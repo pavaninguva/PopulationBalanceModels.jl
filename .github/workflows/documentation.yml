@@ -1,0 +1,39 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# Deployments authenticate with the repository's dedicated SSH deploy key.
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation
+  cancel-in-progress: false
+
+jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+      - name: Install documentation dependencies
+        shell: julia --color=yes --project=docs {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+      - name: Build and deploy documentation
+        run: julia --color=yes --project=docs docs/make.jl
+        env:
+          POPULATIONBALANCEMODELS_DOCS_DEPLOY: ${{ github.event_name != 'pull_request' }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

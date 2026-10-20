@@ -1,0 +1,63 @@
+using Documenter
+using PopulationBalanceModels
+
+const ROOT = normpath(joinpath(@__DIR__, ".."))
+# GitHub provides the actual owner; local archives need no guessed remote.
+slug = get(ENV, "GITHUB_REPOSITORY", "")
+remote = if isempty(slug)
+    nothing
+else
+    owner, repository = split(slug, '/'; limit=2)
+    Documenter.Remotes.GitHub(owner, repository)
+end
+remote_options = isnothing(remote) ? (remotes=nothing,) : (repo=remote,)
+
+makedocs(;
+    root = @__DIR__,
+    modules = [PopulationBalanceModels],
+    sitename = "PopulationBalanceModels.jl",
+    authors = "PBM.jl contributors",
+    remote_options...,
+    format = Documenter.HTML(
+        prettyurls = get(ENV, "CI", "false") == "true",
+        edit_link = isempty(slug) ? nothing : "main",
+        repolink = isempty(slug) ? nothing : "https://github.com/$(slug)",
+    ),
+    checkdocs = :exports,
+    warnonly = false,
+    workdir = ROOT,
+    pages = [
+        "Home" => "index.md",
+        "Getting started" => "getting_started.md",
+        "Defining models" => "defining_models.md",
+        "Coupled systems" => "coupled_systems.md",
+        "Numerical methods" => "numerical_methods.md",
+        "Moment methods" => "moment_methods.md",
+        "Observations and estimation" => "inference.md",
+        "Case studies" => [
+            "Overview" => "case_studies/index.md",
+            "Batch population balance" => "case_studies/batch.md",
+            "Interacting populations" => "case_studies/interacting.md",
+            "Aggregation and breakage" => "case_studies/collisions.md",
+            "Cooling crystallization" => "case_studies/crystallization.md",
+            "Two-coordinate transport" => "case_studies/transport.md",
+            "Kinetic estimation" => "case_studies/estimation.md",
+            "Lipid nanoparticles" => "case_studies/nanoparticles.md",
+        ],
+        "API reference" => "api.md",
+        "Contributing and internals" => "development.md",
+        "Publishing" => "publishing.md",
+    ],
+)
+
+if get(ENV, "POPULATIONBALANCEMODELS_DOCS_DEPLOY", "false") == "true"
+    isempty(slug) && error("GITHUB_REPOSITORY is required for documentation deployment")
+    isempty(get(ENV, "DOCUMENTER_KEY", "")) &&
+        error("Add the DOCUMENTER_KEY repository secret; see docs/src/publishing.md")
+    deploydocs(
+        repo = "github.com/$(slug).git",
+        devbranch = "main",
+        push_preview = false,
+        versions = ["stable" => "v^", "v#.#", "dev" => "dev"],
+    )
+end

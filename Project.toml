@@ -1,0 +1,27 @@
+name = "PopulationBalanceModels"
+uuid = "d67dbf4a-e476-4a75-b295-11f266f08ec0"
+authors = ["PBM.jl contributors"]
+version = "0.4.0-DEV"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[weakdeps]
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+
+[extensions]
+PopulationBalanceModelsOptimExt = "Optim"
+PopulationBalanceModelsSciMLBaseExt = "SciMLBase"
+
+[compat]
+julia = "1.10"
+LinearAlgebra = "1"
+Optim = "1, 2"
+SciMLBase = "2, 3"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
