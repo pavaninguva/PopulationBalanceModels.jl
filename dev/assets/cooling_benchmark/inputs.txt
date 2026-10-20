@@ -1,5 +1,0 @@
-Gunawan et al. (2004), Example 2, equations 28–34; target Figures 2 and 3.
-DEMONSTRATION INPUTS: seed=0.08*(1-((L-195.5)/15)^2) on [180.5,210.5]; c0=csat(32).
-These are NOT author-confirmed paper inputs. HR1 and Lax–Wendroff are not implemented here.
-Julia 1.10.3; dt=0.05; tf=1000.0; reference RK4 dt=0.01 checked at 0.005.
-Maximum final relative reference step-halving difference: 1.2693879873038198e-12
