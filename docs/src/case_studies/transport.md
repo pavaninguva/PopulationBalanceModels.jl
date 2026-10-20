@@ -1,205 +1,127 @@
-# Two-coordinate transport
+# Inguva–Braatz: two-coordinate transport
 
-## Physical question and implementation
+## Published problem
 
-A joint distribution over two internal properties can advect at different speeds
-in each direction. This case isolates transport from nucleation and process
-coupling so analytical bin averages can distinguish numerical error from model
-uncertainty. Run `examples/two_coordinate_transport.jl`.
-It compares a smooth profile and a rectangle on 32, 64, and 128 bins per axis.
-
-The general `Grid2D` residual supports growth, midpoint birth/removal,
-bilinear point deposition, and midpoint distributed creation. Boundary influx
-has units of number flux per tangential internal coordinate and is integrated
-over the face width. The per-term 2D GaussianInjection regularizes a point
-using tensor bin fractions; the `GaussianNucleation` physical constructor is 1D.
-2D collisions, general integrated-source terms, and coupled 2D system blocks
-are unsupported. These restrictions are separate from the narrower eligibility
-of the direct methods below.
-
-## Compact/ADI equations and paper fidelity
-
-Li et al., Particuology 110 (2026), 310–319,
-[DOI 10.1016/j.partic.2026.01.024](https://doi.org/10.1016/j.partic.2026.01.024),
-is the HOC–ADI reference paper. The inherited paper assessment records unresolved issues that prevent claiming a faithful reproduction:
-
-- Eq. 1 uses separate g1 and g2, but Eqs. 6–15 contain g1*g2 multiplying both
-  directional derivatives. Used literally as the leading transport coefficient,
-  that does not recover Eq. 1 for independently chosen velocities.
-- The compact coefficients a1–a5 and important derivation details are left to
-  supplementary data. Those supplementary coefficients are not available to this implementation. The printed time levels/intermediate updates are also ambiguous.
-- In the stated Case 1, g1=g2=0.2, the domain is [0,2]² and t=100. Under
-  zero incoming flux the Gaussian center would move from (0.4,0.4) to
-  (20.4,20.4), outside the domain. Units, horizon or boundary conventions need
-  clarification before reproducing its reported nonzero final distributions.
-
-These are reproducibility observations about the supplied equations, not a
-claim that no corrected author implementation exists. A literal paper backend
-remains pending supplementary equations or author code.
-
-`HOCADI(time_order=4)` instead implements the following fully specified,
-independently tested **compact/ADI variant** for homogeneous constant growth:
+Section 3.1 of [Inguva and Braatz (2023)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2023.pdf)
+uses constant growth in two internal coordinates:
 
 ```math
-\tfrac14 d_{i-1}+d_i+\tfrac14 d_{i+1}
-=\tfrac{3}{4h}(f_{i+1}-f_{i-1}),\qquad Md=Df.
+\frac{\partial n(a_1,a_2,t)}{\partial t}
++\frac{\partial n(a_1,a_2,t)}{\partial a_1}
++\frac{\partial n(a_1,a_2,t)}{\partial a_2}=0,
+\qquad (a_1,a_2)\in[0,2]^2,
 ```
-
-For each direction with speed g, the Cayley update is
 
 ```math
-(M+\tfrac{g\Delta t}{2}D)f^{new}
-=(M-\tfrac{g\Delta t}{2}D)f^{old}.
+n(a_1,a_2,0)=50\exp\!\left[-\frac{(a_1-0.4)^2}{0.005}
+-\frac{(a_2-0.4)^2}{0.005}\right].
 ```
 
-Taking one x solve and one y solve defines S₂(Δt). The tensor operators
-commute in this restricted problem. `time_order=2` uses S₂ directly.
-`time_order=4` uses
+Both coordinate velocities are 1. The paper specifies zero ghost-node values
+on the incoming left/bottom boundaries and no flux at the upper/right edges.
+Figure 2 compares solutions at ``t=1``; the peak moves to ``(1.4,1.4)``. Away
+from boundary effects the characteristic solution is
 
 ```math
-S_4(\Delta t)=S_2(\gamma\Delta t)
-S_2((1-2\gamma)\Delta t)S_2(\gamma\Delta t),\quad
-\gamma=(2-2^{1/3})^{-1}.
+n(a_1,a_2,t)=n(a_1-t,a_2-t,0).
 ```
 
-This fourth-order composition has a negative middle substep. It is restricted
-to reversible, homogeneous autonomous transport here. No birth, death,
-aggregation, breakage or bulk coupling is silently run backward. Periodic
-uniform axes are required; one-sided physical compact closures remain work.
-The spatial derivative is fourth order, and independent tests isolate second-
-and fourth-order temporal convergence against the exact semidiscrete Fourier
-solution. Cyclic tridiagonal LU plus rank-two correction gives O(nx*ny) work
-per directional sweep. Linear L2 stability does not establish positivity.
+The benchmark evaluates analytical bin integrals and compares bin-average
+densities. Its initial Gaussian is truncated to the declared domain. This
+avoids comparing finite-volume averages with point samples of a narrow peak.
+It also means these errors should not be equated directly with the published
+nodal Upwind/Exact errors. The paper's Upwind and Exact schemes used 101 nodes;
+its WENO calculation used 100 cells per axis. This package uses 100 cells for
+all methods in the displayed figure and its own WENO/SSPRK implementation.
 
-## The 2D comparison
+## Code deployment
 
-Run `julia --project=. examples/two_coordinate_transport.jl`. Results and environment
-metadata are under `docs/src/assets/`; the script has no plotting dependency.
+Run from the package root:
 
-The shared PDE is
-
-```math
-\partial_t n+0.5\partial_xn+0.25\partial_yn=0,
-\quad (x,y)\in[0,1]\times[0,0.5],\quad t_f=0.25,
+```sh
+julia --project=. examples/inguva_braatz_case1.jl
+python docs/benchmarks/plot_case_studies.py transport
 ```
 
-with periodic diagnostic boundaries. Smooth separable Fourier densities have
-analytical **bin averages**. A rectangular pulse separately tests discontinuous
-fronts. All methods use identical bin-integrated initial numbers, grids,
-output times and analytical references. Uniform averages themselves satisfy
-the constant-advection PDE, allowing the compact derivative and exact shifts
-to evolve the same representation without a nodal/average comparison error.
-
-| Method | Spatial/evolution treatment | Eligibility |
-|---|---|---|
-| WENO5 + SSPRK(3,3) | Unsplit conservative FV residual, summed CFL 0.4 | Current general 2D growth/source residual |
-| HOCADI4_variant | Compact derivative plus composed directional implicit solves; directional CFL 1 | Constant homogeneous growth, periodic uniform axes |
-| InguvaBraatz_constant_shift | Commuting directional cell shifts at CFL 1 | Constant homogeneous growth and integer cell travel at every step/output |
-
-The last row implements the constant-growth class of Inguva and Braatz (2023),
-Section 2.1, Eqs. 9–14. For this class it is also exact for bin averages.
-The special transformed meshes, separable variable growth and noncommuting
-split cases from later sections are not implemented yet. Fractional steps or
-incompatible output times raise an error rather than quietly interpolate.
-An integer multi-cell shift is equivalent to repeated exact one-cell substeps.
-
-The methods cannot share a stable explicit time step and CFL=1 exact shifts
-on this fixed grid. The benchmark therefore declares method-appropriate steps
-and reports them. Accuracy-versus-cost curves are more informative than a
-fixed-grid speed ranking. Timing uses the minimum of three warmed forward
-solves, includes numerical factorization/setup and output copies, excludes
-Julia compilation and common model/initial construction. It measures this
-reference implementation on the recorded host, not a universal library ranking.
-
-Measured smooth-case results at 128 × 128 bins (Julia 1.10.10, one thread,
-AMD EPYC 9V74; minimum of three warmed solves):
-
-| Method | L1 density error | Time | Allocated bytes |
-|---|---:|---:|---:|
-| WENO5 + SSPRK3 | 6.24e-08 | 172.7 ms | 132,062,896 |
-| Compact/ADI fourth-order variant | 4.51e-07 | 35.03 ms | 3,604,880 |
-| Inguva–Braatz constant shift | 1.88e-17 | 1.314 ms | 396,208 |
-
-The compact variant is faster at this grid and chosen step, with a larger
-error. This is not an accuracy-matched speed claim. Its measured L1 refinement
-order from 64 to 128 bins is 3.967. All three conserve total number to roughly
-5e-15 relative or better. Exact-shift precision applies to this eligible
-homogeneous class, not a general nucleating or coupled PBM.
-
-For diagnostic comparison, positivity checks are disabled and both minimum
-density and negative particle number are recorded. Production simulation
-defaults to rejecting negative concentration. The compact scheme shows
-substantial undershoots on the rectangle; a claim of nonoscillatory behavior
-is unsupported. WENO has small undershoots too and still needs a proven
-positivity limiter. No state clipping is used.
+The plotting command requires NumPy and Matplotlib. The Julia benchmark has no
+plotting dependency. Its model definition is
 
 ```julia
-solution_weno = simulate(problem;dt=0.4/n)
-solution_compact = simulate(problem;method=HOCADI(time_order=4),dt=2/n)
-solution_shift = simulate(problem;method=ExactShift(),dt=2/n)
+model = PBMModel(growth=Growth2D((1.0,1.0)))
+boundary = SizeBC(OpenBoundary(),NoFlux())
+operator = compile(model,grid;
+    methods=TermMethods(growth=WENO5(epsilon=1e-12)),
+    bc=SizeBC2D(x=boundary,y=boundary))
+problem = PBMProblem(operator,initial_bin_numbers,(0.0,1.0))
+solution = simulate(problem;method=SSPRK33(),dt=0.2*cell_width,
+    saveat=[1.0],check_nonnegative=false)
 ```
 
-Here `problem` is the eligible periodic constant-growth benchmark and n is its
-bins per axis. HOCADI and ExactShift are direct evolution methods selected by
-simulate. `odeproblem(problem)` exports the compiled residual (FV or moments),
-not those direct evolution methods.
+`reference(grid,t)` in `examples/inguva_braatz_case1.jl` integrates the shifted
+Gaussian. `problem` constructs the equation, state, and boundary treatment;
+`run_benchmark` changes the discretization, runs 50/100/200 bins per axis, and
+exports solutions and error measures. Positivity rejection is disabled in this
+diagnostic run so undershoots are measured rather than clipped or hidden.
 
+## Method comparison and boundary differences
 
+Upwind and WENO use zero incoming flux and a closed outgoing edge, matching the
+paper's intended flux specification. The near-boundary WENO implementation falls
+back to upwind; it does not reproduce SharpClaw's boundary implementation.
+Their unsplit SSPRK time step has a summed directional Courant number of 0.4.
 
-## Historical evidence and reproducibility
+ExactShift uses one cell of travel in each direction per step. Its current
+backend supports paired open boundaries, so that row declares open outflow.
+The compact/ADI variant requires periodic boundaries and is reported as an
+additional diagnostic, not a reproduction of a method in this paper. At this
+horizon the translated Gaussian is well separated from every edge; nevertheless
+the boundary declarations differ and are recorded in the CSV.
 
-The figure and raw records below are the inherited benchmark evidence, recorded
-with Julia 1.10.10 on the host described in the environment file. Rerunning the
-script replaces the working benchmark CSVs and metadata. Times are host-dependent;
-compare errors, allocations, chosen steps, and output schedules together.
+![Two-dimensional numerical solutions and analytical reference](../assets/inguva_case1/solutions.png)
 
-![Smooth and sharp-front transport comparisons](../assets/benchmark_2d.png)
+The colour limits are shared across the density panels. The cut shows diffusion
+and dispersive distortion near the peak. Signed error panels below use separate
+symmetric scales so negative lobes remain visible.
 
-[Full results CSV](../assets/results_2d.csv),
-[environment](../assets/environment.txt),
-[smooth cut](../assets/smooth_cut.csv), and
-[rectangle cut](../assets/rectangle_cut.csv) preserve the recorded experiment.
+![Signed errors for upwind, WENO, and compact ADI](../assets/inguva_case1/errors.png)
 
-At 128² bins the rectangle's minimum density was about ``-0.30990`` for compact/ADI,
-``-1.6452\times10^{-7}`` for WENO, and zero for the eligible exact shift. The
-compact oscillations and negative number are part of the evidence. Diagnostic
-runs disable rejection to measure them; the default solver rejects negative
-states beyond tolerance and never clips them.
+At 100 bins per axis, density RMSE was 1.853 for upwind, 0.1674 for WENO, and
+0.3338 for compact/ADI. The eligible exact shift gave ``1.43\times10^{-14}``.
+The compact minimum density was -1.851; it does not preserve positivity even
+for this narrow Gaussian. Refining to 200 bins reduced its RMSE to 0.03311.
+These are results of this implementation, not digitized published errors.
 
-## Recorded benchmark table
+[All errors and declared boundaries](../assets/inguva_case1/errors.csv) and
+[run metadata](../assets/inguva_case1/environment.txt) accompany the figure.
+The norm definitions are RMSE over bin-average densities, maximum absolute
+density error, and integrated L1 error over bin numbers.
 
-| Profile | Bins per axis | Method | L1 error | Time (ms) | Minimum density | Negative number |
-|---|---:|---|---:|---:|---:|---:|
-| smooth | 32 | WENO5 + SSPRK3 | 3.6645e-05 | 2.629 | 0.16039 | 0 |
-| smooth | 32 | Compact/ADI fourth-order variant | 0.00010301 | 0.54437 | 0.16043 | 0 |
-| smooth | 32 | Inguva–Braatz constant shift | 1.3634e-17 | 0.02693 | 0.16043 | 0 |
-| smooth | 64 | WENO5 + SSPRK3 | 1.2974e-06 | 20.653 | 0.1602 | 0 |
-| smooth | 64 | Compact/ADI fourth-order variant | 7.0518e-06 | 3.7823 | 0.1602 | 0 |
-| smooth | 64 | Inguva–Braatz constant shift | 2.6942e-17 | 0.17459 | 0.1602 | 0 |
-| smooth | 128 | WENO5 + SSPRK3 | 6.2351e-08 | 172.71 | 0.16003 | 0 |
-| smooth | 128 | Compact/ADI fourth-order variant | 4.5106e-07 | 35.028 | 0.16003 | 0 |
-| smooth | 128 | Inguva–Braatz constant shift | 1.8819e-17 | 1.3142 | 0.16003 | 0 |
-| rectangle | 32 | WENO5 + SSPRK3 | 0.011303 | 2.6433 | -5.8337e-08 | 6.6009e-10 |
-| rectangle | 32 | Compact/ADI fourth-order variant | 0.026398 | 0.52662 | -0.24681 | 0.0083505 |
-| rectangle | 32 | Inguva–Braatz constant shift | 0 | 0.029313 | 0 | 0 |
-| rectangle | 64 | WENO5 + SSPRK3 | 0.0069534 | 21.164 | -1.0993e-07 | 9.7062e-10 |
-| rectangle | 64 | Compact/ADI fourth-order variant | 0.018792 | 3.7964 | -0.42451 | 0.0056097 |
-| rectangle | 64 | Inguva–Braatz constant shift | 0 | 0.19299 | 0 | 0 |
-| rectangle | 128 | WENO5 + SSPRK3 | 0.0041601 | 168.15 | -1.6452e-07 | 6.1039e-10 |
-| rectangle | 128 | Compact/ADI fourth-order variant | 0.013659 | 34.928 | -0.3099 | 0.0041315 |
-| rectangle | 128 | Inguva–Braatz constant shift | 0 | 1.4564 | 0 | 0 |
+## Compact/ADI stability audit
 
+The periodic variant's Fourier amplification has unit magnitude, as derived in
+[Time integration](../methods/time.md). A separate ten-period audit preserved
+L2 norms within ``5\times10^{-14}`` over directional Courant numbers 0.25, 1,
+and 4 for both temporal orders. The maximum sampled Fourier amplification
+magnitude was 1.0000000000000004. Independent dense-matrix calculations agree
+with the cyclic solver.
 
-## Executable source
+This supports linear stability of the implemented periodic constant-growth
+variant. It does not support monotonicity or positivity: the rectangle develops
+negative lobes while its L2 norm remains constant. Reducing time step does not
+turn a central compact derivative into a positivity-preserving method.
+[Audit data](../assets/compact_audit/audit.csv) reports norms, minima, and negative
+number without clipping.
 
-This listing is read directly from the runnable script during the documentation build.
+The variant is not a verified reproduction of the HOC–ADI paper; supplementary
+coefficients and update ambiguities remain unresolved. Physical compact boundary
+closures, general sources, and transformed variable-growth exact shifts remain
+outside these implementations.
 
-```@eval
-using Markdown, PopulationBalanceModels
-script = "examples/two_coordinate_transport.jl"
-root = pkgdir(PopulationBalanceModels)
-code = read(joinpath(root, script), String)
-slug = get(ENV, "GITHUB_REPOSITORY", "")
-link = isempty(slug) ? "" : "[Source on GitHub](https://github.com/$slug/blob/main/$script)\n\n"
-Markdown.parse(link * "```julia\n" * code * "\n```")
-```
+## Additional transport diagnostics
+
+The earlier smooth-periodic and rectangular comparison is retained as independent
+evidence in [its results](../assets/results_2d.csv),
+[environment](../assets/environment.txt), and [figure](../assets/benchmark_2d.png).
+It uses different velocities, domain, and initial data from this paper case.
+Run `examples/two_coordinate_transport.jl` to repeat it. It is useful for smooth
+convergence and sharp-front tests, but must not be labelled the paper benchmark.

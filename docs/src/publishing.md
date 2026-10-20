@@ -17,14 +17,14 @@ the owner and repository from that environment variable.
 
 ## Repository address
 
-The owner has not been supplied. This is the single owner placeholder for these
-instructions: `OWNER`. Use the actual account in the following templates:
+The repository is `pavaninguva/PopulationBalanceModels.jl`. Its source and
+versioned manual addresses are:
 
-| Purpose | Address template |
+| Purpose | Address |
 |:--|:--|
-| Repository | `https://github.com/OWNER/PopulationBalanceModels.jl` |
-| Development manual | `https://OWNER.github.io/PopulationBalanceModels.jl/dev/` |
-| Release manual | `https://OWNER.github.io/PopulationBalanceModels.jl/stable/` |
+| Repository | `https://github.com/pavaninguva/PopulationBalanceModels.jl` |
+| Development manual | `https://pavaninguva.github.io/PopulationBalanceModels.jl/dev/` |
+| Release manual | `https://pavaninguva.github.io/PopulationBalanceModels.jl/stable/` |
 
 URL installation uses `Pkg.add(url=repository_url)` followed by
 `using PopulationBalanceModels`. Registry availability is not assumed.

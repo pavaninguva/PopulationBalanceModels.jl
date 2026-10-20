@@ -64,19 +64,30 @@ function build(;grid,initial_lipid,FRR,tau,temperature,viscosity,solubility,
     function J(p,t,ctx)
         nucleation_rate(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm,p.An)
     end
-    function shape(L,p,t,ctx)
-        Lc=critical_length(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm)
-        exp(-0.5*((L-Lc)/p.nucleation_width)^2)
-    end
+    center=(p,t,ctx)->critical_length(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm)
+    # At S<=1, J is zero and the source residual returns before evaluating its
+    # center. Use a finite unused center so the integral itself remains defined.
+    finite_center=(p,t,ctx)->supersaturation(ctx)>1 ? center(p,t,ctx) : first(grid.centers)
+    gaussian=GaussianNucleation(J;center=finite_center,
+        width=(p,t,ctx)->p.nucleation_width,truncation=:renormalize)
+    nucleation_normalization in (:total_rate,:density_amplitude) ||
+        throw(ArgumentError("invalid nucleation normalization"))
+    # Preserve the legacy unnormalized exp(-z²/2) amplitude convention explicitly.
+    physical=GaussianNucleation(J;center=finite_center,
+        width=(p,t,ctx)->p.nucleation_width,truncation=:physical)
+    source=nucleation_normalization===:total_rate ? gaussian :
+        IntegratedNucleation(J,(lo,hi,p,t,ctx)->sqrt(2π)*p.nucleation_width*
+            physical.fraction(lo,hi,p,t,ctx);normalization=:density_amplitude)
     G=(L,p,t,ctx)->p.kg*L*ctx.fields.Cinfinity*
         (supersaturation(ctx)-equilibrium_ratio(L,ctx.fields.w,ctx.fields.T))
     beta=(L,M,p,t,ctx)->p.kPEG*attachment_without_peg(L,M,ctx.fields.w,ctx.fields.T)*
         brownian_kernel(L,M,ctx.fields.T,ctx.fields.mu)
     geometry=AdditiveCoordinate(L->L^3,cbrt)
     model=PBMModel(
-        DistributedNucleation(J,shape;normalization=nucleation_normalization)+
-        Growth(G)+Aggregation(beta;coordinate_map=geometry,overflow=overflow)+
-        Dilution((L,p,t,ctx)->ctx.fields.dilution))
+        nucleation=source,
+        growth=Growth(rate=G),
+        coalescence=Aggregation(beta;coordinate_map=geometry,overflow=overflow),
+        dilution=Dilution(rate=(L,p,t,ctx)->ctx.fields.dilution))
     op=compile(model,grid;growth_scheme=scheme,bc=SizeBC(NoFlux(),NoFlux()))
     exchange=ConservativeExchange(:lnp,:lipid,(L,p,t,ctx)->p.rho*π/6*L^3;
         mechanisms=(:growth,:nucleation))

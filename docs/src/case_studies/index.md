@@ -1,19 +1,26 @@
 # Case studies
 
-Run each script from the package root with `julia --project=. examples/SCRIPT.jl`.
-The estimation script needs Optim in a separate working environment. The sequence
-builds from local kinetics to process coupling and then to observation models.
+These three studies test different parts of the model-to-solver path.
 
-1. [Batch population balance](batch.md): growth, creation, removal, and measured moments.
-2. [Interacting populations](interacting.md): independent grids and a common solute balance.
-3. [Aggregation and breakage](collisions.md): event counting and truncation.
-4. [Cooling crystallization](crystallization.md): Gunawan case 2 with explicit demonstration initialization.
-5. [Two-coordinate transport](transport.md): WENO, compact/ADI, and eligible exact shifts.
-6. [Estimating kinetic parameters](estimation.md): analytical synthetic observations and local rank.
-7. [Lipid nanoparticle formation](nanoparticles.md): CEJ model recipe with explicit demonstration closures.
+1. [Two-coordinate transport](transport.md) uses the Gaussian constant-growth
+   problem in Inguva and Braatz (2023). An analytical solution separates numerical
+   transport error from physical modeling uncertainty. It includes 2D solution
+   plots and a separate compact/ADI stability audit.
+2. [Cooling crystallization](crystallization.md) uses the coupled growth,
+   nucleation, and concentration equations in Gunawan et al. (2004). The current
+   numerical comparison uses declared demonstration initialization because the
+   printed seed is negative. Independent moment equations check the coupling.
+3. [Lipid nanoparticle formation](nanoparticles.md) uses the mechanism structure
+   in Shin et al. (2025). It identifies the inputs needed to reproduce Figure 4,
+   exports number and intensity PSDs, and keeps the runnable synthetic example
+   distinct from the uncompleted paper comparison.
 
-Each case links its executable implementation. Numerical consistency checks and
-synthetic fits are distinct from experimental validation. Supporting scripts
-`nucleation_sources.jl`, `named_term_methods.jl`, `coupled_moment_balance.jl`,
-`moment_closures.jl`, and `periodic_weno_transport.jl` isolate numerical choices
-introduced in the manual.
+Each study specifies equations, inputs, term methods, time integration, and code
+entry points. Agreement with an analytical solution, consistency with an
+independent moment ODE, and agreement with experimental observations are
+separate tests.
+
+Shorter worked examples cover [a batch balance](batch.md),
+[interacting populations](interacting.md), [collisions](collisions.md), and
+[kinetic estimation](estimation.md). They introduce APIs without claiming paper
+reproduction.

@@ -1,0 +1,6 @@
+PopulationBalanceModels 0.4.0-DEV; Julia 1.10.3
+Linux x86_64; threads=1
+Inguva & Braatz (2023), Section 3.1, Eqs. 55–56, Fig. 2; t=1, domain=[0,2]^2.
+All states and errors use bin integrals/averages; paper's Exact/Upwind used nodal values.
+FV: zero incoming, no outgoing flux. Compact: periodic variant. Shift: paired open.
+Initial Gaussian has negligible boundary tails; boundary variants are declared, not identical.

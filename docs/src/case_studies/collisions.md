@@ -6,11 +6,11 @@ Aggregation merges particles and breakage creates daughters. For additive size,
 their moment rates are
 
 ```math
-\dot M_k\big|_A=\tfrac12\iint[(x+y)^k-x^k-y^k]K(x,y)n(x)n(y)\,dx\,dy,
+\frac{dM_k}{dt}\big|_A=\tfrac12\iint[(x+y)^k-x^k-y^k]K(x,y)n(x)n(y)\,dx\,dy,
 ```
 
 ```math
-\dot M_k\big|_F=\int a(x)n(x)\left[\sum_j\nu_jx_j^k-x^k\right]dx.
+\frac{dM_k}{dt}\big|_F=\int a(x)n(x)\left[\sum_j\nu_jx_j^k-x^k\right]dx.
 ```
 
 These conserve ``M_1`` when daughter properties sum to the parent's and products

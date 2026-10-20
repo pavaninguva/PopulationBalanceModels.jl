@@ -1,206 +1,161 @@
-# Lipid nanoparticle formation: CEJ recipe
+# Shin: lipid nanoparticle formation
 
-With D_c defined as a positive loss magnitude, the physical bookkeeping is
+## Equation and process balances
+
+[Shin et al. (2025)](https://web.mit.edu/braatzgroup/Shin_ChemEngJ_2025.pdf)
+models a diameter distribution through nucleation, growth, and binary coalescence.
+For a concentration basis per current mixture volume, the implemented balance is
 
 ```math
-\partial_t n+\partial_L(Gn)
-=B_n+B_c-D_c.
+\frac{\partial n(L,t)}{\partial t}
++\frac{\partial [G(L,t)n(L,t)]}{\partial L}
+=B_n(L,t)+B_c(L,t)-D_c(L,t)-\lambda(t)n(L,t).
 ```
 
-The recipe implements the following components in diameter/length coordinates:
+``D_c`` is a positive removal magnitude. The paper's printed PBE has a plus sign
+beside its positive loss integral; the implementation uses physical parent
+removal. This convention must be reconciled with author code before reproducing
+its figures. Lengths are meters, time is seconds, and lipid concentrations are kg/m³.
 
-| Mechanism/closure | Implementation |
-|---|---|
-| Solvent history | Prescribed aqueous fraction w(t); no CFD |
-| Solubility | User-supplied C_infinity(w,T), with a separate log-linear mole-solubility helper |
-| CNT creation | Critical diameter and nucleation rate from Eqs. 7-8 |
-| Creation-size spread | Gaussian centered at the current critical diameter; width and normalization explicit |
-| Growth/dissolution | Signed G=k_g L C_infinity (S-S_star) |
-| Coalescence | Brownian kernel times a supplied attachment law and fitted PEG factor |
-| Material balance | Shared free-lipid state coupled to the actual particle-volume update |
-| Dilution | Same volumetric dilution rate applied to particles and dissolved lipid |
-| Measurements | L^6-weighted normalized histogram and final-paper Eq. 3, M7/M6 |
+The growth and classical-nucleation laws are
 
-The implemented CNT formulas are
+```math
+G(L,t)=k_gLC_\infty(w,T)[S(t)-S^*(L,w,T)],\qquad
+S(t)=\frac{c(t)}{C_\infty(w,T)},
+```
 
 ```math
 L_c=\frac{4\gamma V_m}{k_BT\ln S},\qquad
-B_0=A_n\exp\left[-\frac{16\pi\gamma^3V_m^2}
-{3(k_BT)^3(\ln S)^2}\right],
+J=A_n\exp\!\left[-\frac{16\pi\gamma^3V_m^2}{3(k_BT)^3(\ln S)^2}\right].
 ```
 
-with B0=0 for S<=1. V_m is PER-MOLECULE volume, consistent with k_B.
-A molar volume would require the matching thermodynamic convention.
+Nucleation is zero for ``S\le1``. ``V_m`` is volume per molecule, matching ``k_B``;
+a molar volume needs a different thermodynamic convention. The Gaussian source
+is centred at ``L_c`` with a separately specified size width. The printed Gaussian
+omits its normalization factor and uses the same symbol as interfacial energy.
+The recipe requires a normalization choice instead of treating those conventions
+as interchangeable. With a total-rate choice it integrates each Gaussian bin;
+midpoint sampling can miss a narrow moving source entirely.
 
-The collision kernel is
+The coalescence kernel is
 
 ```math
-\beta(L,\lambda)=
-k_{\rm PEG}\alpha_{\rm base}(L,\lambda,w,T)
-\frac{2k_BT(L+\lambda)^2}{3\mu L\lambda}.
+K(L,M,t)=k_{\mathrm{PEG}}\alpha_{\mathrm{base}}(L,M,w,T)
+\frac{2k_BT(L+M)^2}{3\eta LM}.
 ```
 
-The attachment_without_peg callback returns alpha_base; it must not already
-include the PEG factor. Parameters k_g, A_n and k_PEG remain available for
-native fitting through the problem parameter tuple.
+The supplied attachment function must exclude ``k_{\mathrm{PEG}}`` to avoid
+counting the fitted factor twice. Fixed-pivot deposition uses additive property
+``L^3``. Thus ``L_*=(L_1^3+L_2^3)^{1/3}``; diameter is retained for growth and
+observations while coalescence conserves volume. The expected physical loss is
+``D_c(L,t)=n(L,t)\int K(L,M,t)n(M,t)\,dM``.
 
-The final paper reports A_n=2.0e22 m^-3 s^-1,
-k_g=11.88 m^3 kg^-1 s^-1 and k_PEG=6.5e-6, and uses an interfacial energy
-near 0.010 N/m. Reusing those values under a changed source normalization
-or concentration basis requires verification, not a mechanical substitution.
-
-### Diameter-space coalescence
-
-An event produces a particle with
-
-```math
-L_{\rm product}=(L_1^3+L_2^3)^{1/3}.
-```
-
-Use AdditiveCoordinate(L->L^3,cbrt) for fixed-pivot interpolation.
-This keeps L as the transport/measurement coordinate while conserving M3.
-Depositing a product at L1+L2 would conserve the wrong physical quantity.
-
-The equivalent number-density transformation to q=L^3 is
-
-```math
-n_q(q)=n_L(L)/(3L^2).
-```
-
-Changing coordinates without the Jacobian changes the physical distribution.
-For a physical volume v=(pi/6)L^3, the corresponding Jacobian is different.
-
-### Mixing and free-lipid balance
-
-For the delayed-mixing case,
+For delayed mixing, the paper supplies
 
 ```math
 w(t)=\frac{\mathrm{FRR}}{\mathrm{FRR}+1}(1-e^{-t/\tau}).
 ```
 
-An explicit material-element interpretation gives V/Vorganic=1/(1-w).
-The dilution hazard is lambda=w_dot/(1-w). With particle concentrations and
-free lipid both defined per current mixture volume, the recipe applies
+The recipe declares a material-element closure ``V/V_{\mathrm{organic}}=1/(1-w)``
+and dilution hazard ``\lambda=(dw/dt)/(1-w)``. Free lipid obeys
 
 ```math
-\dot c=-\lambda c
--\rho_p\frac{\pi}{6}
-\left(\dot M_3\big|_{\rm growth}+\dot M_3\big|_{\rm nucleation}\right).
+\frac{dc}{dt}=-\lambda c-\rho_p\frac{\pi}{6}
+\left[\left.\frac{dM_3}{dt}\right|_{\mathrm{growth}}
++\left.\frac{dM_3}{dt}\right|_{\mathrm{nucleation}}\right].
 ```
 
-There is also a -lambda*n term in the PBE. Coalescence does not consume
-dissolved lipid. Absent truncation/other losses, the conserved material is
+Coalescence redistributes particle volume without consuming dissolved lipid.
+In the absence of unresolved product loss, the invariant is
+``V(t)[c(t)+\rho_p\pi M_3(t)/6]``. This free-lipid/volume closure is explicit;
+the main paper does not print a complete free-lipid ODE. Instantaneous mixing
+starts at ``c_0/(1+\mathrm{FRR})``; delayed mixing starts before that dilution.
+
+## Target comparison and missing inputs
+
+Figure 4 is the intended first comparison: intensity-weighted PSDs and the
+paper-defined mean diameter during formation and incubation. The reported
+kinetic values are ``A_n=2.0\times10^{22}``, ``k_g=11.88``,
+``k_{\mathrm{PEG}}=6.5\times10^{-6}``, with interfacial energy near 0.010 N/m.
+Those values alone do not define a forward calculation.
+
+A reproducible run still needs the exact initial state/grid limits, temperature
+and viscosity, molecular volume and density, a solubility conversion from mole
+fraction to concentration, ``S^*``, nucleation width/normalization, and the
+attachment law. The DLVO integral's separation, screening, and reciprocal
+conventions also need confirmation. The publisher supplement was unavailable
+to this session; the main article states that data are available on request.
+No experimental arrays or author implementation are included in the repository.
+
+The paper uses 200 logarithmic bins, a second-order central growth difference,
+and MATLAB ode15s. This package's current sectional recipe uses conservative
+upwind/MUSCL or uniform-grid WENO, fixed-pivot collisions, and explicit SSPRK
+unless exported to an external solver. These numerical differences must be
+reported and refined; they must not be labelled a reproduction of the paper's
+numerical method.
+
+## Code deployment
+
+The reusable builder in `examples/papers/cej2025_lnp.jl` makes the mechanisms
+individually inspectable:
+
+```julia
+model = PBMModel(
+    nucleation=source,
+    growth=Growth(rate=G),
+    coalescence=Aggregation(beta;
+        coordinate_map=AdditiveCoordinate(L->L^3,cbrt),overflow=:error),
+    dilution=Dilution(rate=(L,p,t,ctx)->ctx.fields.dilution),
+)
+```
+
+`source` is a bin-integrated Gaussian for total-rate nucleation. `G` reads free
+lipid and prescribed solvent fields. `beta` combines the Brownian kernel with
+the supplied attachment law and PEG factor. `PBMSystem` adds free lipid,
+volume-consistent dilution, and `ConservativeExchange` based on actual discrete
+growth/nucleation contributions.
+
+`examples/shin_lnp_reproduction.jl` exports PSD and concentration histories from
+an explicitly supplied configuration. An input Julia file must return a named
+tuple with `inputs` (keywords for `CEJ2025LNP.build`), `dt`, `saveat`, and
+`provenance` describing the data source and target figure. Run it with
+
+```sh
+julia --project=. examples/shin_lnp_reproduction.jl /path/to/confirmed_inputs.jl /path/to/output
+```
+
+It deliberately has no default paper inputs. Use the paper's actual output
+times and obtain the reference data before overlaying measurements. A fitted
+curve without those inputs would hide model substitutions rather than test the
+implementation.
+
+## Observation definition and demonstration
+
+The paper compares intensity weighting ``n_{\mathrm{intensity}}(L)=L^6n(L)`` and
+its stated mean
 
 ```math
-V(t)\left[c(t)+\rho_p\frac{\pi}{6}M_3(t)\right].
+d_{\mathrm{paper}}=
+\frac{\int_0^\infty L^7n(L,t)\,dL}{\int_0^\infty L^6n(L,t)\,dL}.
 ```
 
-This balance is an explicitly declared completion of the model. The main
-paper discusses lipid consumption but does not print a complete free-lipid ODE.
+The export distinguishes density per meter from number or intensity per bin.
+A logarithmic grid changes bin widths; connecting per-bin fractions as though
+they were density values changes the PSD. Normalization is over the modeled
+window. Finite domain losses can therefore affect both tails and the mean.
 
-For tau=0, use the already mixed initial concentration
-Corganic/(FRR+1). For tau>0, the model starts with Corganic before dilution.
-The delayed recipe currently begins at t=0; later-start initialization needs
-a custom operating history/state.
+Run the existing synthetic recipe and plot its exports with
 
-### Required inputs and conventions
-
-| Input | Why it stays explicit |
-|---|---|
-| Initial distribution and diameter limits | The paper mentions 200 logarithmic bins but does not give a complete grid/initial-state specification |
-| Initial dissolved concentration/basis | Must agree with instantaneous versus delayed mixing |
-| Temperature and viscosity law | Required by CNT/Brownian kernels; process conditions must be confirmed |
-| Molecular volume and particle density | Needed to translate thermodynamics and particle volume into mass |
-| C_infinity(w,T) | Log-linear mole solubility must be converted to the concentration units used for growth |
-| S_star(L,w,T) | A size-dependent equilibrium closure is referenced but not fully specified |
-| Nucleation width | The size-spread width must be distinct from interfacial energy |
-| Gaussian normalization | Total number rate and unnormalized density amplitude differ dimensionally |
-| Attachment law | Resolve the energy/separation/stability-ratio convention against author implementation |
-
-A conventional Kelvin-ratio helper is provided as an OPTIONAL closure. It is
-not automatically asserted to be the author's exact S_star implementation.
-
-The inherited recipe notes describe the two-page supplement specifies DLVO energy expressions,
-A_H=1.7e-22 J and a selected surface potential of 10 mV. Its screening formula
-gives an inverse length although kappa is described as a Debye length.
-Ion concentration units, separation coordinate and electrostatic prefactors
-need a consistent interpretation. The recipe accepts a confirmed attachment
-function or table rather than silently repairing the printed implementation.
-
-Additional printed conventions to reconcile:
-
-- Eq. 1 adds D_c while Eq. 11 defines a positive integral. The recipe uses
-  parent removal, B_c-D_c.
-- Eq. 6 prints a Gaussian without its density-normalization prefactor, and
-  reuses sigma notation later used for interfacial energy.
-- Eq. 14 prints an energy-barrier integral where attachment versus stability
-  ratio, reciprocal and distance conventions need confirmation.
-- Eq. 10's kernel arguments need to agree with the length arguments in Eq. 12.
-
-These points are reproduction questions, not evidence about what the author's
-actual code computes.
-
-### Observations and calibration
-
-For the final-paper definition,
-
-```math
-n_{\rm intensity}(L)=L^6 n(L),\qquad
-d_{\rm paper}=M_7/M_6.
+```sh
+julia --project=. examples/lipid_nanoparticle_demo.jl
+python docs/benchmarks/plot_case_studies.py lnp
 ```
 
-paper_intensity_mean uses that exact ratio under an explicit name. The
-normalized histogram is a separate observable, with its measurement window
-and weighting specified. Do not equate different instrument averages without
-checking their definitions.
+![Synthetic LNP demonstration, not a paper figure reproduction](../assets/lnp_demo/demonstration.png)
 
-Joint PSD, free-lipid and number/moment measurements can share fitted kinetic
-parameters through CalibrationProblem. The article's late-time observations
-provide limited information about the absolute millisecond kinetic scale.
-Testing multistart, profile likelihood and numerical refinement is part of
-the planned inference validation.
-
-
-
-## Run the model recipe
-
-Run `examples/lipid_nanoparticle_demo.jl`
-using the reusable `examples/papers/cej2025_lnp.jl`.
-The demonstration starts with free lipid 10 kg/m³, FRR 3, mixing time 0.01 s,
-and 60 logarithmic diameter bins from 1 nm to 2 micrometers. SSPRK33 uses a
-20-microsecond step to 0.02 s. Temperature, viscosity, solubility, equilibrium
-ratio, attachment, molecular volume, density, and nucleation width are explicitly
-supplied demonstration choices. The growth constant also differs from the
-paper's reported value. Overflow is discarded explicitly.
-
-The script reports particle concentration, the defined intensity mean in nm,
-and free lipid. These outputs demonstrate executable coupling and observation
-paths. They are not validated predictions or reproductions of published figures.
-A derivative-level test checks the declared material-element dilution balance;
-full experimental comparison needs confirmed inputs, conventions, and refinement.
-Late-time normalized PSDs alone may poorly identify an absolute fast kinetic scale.
-
-Reference: Shin et al. (2025), *Chemical Engineering Journal* 523, 167786,
-[doi:10.1016/j.cej.2025.167786](https://doi.org/10.1016/j.cej.2025.167786).
-The original supplementary source is identified in the recipe comments;
-its unresolved conventions remain explicit above.
-
-## Numerical output
-
-With the stated synthetic closures on Julia 1.10.3, the script returned
-particle concentration 2.80014e18 m⁻³, intensity mean 3.24097 nm, and free lipid
-3.51500 kg/m³. These magnitudes belong to the demonstration recipe only.
-
-## Executable source
-
-This listing is read directly from the runnable script during the documentation build.
-
-```@eval
-using Markdown, PopulationBalanceModels
-script = "examples/lipid_nanoparticle_demo.jl"
-root = pkgdir(PopulationBalanceModels)
-code = read(joinpath(root, script), String)
-slug = get(ENV, "GITHUB_REPOSITORY", "")
-link = isempty(slug) ? "" : "[Source on GitHub](https://github.com/$slug/blob/main/$script)\n\n"
-Markdown.parse(link * "```julia\n" * code * "\n```")
-```
+These plots show code behavior with the clearly labelled demonstration closures;
+they are not an overlay of Figure 4. The integrated-source correction changes
+the demonstration mean to approximately 3.27547 nm. That result is unrelated
+to the paper's fitted 100-nm-scale PSD and must not be used to claim agreement.
+[Inputs](../assets/lnp_demo/inputs.txt), [histories](../assets/lnp_demo/history.csv),
+and [PSD arrays](../assets/lnp_demo/psd.csv) record what was actually calculated.

@@ -6,7 +6,16 @@ _terms(a::AbstractPBMTerm) = (a,)
 _terms(a::TermSum) = a.terms
 Base.:+(a::AbstractPBMTerm, b::AbstractPBMTerm) = TermSum((_terms(a)..., _terms(b)...))
 
-"""Size-space conservative transport. Callback `rate(v,p,t,ctx)` is d(v)/dt."""
+"""
+    Growth(rate)
+    Growth(; rate)
+
+Conservative transport in the internal coordinate x, with PDE contribution
+``-\\frac{\\partial (Gn)}{\\partial x}``. Supply `rate(x,p,t,ctx) -> G` in coordinate units per time;
+this is a velocity, not a particle birth rate or a precomputed face flux.
+The callback is evaluated at grid faces and at the current integration stage.
+Select Upwind/MUSCL/WENO5 separately through `TermMethods(growth=...)`.
+"""
 struct Growth{F} <: AbstractPBMTerm
     rate::F
 end
@@ -37,7 +46,17 @@ struct AdditiveCoordinate{F,I}
     measure::F
     inverse::I
 end
-"""Total particle creation rate `rate(p,t,ctx)` at a fixed additive size."""
+"""
+    Nucleation(rate, size)
+    Nucleation(; rate, size)
+
+Point creation `J*δ(x-size)`, where `rate(p,t,ctx) -> J` is total number
+per process-volume per time and `size` is a fixed location in the grid's
+coordinate (not necessarily an additive property). The default FixedPivot
+method requires a location inside the pivot range. For an edge source select
+BoundaryInjection explicitly; for a physical size spread use GaussianNucleation.
+Do not add the same creation event again as an InflowFlux boundary.
+"""
 struct Nucleation{F,T<:Real} <: AbstractPBMTerm
     rate::F
     size::T
@@ -124,3 +143,12 @@ mechanism(::Breakage)=:breakage
 mechanism(::Death)=:death
 mechanism(::Dilution)=:dilution
 mechanism(::CustomTerm)=:custom
+
+# Named keyword forms expose physical inputs without changing positional APIs.
+Growth(;rate)=Growth(rate)
+Birth(;source)=Birth(source)
+Death(;rate)=Death(rate)
+Dilution(;rate)=Dilution(rate)
+Nucleation(;rate,size)=Nucleation(rate,size)
+DistributedNucleation(;rate,shape,normalization=:total_rate)=
+    DistributedNucleation(rate,shape;normalization)

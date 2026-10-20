@@ -1,149 +1,132 @@
-# Cooling crystallization: Gunawan case 2
+# Gunawan: cooling crystallization
 
-For a length-based number distribution f(L,t),
+## Coupled equations
+
+Example 2 in [Gunawan, Fusman, and Braatz (2004)](https://web.mit.edu/braatzgroup/80_High_resolution_algorithms_for_multidimensional_population_balance_equations.pdf)
+models nucleation and size-dependent growth driven by a changing dissolved
+concentration and a prescribed cooling trajectory:
 
 ```math
-\partial_t f+\partial_L(Gf)=B_0\delta(L),\qquad
-G=k_g s^g(1+0.1L),\qquad
-B_0=k_b V s^b,
+\frac{\partial n(L,t)}{\partial t}
++\frac{\partial [G(L,c(t),T(t))n(L,t)]}{\partial L}
+=B_0(c(t),T(t))\delta(L),
 ```
 
-where
-
 ```math
-s=\frac{c-c_{\rm sat}(T)}{c_{\rm sat}(T)},\qquad
-V=\int_0^\infty L^3 f(L,t)\,dL,
+G(L,c,T)=k_g\left[\frac{c-c_{\mathrm{sat}}(T)}{c_{\mathrm{sat}}(T)}\right]^g(1+0.1L),
 \qquad
-\dot c=-3\rho_c\int_0^\infty G L^2 f\,dL.
+B_0=k_b\left[\int_0^\infty L^3 n(L,t)\,dL\right]
+\left[\frac{c-c_{\mathrm{sat}}(T)}{c_{\mathrm{sat}}(T)}\right]^b,
 ```
-
-The recipe implements the supersaturated branch with zero growth/nucleation
-when s<=0. A signed undersaturated/dissolution law is not specified by these
-fractional-power laws and must be an explicit extension.
-
-The prescribed functions and stated parameters are
 
 ```math
-c_{\rm sat}(T)=1.721\,10^{-4}T^2-5.88\,10^{-3}T+0.1286,
-\quad
-T(t)=32-4(1-e^{-t/18600}),
+\frac{dc(t)}{dt}=-3\rho_c\int_0^\infty G(L,c(t),T(t))L^2n(L,t)\,dL.
 ```
 
-| Parameter | Stated value |
-|---|---|
-| k_b | 4.64e-7 |
-| b | 1.78 |
-| k_g | 116 |
-| g | 1.32 |
-| rho_c | 2.11e-12 g/micrometer^3 |
-
-Use the paper's length in micrometers, time in seconds and g/g-water
-concentration basis consistently. Geometric shape or reference-basis factors
-must agree with its volume/mass definitions; no extra factor pi/6 is inserted
-into this crystal model.
-
-### Initialization issue
-
-The inherited paper-recipe notes identify the reported seed law is
+Lengths are micrometers, time is seconds, and concentration is grams of solute
+per gram of water. The crystal density is ``2.11\times10^{-12}`` g/µm³ and the
+paper's shape convention is ``V=\int L^3n\,dL``; no extra spherical factor is added.
+The kinetics use ``k_b=4.64\times10^{-7}``, ``b=1.78``, ``k_g=116``, and ``g=1.32``.
+The recipe sets growth and nucleation to zero outside supersaturation; these
+fractional-power laws do not specify a dissolution branch.
 
 ```math
-f(L,0)=-3.48\,10^{-4}L^2+0.136L-13.3
-\quad (180.5\le L\le210.5).
+T(t)=32-4(1-e^{-t/18600}),\qquad
+c_{\mathrm{sat}}(T)=1.721\times10^{-4}T^2-5.88\times10^{-3}T+0.1286.
 ```
 
-At the printed precision, even its maximum is negative:
-approximately -0.01264368 at L=195.4023 micrometers. Thus directly using it
-gives a negative initial population. Clipping it produces an empty seed and
-changes the secondary-nucleation model. The recipe exposes this expression
-for checking but requires a separately supplied initial_density.
+## Initial data and the reproduction limit
 
-The case-study description also does not state c(0) explicitly. Starting at
-c_sat(T(0)) is a plausible initialization choice, not a verified paper input.
-The runnable demonstration labels both its nonnegative compact parabolic seed
-and its saturated initial concentration as demonstration assumptions.
-
-### Numerical representation
-
-Implement the delta source as an inward NUMBER FLUX at L=0:
+Equation 34 prints the seed polynomial
 
 ```math
-(Gf)(0,t)=B_0(t).
+n(L,0)=-3.48\times10^{-4}L^2+0.136L-13.3,
+\qquad 180.5\le L\le210.5.
 ```
 
-This avoids dividing by G(0,t), which may vanish at saturation. Do not also add
-the same nuclei as a distributed source.
+At that precision its maximum is approximately -0.01264368, so it cannot be
+used as a nonnegative population. Clipping produces an empty seed and changes
+secondary nucleation. The published case description also does not specify an
+unambiguous initial dissolved concentration. The builder therefore requires
+`initial_density` and `c0`; it does not silently repair the polynomial.
 
-ConservativeExchange computes solute depletion from the exact selected
-discrete distribution update and the fixed crystal quantity rho_c L^3. This
-closes the discrete material balance. It converges toward the continuum
-growth integral as the grid is refined; it is not an identical quadrature
-formula at finite grid size. A zero-size birth represented in the first
-finite-volume cell has a small positive pivot-volume contribution.
+The executable comparison uses the explicitly chosen seed
+``0.08[1-((L-195.5)/15)^2]`` on that support, and ``c(0)=c_{\mathrm{sat}}(32)``.
+It now runs to the paper's 1000-second horizon. These inputs support a numerical
+coupling/refinement study, not reproduction of the published CSD or error table.
+The paper's comparison also used HR1 and Lax–Wendroff, which are not provided
+by the current package.
 
-The current numerical scheme is selectable Upwind/MUSCL/uniform WENO.
-The 2004 HR1 algorithm is not claimed to be implemented.
+## Code deployment and term treatment
 
-### Independent moment reference
+`examples/papers/gunawan2004_case2.jl` contains the reusable builder. It declares
+nucleation explicitly as a named term, separately from growth:
 
-Because G=h(t)(1+0.1L), its continuum moment equations close:
+```julia
+model = PBMModel(
+    growth=Growth(rate=G),
+    nucleation=Nucleation(rate=J,size=0.0),
+)
+methods = TermMethods(growth=MUSCL(),
+    by_term=(nucleation=BoundaryInjection(:left),))
+operator = compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
+system = PBMSystem((crystals=operator,);
+    fields=(p,t)->(T=temperature(t),),
+    nonnegative_bulk=(:c,),
+    exchanges=(ConservativeExchange(:crystals,:c,
+        (L,p,t,ctx)->p.rho*L^3; mechanisms=(:growth,:nucleation)),))
+```
+
+`G(L,p,t,ctx)` reads the current `ctx.bulk.c`; `J(p,t,ctx)` reads that
+concentration and `moment(ctx.system,:crystals,3)`. Temperature is a prescribed
+field, while concentration is a state advanced with the distribution at every
+SSPRK stage. The grid must start at zero for the boundary source.
+
+The number influx ``G(0,t)n(0,t)=B_0(t)`` is deposited without dividing by growth.
+The exchange uses the selected discrete growth and nucleation residuals with
+weight ``\rho_cL^3``. Therefore it preserves the discrete dissolved-plus-particle
+quantity. The continuum zero-size source has zero mass; its finite first pivot
+has a small positive discrete mass, also included in that exchange.
+
+## Independent moment comparison
+
+Writing ``\mu_k(t)=\int L^k n(L,t)\,dL`` and ``h(t)=k_gs(t)^g`` gives
 
 ```math
-\dot\mu_0=k_b\mu_3s^b,\qquad
-\dot\mu_k=k\,h(t)(\mu_{k-1}+0.1\mu_k),\ k=1,2,3,\qquad
-\dot c=-\rho_c\dot\mu_3,
-\quad h=k_gs^g.
+\frac{d\mu_0}{dt}=k_b\mu_3s^b,\qquad
+\frac{d\mu_k}{dt}=k\,h(t)[\mu_{k-1}+0.1\mu_k],\quad k=1,2,3,
+\qquad
+\frac{dc}{dt}=-\rho_c\frac{d\mu_3}{dt}.
 ```
 
-The recipe supplies moment_rhs! for [mu0,mu1,mu2,mu3,c].
-It also supplies build_moments(initial_moments=...,c0=...), using native
-MomentSet/ExactClosure, PolynomialRate, zero-size Nucleation and MomentExchange.
-The optional integration suite compares the native solver state against the
-independently coded moment_rhs! under the same initial data and cooling.
-Compare the distribution's moments, concentration, material balance and
-refinement behavior against this reference.
+The benchmark integrates these separately coded continuum equations with RK4
+and checks reference step halving from 0.01 to 0.005 s. It initializes continuum
+moments by exact three-point quadrature of the demonstration polynomial, rather
+than fitting them to the sectional pivots. Seed-support edges are inserted into
+the sectional grid so cell quadrature does not straddle the discontinuity.
 
-The included 50 s demonstration comparison is a numerical consistency test.
-It does not reproduce the 1000 s published benchmark or use a verified paper seed.
-
-
-
-## Run and interpret the demonstration
-
-Run `examples/cooling_crystallization_demo.jl`.
-The reusable `examples/papers/gunawan2004_case2.jl`
-contains the laws, native moment model, and independent moment reference.
-The script uses 800 length bins over 0–1600 micrometers and SSPRK33 with
-`dt=0.02` for 50 seconds. It prints final dissolved concentration and discrete
-material drift. A small drift checks the discrete exchange, not the printed
-seed polynomial or published trajectories. The demonstration's compact
-parabolic seed and saturated initial concentration are explicit assumptions.
-
-Historical refinement against an independent moment ODE gave relative final
-``M_3`` errors of ``1.6211\times10^{-4}`` for 400 bins and
-``5.9056\times10^{-5}`` for 800 bins. These inherited results used the illustrative
-initialization and a 50-second horizon, not the 1000-second publication case.
-Do not treat them as measurements from a new execution.
-
-Reference: Gunawan, Fusman, and Braatz (2004), *AIChE Journal* 50, 2738–2749,
-[doi:10.1002/aic.10228](https://doi.org/10.1002/aic.10228).
-
-## Numerical output
-
-The Julia 1.10.3 demonstration returned final dissolved concentration
-0.1166695816 and discrete material drift -1.8541e-14. The optional integration
-suite also reran the 400/800-bin comparisons, agreeing with the historical
-relative errors above to their reported precision.
-
-## Executable source
-
-This listing is read directly from the runnable script during the documentation build.
-
-```@eval
-using Markdown, PopulationBalanceModels
-script = "examples/cooling_crystallization_demo.jl"
-root = pkgdir(PopulationBalanceModels)
-code = read(joinpath(root, script), String)
-slug = get(ENV, "GITHUB_REPOSITORY", "")
-link = isempty(slug) ? "" : "[Source on GitHub](https://github.com/$slug/blob/main/$script)\n\n"
-Markdown.parse(link * "```julia\n" * code * "\n```")
+```sh
+julia --project=. examples/cooling_crystallization_benchmark.jl
+python docs/benchmarks/plot_case_studies.py cooling
 ```
+
+![Coupled concentration, moments, distributions, and material balance](../assets/cooling_benchmark/coupled_solution.png)
+
+The 802/1602-cell runs compare upwind and MUSCL at a 0.05 s time step. Final
+relative third-moment errors against the continuum ODE were about
+``1.40\times10^{-4}`` / ``6.99\times10^{-5}`` for upwind and
+``1.47\times10^{-6}`` / ``9.36\times10^{-7}`` for MUSCL. The reference step-halving
+difference was below ``1.3\times10^{-12}``. The grid study does not isolate
+spatial order: time and boundary-source discretization errors remain.
+
+[Moment histories](../assets/cooling_benchmark/moments.csv),
+[continuum reference](../assets/cooling_benchmark/reference.csv), and
+[input metadata](../assets/cooling_benchmark/inputs.txt) record this calculation.
+The concentration and material-balance panels check different properties:
+discrete conservation can be excellent while continuum moment error is finite.
+
+For a paper reproduction, replace the demonstration seed and `c0` with confirmed
+values, then compare the CSD at 1000 s and moments under the same size/time
+intervals as the publication. The builder also provides `build_moments` for the
+native exact-closure API; the optional integration tests compare it with the
+independent moment equations.

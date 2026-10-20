@@ -7,7 +7,7 @@ volume (or another explicitly chosen process basis). If ``x`` has units X and
 time has units T, ``n`` has units number/(reference volume X). The local equation is
 
 ```math
-\partial_t n+\partial_x(Gn)=B-dn+J\delta(x-x_c)+\mathcal A[n]+\mathcal F[n].
+\frac{\partial n}{\partial t}+\frac{\partial (Gn)}{\partial x}=B-dn+J\delta(x-x_c)+\mathcal A[n]+\mathcal F[n].
 ```
 
 `Grid1D(edges; coordinate=:volume)` stores edges, widths, and center pivots.
@@ -31,9 +31,9 @@ representations; see [Moment methods](moment_methods.md) and
 
 ```julia
 model = PBMModel(
-    growth = Growth((x,p,t,ctx) -> p.G),
-    primary = Nucleation((p,t,ctx) -> p.J, 0.0),
-    loss = Death((x,p,t,ctx) -> p.k),
+    growth = Growth(rate=(x,p,t,ctx) -> p.G),
+    primary = Nucleation(rate=(p,t,ctx) -> p.J, size=0.0),
+    loss = Death(rate=(x,p,t,ctx) -> p.k),
 )
 ```
 

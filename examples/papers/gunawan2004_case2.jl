@@ -18,8 +18,10 @@ end
 function build_moments(;initial_moments,c0,tspan=(0.0,1000.0))
     p=(kb=4.64e-7,b=1.78,kg=1.16e2,g=1.32,rho=2.11e-12)
     h=(p,t,ctx)->p.kg*max(ctx.bulk.c/solubility(ctx.fields.T)-1,0.0)^p.g
-    J=(p,t,ctx)->p.kb*ctx.N[4]*max(ctx.bulk.c/solubility(ctx.fields.T)-1,0.0)^p.b
-    model=PBMModel(Growth(PolynomialRate((h,(p,t,ctx)->0.1h(p,t,ctx))))+Nucleation(J,0.0))
+    J=(p,t,ctx)->p.kb*moment(ctx,3)*max(ctx.bulk.c/solubility(ctx.fields.T)-1,0.0)^p.b
+    model=PBMModel(
+        growth=Growth(rate=PolynomialRate((h,(p,t,ctx)->0.1h(p,t,ctx)))),
+        nucleation=Nucleation(rate=J,size=0.0))
     op=compile(model,MomentSet(0:3;coordinate=:length))
     system=PBMSystem((crystals=op,);fields=(p,t)->(T=temperature(t),),
         nonnegative_bulk=(:c,),exchanges=(MomentExchange(:crystals,:c,3;
@@ -43,12 +45,14 @@ function build(;grid=Grid1D(range(0.0,1600.0;length=1601);coordinate=:length),
     supersaturation(ctx)=max(ctx.bulk.c/solubility(ctx.fields.T)-1,0.0)
     G=(L,p,t,ctx)->p.kg*supersaturation(ctx)^p.g*(1+0.1L)
     J=(p,t,ctx)->p.kb*moment(ctx.system,:crystals,3)*supersaturation(ctx)^p.b
-    op=compile(PBMModel(Growth(G)),grid;growth_scheme=scheme,
-        bc=SizeBC(InflowFlux(J),NoFlux()))
+    first(grid.edges)==0 || throw(ArgumentError("Gunawan boundary nucleation requires a grid starting at L=0"))
+    model=PBMModel(growth=Growth(rate=G),nucleation=Nucleation(rate=J,size=0.0))
+    methods=TermMethods(growth=scheme,by_term=(nucleation=BoundaryInjection(:left),))
+    op=compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
     system=PBMSystem((crystals=op,);
         fields=(p,t)->(T=temperature(t),),nonnegative_bulk=(:c,),
         exchanges=(ConservativeExchange(:crystals,:c,(L,p,t,ctx)->p.rho*L^3;
-            mechanisms=(:growth,)),))
+            mechanisms=(:growth,:nucleation)),))
     N0=initial_counts(grid,initial_density)
     PBMProblem(system,(crystals=N0,),tspan;bulk0=(c=float(c0),),p)
 end

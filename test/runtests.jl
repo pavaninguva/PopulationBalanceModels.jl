@@ -162,3 +162,5 @@ include("papers.jl")
 include("sources_moments.jl")
 include("tensor.jl")
 include("method_interfaces.jl")
+
+include("numerical_contracts.jl")

@@ -6,7 +6,7 @@ How does a seeded batch change when particles grow, new particles appear at a
 specified size, and existing particles are removed? The model is
 
 ```math
-\partial_t n+\partial_x(Gn)=J\delta(x-0.2)-kn,
+\frac{\partial n}{\partial t}+\frac{\partial (Gn)}{\partial x}=J\delta(x-0.2)-kn,
 \quad 0\le x\le10,
 ```
 
@@ -29,7 +29,7 @@ The script prints final number, first moment, and an initial step suggestion.
 Number balances creation against removal and any right-boundary escape.
 The first moment also responds to growth and to nuclei entering at nonzero size.
 A useful continuum comparison before boundary loss is
-``\dot M_0=J-kM_0`` and ``\dot M_1=GM_0+0.2J-kM_1``.
+``\frac{dM_0}{dt}=J-kM_0`` and ``\frac{dM_1}{dt}=GM_0+0.2J-kM_1``.
 Compare refinement of these quantities before interpreting a density plot.
 Upwind broadens fronts; the `examples/periodic_weno_transport.jl`
 uses an analytical bin-average reference to study transport accuracy separately.

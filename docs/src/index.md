@@ -13,9 +13,9 @@ become residuals and time updates; [Moment methods](moment_methods.md) covers
 reduced representations. [Observations and estimation](inference.md) maps the
 same forward model to data.
 
-The [case studies](case_studies/index.md) progress from a batch balance to
-coupled populations, collisions, cooling crystallization, two-coordinate
-transport, kinetic estimation, and lipid nanoparticle formation. Read the
+The [case studies](case_studies/index.md) focus on analytical two-coordinate
+transport, coupled cooling crystallization, and lipid nanoparticle formation.
+Shorter worked examples introduce the model and inference APIs. Read the
 [API reference](api.md) alongside these explanations. The [developer guide](development.md)
 covers internals and extensions, and [publishing](publishing.md) describes
 versioned documentation hosting.

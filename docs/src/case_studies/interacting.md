@@ -8,8 +8,8 @@ material? With source size 2, ``J=kc``, and transfer hazard ``r``, the continuum
 bookkeeping is
 
 ```math
-\partial_t n_A=kc\,\delta(x-2)-rn_A,\qquad
-\partial_t n_B=rn_A,\qquad \dot c=-2kc.
+\frac{\partial n_A}{\partial t}=kc\,\delta(x-2)-rn_A,\qquad
+\frac{\partial n_B}{\partial t}=rn_A,\qquad \frac{dc}{dt}=-2kc.
 ```
 
 The conserved quantity is ``c+M_{1,A}+M_{1,B}``, assuming common additive size

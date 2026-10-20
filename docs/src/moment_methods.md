@@ -10,7 +10,7 @@ stores and advances the raw moments themselves:
 For zero unmodelled boundary flux, its weak form includes
 
 ```math
-\dot\mu_k=k\int x^{k-1}Gn\,dx+Jx_c^k+S_k
+\frac{d\mu_k}{dt}=k\int x^{k-1}Gn\,dx+Jx_c^k+S_k
 -\int x^k d(x)n\,dx+\mathcal A_k+\mathcal F_k,
 ```
 

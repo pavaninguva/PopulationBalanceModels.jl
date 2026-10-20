@@ -42,3 +42,9 @@ end
 
 mechanism(::IntegratedBirth)=:birth
 mechanism(::IntegratedNucleation)=:nucleation
+
+IntegratedBirth(;integral)=IntegratedBirth(integral)
+IntegratedNucleation(;rate,fraction,normalization=:total_rate)=
+    IntegratedNucleation(rate,fraction;normalization)
+GaussianNucleation(;rate,center,width,truncation=:renormalize)=
+    GaussianNucleation(rate;center,width,truncation)

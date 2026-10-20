@@ -6,7 +6,7 @@ include("../examples/papers/cej2025_lnp.jl")
     @test Gunawan2004Case2.solubility(32.0)≈0.1166704
     Lmax=0.136/(2*3.48e-4)
     @test Gunawan2004Case2.reported_seed_density(Lmax)<0
-    badgrid=Grid1D(180.0:2:212.0;coordinate=:length)
+    badgrid=Grid1D(vcat(0.0,collect(180.0:2:212.0));coordinate=:length)
     @test_throws ArgumentError Gunawan2004Case2.build(;grid=badgrid,
         initial_density=Gunawan2004Case2.reported_seed_density,c0=0.2)
     seed=L->180.5<=L<=210.5 ? 0.08*(1-((L-195.5)/15)^2) : 0.0

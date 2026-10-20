@@ -3,7 +3,7 @@
 ## Physical question and analytical data
 
 Can a common first-order removal hazard be recovered from two experiments with
-different initial concentrations? For ``\partial_t n=-kn``, total number obeys
+different initial concentrations? For ``\frac{\partial n}{\partial t}=-kn``, total number obeys
 ``M_0(t)=M_0(0)e^{-kt}``. The example generates data analytically with ``k=0.4``
 at times 0, 0.2, 0.6, 1.2, and 2, for initial scales 1 and 2. This independent
 formula avoids generating synthetic data with the same numerical solver used

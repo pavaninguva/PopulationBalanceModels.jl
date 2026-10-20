@@ -146,3 +146,27 @@ metadata with any new figures. Label historical evidence and synthetic inputs.
 Build with the commands in the README. The build executes the first model,
 coupled tutorial, and named-method example, checks references, and treats
 warnings as failures. The [publishing guide](publishing.md) describes deployment.
+
+
+## Updating this checkout
+
+Edits made in this working directory are ordinary local Git changes. Review
+`git status --short` and `git diff` before committing. Run the package tests and
+build the manual, then commit the source, tests, documentation, and benchmark
+evidence together. No archive extraction or replacement of the `.git` directory
+is needed.
+
+```sh
+git diff --stat
+julia --project=. -e 'using Pkg; Pkg.test()'
+julia --project=docs docs/make.jl
+git add src examples test docs CHANGELOG.md
+git diff --cached --stat
+git commit -m "Separate term methods and add paper benchmark comparisons"
+git push origin main
+```
+
+Use the appropriate branch instead of `main` when working through a pull request.
+A normal push to `main` triggers the existing documentation workflow and updates
+`/dev/`. Builds and manifests remain ignored. Keep downloaded PDFs and temporary
+research environments outside the tracked tree unless redistribution is intended.
