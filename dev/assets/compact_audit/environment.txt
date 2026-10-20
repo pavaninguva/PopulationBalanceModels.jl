@@ -1,0 +1,4 @@
+PopulationBalanceModels 0.4.0-DEV; Julia 1.10.3
+Linux x86_64; n=32; t=20; ten periods; both time orders.
+Courant numbers 0.25,1,4; negativity checks disabled, no clipping.
+Maximum sampled Fourier amplification magnitude: 1.0000000000000004
