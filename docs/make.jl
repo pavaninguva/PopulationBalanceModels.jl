@@ -45,7 +45,7 @@ makedocs(;
             "Overview" => "case_studies/index.md",
             "Batch cooling crystallization" => "case_studies/crystallization.md",
             "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
-            "Two-coordinate PBM" => "case_studies/transport.md",
+            "Growth in two particle dimensions" => "case_studies/transport.md",
         ],
         "API reference" => "api.md",
         "Contributing and internals" => "development.md",

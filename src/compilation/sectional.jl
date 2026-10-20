@@ -9,13 +9,14 @@ struct CompiledPBM{M,G,S,B,D,F,P}
 end
 
 """
-    compile(model, grid; growth_scheme=Upwind(), bc=SizeBC(),
+    compile(model, grid; methods=TermMethods(), growth_scheme=Upwind(), bc=SizeBC(),
             domain=BatchDomain(), fields=(cell,t)->(;))
 
 Prepare a conservative sectional operator. Callback context contains `grid`,
 `N` (the local bin concentrations), `cell`, and `fields` (prescribed conditions).
-The reference implementation intentionally computes collision deposition on the
-fly; it is a correctness foundation, not an optimized large-scale CFD engine.
+Methods select numerical treatment by mechanism class or individual term name.
+Named choices in `methods.by_term` take precedence over class choices. Collision
+deposition is evaluated during each residual call.
 """
 function compile(model::PBMModel, grid::Grid1D; growth_scheme=Upwind(), bc=SizeBC(),
                  domain=BatchDomain(),fields=_emptyfields,methods=TermMethods())

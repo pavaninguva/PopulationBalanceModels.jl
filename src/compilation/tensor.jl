@@ -17,7 +17,7 @@ function compile(model::PBMModel,g::Grid2D;growth_scheme=Upwind(),bc=SizeBC2D(),
         throw(ArgumentError("a 2D InflowFlux boundary requires Growth2D"))
     for term in model.terms
         if term isa Growth2D && term.rate isa Tuple
-            length(term.rate)==2 && all(x->x isa Real && isfinite(x),term.rate) || throw(ArgumentError("invalid constant velocities"))
+            _validate_velocity(term.rate)
         end
     end
     prepared=_prepare_terms(model,plan,g;bc)
@@ -32,7 +32,8 @@ function PBMProblem(op::CompiledPBM2D,u0::AbstractMatrix,tspan;p=NamedTuple())
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
     PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
 end
-_tensor_context(op,N,t)=(;grid=op.grid,N,cell=1,fields=op.fields(1,t),bulk=(;),populations=(;),system=nothing)
+_tensor_context(op,N,t)=(;grid=op.grid,operator=op,N,cell=1,fields=op.fields(1,t),
+    bulk=(;),populations=(;),system=nothing)
 
 function rhs!(dN::AbstractMatrix,N::AbstractMatrix,op::CompiledPBM2D,p,t)
     size(dN)==size(N)==size(op.grid) || throw(DimensionMismatch("tensor state size mismatch"))

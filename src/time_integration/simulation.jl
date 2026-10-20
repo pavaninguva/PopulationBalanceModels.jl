@@ -37,6 +37,18 @@ function _checkstate(N,negative_tolerance)
     nothing
 end
 
+# Shared by residual-based and direct evolution methods, including runs that
+# only request the initial state and therefore never enter a stepping loop.
+function _evolution_args(prob,dt,saveat,negative_tolerance,maxsteps)
+    isfinite(dt) && dt>0 || throw(ArgumentError("dt must be finite and positive"))
+    isfinite(negative_tolerance) && negative_tolerance>=0 || throw(ArgumentError("invalid negativity tolerance"))
+    maxsteps isa Integer && maxsteps>0 || throw(ArgumentError("maxsteps must be a positive integer"))
+    ts=float.(collect(saveat)); t0,tf=prob.tspan
+    !isempty(ts) && all(isfinite,ts) && all(diff(ts).>0) && t0<=first(ts)<=last(ts)<=tf ||
+        throw(ArgumentError("saveat must be increasing inside tspan"))
+    ts
+end
+
 """
     simulate(problem; dt, saveat=[t0,tf], check_nonnegative=true,
              negative_tolerance=1e-12, maxsteps=10^7)
@@ -49,11 +61,8 @@ check convergence. For production adaptive/stiff integration use `odeproblem`.
 function simulate(prob::PBMProblem;dt,saveat=collect(prob.tspan),check_nonnegative=true,
                   negative_tolerance=1e-12,maxsteps=10^7,method=SSPRK33())
     method isa SSPRK33 || return _simulate(prob,method;dt,saveat,check_nonnegative,negative_tolerance,maxsteps)
-    isfinite(dt) && dt>0 || throw(ArgumentError("dt must be finite and positive"))
-    isfinite(negative_tolerance) && negative_tolerance>=0 || throw(ArgumentError("negative_tolerance must be nonnegative"))
-    ts=float.(collect(saveat)); t0,tf=prob.tspan
-    !isempty(ts) && all(isfinite,ts) && all(diff(ts).>0) || throw(ArgumentError("saveat must be strictly increasing"))
-    t0<=first(ts)<=last(ts)<=tf || throw(ArgumentError("saveat is outside tspan"))
+    ts=_evolution_args(prob,dt,saveat,negative_tolerance,maxsteps)
+    t0=first(prob.tspan)
     N=copy(prob.u0); U1=similar(N); U2=similar(N); k=similar(N)
     states=typeof(N)[]; t=t0; steps=0
     for target in ts

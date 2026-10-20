@@ -1,5 +1,10 @@
 # Birth, death, and dilution
 
+A local source adds particles directly to a size interval. A removal hazard
+acts on the particles already there. Dilution has the same mathematical loss
+form as a removal hazard, but represents a changing process-volume basis and
+must also be applied to other concentrations.
+
 ## Distributed birth
 
 ```math

@@ -1,105 +1,131 @@
 # Moment methods
 
-`moment(grid,N,k)` still measures a distribution. `MomentSet(0:K)` instead
-stores and advances the raw moments themselves:
+Sometimes the quantities of interest are total number, mean size, or total
+particle material rather than every bin of a distribution. A moment model
+advances integrals directly:
 
 ```math
-\mu_k=\int_0^\infty x^k n(x)\,dx.
+\mu_k(t)=\int_0^\infty x^kn(x,t)\,dx.
 ```
 
-For zero unmodelled boundary flux, its weak form includes
+This differs from calling `moment(grid,N,k)` on a sectional solution. In a
+moment model the moments are the dynamical variables. We need equations for
+their rates, and often an assumption to express those rates using finitely many
+tracked moments.
+
+## Integrate the balance against a particle property
+
+For vanishing unmodelled boundary flux, the growth, source, removal, and collision
+contributions are
 
 ```math
-\frac{d\mu_k}{dt}=k\int x^{k-1}Gn\,dx+Jx_c^k+S_k
--\int x^k d(x)n\,dx+\mathcal A_k+\mathcal F_k,
+\frac{d\mu_k(t)}{dt}
+=k\int_0^\infty x^{k-1}G(x,t)n(x,t)\,dx+J(t)x_c^k+S_k(t)
+-\int_0^\infty x^kd(x,t)n(x,t)\,dx+\mathcal A_k(t)+\mathcal F_k(t),
 ```
+
+with additive-coordinate aggregation
 
 ```math
-\mathcal A_k=\tfrac12\iint[(x+y)^k-x^k-y^k]K(x,y)n(x)n(y)\,dx\,dy,
+\mathcal A_k(t)=\frac12\int_0^\infty\int_0^\infty
+[(x+y)^k-x^k-y^k]K(x,y,t)n(x,t)n(y,t)\,dx\,dy
 ```
+
+and breakage
 
 ```math
-\mathcal F_k=\int a(x)n(x)
-\left[\sum_j\nu_j(x)x_j(x)^k-x^k\right]dx.
+\mathcal F_k(t)=\int_0^\infty a(x,t)n(x,t)
+\left[\sum_j\nu_j(x,t)x_j(x,t)^k-x^k\right]dx.
 ```
 
-For nonadditive coordinates the aggregate coordinate is obtained through
-the declared AdditiveCoordinate map. Boundary losses at zero/infinity are
-not inferred; supply a model with the assumed vanishing flux or explicitly
-extend the equations. In particular, dissolution reaching zero needs a
-particle-extinction treatment beyond these current raw-moment rules.
+For a nonadditive coordinate, the aggregate size is obtained through the declared
+AdditiveCoordinate map. Boundary losses at zero or infinity are not inferred.
+In particular, dissolution reaching zero needs an extinction treatment beyond
+the current raw-moment rules.
+
+## Use an exact closure when the equations close
+
+Affine growth and constant-kernel aggregation in an additive coordinate produce
+a closed hierarchy through any chosen integer order. Declare the polynomial
+structure so the compiler can find its moment dependencies:
+
+```@example moments
+using PopulationBalanceModels
+basis = MomentSet(0:3;coordinate=:volume)
+model = PBMModel(
+    growth=Growth(rate=PolynomialRate(((p,t,ctx)->p.g,0.1))),
+    primary=Nucleation(rate=(p,t,ctx)->p.J,size=0.0),
+    aggregation=Aggregation(ConstantKernel((p,t,ctx)->p.K)),
+)
+operator = compile(model,basis;closure=ExactClosure())
+problem = PBMProblem(operator,[1.0,1.0,2.0,6.0],(0.0,1.0);
+    p=(g=0.2,J=0.1,K=0.3))
+solution = simulate(problem;dt=0.001)
+vec(solution.u[end])
+```
+
+ExactClosure also supports polynomial removal, self-similar polynomial-rate
+breakage, point creation, and MomentSource. Removal and breakage polynomial
+coefficients must be nonnegative; growth coefficients may be signed. Compilation
+rejects equations that need untracked moments. A distributed source must provide
+its raw moments through `MomentSource(J,(k,p,t,ctx)->E_xk)`.
+
+The [cooling-crystallization model](case_studies/crystallization.md) has an exact
+four-moment closure because its growth is affine in length. Its
+`build_moments` routine uses the same kinetic parameters and nucleation callback
+as the sectional builder, and couples the third moment to dissolved concentration.
+This supplies a useful check independent of the sectional discretization.
+
+## Approximate an unclosed hierarchy
+
+General size-dependent rates can require integrals that the tracked moments do
+not determine. The implemented approximation families make different assumptions:
+
+- `QMOM(n)` (also `QuadratureClosure(n)`) reconstructs positive quadrature nodes
+  and weights from moments 0:2n−1. The rate callbacks are evaluated through their
+  weak forms at those nodes. Scaled Hankel inversion is checked by reconstructing
+  the input moments. Empty states are supported; rank-deficient nonempty states
+  fail rather than silently changing node count or repairing moments.
+- `LogNormalClosure(quadrature_order=16)` fits a lognormal density to moments
+  0:2 and integrates its weak forms with cached normal quadrature. Empty and
+  point-mass limits are supported. A three-moment assumed density cannot recover
+  multimodality, even if its weak-form quadrature is accurate.
+
+`realizability` reports necessary Hankel positivity checks. These do not prove
+realizability at singular truncated-moment boundaries. A closure needs its own
+accuracy and convergence assessment; selecting QMOM does not establish agreement
+with a full size distribution for nonlinear nanoparticle kinetics.
+
+## Select weak-form rules and couple populations
+
+The reconstruction family and each term's integration rule can be chosen
+separately. For example:
 
 ```julia
-moments = MomentSet(0:3;coordinate=:volume)
-model = PBMModel(
-    Growth(PolynomialRate(((p,t,ctx)->p.g, 0.1))) +
-    Nucleation((p,t,ctx)->p.J,0.0) +
-    Aggregation(ConstantKernel((p,t,ctx)->p.K)))
-op = compile(model,moments;closure=ExactClosure())
-prob = PBMProblem(op,[1.0,1.0,2.0,6.0],(0.0,1.0);
-    p=(g=0.2,J=0.1,K=0.3))
-sol = simulate(prob;dt=0.001)
+operator = compile(model,basis;method=QMOM(2),
+    methods=TermMethods(growth=ExactMomentRule(),
+                        aggregation=QuadratureMomentRule()))
 ```
 
-ExactClosure supports polynomial growth/removal, point nucleation,
-MomentSource, constant-kernel aggregation in an additive coordinate and
-self-similar polynomial-rate breakage. Removal/breakage polynomial
-coefficients must be nonnegative; growth coefficients may be signed.
-If an equation requires an untracked moment, compilation rejects it.
-It does not silently set missing moments to zero. General distributed birth
-must supply source integrals via `MomentSource(J,(k,p,t,ctx)->E_xk)`.
+Here polynomial growth is integrated analytically while aggregation uses the
+reconstructed quadrature. `closure=` remains available for raw-moment families.
+The reconstruction is shared within a residual evaluation; `term_methods(operator)`
+records the rules used. `examples/moment_closures.jl` exercises all three families.
 
-`QuadratureClosure(n)` uses moments 0:2n-1 to reconstruct positive quadrature
-nodes/weights from scaled Hankel matrices. The same kinetic callbacks then
-evaluate growth, removal, aggregation and daughter weak forms. This is a QMOM
-approximation for general laws, not an exact closure. Each inversion verifies
-the reconstructed moments. Empty all-zero states are supported; rank-deficient
-nonempty moment vectors raise a numerical failure rather than silently reduce
-node count or repair the state. Rank-adaptive inversion is future work.
-`realizability` reports necessary Hankel positivity checks; these alone do not
-prove realizability at singular truncated-moment boundaries.
+Moment populations can share a PBMSystem with 1D sectional populations.
+`MomentExchange(:particles,:c,k;factor=...)` derives bulk exchange from the actual
+moment rate. Its invariant ``c+\mathrm{factor}\,\mu_k`` assumes a fixed conversion
+factor; a changing density or composition needs its additional balance.
+PopulationTransfer and CrossAggregation currently require sectional populations;
+moment interactions can be written explicitly through CustomCoupling.
 
-The implemented moment families can participate in PBMSystem alongside 1D
-sectional populations. Their laws share stage-level bulk/field context.
-`MomentExchange(:particles,:c,k;factor=...)` conserves a selected moment-based
-particle/bulk quantity using the actual moment residual.
-The invariant c+factor*mu_k assumes factor is fixed in time/state; a changing
-density or composition requires its additional balance contribution.
-Sectional PopulationTransfer/CrossAggregation are deliberately restricted to
-sectional populations; moment interactions can be written explicitly through
-CustomCoupling until typed moment transfer rules are added.
+Use MomentObservable, PopulationMoment, or a custom observation to measure the
+result. Histogram predictions require a declared reconstruction or measurement
+model. Optim and SciML adapters can use moment problems, subject to the same
+closure and boundary restrictions.
 
-MomentObservable, PopulationMoment, BulkObservable, custom observations,
-Experiment, CalibrationProblem and the optional Optim/SciML adapters work with
-moment models. Histograms require a declared distribution reconstruction or
-measurement model; finite moments do not determine a unique PSD.
-For standalone 2D distributions use `MomentObservable((kx,ky))` or a
-FunctionObservable for marginals/bins.
-
-Gunawan case 2 has an exact finite moment closure because growth is affine
-in length. `Gunawan2004Case2.build_moments` expresses it through the native
-model API and MomentExchange. The optional tests compare that implementation
-to the separately coded continuum equations. It retains the explicit seed/c0
-requirements and does not resolve the publication's invalid printed seed.
-The CEJ nonlinear size laws and aggregation would require a chosen closure
-and convergence study; equivalence to its full PSD is not established merely
-by choosing QMOM. Multivariate QMOM/CQMOM, DQMOM and maximum-entropy PSD
-reconstruction are not implemented.
-
-## Choosing a family and weak-form rule
-
-`compile(model,basis; method=QMOM(2), methods=TermMethods(growth=ExactMomentRule()))`
-selects a reconstruction family separately from each term's integration rule.
-`closure=` remains accepted for the raw-moment families. `term_methods(op)`
-records the resulting rules. The family shares its reconstruction within a
-residual evaluation.
-
-`LogNormalClosure(quadrature_order=16)` requires moments 0:2, fits a lognormal,
-and uses cached normal quadrature for weak forms. Empty and point-mass limits
-are supported. Quadrature adequacy is checked, but a three-moment assumed
-distribution cannot recover multimodality and needs its own closure study.
-See `examples/moment_closures.jl` for all three implemented families.
-
-The direct-state contract separates solver state from moment values and rates.
-Its external test is an interface check, not a general DQMOM implementation.
-EQMOM, CQMOM, and other families require concrete algorithms and verification.
+The [extension interface](development.md) also supports solver states other than
+raw moments, with explicit maps for moment values and their rates. Its tested
+direct-state example is an extension contract, not a general DQMOM solver.
+EQMOM, CQMOM, multivariate moment closures, and maximum-entropy reconstruction
+remain future implementations.

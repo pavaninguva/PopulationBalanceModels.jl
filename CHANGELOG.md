@@ -2,30 +2,28 @@
 
 ## Unreleased
 
-- Reduced the manual to three ordered case studies: Gunawan Example 2, Shin Figure 4, and Inguva–Braatz Case 2; removed the separate worked-example pages.
-- Replaced the user-facing constant-growth Case 1 comparison with the affine-growth Case 2 model, analytical bin integrals, and an explicit travel-time mesh adapter for exact shifts.
-- Added Figure 4 zero-particle initialization, the full 4320-minute schedule, adaptive-solver export support, and explicit peak-scaled intensity outputs.
-- Kept Gunawan Eq.34 verbatim with a numerical input check; removed the substitute seed as the benchmark default.
-- Moved earlier demonstration and constant-growth results outside the published manual while retaining them as diagnostic evidence.
+- Renamed the package and optional extensions to PopulationBalanceModels, preserving its UUID and version.
+- Made `docs/src/` the authoritative manual and consolidated standalone architecture, numerical, validation, and publishing reports.
+- Rewrote the model tutorials around equations, parameters, rate callbacks, boundaries, numerical treatment, and observations, with executable code blocks.
+- Organized the case studies around three physical problems: batch cooling crystallization, lipid nanoparticle formation, and growth in two particle dimensions.
+- Separated the mathematical and numerical treatment of growth, nucleation, local sources and removal, collisions, and time integration.
+- Added keyword term declarations while retaining positional constructors, including keyword forms for two-coordinate growth and nucleation.
+- Shared crystallization rate callbacks and parameters between sectional and exactly closed moment builders.
+- Made the two-coordinate benchmark and its analytical and mapped references use the same explicit parameters. Added area-weighted density errors and actual physical cell edges to exported fields and plots.
+- Replaced the published manual's constant-growth comparison with the coordinate-dependent growth problem and its analytical solution. Retained earlier diagnostics outside the case studies.
+- Added zero-particle initialization, the full 4320-minute nanoparticle output schedule, adaptive-solver export support, and peak-scaled intensity outputs.
+- Kept the printed crystallization seed literal and checked its nonnegativity before running; removed substitute initialization from the benchmark default.
+- Retained compact/ADI stability, convergence, and sharp-front evidence, including negative undershoots and the restriction to periodic constant growth.
+- Updated navigation, links, versioned documentation deployment, and local contribution instructions. Simplified the README and repository root.
 
-- Separated growth, nucleation, source/removal, collision, and time-integration documentation; wrote derivatives explicitly throughout the manual.
-- Added named keyword term declarations while retaining positional constructors.
-- Added the Inguva–Braatz constant-growth Gaussian case, analytical bin-average comparisons, and two-dimensional solution/error plots.
-- Audited periodic compact/ADI amplification, long-time norm stability, and agreement with independent dense matrix updates; retained measured negative lobes.
-- Added a 1000-second Gunawan-law coupling/refinement comparison with independent moment equations and explicitly labelled demonstration initialization.
-- Added a Shin-model result export interface requiring input provenance; kept synthetic LNP figures distinct from the pending paper reproduction.
-- Fixed the LNP recipe's moving narrow nucleation source by integrating bin fractions instead of sampling only bin centres; preserved the explicit unnormalized-amplitude convention.
-- Made growth and boundary nucleation separate named terms in the crystallization recipe and included both in discrete material exchange.
+### Fixes
 
-- Renamed the package and optional extensions to PopulationBalanceModels; preserved the UUID and version.
-- Reorganized the manual around model definition, numerical treatment, coupling, inference, and case studies.
-- Consolidated standalone development reports into the authoritative documentation under `docs/src/`.
-- Reworked examples into case studies tied to descriptive runnable scripts.
-- Documented supported combinations, numerical assumptions, conservation, and extension interfaces.
-- Updated manual navigation, links, assets, and versioned documentation deployment configuration.
-- Simplified the README and repository root.
-- Preserved scientific limitations and distinguished demonstration recipes from validated paper reproductions.
+- Integrated narrow moving Gaussian nucleation sources over bins in the nanoparticle recipe, preserving the explicit source-normalization convention.
+- Included boundary nucleation in the crystallization recipe's discrete material exchange.
+- Supplied the operator in two-coordinate callback contexts so `moment(ctx,(kx,ky))` works consistently with other representations.
+- Validated two-coordinate velocity callback results as two finite real components, with a direct error for invalid output.
+- Used common evolution-argument validation for SSPRK33 and direct transport methods; invalid step limits are now rejected even for initial-state-only output.
 
-The inherited development work includes sectional and moment models, shared bulk
+The inherited implementation includes sectional and moment models, shared bulk
 balances, population interactions, inference adapters, and restricted two-coordinate
 transport. Earlier internal milestones are not treated as published releases.

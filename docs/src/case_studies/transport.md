@@ -1,10 +1,21 @@
-# 3. A two-coordinate population balance
+# Growth in two particle dimensions
 
-## Case 2: size-dependent growth
+A particle can grow at different rates along two dimensions. A distribution
+that is initially narrow then moves and spreads in the plane of those particle
+properties. A useful numerical test is to predict both effects without adding
+artificial broadening or losing particles.
 
-Case 2 in [Inguva and Braatz (2023)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2023.pdf)
-uses two internal particle coordinates, ``a_1`` and ``a_2``. The joint number
-density ``f(a_1,a_2,t)`` satisfies
+We choose a growth law for which each particle trajectory can be calculated
+exactly. This gives a reference for the whole distribution and lets us compare
+upwind, WENO5, and an exact shift on a transformed mesh. The model and initial
+condition are those of
+[Inguva and Braatz (2023), Case 2](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2023.pdf).
+The two coordinates below describe particles, not positions in a vessel.
+
+## The population balance
+
+Let ``f(a_1,a_2,t)`` be the joint number density. Particles grow without nucleation,
+aggregation, or breakage:
 
 ```math
 \frac{\partial f(a_1,a_2,t)}{\partial t}
@@ -12,92 +23,151 @@ density ``f(a_1,a_2,t)`` satisfies
 +\frac{\partial\!\left[G_2(a_2)f(a_1,a_2,t)\right]}{\partial a_2}=0,
 ```
 
+where
+
 ```math
 G_1(a_1)=0.1+0.05a_1,\qquad G_2(a_2)=0.5+0.25a_2,
 \qquad 0\le a_1,a_2\le2.
 ```
 
-There are no nucleation or collision terms in this case. The velocities increase
-with coordinate, so each divergence must include the product of velocity and
-density. Replacing it by ``G_i\,\partial f/\partial a_i`` would solve a different
-equation and fail to account for stretching of the distribution.
+Both velocities depend on the particle coordinate. Consequently, growth changes
+the height and width of the distribution as well as its position. Keeping the
+product inside each derivative accounts for this stretching.
 
-The initial condition is
+Initially,
 
 ```math
 f(a_1,a_2,0)=50\exp\!\left[-\frac{(a_1-0.4)^2}{0.005}
 -\frac{(a_2-0.4)^2}{0.005}\right].
 ```
 
-The finite-volume calculations use zero incoming flux at the lower edges and
-no flux at the upper edges. At the comparison time ``t=1``, the narrow density
-is well inside the domain; boundary tails are negligible. The Gaussian's
-standard deviation is 0.05 in each coordinate, not one grid cell.
+The standard deviation is 0.05 in each coordinate. This is a property of the
+initial population and stays fixed when the numerical grid is refined. We
+compare solutions at ``t=1``, before appreciable population reaches an upper edge.
+The physical-grid solve uses zero incoming density at the lower edges and
+closed upper edges.
 
-## Analytical solution
+## Enter the growth law and parameters
 
-Define the starting points of the characteristics that arrive at ``(a_1,a_2)``:
+The script `examples/inguva_braatz_case2.jl` contains the model, reference
+integrals, and comparison runner. We use its parameter constructor so that the
+numerical and analytical calculations read the same values:
+
+```@example growth2d
+using PopulationBalanceModels
+include(joinpath(pkgdir(PopulationBalanceModels),"examples","inguva_braatz_case2.jl"))
+import .InguvaBraatzCase2
+const study = InguvaBraatzCase2
+p = study.parameters()
+```
+
+`offset` and `slope` specify the two affine velocities; `amplitude`, `center`,
+and `width` specify the initial Gaussian. The callback used in the script is:
+
+```@example growth2d
+function growth_rate(a1,a2,p,t,ctx)
+    (p.offset[1] + p.slope[1]*a1,
+     p.offset[2] + p.slope[2]*a2)
+end
+model = PBMModel(growth=Growth2D(rate=growth_rate))
+growth_rate(0.4,0.4,p,0.0,nothing)
+```
+
+Growth2D passes both face coordinates and expects two coordinate velocities.
+The numerical method is supplied separately when the model is compiled.
+
+## Integrate the initial density over bins
+
+A finite-volume state contains a number in each rectangular bin:
+
+```math
+N_{ij}(t)=\int_{a_{1,i-1/2}}^{a_{1,i+1/2}}
+\int_{a_{2,j-1/2}}^{a_{2,j+1/2}}f(a_1,a_2,t)\,da_2\,da_1.
+```
+
+The reference routine evaluates these integrals from the Gaussian, avoiding
+an initial midpoint approximation. Here we use a small grid for an interactive run:
+
+```@example growth2d
+grid = Grid2D(range(0,2;length=41),range(0,2;length=41))
+initial = study.reference(grid,0.0,p)
+sum(initial)
+```
+
+To reconstruct a density for plotting, call `density(grid,initial)`. Dividing
+by one width rather than the bin area would give the wrong two-dimensional density.
+
+## Choose face fluxes, boundaries, and a time step
+
+```@example growth2d
+boundary = SizeBC(OpenBoundary(),NoFlux())
+operator = compile(model,grid;
+    methods=TermMethods(growth=WENO5(epsilon=1e-12)),
+    bc=SizeBC2D(x=boundary,y=boundary))
+problem = PBMProblem(operator,initial,(0.0,1.0);p)
+dt = suggest_dt(operator,initial,p,0.0;cfl=0.4)
+solution = simulate(problem;method=SSPRK33(),dt,saveat=[1.0],
+    check_nonnegative=false)
+nothing # hide
+```
+
+Each directional face flux uses its own local growth velocity. The time-step
+estimate limits the sum of outgoing directional Courant numbers to 0.4. The
+velocity is independent of time and state here, so this estimate does not
+need updating during the run.
+
+Upwind is selected by changing `growth=WENO5(...)` to `growth=Upwind()` and
+recompiling. SSPRK33 advances either residual. WENO5 has no positivity limiter;
+this diagnostic run disables rejection of negative populations so that the
+comparison can report undershoots. Ordinary simulation enables that check.
+Neither path clips negative values.
+
+## Compare with the analytical solution
+
+The particle trajectories obey ``da_i/dt=G_i(a_i)``. Tracing back from a final
+coordinate to its initial value gives
 
 ```math
 \xi_1=(a_1+2)e^{-0.05t}-2,\qquad
 \xi_2=(a_2+2)e^{-0.25t}-2.
 ```
 
-Conservation along the expanding characteristics gives
+Conservation of particle number along these expanding trajectories gives
 
 ```math
 f(a_1,a_2,t)=f(\xi_1,\xi_2,0)e^{-0.30t}.
 ```
 
-This is equivalent to Eq. 60 in the paper. The factor ``e^{-0.30t}`` is essential:
-it accounts for the area expansion in coordinate space. The numerical peak
-moves near ``(0.5231,1.0817)`` at time 1, rather than the ``(1.4,1.4)`` location
-of the constant-growth Case 1.
+Zero incoming density is used when a starting point lies outside the initial
+domain. The exponential factor accounts for area expansion. The initial peak
+at ``(0.4,0.4)`` travels to approximately ``(0.5231,1.0817)`` at ``t=1`` and its
+height falls from 50 to ``50e^{-0.30}``.
 
-Comparisons use the integral of this solution over each bin, not its value at
-a bin centre. The exact bin number follows by mapping the bin's edges back to
-``\xi_1,\xi_2`` and integrating the initial Gaussian there.
+We compare each numerical bin number with the integral of this solution over
+the same bin:
 
-## Define the model and initial state in Julia
-
-```julia
-using PopulationBalanceModels
-include("examples/inguva_braatz_case2.jl")
-import .InguvaBraatzCase2
-
-function growth_rate(a1,a2,p,t,ctx)
-    (0.1 + 0.05a1, 0.5 + 0.25a2)
-end
-
-model = PBMModel(growth=Growth2D(growth_rate))
-grid = Grid2D(range(0,2;length=101),range(0,2;length=101))
-initial_bin_numbers = InguvaBraatzCase2.reference(grid,0.0)
-boundary = SizeBC(OpenBoundary(),NoFlux())
-operator = compile(model,grid;
-    methods=TermMethods(growth=WENO5(epsilon=1e-12)),
-    bc=SizeBC2D(x=boundary,y=boundary))
-problem = PBMProblem(operator,initial_bin_numbers,(0.0,1.0))
-solution = simulate(problem;method=SSPRK33(),dt=0.4/(0.2/0.02 + 1.0/0.02),
-    saveat=[1.0],check_nonnegative=false)
+```@example growth2d
+truth = study.reference(grid,1.0,p)
+final = solution.u[end]
+(integrated_absolute_error=sum(abs,final-truth),
+ minimum_density=minimum(density(grid,final)))
 ```
 
-`Growth2D` receives both coordinates and returns their two velocities. `Grid2D`
-stores integrated numbers, and `density(grid,N)` divides by the physical bin
-areas for plotting. The quoted time step bounds the sum of both directional
-Courant numbers by 0.4. Diagnostic solves report negative lobes instead of
-clipping them. Standard simulation keeps its nonnegativity check enabled.
+This avoids interpreting the difference between a centre value and a bin
+average as a solver error.
 
-## Exact shifts on a transformed mesh
+## Shift on a travel-time mesh
 
-The paper also transforms each coordinate to a particle travel time:
+The coordinate-dependent velocities can also be handled by changing variables.
+Define the travel time from the origin along each growth trajectory:
 
 ```math
 \tau_1(a_1)=\frac{\ln(1+a_1/2)}{0.05},\qquad
-\tau_2(a_2)=\frac{\ln(1+a_2/2)}{0.25},
-\qquad F(\tau_1,\tau_2,t)=G_1(a_1)G_2(a_2)f(a_1,a_2,t).
+\tau_2(a_2)=\frac{\ln(1+a_2/2)}{0.25}.
 ```
 
-The transformed density obeys
+The density per travel-time area is
+``F(\tau_1,\tau_2,t)=G_1(a_1)G_2(a_2)f(a_1,a_2,t)``. It satisfies
 
 ```math
 \frac{\partial F(\tau_1,\tau_2,t)}{\partial t}
@@ -105,48 +175,82 @@ The transformed density obeys
 +\frac{\partial F(\tau_1,\tau_2,t)}{\partial \tau_2}=0.
 ```
 
-A uniform mesh with ``\Delta\tau_1=\Delta\tau_2=\Delta t`` permits one-cell shifts
-in each direction. The case-specific adapter implements the analytical maps
-and initializes the transformed bin numbers from the same physical integrals:
+Only in these new coordinates are the velocities constant. A uniform
+travel-time mesh with ``\Delta\tau_1=\Delta\tau_2=\Delta t`` lets ExactShift
+move the state one cell in each direction without interpolation:
 
-```julia
-mapped = InguvaBraatzCase2.mapped_problem(20) # Δt = 0.05; 20 steps to t = 1
-solution = simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
-physical_density = density(mapped.physical_grid,solution.u[end])
+```@example growth2d
+mapped = study.mapped_problem(20;p) # 20 steps of 0.05
+shifted = simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
+physical_density = density(mapped.physical_grid,shifted.u[end])
+sum(abs,shifted.u[end]-study.reference(mapped.physical_grid,1.0,p))
 ```
 
-Bin number is invariant under the coordinate transformation. Do not multiply
-it again by ``G_1G_2``; that factor converts density per physical area into
-density per travel-time area. Divide the output bin numbers by physical cell
-areas when returning to ``f``.
+Bin number is unchanged by the transformation; do not multiply it by the
+Jacobian a second time. To recover ``f``, divide by the **physical** bin areas,
+as in the last block.
 
-The mapped grid contains only whole travel-time cells inside the physical
-0–2 domain. Its final partial cells are omitted, and the resulting extents are
-recorded in the CSV. It uses paired open boundaries and a different nonuniform
-physical grid from the uniform FV comparison. This is a bin-average adaptation
-of the paper's transformed-mesh idea, not a claim that the nodal arrays or
-SharpClaw settings are identical. The core ExactShift method still accepts
-only constant-speed transport; the explicit case adapter supplies that form.
+The adapter keeps whole travel-time cells inside the 0–2 domain, omits fractional
+end cells, and uses paired open boundaries. Its nonuniform physical mesh and
+actual extents are recorded with the results. The comparison adapts the
+transformed-mesh method to bin averages; it does not reproduce the paper's
+nodal implementation or SharpClaw settings. ExactShift itself still requires
+constant velocities and integer cell displacements.
 
-HOCADI also accepts only homogeneous constant growth on periodic uniform axes.
-It is not applied directly to this variable-growth physical problem. Its
-[separate stability audit](../methods/time.md) remains a numerical-method test.
+HOCADI is also restricted to constant velocities, and additionally requires
+periodic boundaries. Applying it directly to this physical problem is unsupported.
+Its [periodic stability audit](../methods/time.md) tests the implemented compact
+variant separately and reports its oscillations and negative undershoots.
 
-## Run and plot locally
+## Generate the two-dimensional plots
 
 ```sh
 julia --project=. examples/inguva_braatz_case2.jl
 python docs/benchmarks/plot_case_studies.py transport
 ```
 
-The runner compares upwind, WENO5, and mapped exact shifts with the analytical
-bin averages. It writes 2D fields, RMSE, maximum density error, integrated L1
-error, minima, and negative number to `docs/src/assets/inguva_case2/`. The
-Figure 4 layout and refinement comparison should be read with the declared
-nodal/bin-average and mesh differences in mind.
+The runner compares uniform 50-, 100-, and 200-bin axes and corresponding
+transformed meshes. It writes solution fields and signed errors, together with
+integrated absolute error, maximum error, minima, and negative number.
+`RMSE` is the unweighted root mean square over bins; `RMS_area` weights squared
+density errors by physical bin area. They agree on a uniform mesh but generally
+differ on the transformed mesh. Error norms from different meshes must be read
+with their respective resolutions and extents.
+
+The following values are read from the saved comparison data:
+
+```@eval
+using Markdown, PopulationBalanceModels
+file=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","inguva_case2","errors.csv")
+if isfile(file)
+    lines=split.(readlines(file),',')
+    columns=first(lines)
+    value(row,key)=row[findfirst(==(key),columns)]
+    labels=Dict("upwind"=>"Upwind","weno5"=>"WENO5","mapped_shift"=>"Mapped exact shift")
+    table=["| Method | Bins (a₁ × a₂) | Area RMS density error | Minimum density |",
+           "|:--|--:|--:|--:|"]
+    for row in lines[2:end]
+        value(row,"resolution") in ("100","200") || continue
+        method=labels[value(row,"method")]
+        nx=value(row,"nx");ny=value(row,"ny")
+        rms=round(parse(Float64,value(row,"RMS_area"));sigdigits=3)
+        minimum=round(parse(Float64,value(row,"minimum_density"));sigdigits=3)
+        push!(table,"| $method | $nx × $ny | $rms | $minimum |")
+    end
+    Markdown.parse(join(table,'\n'))
+else
+    Markdown.parse("Run the comparison to generate the error table.")
+end
+```
+
+Upwind spreads the narrow peak substantially. WENO5 reduces that broadening
+under refinement but still produces small negative lobes. The mapped shift
+matches its own analytical bin integrals to roundoff because this separable
+growth law permits an exact travel-time map and compatible integer shifts.
+That result does not apply to arbitrary size-dependent velocities.
 
 ```@eval
 using Markdown, PopulationBalanceModels
 file=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","inguva_case2","solutions.png")
-Markdown.parse(isfile(file) ? "![Case 2 analytical and numerical densities](../assets/inguva_case2/solutions.png)\n\n![Case 2 signed errors](../assets/inguva_case2/errors.png)" : "Run the commands above to generate the two-dimensional solution and signed-error panels, then rebuild the manual.")
+Markdown.parse(isfile(file) ? "![Analytical and computed densities for coordinate-dependent growth](../assets/inguva_case2/solutions.png)\n\n![Signed density errors](../assets/inguva_case2/errors.png)" : "Run the commands above and rebuild the manual to display the solution and signed-error panels.")
 ```

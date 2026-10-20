@@ -78,17 +78,22 @@ function build(;grid,initial_lipid,FRR,tau,temperature,viscosity,solubility,
     source=nucleation_normalization===:total_rate ? gaussian :
         IntegratedNucleation(J,(lo,hi,p,t,ctx)->sqrt(2π)*p.nucleation_width*
             physical.fraction(lo,hi,p,t,ctx);normalization=:density_amplitude)
-    G=(L,p,t,ctx)->p.kg*L*ctx.fields.Cinfinity*
-        (supersaturation(ctx)-equilibrium_ratio(L,ctx.fields.w,ctx.fields.T))
-    beta=(L,M,p,t,ctx)->p.kPEG*attachment_without_peg(L,M,ctx.fields.w,ctx.fields.T)*
-        brownian_kernel(L,M,ctx.fields.T,ctx.fields.mu)
+    function growth_rate(L,p,t,ctx)
+        p.kg*L*ctx.fields.Cinfinity*
+            (supersaturation(ctx)-equilibrium_ratio(L,ctx.fields.w,ctx.fields.T))
+    end
+    function coalescence_kernel(L,M,p,t,ctx)
+        p.kPEG*attachment_without_peg(L,M,ctx.fields.w,ctx.fields.T)*
+            brownian_kernel(L,M,ctx.fields.T,ctx.fields.mu)
+    end
     geometry=AdditiveCoordinate(L->L^3,cbrt)
     model=PBMModel(
         nucleation=source,
-        growth=Growth(rate=G),
-        coalescence=Aggregation(beta;coordinate_map=geometry,overflow=overflow),
+        growth=Growth(rate=growth_rate),
+        coalescence=Aggregation(coalescence_kernel;coordinate_map=geometry,overflow=overflow),
         dilution=Dilution(rate=(L,p,t,ctx)->ctx.fields.dilution))
-    op=compile(model,grid;growth_scheme=scheme,bc=SizeBC(NoFlux(),NoFlux()))
+    methods=TermMethods(growth=scheme,aggregation=FixedPivot())
+    op=compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
     exchange=ConservativeExchange(:lnp,:lipid,(L,p,t,ctx)->p.rho*π/6*L^3;
         mechanisms=(:growth,:nucleation))
     sys=PBMSystem((lnp=op,);fields,exchanges=(exchange,),nonnegative_bulk=(:lipid,),

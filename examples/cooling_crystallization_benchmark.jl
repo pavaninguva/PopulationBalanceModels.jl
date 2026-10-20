@@ -35,7 +35,7 @@ function run_benchmark(;initial_density=reported_seed_density,c0,provenance,
     isempty(strip(provenance)) && throw(ArgumentError("record the source of the initial conditions"))
     mkpath(output); times=collect(range(0,tf;length=101))
     initial=vcat(initial_moments,c0)
-    params=(kb=4.64e-7,b=1.78,kg=116.0,g=1.32,rho=2.11e-12)
+    params=parameters()
     truth=reference(initial,params,times)
     check=reference(initial,params,times;dt=0.005)
     reference_error=maximum(abs.(last(truth).-last(check))./max.(abs.(last(check)),eps()))

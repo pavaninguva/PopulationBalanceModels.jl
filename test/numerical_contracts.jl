@@ -112,6 +112,60 @@ include("../examples/inguva_braatz_case2.jl")
     @test_throws ArgumentError simulate(prob;method=ExactShift(),dt=0.05)
 end
 
+@testset "Shared growth parameters and physical error measures" begin
+    study=InguvaBraatzCase2
+    p=study.parameters(offset=(0.15,0.45),slope=(0.1,0.2))
+    prob=study.problem(20;p)
+    @test collect(only(prob.operator.model.terms).rate(0.4,0.4,prob.p,0.0,nothing))≈[0.19,0.53]
+    x=(p.center[1]+p.offset[1]/p.slope[1])*exp(p.slope[1])-p.offset[1]/p.slope[1]
+    y=(p.center[2]+p.offset[2]/p.slope[2])*exp(p.slope[2])-p.offset[2]/p.slope[2]
+    @test study.analytical_density(x,y,1.0,p)≈p.amplitude*exp(-sum(p.slope)) rtol=1e-13
+    # A parameter change must affect both the mapped transport and reference.
+    for slopes in ((0.1,0.2),(0.0,0.0))
+        q=merge(p,(slope=slopes,));mapped=study.mapped_problem(20;p=q)
+        sol=simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
+        @test sum(abs,last(sol.u).-study.reference(mapped.physical_grid,1.0,q))<3e-13
+    end
+    # Subdivide only the low-error region of the same piecewise constant field.
+    # An area norm must stay fixed even though the unweighted bin mean changes.
+    norms=map(([0.0,0.5,1.0],[0.0,0.125,0.25,0.5,1.0])) do edges
+        g=Grid2D(edges,[0.0,0.5,1.0]);area=g.x.widths*g.y.widths'
+        f=[x<0.5 ? 1.0 : 3.0 for x in g.x.centers,y in g.y.centers]
+        study.metrics(f.*area,zeros(size(g)),g)
+    end
+    @test norms[1].RMS_area≈sqrt(5)
+    @test norms[2].RMS_area≈norms[1].RMS_area
+    @test norms[1].RMSE!=norms[2].RMSE
+
+    recipe=Gunawan2004Case2
+    p=recipe.parameters(kg=20.0,size_factor=0.2)
+    mu=[1.0,200.0,40000.0,8e6];c0=1.05*recipe.solubility(32.0)
+    prob=recipe.build_moments(;initial_moments=mu,c0,p)
+    du=similar(prob.u0);rhs!(du,prob.u0,prob.operator,p,0.0)
+    reference=similar(prob.u0);recipe.moment_rhs!(reference,vcat(mu,c0),p,0.0)
+    @test du≈reference rtol=1e-13
+end
+
+@testset "Evolution input contracts and two-coordinate rate errors" begin
+    g=Grid2D(0.0:0.1:1.0,0.0:0.1:1.0)
+    for bad in ((1.0,), (1.0,2.0,3.0), (NaN,1.0), ("a",1.0))
+        @test_throws ArgumentError compile(PBMModel(Growth2D(rate=bad)),g)
+        op=compile(PBMModel(Growth2D(rate=(x,y,p,t,ctx)->bad)),g)
+        @test_throws ArgumentError rhs!(zeros(size(g)),ones(size(g)),op,(;),0.0)
+    end
+    periodic=SizeBC(Periodic(),Periodic())
+    op=compile(PBMModel(Growth2D(rate=(1.0,1.0))),g;bc=SizeBC2D(x=periodic,y=periodic))
+    prob=PBMProblem(op,ones(size(g)),(0.0,1.0))
+    state_dependent=compile(PBMModel(Growth2D(rate=(x,y,p,t,ctx)->(moment(ctx,(0,0)),0.0))),g;
+        bc=SizeBC2D(x=periodic,y=periodic))
+    @test suggest_dt(state_dependent,ones(size(g)),(;),0.0)≈0.0005
+    for method in (SSPRK33(),ExactShift(),HOCADI())
+        @test_throws ArgumentError simulate(prob;method,dt=0.1,saveat=[0.0],maxsteps=0)
+        @test_throws ArgumentError simulate(prob;method,dt=0.1,maxsteps=1.5)
+        @test_throws ArgumentError simulate(prob;method,dt=0.1,saveat=[0.2,0.1])
+    end
+end
+
 @testset "Shin Figure 4: zero particle initialization and long output schedule" begin
     grid=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
     material=(temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->1.0,

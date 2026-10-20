@@ -1,51 +1,84 @@
 # Coupled populations
 
-The two populations below share a scalar solute state. Nucleation consumes
-solute and a transfer interaction moves particles between populations.
+A process can contain several particle populations that share the same liquid
+phase. Each distribution has its own balance, but its rates may depend on a
+common solute concentration. Transfers between populations must remove the
+source particles and create the corresponding destination particles in the
+same calculation.
+
+Consider precursors created from solute at size ``v_c=2``. They become products
+with hazard ``h``, retaining their size. For an additive volume coordinate,
+
+```math
+\frac{\partial n_A(v,t)}{\partial t}
+=k c(t)\delta(v-v_c)-h n_A(v,t),
+```
+
+```math
+\frac{\partial n_B(v,t)}{\partial t}=h n_A(v,t),\qquad
+\frac{dc(t)}{dt}=-v_c k c(t).
+```
+
+This is a simple transfer model: each newly created precursor consumes ``v_c``
+units of solute, while conversion to product moves existing material. The total
+``c+\int_0^\infty v[n_A(v,t)+n_B(v,t)]\,dv`` should stay fixed.
+
+## Compile each population
 
 ```@example coupled
 using PopulationBalanceModels
 
-grid = Grid1D(0.5:1.0:10.5)
+grid = Grid1D(0.5:1.0:10.5;coordinate=:volume)
 precursors = compile(PBMModel(
-    Nucleation((p, t, ctx) -> p.k * ctx.bulk.c, 2.0)), grid)
-products = compile(PBMModel(), grid)
-
-system = PBMSystem((precursors=precursors, products=products);
-    interactions=(
-        PopulationTransfer(:precursors, :products,
-            (size, p, t, ctx) -> p.transfer),
-    ),
-    exchanges=(
-        ConservativeExchange(:precursors, :c,
-            (size, p, t, ctx) -> size),
-    ),
-    nonnegative_bulk=(:c,))
-
-problem = PBMProblem(system,
-    (precursors=zeros(length(grid)), products=zeros(length(grid))),
-    (0.0, 3.0); bulk0=(c=5.0,), p=(k=0.1, transfer=0.3))
-solution = simulate(problem; dt=0.01, saveat=0.0:0.25:3.0)
-final = stateview(problem, solution.u[end])
-
-@assert bulk(problem, solution.u[end], :c) >= 0.0
-(precursor_number=sum(population(problem, solution.u[end], :precursors)),
- product_number=sum(population(problem, solution.u[end], :products)),
- solute=bulk(problem, solution.u[end], :c))
+    primary=Nucleation(rate=(p,t,ctx)->p.k*ctx.bulk.c,size=2.0)),grid)
+products = compile(PBMModel(),grid)
+nothing # hide
 ```
 
-The system packs all states into one solver vector and evaluates their current
-values together at every time-integration stage. Laws can access `ctx.bulk`,
-`ctx.populations`, `ctx.fields` and `ctx.system`.
+The precursor callback reads the **current** shared solute concentration. The
+product operator is empty because this population changes only through transfer.
+The populations could use different grids; here matching grids make the material
+balance especially easy to inspect.
 
-`ConservativeExchange` derives the bulk exchange from the selected discrete
-population contribution with a fixed particle weight. Declare transfers and
-other material contributions consistently with the physical balance you intend.
+## Add transfer and solute exchange
 
-The current coupled-system backend supports named one-coordinate sectional and
-moment populations. The standalone two-coordinate transport backend is not yet
-a general coupled two-coordinate system solver.
+```@example coupled
+system = PBMSystem((precursors=precursors,products=products);
+    interactions=(PopulationTransfer(:precursors,:products,
+        (size,p,t,ctx)->p.transfer),),
+    exchanges=(ConservativeExchange(:precursors,:c,
+        (size,p,t,ctx)->size),),
+    nonnegative_bulk=(:c,))
+nothing # hide
+```
 
+PopulationTransfer removes precursors and deposits products. ConservativeExchange
+subtracts the material created by nucleation from solute. Transfer does not
+consume solute again: it conserves material between the two particle populations.
+
+## Initialize and advance the shared state
+
+```@example coupled
+problem = PBMProblem(system,
+    (precursors=zeros(length(grid)),products=zeros(length(grid))),
+    (0.0,3.0);bulk0=(c=5.0,),p=(k=0.1,transfer=0.3))
+solution = simulate(problem;dt=0.01,saveat=0.0:0.25:3.0)
+
+final = solution.u[end]
+A = population(problem,final,:precursors)
+B = population(problem,final,:products)
+c = bulk(problem,final,:c)
+@assert abs(c+moment(grid,A,1)+moment(grid,B,1)-5.0) < 1e-12
+(precursor_number=sum(A),product_number=sum(B),solute=c)
+```
+
+PBMSystem packs the populations and concentration into one solver vector. At
+every integration stage it evaluates their derivatives from the same state.
+`population`, `bulk`, and `stateview` recover named views from that vector.
+Freezing concentration during a particle update would define a different method.
+
+The coupled backend accepts named 1D sectional and moment populations. The
+standalone Grid2D transport operator is not yet a coupled-system population block.
 
 ## Shared state and independent representations
 

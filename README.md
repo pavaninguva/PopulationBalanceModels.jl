@@ -21,8 +21,8 @@ julia --project=docs docs/make.jl
 
 Sectional collisions use fixed pivot. Moment closures and high-order transport
 have method-specific restrictions; see the [numerical manual](docs/src/numerical_methods.md).
-The Gunawan and CEJ examples explicitly use demonstration inputs and do not
-establish published-figure reproduction. CFD coupling is deferred.
+The cooling-crystallization comparison has an unresolved printed seed input;
+the nanoparticle model requires explicit material closures. Their case-study
+pages describe these limits. CFD coupling is deferred.
 
 See [contributing](CONTRIBUTING.md), [changes](CHANGELOG.md), and the [MIT license](LICENSE).
-No registry availability is asserted.

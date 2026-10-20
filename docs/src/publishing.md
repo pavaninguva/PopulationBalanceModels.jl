@@ -27,7 +27,7 @@ versioned manual addresses are:
 | Release manual | `https://pavaninguva.github.io/PopulationBalanceModels.jl/stable/` |
 
 URL installation uses `Pkg.add(url=repository_url)` followed by
-`using PopulationBalanceModels`. Registry availability is not assumed.
+`using PopulationBalanceModels`.
 
 ## Versioned GitHub Pages deployment
 
@@ -44,9 +44,7 @@ credentials or local environment files.
 In repository Settings → Pages choose deployment from branch `gh-pages` at
 `/ (root)`. Main builds publish `/dev/`. After an ordinary `vX.Y.Z` release tag
 with a matching package version, Documenter supplies versioned pages and the
-`/stable/` alias. Stable is a version alias, not a scientific validation claim.
-The development version remains `0.4.0-DEV`; this archive does not create a
-release, register the package, push changes, or publish documentation.
+`/stable/` alias. The current development version is `0.4.0-DEV`.
 
 If deployment fails, check the Documentation job, matching SSH deploy key and
 secret, actual repository slug, and Pages branch settings. A missing `/stable/`

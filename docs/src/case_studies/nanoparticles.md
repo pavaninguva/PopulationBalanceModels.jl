@@ -1,12 +1,57 @@
-# 2. Lipid nanoparticle formation
+# Lipid nanoparticle formation
 
-## Population balance
+Mixing an ethanolic lipid solution with water lowers lipid solubility. The
+resulting supersaturation creates particles, feeds their growth, and changes
+as lipid leaves solution. Coalescence then changes the size distribution even
+when little free lipid remains. Predicting a measured mean diameter requires
+following the distribution through both formation and subsequent incubation.
 
-The second study targets the model curves in Figure 4 of
+We model these processes with a diameter population balance coupled to free
+lipid. The formulation is based on
 [Shin et al. (2025)](https://web.mit.edu/braatzgroup/Shin_ChemEngJ_2025.pdf).
-Let ``f(L,t)`` be the number density of particles of diameter ``L`` at time ``t``.
-Nucleation creates new particles, growth changes their diameters, and
-coalescence combines two particles:
+The comparison of interest is the calculated distributions and mean-diameter
+history in Figure 4. We start with no particles and follow the calculation to
+4320 minutes; the material inputs needed to complete that comparison are
+listed below.
+
+## Start with dissolved lipid
+
+Let ``f(L,t)`` be the number density per unit diameter and per unit process
+volume. Initially,
+
+```math
+f(L,0)=0.
+```
+
+For instantaneous mixing, an organic-feed concentration of 10 mg/mL and an
+aqueous-to-organic flow-rate ratio of 3 give
+
+```math
+c(0)=\frac{10}{1+3}=2.5\ \mathrm{kg\,m^{-3}},\qquad
+w=\frac{3}{1+3}=0.75,
+```
+
+where ``w`` is the aqueous volume fraction. A concentration in mg/mL has the
+same numerical value in kg/m³. Empty particle bins therefore coexist with a
+nonzero dissolved concentration.
+
+The recipe uses meters, seconds, kelvin, and kg/m³ internally. Its adapter
+sets these operating conditions and rejects a nonzero initial particle array:
+
+```julia
+using PopulationBalanceModels
+include("examples/shin_lnp_reproduction.jl")
+import .ShinLNPReproduction
+
+# The input file supplies the grid and material functions described below.
+config = include("/path/to/nanoparticle_inputs.jl")
+problem = ShinLNPReproduction.figure4_problem(;config.inputs...)
+@assert all(iszero,population(problem,problem.u0,:lnp))
+```
+
+## Write the population balance
+
+The balance contains diameter transport, nucleation, and coalescence:
 
 ```math
 \frac{\partial f(L,t)}{\partial t}
@@ -14,81 +59,101 @@ coalescence combines two particles:
 =B_n(L,t)+B_c(L,t)-D_c(L,t).
 ```
 
-The loss ``D_c`` is defined as a positive magnitude, so it is subtracted. The
-main paper prints a plus sign in its PBE alongside a positive loss integral;
-the implementation uses physical parent removal.
+Here ``D_c`` is a positive removal rate. Each coalescence event removes both
+parents and creates one product. The signs in the calculation follow that event
+balance; the printed positive loss integral must be subtracted.
 
-## Initial conditions and time units
-
-The initial particle population is zero:
+Define the supersaturation ``S(t)=c(t)/C_\infty(w,T)``. Classical nucleation gives
 
 ```math
-f(L,0)=0\qquad\text{for every modeled diameter }L.
-```
-
-This does not mean zero dissolved lipid. For the default organic feed of
-10 mg/mL and flow-rate ratio 3, instantaneous mixing gives
-
-```math
-c(0)=\frac{10}{1+3}=2.5\ \mathrm{kg\,m^{-3}},\qquad
-w=\frac{3}{1+3}=0.75.
-```
-
-The same concentration value in mg/mL equals its value in kg/m³. The Figure 4
-setup uses instantaneous mixing (`tau=0`); the delayed-mixing model is a different
-operating condition used later in the paper.
-
-Figure 4(a) shows distributions at 1, 40, 100, 170, and 4320 **minutes**. The
-solver uses **seconds**, so the last output is at 259200 s. Figure 4(b) covers
-both the rapid formation stage and long incubation. A millisecond-only example
-cannot represent that comparison.
-
-## Nucleation and growth laws
-
-Define the supersaturation as ``S(t)=c(t)/C_\infty(w,T)``. The reported
-classical-nucleation laws are
-
-```math
-L_c(t)=\frac{4\gamma V_m}{k_BT\ln S(t)},
-```
-
-```math
+L_c(t)=\frac{4\gamma V_m}{k_BT\ln S(t)},\qquad
 J(t)=A_n\exp\!\left[-\frac{16\pi\gamma^3V_m^2}
-{3(k_BT)^3[\ln S(t)]^2}\right],\qquad S>1.
+{3(k_BT)^3[\ln S(t)]^2}\right],\quad S>1.
 ```
 
-For ``S\le1`` the nucleation rate is zero. ``V_m`` is volume per molecule,
-consistent with the Boltzmann constant ``k_B``. The source is a Gaussian about
-the critical diameter. For a normalized total-rate convention,
+For ``S\le1``, ``J=0``. ``V_m`` is volume per molecule, consistent with the
+Boltzmann constant ``k_B``. Under a total-rate convention, the source is
 
 ```math
 B_n(L,t)=\frac{J(t)}{\sqrt{2\pi}\,\sigma_L}
 \exp\!\left[-\frac{(L-L_c(t))^2}{2\sigma_L^2}\right].
 ```
 
-``\sigma_L`` is the width of the diameter distribution, whereas ``\gamma`` is
-interfacial energy. The printed Gaussian omits its normalization factor and
-reuses the symbol for these two quantities. The code makes that choice explicit
-through `nucleation_normalization`; a finite-domain total-rate source and an
-unnormalized density amplitude are not interchangeable.
+``\sigma_L`` is the physical spread in nucleation diameters. It is distinct
+from interfacial energy ``\gamma`` and from numerical bin width. The source
+study prints an unnormalized Gaussian; selecting a total-rate source or a
+source-density amplitude is therefore an explicit input convention.
 
-Growth follows
+Growth and dissolution follow
 
 ```math
-G(L,t)=k_gL C_\infty(w,T)\left[S(t)-S^*(L,w,T)\right].
+G(L,t)=k_gL C_\infty(w,T)[S(t)-S^*(L,w,T)].
 ```
 
-The size-dependent equilibrium ratio ``S^*`` permits dissolution when it exceeds
-the current supersaturation. It is a material closure, not a numerical method.
+The material function ``S^*`` sets equilibrium at each diameter. A negative
+velocity means dissolution; it is handled by the same signed face flux as growth.
 
-The reported kinetic values are ``A_n=2.0\times10^{22}`` m⁻³s⁻¹,
-``k_g=11.88`` m³kg⁻¹s⁻¹, ``k_{\mathrm{PEG}}=6.5\times10^{-6}``, and
-interfacial energy approximately 0.010 N/m.
+## Define the rate callbacks
 
-## Coalescence and conservation
+The implementation is in `examples/papers/cej2025_lnp.jl`. The kinetic constants
+are passed as builder keywords and stored in `problem.p`: `An=2.0e22`, `kg=11.88`,
+`kPEG=6.5e-6`, and `gamma=0.010`. Other physical scales, including molecular
+volume and nucleation width, must be supplied.
 
-For diameter coordinates, define
-``\ell=(L^3-M^3)^{1/3}``. The continuum birth and loss terms are
+Inside the builder, the rates are defined using the current free-lipid state
+and prescribed material properties:
+
+```julia
+supersaturation(ctx) = ctx.bulk.lipid / ctx.fields.Cinfinity
+
+function J(p,t,ctx)
+    nucleation_rate(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm,p.An)
+end
+
+function growth_rate(L,p,t,ctx)
+    p.kg * L * ctx.fields.Cinfinity *
+        (supersaturation(ctx) - equilibrium_ratio(L,ctx.fields.w,ctx.fields.T))
+end
+
+function coalescence_kernel(L,M,p,t,ctx)
+    p.kPEG * attachment_without_peg(L,M,ctx.fields.w,ctx.fields.T) *
+        brownian_kernel(L,M,ctx.fields.T,ctx.fields.mu)
+end
+```
+
+`nucleation_rate` and `brownian_kernel` are recipe functions. `equilibrium_ratio`
+and `attachment_without_peg` are supplied material functions, captured by the
+builder. The latter excludes the separately applied PEG factor.
+
+A moving critical diameter is supplied as a callback too. With
+`nucleation_normalization=:total_rate`, the source declaration is:
+
+```julia
+center = (p,t,ctx)->supersaturation(ctx)>1 ?
+    critical_length(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm) :
+    first(grid.centers)
+
+source = GaussianNucleation(rate=J,center=center,
+    width=(p,t,ctx)->p.nucleation_width,truncation=:renormalize)
+```
+
+The inactive source uses an unused finite centre when ``S\le1``. Bin integration
+then deposits a narrow peak even if it lies between bin centres. Renormalization
+puts the full declared rate into the finite diameter range. With
+`:density_amplitude`, the recipe instead integrates the unnormalized exponential
+without redistributing its outside-domain tail. These conventions require
+consistent units for the amplitude; they are not interchangeable quadrature choices.
+
+## Coalesce in particle volume
+
+The Brownian collision kernel is
+
+```math
+K(L,M,t)=k_{\mathrm{PEG}}\alpha_{\mathrm{base}}(L,M,w,T)
+\frac{2k_BT(L+M)^2}{3\eta(w,T)LM}.
+```
+
+For ``\ell=(L^3-M^3)^{1/3}``, its diameter-coordinate birth and loss terms are
 
 ```math
 B_c(L,t)=\frac{L^2}{2}\int_0^L
@@ -99,97 +164,88 @@ B_c(L,t)=\frac{L^2}{2}\int_0^L
 D_c(L,t)=f(L,t)\int_0^\infty K(L,M,t)f(M,t)\,dM.
 ```
 
-The Brownian kernel with attachment efficiency is
+The numerical event calculation avoids evaluating this birth integral's
+endpoint directly. It combines parent volumes and deposits the product on fixed
+pivots. Specify volume addition on a diameter grid as follows:
 
-```math
-K(L,M,t)=k_{\mathrm{PEG}}\alpha_{\mathrm{base}}(L,M,w,T)
-\frac{2k_BT(L+M)^2}{3\eta(w,T)LM}.
+```julia
+model = PBMModel(
+    nucleation = source,
+    growth = Growth(rate=growth_rate),
+    coalescence = Aggregation(coalescence_kernel;
+        coordinate_map=AdditiveCoordinate(L->L^3,cbrt)),
+    dilution = Dilution(rate=(L,p,t,ctx)->ctx.fields.dilution),
+)
+methods = TermMethods(growth=MUSCL(),aggregation=FixedPivot())
+operator = compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
 ```
 
-The supplied attachment function excludes ``k_{\mathrm{PEG}}``. Fixed-pivot event
-deposition uses the additive property ``L^3``, producing a diameter
-``(L_1^3+L_2^3)^{1/3}``. This conserves particle volume rather than the sum of
-diameters. It does not consume free lipid a second time during coalescence.
+A product diameter is ``(L_1^3+L_2^3)^{1/3}``. FixedPivot preserves this volume
+and one product per event within the pivot range. Products outside that range
+raise an error by default. The size boundaries above are closed, including for
+dissolution; there is no extinction model at the lower diameter edge. Choose
+positive diameter limits and check that neither edge controls the result.
+The dilution hazard is zero for instantaneous mixing.
 
-Free lipid is coupled to the actual resolved growth and nucleation contributions:
+## Return particle uptake to the lipid balance
+
+Nucleation and growth consume free lipid; volume-conserving coalescence does
+not consume it again. The fixed-volume balance is
 
 ```math
 \frac{dc(t)}{dt}=-\rho_p\frac{\pi}{6}
-\left[\left.\frac{dM_3}{dt}\right|_{\mathrm{growth}}
-+\left.\frac{dM_3}{dt}\right|_{\mathrm{nucleation}}\right],
-\qquad M_3(t)=\int_0^\infty L^3 f(L,t)\,dL.
+\left[\left.\frac{dM_3(t)}{dt}\right|_{\mathrm{growth}}
++\left.\frac{dM_3(t)}{dt}\right|_{\mathrm{nucleation}}\right],
+\qquad M_3(t)=\int_0^\infty L^3f(L,t)\,dL.
 ```
 
-Thus the fixed-volume invariant is ``c+\rho_p\pi M_3/6``, provided no products
-are discarded. This is the recipe's explicit free-lipid closure. If delayed
-mixing is selected, particle and dissolved concentrations also require the
-same volume-dilution hazard; it is zero for this instantaneous-mixing setup.
-
-## Implement the model in code
-
-The reusable implementation is `examples/papers/cej2025_lnp.jl`. Its mechanisms
-are declared independently:
+The builder obtains those rates from the actual discrete population terms:
 
 ```julia
-source = GaussianNucleation(rate=J,
-    center=(p,t,ctx)->critical_length(
-        ctx.bulk.lipid/ctx.fields.Cinfinity,ctx.fields.T,p.gamma,p.Vm),
-    width=(p,t,ctx)->p.nucleation_width,
-    truncation=:renormalize)
-
-model = PBMModel(
-    nucleation=source,
-    growth=Growth(rate=G),
-    coalescence=Aggregation(beta;
-        coordinate_map=AdditiveCoordinate(L->L^3,cbrt)),
-)
+exchange = ConservativeExchange(:lnp,:lipid,
+    (L,p,t,ctx)->p.rho*π/6*L^3;
+    mechanisms=(:growth,:nucleation))
 ```
 
-The bin-integrated Gaussian creates nuclei even when a narrow peak falls between
-bin centres. Growth uses the chosen face reconstruction; coalescence uses fixed
-pivot. Their method choices are distinct from the temporal solver. The builder
-adds `PBMSystem` and `ConservativeExchange` for the free-lipid balance and handles
-the inactive source when supersaturation is at most one.
+This closes ``c+\rho_p\pi\sum_iL_i^3N_i/6`` for the resolved closed system.
+The builder places the exchange in PBMSystem and advances free lipid with the
+particle bins. Its delayed-mixing option also dilutes particles and free lipid
+at the same volume-growth rate; that option is a different operating condition.
 
-The Figure 4 adapter explicitly constructs the zero state:
+## Provide the material inputs
 
-```julia
-include("examples/shin_lnp_reproduction.jl")
-using .ShinLNPReproduction
+The adapter's `inputs` named tuple contains `grid` and these builder keywords:
 
-# material is a NamedTuple containing the material functions/values described below.
-grid = Grid1D(exp.(range(log(Lmin),log(Lmax);length=201));coordinate=:diameter)
-problem = figure4_problem(;grid,material...)
-initial_particles = population(problem,problem.u0,:lnp)
-@assert all(iszero,initial_particles)
-times = figure4_saveat() # includes formation times and all five Figure 4 snapshots
-```
+| Input | Meaning and units |
+|:--|:--|
+| `temperature(t)` | kelvin |
+| `viscosity(w,T)` | Pa s |
+| `solubility(w,T)` | ``C_\infty`` in kg/m³, after conversion from any mole-fraction correlation |
+| `equilibrium_ratio(L,w,T)` | dimensionless ``S^*`` |
+| `attachment_without_peg(L,M,w,T)` | dimensionless attachment modifier excluding ``k_{\mathrm{PEG}}`` |
+| `molecular_volume`, `particle_density` | m³ per molecule and kg/m³ |
+| `nucleation_width` | diameter standard deviation in meters |
+| `nucleation_normalization` | `:total_rate` or `:density_amplitude` |
 
-`Lmin` and `Lmax` are positive diameter limits in meters. `material` supplies
-`temperature`, `viscosity`, `solubility`, `equilibrium_ratio`,
-`attachment_without_peg`, `molecular_volume`, `particle_density`,
-`nucleation_width`, and `nucleation_normalization`. The feed, FRR, mixing option,
-and 4320-minute horizon have Figure 4 defaults. A nonzero initial particle
-array is rejected by this adapter.
+For example, a 200-bin logarithmic diameter grid is constructed with
+`Grid1D(exp.(range(log(Lmin),log(Lmax);length=201));coordinate=:diameter)`.
+The positive limits must resolve the chosen material model.
 
 The [supplement](https://ars.els-cdn.com/content/image/1-s2.0-S1385894725086267-mmc1.pdf)
-supplies the DLVO energy expressions, Hamaker constant ``1.7\times10^{-22}`` J,
-and surface potential 10 mV. It was checked with the main paper. Its quantity
-called Debye length has an inverse-length formula; its ion-concentration and
-energy conventions still need to match the attachment implementation. The
-solubility endpoints/conversion, Gaussian width, physical property values,
-and equilibrium closure must also be made numerical inputs. A zero initial
-population fixes the initial condition but does not determine those functions.
-The input file records these functions and constants for the calculation.
+gives DLVO energy expressions, a Hamaker constant of ``1.7\times10^{-22}`` J,
+and a surface potential of 10 mV. Matching the attachment convention still
+requires resolving its ion-concentration and energy units; the quantity called
+Debye length has an inverse-length formula. Numerical solubility inputs,
+physical properties, equilibrium closure, and Gaussian width also remain to be
+established for the published comparison. The recipe keeps them explicit rather
+than selecting values to fit a target curve.
 
-## Solve the full Figure 4 horizon
+## Integrate formation and incubation
 
-The paper used 200 logarithmic bins, a central growth difference, and MATLAB
-ode15s. The package's current growth and collision discretizations differ;
-report their convergence before claiming a numerical reproduction. A fixed
-microsecond SSPRK step over 4320 minutes is impractical. The exporter therefore
-accepts an external adaptive solver, for example in a separate working
-environment containing SciMLBase, OrdinaryDiffEqRosenbrock, and ADTypes:
+The output times include 1, 40, 100, 170, and 4320 **minutes**. Internally the last
+time is 259200 **seconds**. A fixed microsecond step is unsuitable for this
+horizon. An adaptive stiff solver can integrate the same coupled residual in a
+working environment containing SciMLBase, OrdinaryDiffEqRosenbrock, and ADTypes:
 
 ```julia
 using SciMLBase, OrdinaryDiffEqRosenbrock
@@ -198,55 +254,63 @@ using ADTypes: AutoFiniteDiff
 function solve_for_outputs(problem,times)
     result = SciMLBase.solve(odeproblem(problem),Rodas5P(autodiff=AutoFiniteDiff());
         saveat=times,save_everystep=false,reltol=1e-7,abstol=1e-10)
-    SciMLBase.successful_retcode(result) || error("Figure 4 integration failed")
+    SciMLBase.successful_retcode(result) || error("Nanoparticle integration failed")
     result
 end
 
-solution = run_case(problem;saveat=times,solver=solve_for_outputs,
-    provenance="Material inputs and conventions: ...; target: Figure 4 model curves",
+times = ShinLNPReproduction.figure4_saveat()
+solution = ShinLNPReproduction.run_case(problem;saveat=times,
+    solver=solve_for_outputs,provenance=config.provenance,
     output="docs/src/assets/shin_case")
 ```
 
-Finite-difference Jacobians avoid assuming automatic-differentiation support
-for the recipe callbacks. The scalar tolerance is a starting setting, not a demonstrated choice for every
-material parameterization. The exporter checks output times, finite values,
-and substantial negative concentrations; it does not clip the state. Repeat
-with tighter tolerances and refined diameter limits/bins before interpreting
-the intensity-weighted tail.
+The tolerances are starting values; verify them against the state scales of the
+chosen inputs. The exporter checks output times, finite values, and substantial
+negative concentrations without clipping. Repeat with tighter tolerances and
+refined grids. The source study used central growth differences and MATLAB
+ode15s; the package uses a different growth discretization.
 
-An input Julia file can return
-`(inputs=material_and_grid,solver=solve_for_outputs,provenance="...")`.
-The driver builds the problem and uses the Figure 4 output schedule:
+## Calculate the observation
 
-```sh
-julia --project=/path/to/working_environment examples/shin_lnp_reproduction.jl /path/to/shin_inputs.jl
-python docs/benchmarks/plot_case_studies.py lnp
-```
-
-## Recreate the model panels
-
-The reported intensity weighting and mean are
+Large particles contribute disproportionately to scattering. The reported
+intensity weighting and mean diameter are
 
 ```math
 I(L,t)=L^6f(L,t),\qquad
-\overline L_{\mathrm{paper}}(t)=
-\frac{\int_0^\infty L^7f(L,t)\,dL}{\int_0^\infty L^6f(L,t)\,dL}.
+\overline L(t)=\frac{\int_0^\infty L^7f(L,t)\,dL}
+{\int_0^\infty L^6f(L,t)\,dL}.
 ```
 
-The mean is undefined at the empty initial state and is omitted from that point
-on the log-time plot. The exporter writes both area-normalized intensity density
-per meter and unit-peak-scaled density. The five PSD panels use peak scaling to
-match Figure 4(a)'s displayed vertical scale; the mean-time panel uses minutes
-and nanometers. Bin widths must be included before treating logarithmic-bin
-numbers as a density.
+For example, the recipe evaluates the mean as
 
-No experimental data are needed to plot the model-only panels requested here.
-Agreement with the publication's black curves still needs a run with the stated
-material closures and conventions. A millisecond-only calculation does not cover the Figure 4 incubation horizon.
+```julia
+N = population(problem,solution.u[end],:lnp)
+grid = problem.operator.system.populations.lnp.grid
+mean_diameter = moment(grid,N,7) / moment(grid,N,6)
+```
+
+It is undefined for the empty initial state. The exporter omits that point from
+the mean-time plot and writes both area-normalized and unit-peak intensity
+densities. The distribution panels use unit-peak scaling, while the mean-time
+panel uses minutes and nanometers. Logarithmic-bin counts are divided by their
+individual widths before plotting a density.
+
+An input file returning `(inputs=...,solver=solve_for_outputs,provenance="...")`
+can be run with:
+
+```sh
+julia --project=/path/to/working_environment examples/shin_lnp_reproduction.jl /path/to/nanoparticle_inputs.jl
+python docs/benchmarks/plot_case_studies.py lnp
+```
+
+The plotting command recreates the model-panel layout after a full-horizon run.
+No experimental observations are substituted for missing model inputs. Agreement
+with the published curves remains unverified until those inputs are resolved
+and the calculation is converged.
 
 ```@eval
 using Markdown, PopulationBalanceModels
 folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","shin_case")
 ready=all(isfile(joinpath(folder,f)) for f in ("figure4a_model.png","figure4b_model.png"))
-Markdown.parse(ready ? "![Figure 4 layout: calculated intensity PSDs](../assets/shin_case/figure4a_model.png)\n\n![Calculated mean diameter](../assets/shin_case/figure4b_model.png)" : "Run the full-horizon calculation and plotting commands above, then rebuild the manual to display the panels.")
+Markdown.parse(ready ? "![Intensity-weighted distributions](../assets/shin_case/figure4a_model.png)\n\n![Mean diameter through formation and incubation](../assets/shin_case/figure4b_model.png)" : "The distribution and mean-diameter panels will appear here after the full-horizon calculation and plotting commands have been run.")
 ```

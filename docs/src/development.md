@@ -143,9 +143,8 @@ restrictions, and a runnable implementation. Update the relevant case study
 when modifying an example. Keep benchmark inputs, raw CSV data, and environment
 metadata with any new figures. Label historical evidence and synthetic inputs.
 
-Build with the commands in the README. The build executes the first model,
-coupled tutorial, and named-method example, checks references, and treats
-warnings as failures. The [publishing guide](publishing.md) describes deployment.
+Build with the commands in the README. The build executes the model tutorials and selected case-study code blocks,
+checks references, and treats warnings as failures. The [publishing guide](publishing.md) describes deployment.
 
 
 ## Updating this checkout
@@ -162,7 +161,7 @@ julia --project=. -e 'using Pkg; Pkg.test()'
 julia --project=docs docs/make.jl
 git add src examples test docs CHANGELOG.md
 git diff --cached --stat
-git commit -m "Separate term methods and add paper benchmark comparisons"
+git commit -m "Clarify model tutorials and numerical interfaces"
 git push origin main
 ```
 

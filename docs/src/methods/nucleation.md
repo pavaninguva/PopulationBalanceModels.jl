@@ -1,5 +1,10 @@
 # Nucleation
 
+Before choosing a nucleation method, decide where particles are created in
+size space. Entry at the domain boundary, creation at one interior size, and
+creation over a physical size distribution are different models. A total
+number rate alone does not specify which one is intended.
+
 ## Boundary creation
 
 Zero-size nuclei can enter through the left boundary rather than an interior
@@ -15,13 +20,22 @@ source:
 units. Specifying number flux avoids dividing by a vanishing growth rate.
 The bulk model must still explain how particles move away from the boundary.
 
-```julia
+```@example nucleation
+using PopulationBalanceModels
+grid = Grid1D(0.0:0.1:2.0;coordinate=:length)
+p = (J=1.0,critical_size=0.8,nucleation_width=0.015)
+growth_rate(x,p,t,ctx) = 0.2
+nucleation_rate(p,t,ctx) = p.J
+
 model = PBMModel(
     growth=Growth(rate=growth_rate),
     primary=Nucleation(rate=nucleation_rate, size=0.0),
 )
 methods = TermMethods(growth=MUSCL(), by_term=(primary=BoundaryInjection(:left),))
 operator = compile(model,grid;methods)
+problem = PBMProblem(operator,zeros(length(grid)),(0.0,0.1);p)
+solution = simulate(problem;dt=0.01)
+sum(solution.u[end])
 ```
 
 The source location must equal the selected edge and the model must contain
@@ -57,6 +71,18 @@ pivot range. It does not preserve every nonlinear particle property. A location
 between the domain edge and first pivot is not inside the pivot range; use a
 boundary declaration or an explicit distributed size model as appropriate.
 
+The interior source needs no boundary injection:
+
+```@example nucleation
+point_model = PBMModel(secondary=Nucleation(rate=nucleation_rate,size=0.8))
+point_operator = compile(point_model,grid;
+    methods=TermMethods(nucleation=FixedPivot()))
+point_problem = PBMProblem(point_operator,zeros(length(grid)),(0.0,0.1);p)
+point_solution = simulate(point_problem;dt=0.01)
+(number=sum(point_solution.u[end]),
+ first_moment=only(moment(grid,point_solution.u[end],1)))
+```
+
 ## A physical distribution of creation sizes
 
 ```math
@@ -85,13 +111,17 @@ already dimensional bin creation rate.
 \int_{x_{i-1/2}}^{x_{i+1/2}}\phi(x,t)\,dx.
 ```
 
-```julia
+```@example nucleation
 source = GaussianNucleation(
     rate=nucleation_rate,
     center=(p,t,ctx)->p.critical_size,
     width=(p,t,ctx)->p.nucleation_width,
     truncation=:physical,
 )
+gaussian_operator = compile(PBMModel(primary=source),grid)
+gaussian_problem = PBMProblem(gaussian_operator,zeros(length(grid)),(0.0,0.1);p)
+gaussian_solution = simulate(gaussian_problem;dt=0.01)
+sum(gaussian_solution.u[end])
 ```
 
 `width` is a standard deviation in coordinate units. Hold a physical width fixed

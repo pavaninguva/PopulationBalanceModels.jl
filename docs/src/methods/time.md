@@ -101,7 +101,13 @@ The recorded norm changes are below ``5\times10^{-14}``; negative densities
 remain. Independent dense-matrix tests verify the cyclic solves for both time
 orders. These results support stability of the implemented periodic variant,
 not a positivity claim or physical-boundary/paper-fidelity claim.
-The [transport case](../case_studies/transport.md) displays signed errors.
+The figure below retains the smooth-profile and sharp-front evidence for this
+periodic constant-growth diagnostic. In particular, the front cut shows the
+negative lobes despite bounded norm. The
+[two-coordinate growth case](../case_studies/transport.md) is a separate,
+coordinate-dependent physical problem.
+
+![Periodic transport: smooth accuracy, sharp fronts, and negative undershoots](../assets/benchmark_2d.png)
 
 ## Exact integer shifts
 
@@ -112,6 +118,6 @@ Fractional remapping is rejected. An integer shift moves bin numbers exactly;
 no interpolation or flux reconstruction is required.
 
 This property does not extend automatically to transformed variable-growth
-meshes, noncommuting velocities, or source terms. The [Case 2 adapter](../case_studies/transport.md) explicitly transforms
-the paper's separable affine growth laws to constant velocities before using
+meshes, noncommuting velocities, or source terms. The [travel-time adapter](../case_studies/transport.md) explicitly transforms
+the separable affine growth laws to constant velocities before using
 ExactShift. This does not make the core method a general variable-growth solver.

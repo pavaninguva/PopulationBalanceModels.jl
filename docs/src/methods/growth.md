@@ -1,6 +1,11 @@
 # Growth and dissolution
 
-## Physical law and units
+Growth changes the size of an existing particle. Without boundary crossings,
+it should change the distribution's shape and size moments while keeping its
+total number fixed. This is why the implementation computes a common flux at
+each face shared by neighbouring bins.
+
+## Specify a particle velocity
 
 ```math
 \frac{\partial n(x,t)}{\partial t}
@@ -26,7 +31,7 @@ model = PBMModel(growth=Growth(rate=growth_rate))
 `ctx.fields` holds prescribed operating conditions. The function returns velocity,
 not a derivative vector or particle number flux. It should not modify the state.
 
-## Sectional face flux
+## Convert velocity to a face flux
 
 For bin numbers, growth contributes
 
@@ -77,12 +82,13 @@ dissolve away; a moment closure does not infer that boundary process.
 +\frac{\partial [G_y(x,y,t)n(x,y,t)]}{\partial y}=0.
 ```
 
-`Growth2D((Gx,Gy))` declares constant velocities; `Growth2D((x,y,p,t,ctx)->(Gx,Gy))`
-uses a callback. `Grid2D` stores bin numbers over areas. Flux differences in each
+`Growth2D(rate=(Gx,Gy))` declares constant velocities;
+`Growth2D(rate=(x,y,p,t,ctx)->(Gx,Gy))` uses a callback returning two finite real
+velocities. `Grid2D` stores bin numbers over areas. Flux differences in each
 direction are multiplied by the tangential bin width. Upwind and uniform-grid
 WENO5 are supported; 2D MUSCL is not implemented.
 
-The [Inguva–Braatz case](../case_studies/transport.md) compares variable-growth residuals
+The [two-dimensional growth calculation](../case_studies/transport.md) compares variable-growth residuals
 with an analytical solution and a case-specific transformed-mesh adapter. Direct methods
 have additional boundary and constant-growth restrictions, described under
 [Time integration](time.md).

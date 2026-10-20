@@ -1,5 +1,10 @@
 # Aggregation and breakage
 
+Collisions change particle number through events. The numerical calculation
+must count each event once, remove its parents, and place its products at sizes
+that conserve the chosen material property. Reconstructing a growth face flux
+does not perform any of these operations.
+
 ## Aggregation events
 
 For an additive coordinate ``x``, a symmetric binary kernel gives
@@ -28,6 +33,27 @@ grid, `AdditiveCoordinate(L->L^3,cbrt)` produces
 ``L_*=(L_i^3+L_j^3)^{1/3}`` and conserves volume. Adding diameters would conserve
 the wrong quantity. The compiler checks an increasing positive property map
 and its inverse at the grid pivots.
+
+For example, the following checks the instantaneous balance for a population
+with particles in two diameter bins:
+
+```@example aggregation
+using PopulationBalanceModels
+grid = Grid1D([1.0,2.0,4.0,8.0,16.0];coordinate=:diameter)
+kernel(L,M,p,t,ctx) = p.K
+model = PBMModel(coalescence=Aggregation(kernel;
+    coordinate_map=AdditiveCoordinate(L->L^3,cbrt)))
+operator = compile(model,grid;methods=TermMethods(aggregation=FixedPivot()))
+N = reshape([0.0,1.0,2.0,0.0],:,1)
+dN = similar(N)
+rhs!(dN,N,operator,(K=0.1,),0.0)
+@assert abs(only(moment(grid,dN,3))) < 1e-12
+(number_rate=sum(dN),volume_rate=only(moment(grid,dN,3)))
+```
+
+The negative number rate counts the reduction of two parents to one product.
+The third diameter moment is unchanged. That conservation check concerns the
+event residual; time-step size and domain truncation still matter in a solve.
 
 ## Breakage events
 
