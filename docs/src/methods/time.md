@@ -112,6 +112,6 @@ Fractional remapping is rejected. An integer shift moves bin numbers exactly;
 no interpolation or flux reconstruction is required.
 
 This property does not extend automatically to transformed variable-growth
-meshes, noncommuting velocities, or source terms. Those cases need additional
-algorithms. The [paper benchmark](../case_studies/transport.md) declares the
-boundary and representation differences from the published nodal scheme.
+meshes, noncommuting velocities, or source terms. The [Case 2 adapter](../case_studies/transport.md) explicitly transforms
+the paper's separable affine growth laws to constant velocities before using
+ExactShift. This does not make the core method a general variable-growth solver.

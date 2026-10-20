@@ -53,11 +53,11 @@ Choose a Gaussian or pivot source method when those assumptions do not apply.
 ## Case studies
 
 The [three case studies](case_studies/index.md) build on this workflow:
-analytical two-coordinate transport, cooling crystallization with a dissolved
-concentration balance, and lipid nanoparticle formation. Each separates its
+batch cooling crystallization, lipid nanoparticle formation, and analytical
+two-coordinate transport with size-dependent growth. Each separates its
 physical rates, term discretization, time integration, and observations.
 
-Run `examples/inguva_braatz_case1.jl` for the analytical comparison and
+Run `examples/inguva_braatz_case2.jl` for the analytical comparison and
 `examples/cooling_crystallization_benchmark.jl` for the 1000-second coupled
 numerical study. The LNP page distinguishes the explicit synthetic demonstration
 from the author inputs still needed for the paper comparison.

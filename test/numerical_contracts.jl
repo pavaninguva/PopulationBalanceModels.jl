@@ -66,7 +66,7 @@ end
     end
 end
 
-include("../examples/inguva_braatz_case1.jl")
+include("fixtures/constant_growth_gaussian.jl")
 @testset "Inguva–Braatz published Gaussian case" begin
     prob=InguvaBraatzCase1.problem(20;boundary=:open)
     @test sum(prob.u0)≈50*π*0.005 rtol=1e-12
@@ -94,4 +94,54 @@ include("../examples/shin_lnp_reproduction.jl")
         @test sum(intensity.*grid.widths)≈1 rtol=1e-14
         @test sol.u[end]≈prob.u0 rtol=1e-14
     end
+end
+
+include("../examples/inguva_braatz_case2.jl")
+@testset "Inguva–Braatz Case 2: affine growth and mapped bin numbers" begin
+    case=InguvaBraatzCase2
+    prob=case.problem(20)
+    @test sum(prob.u0)≈50π*0.005 rtol=1e-13
+    @test case.analytical_density(0.4,0.4,0.0)==50.0
+    x=2.4exp(0.05)-2;y=2.4exp(0.25)-2
+    @test case.analytical_density(x,y,1.0)≈50exp(-0.3) rtol=1e-13
+    @test sum(case.reference(prob.operator.grid,1.0))≈sum(prob.u0) rtol=1e-13
+    mapped=case.mapped_problem(20)
+    sol=simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
+    @test sum(abs,last(sol.u).-case.reference(mapped.physical_grid,1.0))<2e-13
+    @test sum(last(sol.u))≈sum(mapped.problem.u0) rtol=1e-13
+    @test_throws ArgumentError simulate(prob;method=ExactShift(),dt=0.05)
+end
+
+@testset "Shin Figure 4: zero particle initialization and long output schedule" begin
+    grid=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
+    material=(temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->1.0,
+        equilibrium_ratio=(L,w,T)->1.0,attachment_without_peg=(L,M,w,T)->1.0,
+        molecular_volume=5e-28,particle_density=1000.0,nucleation_width=1e-9,
+        nucleation_normalization=:total_rate,kg=0.0,kPEG=0.0)
+    prob=ShinLNPReproduction.figure4_problem(;grid,material...)
+    @test all(iszero,population(prob,prob.u0,:lnp))
+    @test bulk(prob,prob.u0,:lipid)==2.5
+    @test prob.tspan==(0.0,259200.0)
+    times=ShinLNPReproduction.figure4_saveat()
+    @test all(t->t in times,60 .*collect(ShinLNPReproduction.FIGURE4_MINUTES))
+    @test first(times)==0 && last(times)==prob.tspan[2] && all(diff(times).>0)
+    @test_throws ArgumentError ShinLNPReproduction.figure4_problem(;grid,material...,initial_distribution=ones(length(grid)))
+    # Test both exporter paths with zero kinetics over a short interval; these
+    # are synthetic interface checks, not a full-horizon paper calculation.
+    empty=remake(prob;tspan=(0.0,0.001),p=merge(prob.p,(An=0.0,)))
+    for solver in (nothing,(p,ts)->simulate(p;dt=0.001,saveat=ts))
+        mktempdir() do output
+            sol=ShinLNPReproduction.run_case(empty;dt=0.001,saveat=[0.0,0.001],solver,
+                provenance="Synthetic zero-kinetics exporter test",output)
+            @test all(iszero,population(empty,last(sol.u),:lnp))
+            @test occursin("intensity_peak_scaled",first(readlines(joinpath(output,"psd.csv"))))
+        end
+    end
+end
+
+include("../examples/cooling_crystallization_benchmark.jl")
+@testset "Gunawan printed seed is retained and checked before running" begin
+    @test CoolingCrystallizationBenchmark.Gunawan2004Case2.reported_seed_density(195.5)≈-0.012647 atol=1e-14
+    @test_throws ArgumentError CoolingCrystallizationBenchmark.run_benchmark(
+        c0=0.1166704,provenance="Verbatim published seed")
 end

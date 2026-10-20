@@ -43,15 +43,9 @@ makedocs(;
         "Observations and estimation" => "inference.md",
         "Case studies" => [
             "Overview" => "case_studies/index.md",
-            "Inguva–Braatz transport" => "case_studies/transport.md",
-            "Gunawan crystallization" => "case_studies/crystallization.md",
-            "Shin lipid nanoparticles" => "case_studies/nanoparticles.md",
-        ],
-        "Worked examples" => [
-            "Batch population balance" => "case_studies/batch.md",
-            "Interacting populations" => "case_studies/interacting.md",
-            "Aggregation and breakage" => "case_studies/collisions.md",
-            "Kinetic estimation" => "case_studies/estimation.md",
+            "Batch cooling crystallization" => "case_studies/crystallization.md",
+            "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
+            "Two-coordinate PBM" => "case_studies/transport.md",
         ],
         "API reference" => "api.md",
         "Contributing and internals" => "development.md",

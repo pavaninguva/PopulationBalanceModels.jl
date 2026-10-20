@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Reduced the manual to three ordered case studies: Gunawan Example 2, Shin Figure 4, and Inguva–Braatz Case 2; removed the separate worked-example pages.
+- Replaced the user-facing constant-growth Case 1 comparison with the affine-growth Case 2 model, analytical bin integrals, and an explicit travel-time mesh adapter for exact shifts.
+- Added Figure 4 zero-particle initialization, the full 4320-minute schedule, adaptive-solver export support, and explicit peak-scaled intensity outputs.
+- Kept Gunawan Eq.34 verbatim with a numerical input check; removed the substitute seed as the benchmark default.
+- Moved earlier demonstration and constant-growth results outside the published manual while retaining them as diagnostic evidence.
+
 - Separated growth, nucleation, source/removal, collision, and time-integration documentation; wrote derivatives explicitly throughout the manual.
 - Added named keyword term declarations while retaining positional constructors.
 - Added the Inguva–Braatz constant-growth Gaussian case, analytical bin-average comparisons, and two-dimensional solution/error plots.

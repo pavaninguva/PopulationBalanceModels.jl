@@ -23,4 +23,4 @@ println("Free lipid [kg/m^3]: ",bulk(problem,solution.u[end],:lipid))
 include("shin_lnp_reproduction.jl")
 ShinLNPReproduction.run_case(problem;dt=2e-5,saveat=0.0:0.0005:0.02,
     provenance="SYNTHETIC DEMONSTRATION: inputs are defined in examples/lipid_nanoparticle_demo.jl. Target for future reproduction: Shin et al. (2025), Fig. 4. This run is not a paper reproduction; viscosity, solubility, equilibrium, attachment, molecular volume, density, width, and kg are demonstration choices.",
-    output=joinpath(@__DIR__,"..","docs","src","assets","lnp_demo"))
+    output=joinpath(@__DIR__,"..","docs","benchmarks","diagnostics","lnp_demo"))

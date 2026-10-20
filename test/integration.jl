@@ -76,3 +76,25 @@ end
     @test errors[2]<1e-3
     println("Gunawan demo third-moment relative errors (400,800 bins): ",errors)
 end
+
+include("../examples/shin_lnp_reproduction.jl")
+@testset "Shin Figure 4 exporter with a SciML output schedule" begin
+    g=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
+    prob=ShinLNPReproduction.figure4_problem(;grid=g,tspan=(0.0,0.001),
+        temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->1.0,
+        equilibrium_ratio=(L,w,T)->1.0,attachment_without_peg=(L,M,w,T)->1.0,
+        molecular_volume=5e-28,particle_density=1000.0,nucleation_width=1e-9,
+        nucleation_normalization=:total_rate,kg=0.0,kPEG=0.0,An=0.0)
+    function external(p,times)
+        result=SciMLBase.solve(odeproblem(p),Tsit5();saveat=times,save_everystep=false,
+            reltol=1e-9,abstol=1e-12)
+        SciMLBase.successful_retcode(result) || error("test integration failed")
+        result
+    end
+    mktempdir() do output
+        solution=ShinLNPReproduction.run_case(prob;saveat=[0.0,0.0003,0.001],solver=external,
+            provenance="Synthetic zero-kinetics adapter check; not a paper reproduction",output)
+        @test solution.t==[0.0,0.0003,0.001]
+        @test all(u->iszero(sum(population(prob,u,:lnp))),solution.u)
+    end
+end

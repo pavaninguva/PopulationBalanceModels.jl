@@ -30,10 +30,10 @@ function build_moments(;initial_moments,c0,tspan=(0.0,1000.0))
 end
 
 """
-Gunawan et al. 2004, case 2, Eqs. 28-34 and Table 3.
-initial_density and c0 are REQUIRED: Eq. 34's printed rounded polynomial is
-negative throughout its support and the initial dissolved concentration is not
-specified in the case-study text. Do not silently replace or clip that seed.
+Gunawan et al. 2004, Example 2, Eqs. 28-34 and Table 3.
+initial_density and c0 are explicit inputs. Eq. 34 is retained verbatim in
+reported_seed_density; its displayed coefficients evaluate to negative values
+on the stated support. Do not silently replace or clip that seed.
 
 Units: length in micrometers, time in seconds, concentration in the paper's
 g/g-water basis, crystal density in g/micrometer^3. The state basis and shape

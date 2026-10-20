@@ -82,7 +82,7 @@ uses a callback. `Grid2D` stores bin numbers over areas. Flux differences in eac
 direction are multiplied by the tangential bin width. Upwind and uniform-grid
 WENO5 are supported; 2D MUSCL is not implemented.
 
-The [Inguva–Braatz case](../case_studies/transport.md) compares these residuals
-with an eligible direct exact shift and the compact/ADI variant. Direct methods
+The [Inguva–Braatz case](../case_studies/transport.md) compares variable-growth residuals
+with an analytical solution and a case-specific transformed-mesh adapter. Direct methods
 have additional boundary and constant-growth restrictions, described under
 [Time integration](time.md).

@@ -48,8 +48,7 @@ masking errors with arbitrary penalties.
 
 Load Optim in a separate working environment to activate `fit(cal,z0; ...)`.
 The adapter returns a `FitResult` with minimizer, convergence flag, minimum,
-raw optimizer output, and numerical failure records. See the
-[kinetic estimation case study](case_studies/estimation.md) for the runnable fit.
+raw optimizer output, and numerical failure records. Run `examples/estimate_kinetic_parameters.jl` for an analytical synthetic-data fit.
 
 `sensitivity_report(cal,z)` finite-differences standardized residuals in
 optimization coordinates and reports singular values, numerical rank, condition

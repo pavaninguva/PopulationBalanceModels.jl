@@ -37,7 +37,7 @@ function write_field(path,grid,values)
         end
     end
 end
-function run_benchmark(;grids=(50,100,200),output=joinpath(@__DIR__,"..","docs","src","assets","inguva_case1"))
+function run_benchmark(;grids=(50,100,200),output=joinpath(@__DIR__,"..","..","docs","benchmarks","diagnostics","inguva_case1"))
     mkpath(output); rows=NamedTuple[]
     for n in grids
         iseven(n) || throw(ArgumentError("even bin count required for final integer shifts"))

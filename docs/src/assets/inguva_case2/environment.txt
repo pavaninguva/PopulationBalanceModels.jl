@@ -1,0 +1,7 @@
+Inguva & Braatz (2023), Case 2, Eqs.57–60; Figure 4 at t=1.
+Julia 1.10.3; package 0.4.0-DEV; Linux x86_64
+Conservative FV comparison uses bin-integrated numbers; output densities are bin averages.
+Mapped shifts use travel-time coordinates with a common spacing and paired open boundaries.
+Uniform FV grids cover [0,2]^2; mapped grids omit fractional last cells, extents recorded in errors.csv.
+Mapped comparison is a bin-average adaptation, not the paper's nodal implementation.
+HOCADI cannot solve this variable-growth problem directly and is not included.
