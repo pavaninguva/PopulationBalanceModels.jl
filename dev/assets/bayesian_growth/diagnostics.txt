@@ -1,15 +1,15 @@
-SYNTHETIC DATA: analytical affine-growth density plus independent Gaussian noise sigma=1.0
+SYNTHETIC DATA: nonnegative truncated-Gaussian observations of analytical affine-growth density, underlying sigma=1.0
 Inguva, Schickel & Braatz (2022), Case 2; doi:10.1016/j.compchemeng.2022.107808
 f0=50 exp(-(a-.2)^2/.0005); g0=.434; g1=.2604. Scaled size/time units from the benchmark.
 281 density observation positions at each of six times; no sampled counts or binning.
 Initial density and noise are fixed. Only g0 and g1 are fitted. All priors are physical-coordinate densities, with log-coordinate Jacobians exactly once.
 Uniform bounds: g0 in [0.05,1], g1 in [0.02,1], corresponding at reference size 1 to offset times 1–20 and stretching times 1–50.
-lognormal MAP=(g0 = 0.43360048776031707, g1 = 0.2621164790946515); converged=true; gradient=2.8042956262004735e-8; Hessian agreement=6.535394020747087e-7
-lognormal rhat = [1.0011369279466067, 1.0011396113142819]
-lognormal ess_bulk = [1035.9325159971265, 1017.9716015163591]
-lognormal ess_tail = [1261.381801204713, 1248.3283617201732]
-lognormal mcse_mean = [7.279161423820067e-5, 0.00029995282404149046]
-lognormal ebfmi = [0.9744640649892737, 0.9865950484733412, 1.0997042800812804, 1.1137976345903393]
+lognormal MAP=(g0 = 0.4338219756446632, g1 = 0.26071999020187087); converged=true; derivative backend=forwarddiff; gradient=1.9206937151849957e-9; Hessian agreement=1.0408077394851113e-6
+lognormal rhat = [1.0057050057466477, 1.0053764706785857]
+lognormal ess_bulk = [1023.7269866352838, 995.480495477181]
+lognormal ess_tail = [1043.8316105596211, 996.1014324583916]
+lognormal mcse_mean = [7.125239946504838e-5, 0.0002991536166012363]
+lognormal ebfmi = [1.052049686314183, 1.1329403672163523, 1.155156327384325, 1.0269721038924355]
 lognormal divergences = 0
 lognormal warmup_divergences = 31
 lognormal max_depth_hits = 0
@@ -22,16 +22,16 @@ lognormal warmup = 1000
 lognormal samples = 1500
 lognormal chains = 4
 lognormal seed = 25
-lognormal forward_solves = 851606
-lognormal elapsed_seconds = 293.028755175
-uniform MAP=(g0 = 0.43359325417686845, g1 = 0.2621348470723506); converged=true; gradient=0.00011114377700355125; Hessian agreement=6.535565709564996e-7
-uniform rhat = [1.00453433294695, 1.0051616219318045]
-uniform ess_bulk = [924.9566731681724, 914.7298332311292]
-uniform ess_tail = [1103.4579528343556, 991.1785012331667]
-uniform mcse_mean = [7.964407202527334e-5, 0.0003299751410783667]
-uniform ebfmi = [1.0655070591969227, 0.9592753466429406, 1.0514883300555014, 0.9702311475075152]
+lognormal forward_solves = 335520
+lognormal elapsed_seconds = 339.532804912
+uniform MAP=(g0 = 0.43381485473651954, g1 = 0.2607381377213396); converged=true; derivative backend=forwarddiff; gradient=5.9249214510170845e-6; Hessian agreement=1.0407793753782312e-6
+uniform rhat = [1.0017798294251912, 1.0017702911365263]
+uniform ess_bulk = [817.893971107912, 802.8772677830456]
+uniform ess_tail = [834.44093457379, 767.1799619834729]
+uniform mcse_mean = [8.62154147839248e-5, 0.00036210736922246203]
+uniform ebfmi = [1.0380372546055454, 0.8816045319111128, 0.8398815021840482, 1.0200792347189425]
 uniform divergences = 0
-uniform warmup_divergences = 30
+uniform warmup_divergences = 29
 uniform max_depth_hits = 0
 uniform diagnostics_passed = true
 uniform min_ess = 400
@@ -42,7 +42,7 @@ uniform warmup = 1000
 uniform samples = 1500
 uniform chains = 4
 uniform seed = 26
-uniform forward_solves = 805576
-uniform elapsed_seconds = 268.432572146
+uniform forward_solves = 326102
+uniform elapsed_seconds = 297.6879085
 Julia 1.10.3; data seed=2022, MAP seed=22, dispersed-start seed=80, Laplace seed=23.
 Distributions=0.25.132; Optim=2.3.2; AdvancedHMC=0.8.8; MCMCDiagnosticTools=0.3.19
