@@ -73,7 +73,27 @@ published-figure reproductions. The moment calculation records its reconstructed
 monotonic protocol and material assumptions in `moment_crystallization/inputs.txt`;
 it does not implement the extinction/distribution parts of Figure 13.
 
-The estimation example uses seeded synthetic Gaussian data. Its raw exports
+The older estimation example uses seeded synthetic Gaussian data. Its raw exports
 include whitened residuals, mapped joint-region points, a nuisance-reoptimized
 profile, and numerical diagnostics. The output is a local uncertainty example,
 not a coverage validation for physical models.
+
+## Bayesian growth inference
+
+Use a working environment with Optim, Distributions, AdvancedHMC 0.8 and
+MCMCDiagnosticTools 0.3. The new manual example replaces the older trivial
+kinetic fit, whose code remains available for regression purposes.
+
+```sh
+julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl
+python docs/benchmarks/plot_bayesian_growth.py --usetex
+```
+
+The default budget is three seeded MAP starts, four chains of 500 warmup and
+1000 retained NUTS draws, forty posterior predictive solves, two profiles, an
+alternative-prior fit and four numerical refits. Sampling uses the inexpensive
+case-specific characteristic solution, not a sectional solve at every leapfrog
+stage. Its reported forward count includes those analytical trajectories.
+The numerical refits use sectional MUSCL. CSVs retain convergence flags; failed
+strict stationarity checks must remain visible in plots and interpretation.
+Outputs, raw draws and provenance are in docs/src/assets/bayesian_growth.

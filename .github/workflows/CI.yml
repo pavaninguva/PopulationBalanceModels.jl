@@ -35,5 +35,6 @@ jobs:
           root = pwd()
           Pkg.activate(mktempdir())
           Pkg.develop(path=root)
-          Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5"])
+          Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "AdvancedHMC", "MCMCDiagnosticTools"])
           include(joinpath(root,"test","integration.jl"))
+          include(joinpath(root,"test","bayesian_integration.jl"))

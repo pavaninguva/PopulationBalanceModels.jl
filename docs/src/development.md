@@ -133,8 +133,9 @@ using Pkg
 root = pwd() # package directory
 Pkg.activate(mktempdir())
 Pkg.develop(path=root)
-Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5"])
+Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "AdvancedHMC", "MCMCDiagnosticTools"])
 include(joinpath(root,"test","integration.jl"))
+include(joinpath(root,"test","bayesian_integration.jl"))
 ```
 
 `docs/src/` is the authoritative manual; `docs/make.jl` never copies development

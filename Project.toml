@@ -6,16 +6,23 @@ version = "0.4.0-DEV"
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [weakdeps]
+AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
+MCMCDiagnosticTools = "be115224-59cd-429b-ad48-344e309966f0"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
 
 [extensions]
+PopulationBalanceModelsAdvancedHMCExt = ["AdvancedHMC", "MCMCDiagnosticTools"]
 PopulationBalanceModelsOptimExt = "Optim"
 PopulationBalanceModelsSciMLBaseExt = "SciMLBase"
 
 [compat]
+AdvancedHMC = "0.8"
+MCMCDiagnosticTools = "0.3"
+Random = "1"
 Distributions = "0.25"
 julia = "1.10"
 LinearAlgebra = "1"

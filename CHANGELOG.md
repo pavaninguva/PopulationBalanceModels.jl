@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added a shared Bayesian EstimationProblem for MAP, optional full-posterior Laplace curvature, and optional AdvancedHMC NUTS sampling, with explicit prior coordinates and transform Jacobians.
+- Added multinomial and exposed Poisson count likelihoods, normalized Gaussian likelihoods with inferred noise/covariance, and contrast handling for normalized fractions.
+- Added shared/local/fixed parameter declarations, uncertain initial-condition setup, observation responses, joint nuisance covariance, likelihood/posterior profiles, prior comparisons, and numerical refits.
+- Replaced the manual's introductory trivial kinetic fit with a synthetic size-dependent growth study based on the 2022 affine-growth benchmark, including an explicitly added bulk observable, parameter correlations, predictive checks, sampling diagnostics and numerical-refinement evidence.
+- Preserved the existing Gaussian CalibrationProblem interface. Reused the Distributions/StatsAPI fit and loglikelihood function bindings to avoid ambiguous imports.
+- Added Random as a standard-library dependency and AdvancedHMC/MCMCDiagnosticTools as optional extension dependencies.
+
 - Added fixed correlated Gaussian observation blocks, forward-solver adapters, predictions, and SVD-based local covariance calculations.
 - Added fit diagnostics, checked joint confidence ellipsoids, multiple-start fitting, and nuisance-reoptimized likelihood profiles, with explicit known-error/estimated-scale assumptions.
 - Added a synthetic two-rate uncertainty example with residuals, mapped confidence regions, profiles, and solver-refinement checks.

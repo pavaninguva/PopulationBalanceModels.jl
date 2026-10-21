@@ -1,0 +1,31 @@
+SYNTHETIC DATA: affine growth adapted from Inguva, Schickel & Braatz (2022), Case 2. doi:10.1016/j.compchemeng.2022.107808
+Paper growth g0=.434, g1=.2604; f0=50 exp(-(a-.2)^2/.0005), a>=0. Size/time units follow scaled benchmark coordinates.
+Added demonstration bulk balance c'= -0.2 mu3', c0=2; independent Gaussian sigma=.003. Not experimental paper data.
+400 sampled particles at each of six times, conditional on [0,1.4]; joint unknowns log(g0), log(g1), log(initial_scale), log(noise).
+MAP coordinates define the posterior density. Physical LogNormal priors include exactly one transform Jacobian.
+MAP converged=true; gradient infinity norm=7.011022673101971e-8; solves=1113
+MAP scaled gradient=7.011022673101971e-8; tolerance=0.001; derivative step=6.0554544523933395e-6; optimizer scales=[1.0, 1.0, 1.0, 1.0]; elapsed seconds=3.94013397
+Laplace Hessian agreement=4.269907902791962e-8; condition=30849.142269818865
+MCMC ess_bulk = [2298.816654400112, 2280.0053627159573, 1797.2096330952559, 2042.0503946594768]
+MCMC ess_tail = [2009.183368738369, 1937.4526593808082, 1545.1672985533264, 1834.5005397155762]
+MCMC rhat = [1.0001564319471357, 1.0003544234445894, 1.0023046951428065, 1.001901241694954]
+MCMC divergences = 0
+MCMC warmup_divergences = 73
+MCMC max_depth_hits = 0
+MCMC diagnostics_passed = true
+MCMC min_ess = 400
+MCMC rhat_limit = 1.01
+MCMC target_acceptance = 0.8
+MCMC metric = dense
+MCMC max_depth = 8
+MCMC warmup = 500
+MCMC samples = 1000
+MCMC chains = 4
+MCMC posterior_evaluations = 728088
+MCMC forward_solves = 728088
+MCMC failed_evaluations = 0
+MCMC failure_messages = String[]
+MCMC elapsed_seconds = 61.120569524
+Predictive propagation uses 40 additional reference solves, returning latent and noisy values separately.
+Julia 1.10.3; RNG seeds data=2022, MAP=22, Laplace=23, NUTS=24, predictive=25/26.
+Versions: Distributions=0.25.132; Optim=2.3.2; AdvancedHMC=0.8.8; MCMCDiagnosticTools=0.3.19

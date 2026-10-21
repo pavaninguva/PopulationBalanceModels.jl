@@ -166,3 +166,4 @@ include("method_interfaces.jl")
 include("numerical_contracts.jl")
 
 include("uncertainty.jl")
+include("bayesian.jl")

@@ -41,6 +41,15 @@ construct local joint regions. `fit_multistart` and `profile_likelihood` use the
 fitting backend for multiple starts and nuisance-parameter refits.
 See [Observations and estimation](inference.md) for assumptions and examples.
 
+New Bayesian calculations use `ParameterSpec`, explicitly coordinated `Prior`
+declarations, `Measurement`, `InferenceExperiment`, and `EstimationProblem`.
+`fit(problem)` performs MAP using Optim. `loglikelihood`, `logprior`, and
+`logposterior` share the density used by `laplace_approximation` and
+`sample_posterior`. Sampling requires both AdvancedHMC and MCMCDiagnosticTools.
+`parameter_draws` transforms draws, and `posterior_predictive` requires an explicit
+forward-solve budget. The Bayesian and legacy frequentist uncertainty APIs have
+different interpretations; see the estimation chapter.
+
 ## Numerical extensions
 
 A sectional policy supplies `prepare_term(term,method,representation; kwargs...)`

@@ -1,275 +1,334 @@
-# Observations and parameter estimation
+# Observations and Bayesian parameter estimation
 
-A particle counter, a concentration measurement, and a scattering instrument
-observe different features of a population. Before fitting kinetics, specify
-how a model state becomes the reported measurement. Otherwise a change in
-observation weighting can be mistaken for a change in the physical rate law.
+A measured size distribution depends on the kinetics, the initial population,
+and the instrument. Estimating a growth rate therefore means fitting a complete
+measurement model. A concentration trace can provide different information from
+a normalized size histogram, even when both observe the same batch.
 
-## Fit a removal rate from number measurements
+The package uses one statistical model for three calculations: MAP estimation,
+an explicitly requested Laplace approximation, and optional posterior sampling.
+Start with the [size-dependent growth example](case_studies/estimating_growth.md).
+It fits two growth coefficients from dynamic distribution measurements, together
+with uncertain initial population amplitude and concentration noise.
 
-For size-independent removal,
+## Describe the measurements
+
+An observation operator maps a solved PBM state to a predicted measurement.
+The existing MomentObservable, BulkObservable, FunctionObservable and
+SystemObservable can all be used in a Measurement. For a sectional distribution,
+DistributionObservable integrates over the **measurement** bins:
+
+```julia
+histogram = DistributionObservable(measured_edges;
+    coordinate=:length, population=:crystals, weight=L->1.0)
+sizes = Measurement(times, counts, histogram;
+    likelihood=MultinomialLikelihood(), source=:particle_counter)
+concentration = Measurement(times, measured_concentration, BulkObservable(:c);
+    likelihood=GaussianLikelihood(sigma=(theta,experiment)->theta.noise),
+    source=:concentration_instrument)
+```
+
+Data matrices have one output per row and one time per column. Each experiment
+solves at the union of its measurement times. The likelihood sums all bins,
+times, and experiments; it is never divided by the number of observations.
+
+The coordinate must agree with the model. Diameter and volume densities differ
+by a change-of-variable Jacobian. Weighting is also explicit: number uses
+`L->1.0`, volume can use `L->π*L^3/6`, and the nanoparticle
+scattering approximation uses `L->L^6`. Bin values are integrals, not density
+values sampled at centres. Weighted sectional integrals use eight-point Gauss
+quadrature of the piecewise-constant solver density.
+
+A response callback `response(lo,hi,L,p,t)` can supply the probability that a
+particle of true size L is detected in a measured bin. This is the hook for
+sizing uncertainty and detection efficiency. Its probabilities must be finite
+and between zero and one. Resolve discontinuities explicitly; quadrature through
+an unresolved detection threshold is another numerical approximation.
+
+Moment states can predict compatible moments and explicit observation integrals.
+A histogram requires an independently specified reconstruction, supplied through
+a custom observable. QMOM nodes and weights are quadrature data; they are not
+automatically a uniquely determined measured PSD.
+
+## Choose the likelihood
+
+The choice follows how the instrument produced the data.
+
+| Data | Likelihood | Interpretation |
+|:--|:--|:--|
+| Actual particle counts in bins, with a sampled total at each time | MultinomialLikelihood() | Conditional size probabilities in the measurement window |
+| Absolute counts from a known sampled volume or exposure | PoissonLikelihood(exposure=...) | Expected counts equal predicted bin concentration times exposure |
+| Suitable continuous outputs | GaussianLikelihood(sigma=...) or covariance=... | Absolute errors or an explicitly fitted noise model |
+| Normalized continuous fractions | GaussianLikelihood with independent contrasts | Continuous instrument fractions, without an invented particle count |
+
+For sampled counts ``y_i``, let ``N=\sum_i y_i`` and normalize the predicted
+bin integrals to probabilities ``p_i`` over the stated window. The multinomial
+contribution is
 
 ```math
-\frac{\partial n(v,t)}{\partial t}=-k n(v,t),\qquad
-\frac{dM_0(t)}{dt}=-kM_0(t).
+\log p(\boldsymbol y\mid\theta)
+=\log(N!)-\sum_i\log(y_i!)+\sum_i y_i\log p_i(\theta).
 ```
 
-We can generate synthetic observations from the analytical solution, independently
-of the numerical solver used in fitting:
+The measured total supplies the statistical sample size. Twice as many sampled
+particles generally supplies more information. A normalized instrument trace
+does not supply that count, and must not be multiplied by an arbitrary N.
+Zero counts are valid. A nonzero count in a zero-probability bin has zero
+likelihood.
 
-```@example inference
-using PopulationBalanceModels
-
-grid = Grid1D(range(0,8;length=41))
-model = PBMModel(loss=Death(rate=(v,p,t,ctx)->p.k))
-operator = compile(model,grid)
-initial = exp.(-grid.centers).*grid.widths
-problem = PBMProblem(operator,initial,(0.0,2.0);p=(k=0.4,))
-times = [0.0,0.2,0.6,1.2,2.0]
-data = sum(initial).*exp.(-0.4.*times)
-observation = Observation(times,data,MomentObservable(0);sigma=0.02)
-experiment = Experiment(problem,observation)
-nothing # hide
-```
-
-MomentObservable(0) maps the computed distribution to total number. `sigma` is
-the assumed standard deviation of independent Gaussian measurement errors. Here
-the data contain no added noise; they are a check of the fitting workflow.
-
-To keep the fitted hazard positive, optimize its logarithm:
-
-```@example inference
-calibration = CalibrationProblem((experiment,);
-    parameters=(z,experiment)->(k=exp(z[1]),),dt=0.01)
-residuals(calibration,[log(0.4)])
-```
-
-CalibrationProblem solves the experiment at the requested observation times and
-forms standardized residuals,
+For absolute Poisson counts, the contribution retains both
+``y_i\log\lambda_i-\lambda_i`` and the factorial normalization.
+For Gaussian outputs with covariance ``\Sigma(\theta)``,
 
 ```math
-r_j=\frac{\widehat M_0(t_j)-y_j}{\sigma_j}.
+\log p(\boldsymbol y\mid\theta)
+=-\frac12[\widehat{\boldsymbol y}(\theta)-\boldsymbol y]^\mathsf T
+\Sigma(\theta)^{-1}[\widehat{\boldsymbol y}(\theta)-\boldsymbol y]
+-\frac12\log\det\Sigma(\theta)-\frac n2\log(2\pi).
 ```
 
-`objective(calibration,z)` is the independent Gaussian negative log likelihood,
-including its known-variance normalization. The small residual at the true
-parameter is numerical time-integration error, not a discrepancy in the
-analytical data.
+The determinant is essential when noise parameters are inferred. Covariance
+may be a fixed matrix or `(theta,experiment)->matrix` and applies to
+`vec(data)`: outputs within a time, then successive times.
 
-Load Optim in a working environment to enable fitting:
+Normalized fractions have a sum constraint. Supply a full-row-rank contrast
+matrix A with ``A\boldsymbol1=0`` and their covariance:
+
+```julia
+fractions = Measurement(times, fractions_data,
+    DistributionObservable(edges; coordinate=:length, normalize=true);
+    likelihood=GaussianLikelihood(covariance=Sigma, contrasts=A))
+```
+
+The likelihood projects data, predictions and covariance before factorization.
+It does not invert the singular full covariance or add a diagonal ridge.
+Predictive outputs from this likelihood are also in contrast coordinates.
+
+If moments were calculated from the measured histogram, they share its
+measurement errors. Use the histogram alone, or a joint vector observable with
+the appropriate joint covariance; do not count both as independent evidence.
+Use the same source tag on dependent blocks: InferenceExperiment rejects duplicate
+tags. Untagged dependence cannot be inferred automatically.
+
+## Declare fitted and fixed parameters
+
+Each scalar declaration states its physical initial value, transform and prior:
+
+```julia
+using Distributions
+g0 = ParameterSpec(:g0; initial=0.4, transform=LogTransform(),
+    prior=Prior(LogNormal(log(0.4),0.4); coordinates=:physical))
+noise = ParameterSpec(:noise; initial=0.003, transform=LogTransform(),
+    role=:nuisance,
+    prior=Prior(Normal(log(0.003),0.4); coordinates=:inference))
+```
+
+Both priors above imply Gaussian log coordinates; the coordinate declaration
+makes their density measures unambiguous. There is no implicit prior-coordinate
+default. IdentityTransform supports a location and scale; LogTransform supports
+a positive reference scale. LogitTransform(lower,upper) gives an open bounded
+physical interval. Additional physical restrictions belong in the estimation
+problem's constraints callback; truncating admissible support changes the prior.
+
+A shared parameter has no experiment name. Add `experiment=:batch_B` to make
+a fitted parameter local to that experiment. Put known values in the problem's
+fixed tuple or the experiment's fixed tuple. A name cannot be fixed and fitted,
+or shadow a shared parameter locally.
+
+An experiment's setup callback constructs its actual initial-value problem:
+
+```julia
+setup = function (theta, base)
+    u0 = copy(base.u0)
+    population(base,u0,:crystals) .*= theta.initial_scale
+    remake(base; u0, p=theta)
+end
+experiment = InferenceExperiment(:batch, base_problem, sizes, concentration;
+    setup, dt=0.002)
+problem = EstimationProblem(parameters, (experiment,); fixed=(known_value=1.0,))
+```
+
+This permits uncertain initial populations, bulk initial states, calibration
+factors and noise parameters. A Measurement response callback
+`(prediction,theta,experiment)->...` can apply a calibration factor.
+Operating histories remain in the physical problem or are rebuilt by setup.
+The default setup merges physical parameters into a NamedTuple p.
+
+## Keep the density coordinates explicit
+
+The inference vector is ``z``, with physical parameters ``\theta=T(z)``.
+For each physical-coordinate prior the package evaluates
+
+```math
+\log p_z(z)=\log p_\theta(T(z))+\log|\det J_T(z)|.
+```
+
+An inference-coordinate prior needs no additional Jacobian. This adjustment
+occurs exactly once in logprior. MAP, Hessian calculations and NUTS all use
+
+```math
+\log p(z\mid y)=\sum_e\log p(y_e\mid T(z))+\log p_z(z)+\text{constant}.
+```
+
+The functions loglikelihood, logprior and logposterior expose these separate
+evaluations. posterior_components returns all three at one coordinate vector.
+Returned physical parameter values are the transformed z-density mode.
+Modes depend on density coordinates: transforming that mode does not generally
+give the mode of the physical-coordinate density. Every result records its
+parameter declarations and coordinates.
+
+## Fit the posterior mode
+
+Load Optim in a working environment. For a constructed EstimationProblem:
 
 ```julia
 using Optim
-result = fit(calibration,[log(0.15)];maxiters=100)
-estimated_rate = exp(result.minimizer[1])
-result.converged
+result = fit(problem) # MAP by default, starting from ParameterSpec initial values
+result.parameters
+result.diagnostics.gradient_norm
+
+result = fit(problem; nstarts=3, seed=22, scaling=ones(length(problem.parameters)))
+# Or supply explicit inference-coordinate vectors:
+result = fit(problem; starts=[z_start_1,z_start_2])
 ```
 
-`examples/estimate_kinetic_parameters.jl` runs this calculation jointly for two
-initial population levels. Each experiment can have its own initial conditions
-and operating history while sharing the fitted parameters. FitResult retains
-the convergence flag, objective, raw optimizer result, and numerical failures.
+The reference method is BFGS with central finite-difference derivatives.
+The supplied scaling affects the optimizer coordinates, not the statistical
+density being optimized. Convergence uses the gradient in those optimizer
+coordinates; diagnostics retain both raw z gradients and scaled gradients,
+together with the requested tolerance. Choosing scales is therefore part of
+the numerical specification. A seeded perturbation generates extra starts.
+Multiple starts improve exploration but do not establish a global optimum.
 
-## Observe other quantities
+A supplied posterior-gradient callback is checked against step-halved central
+differences. Solver/representation combinations are not presumed to support
+automatic differentiation. The verified combinations include affine-growth
+characteristics, the native moment reference, a specified sectional MUSCL
+calculation, and a linear Gaussian reference. Limiters can produce nonsmooth
+objectives; a local derivative check does not establish global smoothness.
 
-| Measurement | Declaration |
-|:--|:--|
-| A moment of a standalone population | `MomentObservable(k)` |
-| A moment of a named coupled population | `PopulationMoment(:particles,k)` |
-| A dissolved concentration | `BulkObservable(:c)` |
-| Counts in specified size intervals | `HistogramObservable(edges)` |
-| A weighted histogram of a coupled population | `PopulationHistogram(:particles,edges;weight=x->1,normalize=false)` |
-| A custom standalone or system output | `FunctionObservable((N,op,p,t)->...)` or `SystemObservable((views,op,p,t)->...)` |
+Results retain separate likelihood/prior contributions, convergence, gradients,
+objective history, start outcomes, instrumented forward-solve counts and timing.
+NumericalFailure rejects an evaluation and records a message. Programming errors
+propagate. An external solver must check its success code and return exactly
+the requested output times. Gradient stencils crossing failed solves are reported.
 
-Histogram observations integrate the model's piecewise-constant density over
-measurement intervals, which must lie inside the model domain. Experimental and
-numerical bin edges need not coincide. Normalization is over the measured
-window; normalizing an empty window raises a numerical failure.
-
-A two-coordinate moment uses `MomentObservable((kx,ky))`; custom functions can
-extract marginals or two-dimensional bins. A moment-state model needs an explicit
-distribution reconstruction before predicting a histogram: a finite set of
-moments does not uniquely determine a distribution.
-
-The [nanoparticle calculation](case_studies/nanoparticles.md) weights number
-density by ``L^6`` and reports ``M_7/M_6``. Its observation definition is part of
-the model comparison, separate from the growth or collision discretization.
-
-## Describe errors and assess sensitivity
-
-Observation data use rows for outputs and columns for times. A scalar observable
-also accepts a data vector, as above. Times must increase within the problem
-interval; standard deviations must be finite and positive. Select missing
-measurements before constructing an Observation. For correlated Gaussian measurements, supply a fixed covariance block instead:
+## Request Laplace uncertainty
 
 ```julia
-observation = Observation(times,data,observable;covariance=Sigma)
+laplace = laplace_approximation(problem,result)
+# Equivalent opt-in convenience:
+result = fit(problem; uncertainty=:laplace)
+kinetics = marginal_covariance(problem,laplace; role=:kinetic)
+draws = parameter_draws(problem,laplace; n=1000,seed=23)
 ```
 
-`Sigma` is the covariance of `vec(data)`: outputs within each time, followed by
-times. Cholesky whitening retains its off-diagonal correlations, including those
-across times. Each Observation is an independent block; put dependent outputs
-in the same vector observable and block. Do not supply `sigma` as well.
-The covariance must be positive definite. A normalized histogram has a linear
-dependence between bins and needs independent contrasts or a compositional
-likelihood; deleting correlations or adding an arbitrary diagonal is not a remedy.
-
-A local sensitivity report is available without an optimizer:
-
-```@example inference
-report = sensitivity_report(calibration,[log(0.4)])
-(rank=report.rank,singular_values=report.singular_values)
-```
-
-The report finite-differences standardized residuals in **optimization
-coordinates**. It returns a residual Jacobian, singular values, numerical rank,
-condition number, and a covariance approximation only at full column rank.
-For this example its covariance is in ``\log k``, not ``k``. This local Gaussian
-covariance alone does not specify a confidence level or establish structural
-identifiability. The joint-region calculation below adds a statistical cutoff
-and numerical checks. Profile likelihoods and resampling assess other limitations.
-
-By default solver failures propagate. `objective(...;on_failure=:infinity)` can
-map NumericalFailure to infinity; programming and invalid-model errors still
-propagate. The reference fitting backend uses finite differences. Automatic
-differentiation and adjoints need a separately verified integration.
-
-
-## Construct a joint confidence region
-
-Let ``\boldsymbol z`` denote the optimization coordinates and ``\boldsymbol r``
-the whitened residual vector. The Gaussian objective is
+The Hessian is computed from the actual negative log posterior and checked
+under step halving:
 
 ```math
-\ell(\boldsymbol z)=\frac12\boldsymbol r(\boldsymbol z)^\mathsf T
-\boldsymbol r(\boldsymbol z)+\frac12\log\det\boldsymbol\Sigma
-+\frac{n}{2}\log(2\pi).
+H=\left.\frac{\partial^2[-\log p(z\mid y)]}{\partial z\,\partial z^\mathsf T}
+\right|_{\widehat z},\qquad
+p(z\mid y)\approx\mathcal N(\widehat z,H^{-1}).
 ```
 
-The supplied observation covariance is fixed, independent of the fitted
-parameters. Parameter-dependent noise requires a different likelihood, including
-its changing determinant. Repeated measurements or an independently justified
-instrument model are needed to establish the covariance; choosing weights to
-balance the numerical size of two outputs does not establish measurement errors.
+All nuisance parameters enter this joint curvature. A kinetic marginal uses
+the corresponding block of the full covariance; inverting the kinetic Hessian
+subblock would instead condition on fixed nuisance parameters.
 
-Near an interior optimum, linearize the residuals with Jacobian
-``\boldsymbol J=\partial\boldsymbol r/\partial\boldsymbol z``. With known
-absolute errors the local Gauss–Newton covariance is
+Factorizations and solves form the covariance and draws. Nonconvergence,
+nonstationarity, unstable derivatives, nonpositive curvature or excessive
+conditioning reject the approximation with a LaplaceFailure report. No
+regularization converts an invalid Hessian into reported certainty.
+Positive local curvature does not establish unimodality or Gaussian tails.
+Intervals and parameter regions from these draws are labelled Laplace
+approximations and are transformed to physical coordinates explicitly.
+Draws include an in_support flag. Predictive propagation reports draws outside
+the declared prior/constraint support as failures; it does not silently truncate
+the Gaussian approximation.
 
-```math
-\boldsymbol C_z=(\boldsymbol J^\mathsf T\boldsymbol J)^{-1}.
-```
+## Sample the same posterior
 
-The package computes it from an SVD, without forming the normal equations.
-A rank-deficient Jacobian has no bounded joint ellipsoid and is rejected.
-For ``p`` fitted coordinates the local joint region is
-
-```math
-(\boldsymbol z-\widehat{\boldsymbol z})^\mathsf T
-\boldsymbol C_z^{-1}(\boldsymbol z-\widehat{\boldsymbol z})
-\le\chi^2_{p,1-\alpha}.
-```
-
-If `sigma` specifies only relative weights with **one unknown common variance**,
-request `variance=:estimated`. Then ``\widehat s^2=\mathrm{RSS}/(n-p)`` scales
-the covariance, and the cutoff is ``p F_{p,n-p,1-\alpha}``. Positive residual
-degrees of freedom and RSS are required. This is exact for the corresponding
-linear Gaussian model and a local approximation for nonlinear kinetics. It
-cannot estimate a separate unexplained variance for every observation block.
-Known absolute errors are the default and are not rescaled from residuals.
-
-For the two-rate creation/removal calibration constructed in
-`examples/kinetic_parameter_uncertainty.jl`, the fitted coordinates are
-``\log J`` and ``\log k``. Its confidence calculation is:
+Sampling is requested separately and requires AdvancedHMC and
+MCMCDiagnosticTools in the working environment:
 
 ```julia
-starts = ([log(0.4),log(0.3)], [log(1.2),log(1.0)])
-result = fit_multistart(calibration,starts).best
-
-refined = CalibrationProblem(calibration.experiments;
-    parameters=calibration.parameters,dt=calibration.dt/2)
-region = confidence_ellipsoid(calibration,result;level=0.95,refined)
-report = region.diagnostics
-boundary = ellipse_points(region)   # rows: the two optimization coordinates
-physical_boundary = exp.(boundary) # when both coordinates are logarithms
+using AdvancedHMC, MCMCDiagnosticTools
+samples = sample_posterior(problem; initial=result, laplace,
+    warmup=500, samples=1000, chains=4, seed=24)
+samples.diagnostics
 ```
 
-The last transformation usually gives a curved region in physical parameters,
-not an ellipse. `ellipse_points(region;pair=(1,2))` projects a higher-dimensional
-joint region and retains its full-dimensional cutoff; it does not recompute a
-pairwise confidence level. `z in region` tests the local quadratic region.
+The adapter uses NUTS and explicit posterior gradients. With a supplied Laplace
+approximation it adapts a dense metric initialized from its covariance;
+otherwise it uses a diagonal metric. Laplace can inform dispersed chain starts
+and initial scale; explicit
+starts are also accepted. Warmup draws are excluded from the retained sample.
+Diagnostics include rank-normalized split R-hat, bulk and tail effective sample
+sizes, divergences, warmup divergences, maximum-depth hits, gradient checks,
+evaluation counts and time. diagnostics_passed uses the reported thresholds;
+it is a screening flag, not a proof of convergence. A single chain cannot pass
+that screen. Inspect chains and posterior shape before interpreting results.
 
-## Check that the region is numerically meaningful
+See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
+and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
+documentation for sampler and diagnostic definitions. Finite differences cost
+repeated forward solves; adjoint or AD acceleration remains a separately
+verified extension opportunity.
 
-`confidence_ellipsoid` checks optimizer convergence when given a FitResult,
-local stationarity, full numerical rank, positive-definite covariance, and
-agreement of central differences at steps ``h`` and ``h/2``. Its `refined`
-argument additionally checks prediction changes in measurement-standard-deviation
-units and changes in the residual Jacobian. The two calculations must describe
-the same physical problem and observations; a finer grid requires its own
-consistent initial-bin integrals. The default refinement thresholds are 0.01
-for maximum whitened prediction change and 0.01 for relative Jacobian change.
-These thresholds are numerical checks, not coverage guarantees.
+## Check prediction, identifiability and numerical error
 
-`fit_diagnostics(calibration,result)` also returns residuals, correlations,
-condition number, gradient, and residual degrees of freedom. With known errors,
-a stationary full-rank fit has an approximate chi-square goodness-of-fit
-p-value using ``n-p`` degrees of freedom. Do not interpret a large p-value as
-proof of model correctness. Inspect residuals against time and operating
-conditions, test independent experiments, and repeat the fit from different starts.
-
-For asymmetric likelihoods, examine a nuisance-reoptimized profile:
+Drawing approximate parameters does not solve the PBM. Predictive propagation
+has an explicit forward-solve budget:
 
 ```julia
-values = range(result.minimizer[1]-0.3,result.minimizer[1]+0.3;length=31)
-profile = profile_likelihood(calibration,result,1,values)
+draws = parameter_draws(problem,samples; n=40,seed=25)
+prediction = posterior_predictive(problem,draws;
+    max_solves=40, measurement_noise=true, seed=26)
 ```
 
-This fixes the first optimization coordinate and refits the others at each value.
-The output includes conditional minimizers and convergence flags, not just
-likelihood evaluations with other parameters frozen. For known errors, a
-one-coordinate asymptotic likelihood-ratio comparison uses
-``2[\ell_{\mathrm{prof}}-\ell(\widehat{\boldsymbol z})]\le\chi^2_{1,1-\alpha}``.
-A profile finding a better reference optimum raises an error. Failed conditional
-fits are exposed and must not be used to claim a confidence interval.
+One experiment per draw requires one solve; additional experiments multiply
+the cost. The budget is checked before execution. Returned blocks separate raw
+model outputs, latent measurement means and fresh measurement noise. Failures
+remain visible by draw. Poisson predictions include known exposure; multinomial
+predictive counts condition on the observed snapshot totals.
 
-Wald ellipsoids and likelihood-ratio thresholds still depend on regularity,
-adequate data, the error model, and a suitable local approximation. Active
-constraints, weak identifiability, small samples, and model mismatch can invalidate
-nominal coverage. A parametric bootstrap and simulation-based coverage study
-remain separate work; the package does not certify coverage automatically.
+identifiability_report separates likelihood prediction sensitivities and
+observed likelihood curvature from prior curvature. Prediction rank uses the
+unscaled measurement units and omits noise-only information; inferred noise
+also enters the likelihood Hessian. These are local diagnostics, not proof of
+structural identifiability.
 
-## A reproducible two-rate example
-
-`examples/kinetic_parameter_uncertainty.jl` creates a seeded synthetic realization
-from the independent analytical balance
-
-```math
-\frac{dM_0(t)}{dt}=J-kM_0(t),\qquad
-M_0(t)=M_0(0)e^{-kt}+\frac{J}{k}(1-e^{-kt}).
+```julia
+likelihood = estimation_profile(problem,result,index,values; target=:likelihood)
+posterior  = estimation_profile(problem,result,index,values; target=:posterior)
 ```
 
-It estimates ``J`` and ``k`` jointly, checks three starting points and a halved
-time step, then exports the fitted trajectory, whitened residuals, mapped joint
-region, and a profile. All four panels below come from that run, not experimental
-data. The error bars are one measurement standard deviation. The joint region
-uses a two-coordinate cutoff; the profile panel uses a one-coordinate cutoff.
+Each profile reoptimizes every remaining coordinate, including nuisances.
+The likelihood profile obtains its own unpenalized reference optimum.
+Posterior profiles describe penalized posterior shape and have no ordinary
+likelihood-confidence threshold. Check every conditional convergence flag.
 
-![Synthetic kinetic fit, residuals, joint region, and nuisance-reoptimized profile](assets/parameter_estimation/fit_and_uncertainty.png)
+replace_priors retains the physical experiment and changes explicit prior
+declarations. prior_sensitivity fits named alternatives and reports mode shifts
+in reference posterior SD units and changes in Laplace uncertainty. Its
+prior_sensitive flag uses explicit, configurable shift/scale-ratio thresholds;
+it is a screening rule, not an identifiability theorem.
+Prior dependence is evidence to examine, even when MAP is stable.
 
-```sh
-julia --project=/path/to/working_environment examples/kinetic_parameter_uncertainty.jl
-python docs/benchmarks/plot_case_studies.py estimation --usetex
-```
+refinement_study refits explicitly named numerical variants. Keep measurements,
+parameter coordinates and priors consistent. Compare spatial resolution, size
+domain and time step separately; compare moment closures separately again,
+because closure error is a model approximation. The growth case study records
+such refits alongside reference posterior uncertainty. Parameter uncertainty,
+measurement noise, numerical error and physical model inadequacy remain
+different sources of discrepancy.
 
-The working environment needs Optim. The statistical calculations and geometry
-live in PopulationBalanceModels; Optim supplies the numerical minimizer.
-An adaptive forward calculation can instead be supplied through
-`CalibrationProblem(...;solver=(problem,times)->solution)`. That callback must
-check its solver's success code and return exactly the requested times.
+## Existing Gaussian calibration interface
 
-The likelihood and residual-variance distinctions follow the
-[NIST regression handbook](https://www.itl.nist.gov/div898/handbook/pmd/section4/pmd431.htm).
-The package tests compare whitening, likelihood normalization, covariance, and
-confidence-region geometry against an independently evaluated weighted linear
-problem. These are implementation checks rather than empirical physical validation.
+CalibrationProblem, Observation, Experiment and fit(calibration,z0) remain
+available for existing code. They implement the previous Gaussian maximum
+likelihood workflow. confidence_ellipsoid is its local frequentist calculation;
+it is not the Bayesian Laplace API. The older small kinetic examples remain
+regression examples. New Bayesian work should use EstimationProblem so all
+inference methods share priors, transforms and likelihood definitions.

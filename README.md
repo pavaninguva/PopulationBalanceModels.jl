@@ -19,6 +19,11 @@ julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.in
 julia --project=docs docs/make.jl
 ```
 
+[Bayesian estimation](docs/src/inference.md) uses one model for MAP, optional
+Laplace uncertainty and optional MCMC. The [growth-kinetics example](docs/src/case_studies/estimating_growth.md)
+fits synthetic dynamic particle counts and an independent bulk observable.
+Optim enables fitting; AdvancedHMC and MCMCDiagnosticTools enable sampling.
+
 Sectional collisions use fixed pivot. Moment closures and high-order transport
 have method-specific restrictions; see the [numerical manual](docs/src/numerical_methods.md).
 The cooling-crystallization comparison has an unresolved printed seed input;

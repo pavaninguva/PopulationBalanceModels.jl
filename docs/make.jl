@@ -47,6 +47,7 @@ makedocs(;
             "Crystal growth with moments" => "case_studies/moment_crystallization.md",
             "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
             "Growth in two particle dimensions" => "case_studies/transport.md",
+            "Estimating size-dependent growth" => "case_studies/estimating_growth.md",
         ],
         "API reference" => "api.md",
         "Contributing and internals" => "development.md",

@@ -1,7 +1,9 @@
 module PopulationBalanceModels
 
 using LinearAlgebra
+using Random
 import Distributions
+import Distributions: loglikelihood, fit
 
 export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        AbstractPBMTerm, AbstractPopulationRepresentation, AbstractMomentBasis,
@@ -27,6 +29,14 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        CalibrationProblem, predictions, residuals, objective, sensitivity_report,
        fit_diagnostics, confidence_ellipsoid, ConfidenceEllipsoid, ellipse_points,
        fit_multistart, profile_likelihood,
+       ParameterSpec, Prior, IdentityTransform, LogTransform, LogitTransform,
+       InferenceExperiment, Measurement, EstimationProblem, DistributionObservable,
+       GaussianLikelihood, PoissonLikelihood, MultinomialLikelihood,
+       initial_coordinates, physical_parameters, loglikelihood, logprior, logposterior,
+       posterior_components, posterior_gradient, check_gradient, MAPResult,
+       LaplaceApproximation, LaplaceFailure, laplace_approximation, marginal_covariance,
+       parameter_draws, posterior_predictive, identifiability_report, estimation_profile,
+       replace_priors, prior_sensitivity, refinement_study, sample_posterior, PosteriorSamples,
        PBMSystem, SystemContext, PopulationTransfer, CrossAggregation,
        ConservativeExchange, CustomCoupling, population, bulk, stateview,
        PopulationMoment, BulkObservable, PopulationHistogram, SystemObservable,
@@ -68,9 +78,11 @@ include("time_integration/exact_shift.jl")
 include("inference/observations.jl")
 include("inference/calibration.jl")
 include("inference/uncertainty.jl")
+include("inference/parameters.jl")
+include("inference/statistical_model.jl")
+include("inference/bayesian_diagnostics.jl")
 
-"""Load `Optim` to enable `fit(calibration, initial_parameters; ...)`."""
-function fit end
+@doc "Load Optim to enable fit(calibration, initial_parameters; ...) or MAP fit(estimation_problem; ...)." fit
 
 """Load `SciMLBase` to enable `odeproblem(problem; ...)`."""
 function odeproblem end
