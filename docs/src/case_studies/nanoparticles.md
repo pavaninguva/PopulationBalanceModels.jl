@@ -547,3 +547,29 @@ The panels use real exported simulation data from
 CSVs. They illustrate the numerical coupling over 20 ms. Re-render with
 `python docs/benchmarks/plot_case_studies.py illustrations --usetex`. The
 full-horizon Figure 4 exporter above is kept separate from this illustration.
+
+## Complete runnable script
+
+The code below is read from the example source during the documentation build.
+Run it from the repository root using the environment described above.
+
+### `examples/shin_lnp_long_time.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","shin_lnp_long_time.jl"),String))])
+```
+
+### `examples/shin_lnp_reproduction.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","shin_lnp_reproduction.jl"),String))])
+```
+
+### `examples/papers/cej2025_lnp.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","papers/cej2025_lnp.jl"),String))])
+```

@@ -15,13 +15,15 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        MidpointRule, GaussLegendre, BinIntegral, FixedPivot, PointwiseLoss,
        CellAverageLoss, BoundaryInjection, GaussianInjection, NativeResidual,
        ExactMomentRule, QuadratureMomentRule, LogNormalClosure, QMOM,
+       RankAdaptiveQMOM, EQMOM, DQMOM, quadrature_state,
+       reconstructed_density, reconstructed_bins,
        validate_moment_method, prepare_moment_state, moment_term!,
        moment_state_length, moment_value, moment_rate, validate_moment_state, check_moment_state,
        DistributedNucleation, Dilution, AdditiveCoordinate,
        IntegratedBirth, IntegratedNucleation, GaussianNucleation,
        Grid2D, Growth2D, Nucleation2D, SizeBC2D, ForwardEuler, SSPRK22, SSPRK33, RK4, SSPRK54, HOCADI, ExactShift,
        Centered, LinearUpwind, VanLeer, WENO3, LaxWendroff, BeamWarming,
-       AxialGrid, AxialDispersion, axial_population, axial_fluxes,
+       AxialGrid, AxialDispersion, axial_problem, axial_stateview, axial_population, axial_fluxes,
        AffineGrowth, SeparableGrowth2D, Inguva2022, InguvaBraatz2023,
        characteristic_grid, characteristic_density,
        MomentSet, ExactClosure, QuadratureClosure, PolynomialRate,
@@ -75,6 +77,8 @@ include("numerics/moments/methods.jl")
 include("compilation/moments.jl")
 include("numerics/moments/weak_forms.jl")
 include("numerics/moments/inversion.jl")
+include("numerics/moments/adaptive_extended.jl")
+include("numerics/moments/direct.jl")
 include("coupling/moment_exchange.jl")
 include("compilation/tensor.jl")
 include("numerics/tensor/transport_sources.jl")
@@ -85,6 +89,7 @@ include("time_integration/exact_shift.jl")
 include("time_integration/characteristic_transport.jl")
 include("time_integration/constant_transport.jl")
 include("compilation/axial.jl")
+include("compilation/axial_system.jl")
 include("inference/observations.jl")
 include("inference/differentiation.jl")
 include("inference/calibration.jl")

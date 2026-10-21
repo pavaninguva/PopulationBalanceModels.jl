@@ -333,3 +333,15 @@ well as this package. The script records all seeds, prior definitions, solver
 settings and diagnostics under `docs/src/assets/bayesian_growth/`. The plotter
 reads those files. It uses LaTeX labels and no grid lines, and exports PNG and
 SVG figures. Rebuild Documenter after changing the figures.
+
+## Complete runnable script
+
+The code below is read from the example source during the documentation build.
+Run it from the repository root using the environment described above.
+
+### `examples/estimate_size_dependent_growth.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","estimate_size_dependent_growth.jl"),String))])
+```

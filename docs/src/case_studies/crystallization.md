@@ -308,3 +308,22 @@ accurate when changing initial conditions. Raw results, reference checks, and
 run settings are stored in `docs/src/assets/gunawan_example2/`. These figures
 replace the earlier separate demonstration panels with one runnable,
 consistently specified numerical benchmark.
+
+## Complete runnable script
+
+The code below is read from the example source during the documentation build.
+Run it from the repository root using the environment described above.
+
+### `examples/cooling_crystallization_benchmark.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","cooling_crystallization_benchmark.jl"),String))])
+```
+
+### `examples/papers/gunawan2004_case2.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","papers/gunawan2004_case2.jl"),String))])
+```

@@ -104,7 +104,9 @@ weight/node-to-moment maps. Direct-state families must implement their
 evolution explicitly; the raw-moment residual is never silently applied to
 node variables. The external one-node growth test verifies a state layout
 different from the moment basis, shared bulk exchange and both moment
-observation adapters. That contract test is not a full DQMOM solver.
+observation adapters. The supplied `DQMOM` implementation uses these same
+hooks for a scaled weight/weighted-abscissa source solve; its conditioning and
+positive-weight restrictions are described in [Moment methods](moment_methods.md).
 
 MomentSet currently holds contiguous nonnegative integer orders in one
 coordinate. AbstractMomentBasis leaves room for sparse, fractional or

@@ -137,13 +137,39 @@ axial cell. `ctx.fields.z` gives that cell's center. The compile keyword
 `fields=(cell,t)->(...)` can add prescribed axial operating conditions. The
 context's `N` is the local intrinsic population; it is not the whole reactor.
 
-The present reactor adapter supports a **single sectional population**, with
-one or two intrinsic coordinates, nonnegative constant axial velocity, and
-constant scalar dispersion. Moment representations, transported bulk ODE
-states, multiple interacting reactor populations, negative flow, and direct
-trajectory/Lax–Wendroff/compact evolution are not supported by this adapter.
-They require additional coupling and boundary contracts. Existing batch
-`PBMSystem` coupling continues to use its original interfaces.
+## Transport shared solute and multiple populations
+
+`axial_problem(local_problem,reactor;axial_scheme=MUSCL())` lifts an existing
+local `PBMSystem` into every reactor cell. All scalar bulk states receive the
+same axial advection and dispersion as the populations. Local interactions and
+material exchanges keep their original callbacks; `ctx.bulk.c` is the current
+cell's solute concentration and `ctx.fields.z` is its axial centre.
+
+```julia
+reactor = AxialDispersion(zgrid;velocity=u,dispersion=D,
+    inlet=(p,t)->(populations=(crystals=zeros(nbins),),bulk=(c=p.cfeed,)))
+problem = axial_problem(local_problem,reactor;axial_scheme=MUSCL())
+crystal_numbers = population(problem,problem.u0,:crystals) # bins × axial cells
+solute = bulk(problem,problem.u0,:c)                      # one value per cell
+local_state = axial_stateview(problem,problem.u0,1)
+```
+
+The inlet must provide every local population and bulk value, either as those
+named tuples or as the complete packed vector. Initial values repeat the local
+problem unless an explicit `initial` matrix is given. Named population and bulk
+accessors return views; every column is a complete local coupled state.
+See [Continuous precipitation](case_studies/continuous_precipitation.md) for a
+working material-conserving model.
+
+The coupled adapter supports one-coordinate sectional populations and raw
+moments with residual-based local methods. It rejects DQMOM states: linearly
+advecting weights and weighted abscissas does not implement the spatial direct
+moment equations. Tensor populations remain available through the separate
+single-population `compile(...;domain=reactor)` adapter. Direct evolution methods,
+negative flow, state-dependent dispersion and a solved flow field are outside
+both adapters. Limited reconstruction of individual raw moments can still lose
+joint realizability; check moment stage validity and refine rather than
+repairing moments silently.
 
 ## Conservative discretization and time step
 
@@ -156,7 +182,10 @@ J_{i,c+1/2}=uN_{i,c}
 +\frac{J_{i,c-1/2}-J_{i,c+1/2}}{\Delta z_c}.
 ```
 
-Advection is first-order upwind; dispersion uses a two-point centered flux,
+The single-population adapter uses first-order upwind advection. The coupled
+adapter selects its reconstruction with `axial_scheme`: Upwind, MUSCL, VanLeer,
+WENO3, and eligible uniform-grid WENO5/Centered/LinearUpwind are available.
+Dispersion uses a two-point centered flux,
 including nonuniform axial meshes. On a uniform mesh the dispersive term is
 second order. Interior fluxes cancel after multiplication by ``\Delta z_c``.
 Consequently, the reactor inventory changes by local creation/removal and
@@ -166,7 +195,7 @@ returns those face fluxes for balance diagnostics.
 Explicit time stepping must resolve both intrinsic mechanisms and axial
 transport. On a uniform axial mesh, the axial contribution to the forward-Euler
 outgoing rate is ``u/\Delta z+2D_z/\Delta z^2`` in interior cells.
-`suggest_dt` combines it with local intrinsic transport/source bounds; it is
+For the single-population adapter, `suggest_dt` combines it with local intrinsic transport/source bounds; it is
 still only a heuristic for limited or unlimited high-order intrinsic schemes.
 All residual-based native time methods and the optional SciML residual adapter
 can advance this system. Stiff diffusion on fine axial meshes may make an

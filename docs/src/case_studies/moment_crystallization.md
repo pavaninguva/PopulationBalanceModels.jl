@@ -202,3 +202,15 @@ or a separately tested reconstruction/closure, the cycling protocol, consistent
 material and secondary-nucleation mass conventions, and a declared procedure
 for computing the final distribution. Those are additional scientific inputs
 and methods, rather than plotting options.
+
+## Complete runnable script
+
+The code below is read from the example source during the documentation build.
+Run it from the repository root using the environment described above.
+
+### `examples/temperature_programmed_crystallization.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","temperature_programmed_crystallization.jl"),String))])
+```

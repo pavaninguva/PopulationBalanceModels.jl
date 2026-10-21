@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added one-coordinate rank-adaptive QMOM, Gamma EQMOM with explicit density/bin reconstruction, and local DQMOM with scaled source solves and moment-consistent bulk exchange.
+- Added axial transport of named populations and shared scalar bulk states, structured feeds and selectable axial reconstructions while preserving conservative face fluxes.
+- Added a continuous-precipitation Case 7A workflow with transient fields, outlet distributions and measured numerical error/runtime; retained explicit reference and scheme differences from Zhang2024.
+- Added a protein crystallization fit to reproducibly digitized experimental concentration and diameter markers, explicit rate-unit conversions, observation assumptions and separately declared priors.
+- Embedded the complete source scripts at the end of every case-study page directly from the runnable files.
+
 - Made ForwardDiff the default for inference gradients, prediction sensitivities and posterior Hessians, with independent finite-difference checks and an explicit finite-difference option for incompatible calculations.
 - Added an optional SciMLSensitivity adapter for continuous forward and interpolating-adjoint gradients, including initial-state, observation, noise and shared/local parameter dependence. Added ForwardDiff as a dependency and SciMLSensitivity/ReverseDiff as optional dependencies.
 - Corrected the synthetic growth-estimation study to generate nonnegative truncated-Gaussian measurements and use the matching normalized likelihood, predictive noise and quantile residual checks.
@@ -54,6 +60,8 @@
 - Updated navigation, links, versioned documentation deployment, and local contribution instructions. Simplified the README and repository root.
 
 ### Fixes
+
+- Declared the Printf standard library in the test target, so Pkg.test can load the existing compact-scheme audit in its isolated environment.
 
 - Evaluated the constant-growth exponential reference with a factored exponential and expm1, avoiding cancellation of tiny tails when subtracting nearly saturated cumulative integrals.
 

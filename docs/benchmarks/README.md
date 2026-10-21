@@ -160,3 +160,26 @@ independently derived accuracy correction, never attributed to the paper.
 Neither diagnostic is a general public nodal PBM solver or a verified
 transcription of the main multilevel HOC–ADI algorithm. The public periodic
 constant-growth HOCADI variant remains unchanged.
+
+For the additional moment and reactor calculations:
+
+```sh
+julia --project=. examples/quadrature_moment_methods.jl
+python docs/benchmarks/plot_new_case_studies.py moments --usetex
+
+julia --project=. examples/continuous_precipitation.jl
+python docs/benchmarks/plot_new_case_studies.py precipitation --usetex
+
+# Use an environment containing PopulationBalanceModels and optional Optim:
+julia --project=/path/to/working_environment examples/protein_crystallization.jl
+python docs/benchmarks/plot_new_case_studies.py protein --usetex
+```
+
+The precipitation default uses a small documentation budget for Zhang2024 Case
+7A. `--full` requests expensive SI-scale mesh refinement. Its reference remains
+numerical, and its methods/timings are not CADET's. Protein observations are
+experimental markers digitized from Mitchell2023 Figure 4; the committed CSV and
+extraction provenance are in `examples/data/protein_crystallization/`. The
+protein plotter consumes the actual fitted predictions and does not invent
+uncertainty intervals when the Laplace verification fails. Every case-study
+page embeds its full Julia source during the documentation build.

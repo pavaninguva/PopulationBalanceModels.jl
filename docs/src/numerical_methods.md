@@ -48,17 +48,17 @@ injection are not general 2D implementations.
 
 MomentSet selects a closure separately from each term's weak-form rule.
 ExactClosure uses ExactMomentRule for supported polynomial/closed terms.
-QMOM (QuadratureClosure) and LogNormalClosure use QuadratureMomentRule by
+QMOM (QuadratureClosure), RankAdaptiveQMOM, Gamma EQMOM, DQMOM and LogNormalClosure use QuadratureMomentRule by
 default, with exact rules available for eligible named terms. A closure must
 provide any missing higher moments; neither a requested moment order nor a
-quadrature rule creates an unavailable closure. DQMOM has a direct-state
-extension interface, not a general supplied solver. See
+quadrature rule creates an unavailable closure. DQMOM evolves positive weights
+and weighted abscissas; the other families evolve raw moments. See
 [Moment methods](moment_methods.md) for support and realizability restrictions.
 
 For axial reactors, intrinsic terms retain their representation-specific
-choices. Axial advection uses upwind fluxes and axial dispersion uses centered
-gradient fluxes; the current implementation does not offer arbitrary axial
-reconstruction policies.
+choices. The single-population adapter uses axial upwind fluxes. The coupled
+`axial_problem` adapter also accepts `axial_scheme=MUSCL()`, `WENO3()` and other
+eligible residual reconstructions. Dispersion uses centered gradient fluxes.
 
 | Evolution choice | Applied to | Eligibility |
 |:--|:--|:--|

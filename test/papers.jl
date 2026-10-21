@@ -68,3 +68,21 @@ end
     @test bulk(prob,d,:escaped_lipid)>0
     @test bulk(prob,d,:nucleated_lipid)>0
 end
+
+include("../examples/continuous_precipitation.jl")
+include("../examples/protein_crystallization.jl")
+@testset "Paper case studies" begin
+    p=ContinuousPrecipitation.build(nx=8,nz=8,tf=.5)
+    s=ContinuousPrecipitation.advance(p,[.5]);@test minimum(last(s.u))>=-1e-8
+    @test p.operator.domain.velocity≈1.67e-7/(1.46e-4*.21)
+    pb=ProteinCrystallization.build(bins=40,tf=20.)
+    sol=simulate(pb;dt=.5)
+    @test last(sol.u)[end]<pb.u0[end]
+    @test all(iszero,population(pb,pb.u0,:crystals))
+    data=ProteinCrystallization.observations()
+    @test length(data.concentration.t)==28 && length(data.D50.t)==4
+    # L³-weighted median of a constant number density on [0,2] is 2/2^(1/4).
+    g=Grid1D([0.,1.,2.]);op=compile(PBMModel(),g)
+    base=PBMProblem(PBMSystem((crystals=op,)),(crystals=[1.,1.],),(0.,1.))
+    @test ProteinCrystallization.volume_median(base.u0,base.operator,(;),0.)≈2/2^(1/4)
+end

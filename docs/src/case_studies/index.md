@@ -23,6 +23,13 @@ boundaries, and numerical choices used in its implementation.
   with Gaussian noise illustrate fitting two growth rates, comparing prior choices
   and checking MCMC chains.
 
+- [Continuous tubular precipitation](continuous_precipitation.md): axial transport
+  and dispersion carry both solute and crystals; startup and outlet distributions
+  are compared under refinement.
+- [Inferring protein crystallization kinetics](protein_crystallization.md):
+  graph-read concentration and diameter measurements constrain nucleation and
+  growth in an unseeded batch, with explicit unit and prior assumptions.
+
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition
 and a finer sectional reference, with an independent moment check. The

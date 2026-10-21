@@ -206,3 +206,15 @@ julia --project=. examples/constant_growth_methods.jl
 python docs/benchmarks/plot_transport_comparisons.py constant --usetex
 julia --project=docs docs/make.jl
 ```
+
+## Complete runnable script
+
+The code below is read from the example source during the documentation build.
+Run it from the repository root using the environment described above.
+
+### `examples/constant_growth_methods.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","constant_growth_methods.jl"),String))])
+```

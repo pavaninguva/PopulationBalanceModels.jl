@@ -37,12 +37,23 @@ For axial states, `axial_population(operator,u,cell)` restores a local intrinsic
 view and `axial_fluxes(operator,u,p,t)` returns physical face fluxes. See
 [Axially dispersed reactors](axial_reactors.md) for units and boundary contracts.
 
+`RankAdaptiveQMOM(N)` evolves 2N raw moments with a checked variable-rank
+quadrature. `EQMOM(N)` evolves 2N+1 raw moments with a Gamma-kernel
+reconstruction; `reconstructed_density` and `reconstructed_bins` make that
+assumption explicit. `DQMOM(N)` evolves positive weights and weighted abscissas;
+initialize it with `quadrature_state(method,nodes,weights)`. Read
+[Moment methods](moment_methods.md) for rank, conditioning and boundary limits.
+
 ## Couple and observe
 
 `PBMSystem(populations; bulk_rhs, interactions, exchanges, fields, nonnegative_bulk)`
 accepts a named tuple of compiled populations. Its problem adds named initial
 populations and `bulk0`; use `stateview(problem,u)` to obtain named views.
 See [Coupled systems](coupled_systems.md) for callback and exchange contracts.
+`axial_problem(local_problem,reactor;axial_scheme=...)` adds axial transport to
+local sectional/raw-moment systems, including every scalar bulk state.
+`axial_stateview(problem,u,cell)` exposes a named local state; population and
+bulk accessors return axial arrays. Direct moment states are rejected.
 
 `Observation(times,data,observable; sigma)` or a fixed `covariance` block becomes part of
 `Experiment(problem,observations...)` and then

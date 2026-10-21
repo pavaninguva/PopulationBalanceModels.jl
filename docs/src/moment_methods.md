@@ -110,7 +110,8 @@ operator = compile(model,basis;method=QMOM(2),
 Here polynomial growth is integrated analytically while aggregation uses the
 reconstructed quadrature. `closure=` remains available for raw-moment families.
 The reconstruction is shared within a residual evaluation; `term_methods(operator)`
-records the rules used. `examples/moment_closures.jl` exercises all three families.
+records the rules used. `examples/moment_closures.jl` exercises the original
+families; the comparison below adds the adaptive, extended and direct families.
 
 Moment populations can share a PBMSystem with 1D sectional populations.
 `MomentExchange(:particles,:c,k;factor=...)` derives bulk exchange from the actual
@@ -124,8 +125,131 @@ result. Histogram predictions require a declared reconstruction or measurement
 model. Optim and SciML adapters can use moment problems, subject to the same
 closure and boundary restrictions.
 
-The [extension interface](development.md) also supports solver states other than
-raw moments, with explicit maps for moment values and their rates. Its tested
-direct-state example is an extension contract, not a general DQMOM solver.
-EQMOM, CQMOM, multivariate moment closures, and maximum-entropy reconstruction
-remain future implementations.
+## Adapt the quadrature rank
+
+`RankAdaptiveQMOM(max_nodes)` keeps moments 0:2max_nodes−1 as the ODE state.
+During each residual evaluation it tries quadratures with increasing rank and
+accepts the smallest one that reproduces **every tracked moment**, including
+moments not used in that smaller inversion. This allows an empty or point-mass
+population without pretending its Hankel matrix has full rank. `rtol` controls
+the scaled reconstruction residual; it does not change the number of ODE states.
+No moment vector is clipped or projected to make inversion succeed.
+Empty-state inversion does not by itself solve nucleation/growth startup: an
+explicit Runge–Kutta predictor can leave the realizable-moment cone. There is
+no special startup regularization; use a suitable realizability-preserving
+integration/initialization or a sectional population for that stage.
+
+```@example adaptive_moments
+using PopulationBalanceModels
+basis = MomentSet(0:5)
+nodes, weights = [1.0,3.0], [0.4,0.6]
+mu = [sum(weights .* nodes.^k) for k in 0:5]
+q = quadrature(basis,mu,RankAdaptiveQMOM(3))
+(q.rank, q.nodes, q.moment_error)
+```
+
+A tolerance-based rank decision is discontinuous. Inference through these
+eigenvalue inversions is not supported by ForwardDiff; select explicit finite
+differences and check the stability of the rank under perturbation.
+
+## Reconstruct a density with Gamma EQMOM
+
+A quadrature rule represents integrals. It does not by itself define a smooth
+PSD. Gamma EQMOM makes an additional kernel assumption:
+
+```math
+n(x,t) \approx \sum_{i=1}^{N} w_i(t)
+\frac{x^{\alpha_i(t)-1}\exp[-x/\sigma(t)]}
+{\Gamma[\alpha_i(t)]\sigma(t)^{\alpha_i(t)}},
+\qquad \alpha_i(t)=\frac{\xi_i(t)}{\sigma(t)}.
+```
+
+Each kernel has mean ``\xi_i``, variance ``\xi_i\sigma`` and the same positive
+scale ``\sigma``. `EQMOM(N)` uses moments 0:2N, one more than ordinary QMOM.
+Triangular deconvolution removes the Gamma-kernel contributions from the raw
+moments. A bracketed search finds the realizability boundary of the deconvolved
+Hankel matrices. The primary quadrature is accepted only if the original
+mixture reproduces all input moments. Some nonnegative moment vectors cannot
+be represented by this family; those inputs fail explicitly.
+
+The rates are integrated with a secondary Gauss–Laguerre rule within each
+kernel. `secondary_nodes` controls that integration accuracy independently of
+`N`, the number of mixture components. At zero width the reconstruction becomes
+atomic and no ordinary density exists. Empty populations are allowed; growth
+through zero still requires a separate extinction model.
+
+```@example extended_moments
+using PopulationBalanceModels
+basis = MomentSet(0:2)
+mu = [1.0,2.0,4.4] # Gamma mean 2, variance 0.4
+method = EQMOM(1;secondary_nodes=16)
+operator = compile(PBMModel(growth=Growth((x,p,t,ctx)->sqrt(x))),basis;method)
+q = quadrature(basis,mu,method)
+(q.primary_nodes,q.width,reconstructed_bins(basis,mu,method,[0.,1.,2.,4.,Inf]))
+```
+
+`reconstructed_density` evaluates this declared mixture; `reconstructed_bins`
+uses exact Gamma-CDF bin integrals. `weight_order=3` gives length-cubed weighting
+and `normalize=true` conditions on the specified measurement window. A
+`FunctionObservable` can call these functions explicitly for inference.
+This is a kernel observation model, not a uniquely recovered PSD. Only the
+Gamma kernel is supplied; lognormal EQMOM, CQMOM and multivariate moment
+closures remain unimplemented. The eigenvalue/root inversion requires explicit
+finite-difference inference. The construction follows the Gamma extended
+quadrature framework reviewed by [Dürr and Bück](https://doi.org/10.3390/pr8040414).
+
+## Evolve nodes and weights with DQMOM
+
+`DQMOM(N)` advances ``2N`` variables: positive weights ``w_i`` followed by
+weighted abscissas ``q_i=w_i\xi_i``. Pass these variables, rather than raw
+moments, to `PBMProblem`:
+
+```@example direct_moments
+using PopulationBalanceModels
+method = DQMOM(2)
+basis = MomentSet(0:3)
+u0 = quadrature_state(method,[1.,3.],[0.4,0.6])
+operator = compile(PBMModel(growth=Growth((x,p,t,ctx)->0.2x)),basis;method)
+solution = simulate(PBMProblem(operator,u0,(0.,1.));dt=0.005)
+quadrature(basis,last(solution.u),method)
+```
+
+For a required raw-moment rate ``S_k``, the direct source equations are
+
+```math
+\sum_{i=1}^{N}\left[(1-k)\xi_i^k\frac{dw_i}{dt}
++k\xi_i^{k-1}\frac{dq_i}{dt}\right]=S_k,
+\qquad k=0,\ldots,2N-1.
+```
+
+The same growth, nucleation, removal and collision weak forms supply ``S_k``.
+The implementation scales sizes by their current weighted mean and solves the
+confluent system with LU. It checks conditioning on that dimensionless matrix.
+Coincident nodes, vanishing weights and an empty initial population are rejected;
+no arbitrary seed weight or regularization is inserted. Adaptive QMOM and EQMOM can invert empty moment vectors, with the startup
+integration restriction stated above. DQMOM currently describes local batch
+or coupled balances, not spatial transport of its nonlinear node variables.
+See [Marchisio and Fox](https://doi.org/10.1016/j.jaerosci.2004.07.009) for the
+direct quadrature formulation. `MomentExchange` uses the full chain rule above,
+so bulk exchange remains consistent with these solver states.
+
+## Check the new families against a known evolution
+
+For ``G(x)=0.2x``, every tracked moment satisfies
+``d\mu_k/dt=0.2k\mu_k``. The initial Gamma density stays Gamma as sizes grow.
+The runnable comparison checks the raw moments for QMOM, adaptive QMOM, EQMOM
+and DQMOM and plots the explicit EQMOM density against its analytical value.
+This scaling test verifies implementation; it does not establish closure
+accuracy for arbitrary nonlinear kinetics.
+
+![Gamma reconstruction under linear growth](assets/quadrature_moments/density.png)
+
+```sh
+julia --project=. examples/quadrature_moment_methods.jl
+python docs/benchmarks/plot_new_case_studies.py moments --usetex
+```
+
+The [extension interface](development.md) supplies separate hooks for state
+length, raw-moment values, moment chain rules, reconstruction and stage checks.
+New families must implement those contracts rather than treating their solver
+states as raw moments.

@@ -270,3 +270,15 @@ That result does not apply to arbitrary size-dependent velocities.
 The last figure uses actual total bin counts for each mesh. It compares accuracy
 and undershoots, not elapsed runtime. The transformed mesh exploits the known
 characteristics; its near-roundoff error is specific to this compatible problem.
+
+## Complete runnable script
+
+The code below is read from the example source during the documentation build.
+Run it from the repository root using the environment described above.
+
+### `examples/inguva_braatz_case2.jl`
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","inguva_braatz_case2.jl"),String))])
+```
