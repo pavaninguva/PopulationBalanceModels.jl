@@ -63,7 +63,7 @@ figures were rendered with LaTeX. PNG and compact SVG exports are retained.
 ```sh
 python docs/benchmarks/plot_case_studies.py transport --usetex
 python docs/benchmarks/plot_case_studies.py illustrations --usetex
-julia --project=. examples/temperature_programmed_crystallization.jl
+julia --project=. examples/qamar_moment_benchmarks.jl
 python docs/benchmarks/plot_case_studies.py moments --usetex
 julia --project=/path/to/working_environment examples/kinetic_parameter_uncertainty.jl
 python docs/benchmarks/plot_case_studies.py estimation --usetex
@@ -72,9 +72,10 @@ python docs/benchmarks/plot_case_studies.py estimation --usetex
 `illustrations` re-renders the retained cooling and LNP demonstration data into
 `docs/src/assets/illustrations/`. Their input provenance is in the diagnostic
 folders. They do not replace the unresolved publication inputs or represent
-published-figure reproductions. The moment calculation records its reconstructed
-monotonic protocol and material assumptions in `moment_crystallization/inputs.txt`;
-it does not implement the extinction/distribution parts of Figure 13.
+published-figure reproductions. The active moment case uses Qamar problems 4 and 5 and records analytical
+references, quadrature/time refinement and a sectional reference in
+`qamar_moments/`. The previous temperature-programmed recipe remains runnable
+for compatibility; it is no longer the active manual case study.
 
 The older estimation example uses seeded synthetic Gaussian data. Its raw exports
 include whitened residuals, mapped joint-region points, a nuisance-reoptimized
@@ -118,48 +119,20 @@ julia --project=. examples/axially_dispersed_growth.jl
 python docs/benchmarks/plot_transport_comparisons.py axial --usetex
 ```
 
-The constant-growth comparison follows the 2022 Case 1 equation, initial
-exponential, and t=4. It compares analytical bin integrals with several
-reconstruction/integrator combinations at C=0.5 and C=1. Negative concentrations
-are retained deliberately; LinearUpwind/C=1 is omitted because it is outside
-the integrator stability region. A smooth periodic companion separates formal
-order from sharp-front behavior; time-step refinement separates time error from
-spatial error. Timings are medians of three warmed runs with their ranges. The axial
-example feeds a growing population into an initially empty dispersed tube; the
-PDF-independent verification uses analytical periodic advection–diffusion and
-nonuniform-grid inlet/outlet balances in `test/axial.jl`.
+The constant-growth comparison uses six representative pairings for the 2022
+Case 1 front and a smooth periodic input. Each configuration has one measured
+solve following a small compilation warmup. L1/RMSE panels and measured
+refinement orders replace arbitrary h-power guides and repeated-run bands.
+Inguva2022 appears in the timing and error plots at its required C=1, labelled
+separately from the other methods at C=.5. Run `examples/audit_lax_wendroff.jl`
+to regenerate the coefficient, boundary and final-time comparison with the
+PBM_Schemes reference. The reference also oscillates at C=.5; whole-cell C=1
+shifts remove that error. The axial example retains analytical periodic
+advection–diffusion and nonuniform inlet/outlet tests in `test/axial.jl`.
 
-The figures include every supplied 1D face reconstruction, including van Leer,
-WENO3, Centered and LinearUpwind. Inguva2022 is reported at its required C=1;
-its timing cannot be treated as a common-C=0.5 comparison. HOCADI and
-InguvaBraatz2023 belong to the separate two-coordinate studies.
-
-## Full-horizon nanoparticle reconstruction and compact audit
-
-```sh
-julia --project=/path/to/lnp_environment examples/shin_lnp_long_time.jl 80 1e-7 docs/src/assets/shin_case
-julia --project=/path/to/lnp_environment examples/shin_lnp_long_time.jl 160 1e-8 docs/src/assets/shin_case/refinement 1,3
-python docs/benchmarks/plot_lnp_dynamics.py --comparison docs/src/assets/shin_case/refinement --usetex
-julia --project=. examples/audit_li2026_supplement.jl
-python docs/benchmarks/plot_compact_audit.py --usetex
-```
-
-The LNP environment needs the local package, SciMLBase,
-OrdinaryDiffEqRosenbrock and ADTypes. The runner supplies explicitly recorded
-reconstruction assumptions where the paper/SI do not specify numerical material
-inputs. It integrates FRR 1, 3 and 5 to 4320 minutes, records early mechanism
-rates and cumulative lipid uptake, and accounts for discarded collision volume.
-The current late-time outputs show substantial escaped mass and do not establish
-reproduction or convergence. Read the conservation/domain plots alongside the
-mean-diameter curve. No data are fitted to the target figure.
-
-The Li audit uses nodal densities and the literal S11 coefficients, with
-constant, affine and exponential growth in 1D and separable 2D. It retains fine
-mesh order loss and singular/growing large-step cases. A separate CSV records an
-independently derived accuracy correction, never attributed to the paper.
-Neither diagnostic is a general public nodal PBM solver or a verified
-transcription of the main multilevel HOC–ADI algorithm. The public periodic
-constant-growth HOCADI variant remains unchanged.
+All supplied growth and time methods remain available in the package;
+the case-study figures deliberately show only the representative subset.
+HOCADI and InguvaBraatz2023 belong to the separate two-coordinate studies.
 
 For the additional moment and reactor calculations:
 

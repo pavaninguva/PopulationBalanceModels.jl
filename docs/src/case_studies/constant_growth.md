@@ -1,21 +1,18 @@
 # Comparing growth and time methods
 
-A population can broaden for two different reasons: its particles may have
-different growth rates, or its numerical approximation may smear the size
-distribution. A constant-growth calculation separates these effects. Every
-particle moves at the same rate, so the true distribution translates without
-changing shape. Any broadening, oscillation, or loss of number comes from the
-calculation or its boundaries.
+If every particle grows at the same rate, the size distribution should move
+without broadening. This makes constant growth a useful test: the exact answer
+is known, and numerical diffusion, oscillations and computational cost can be
+compared without uncertainty about the physical kinetics.
 
-This model follows Case 1 of
-[Inguva, Schickel, and Braatz (2022)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2022.pdf).
-It also demonstrates a special result from that study: at a Courant number of
-one, some simple schemes reduce to an exact cell shift. A more accurate ODE
-integrator does not necessarily preserve that cancellation.
+We use Case 1 of [Inguva, Schickel and Braatz (2022)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2022.pdf),
+then repeat the comparison with a smooth periodic distribution to measure
+convergence. The two inputs serve different purposes. A sharp front tests
+resolution and positivity; a smooth input tests the accuracy of the schemes.
 
-## Model and analytical solution
+## Model, initial condition and boundaries
 
-For intrinsic coordinate ``a\ge0``, solve
+For ``0\le a\le1``,
 
 ```math
 \frac{\partial f(a,t)}{\partial t}
@@ -23,198 +20,204 @@ For intrinsic coordinate ``a\ge0``, solve
 \qquad f(a,0)=100\exp(-a/0.01).
 ```
 
-There are no births, deaths, or collisions. The left boundary supplies no new
-particles. The analytical solution before the upper boundary matters is
+The incoming number flux is zero. The far boundary lets particles leave; the
+initial tail that can reach it by ``t=4`` is negligible. The analytical density is
 
 ```math
-f(a,t)=
-\begin{cases}
+f(a,t)=\begin{cases}
 100\exp[-(a-0.1t)/0.01],&a\ge0.1t,\\
 0,&a<0.1t.
 \end{cases}
 ```
 
-The runner uses ``0\le a\le1`` and stops at ``t=4``. It applies a zero-flux
-upper boundary as in the source comparison. The initial tail near that boundary
-is exponentially small; the dominant feature travels to ``a=0.4``. The sharp
-leading edge is a difficult test for unlimited high-order schemes.
-
-## Specify the law, grid, and boundaries
+All numerical states are bin integrals, initialized and assessed against exact
+bin integrals of this function. Sampling the steep exponential only at bin
+centres would add a separate initialization error.
 
 ```@example growth_comparison
 using PopulationBalanceModels
 include(joinpath(pkgdir(PopulationBalanceModels),"examples","constant_growth_methods.jl"))
 import .ConstantGrowthMethods
-const comparison = ConstantGrowthMethods
-
 model = PBMModel(growth=Growth(AffineGrowth(0.1,0.0)))
-grid = Grid1D(range(0.0,1.0;length=201);coordinate=:length)
-bc = SizeBC(OpenBoundary(),NoFlux())
-N0 = comparison.exact_counts(grid,0.0)
-nothing # hide
-```
-
-`AffineGrowth(0.1,0.0)` declares a constant velocity in coordinate units per
-time. `N0` contains bin integrals of the initial density. Sampling the steep
-initial exponential only at bin centers would introduce an avoidable initial
-quadrature error.
-
-## Pair a face reconstruction with an integrator
-
-```@example growth_comparison
+grid = Grid1D(range(0.,1.;length=201);coordinate=:length)
+bc = SizeBC(OpenBoundary(),OpenBoundary())
+initial = ConstantGrowthMethods.exact_counts(grid,0.)
 operator = compile(model,grid;methods=TermMethods(growth=MUSCL()),bc)
-problem = PBMProblem(operator,N0,(0.0,4.0))
-dt = 0.5*first(grid.widths)/0.1
-solution = simulate(problem;method=SSPRK33(),dt)
+problem = PBMProblem(operator,initial,(0.,4.))
+solution = simulate(problem;method=SSPRK33(),dt=0.5*first(grid.widths)/0.1)
 nothing # hide
 ```
 
-Changing `MUSCL()` to `Upwind()`, `VanLeer()`, `WENO3()`, `WENO5()`, `Centered()`, or `LinearUpwind()`
-changes the growth face flux. Changing `SSPRK33()` to `ForwardEuler()`,
-`SSPRK22()`, `SSPRK54()`, or `RK4()` changes how the assembled residual advances in time.
-The runner compares selected combinations, rather than assuming every pairing
-is stable at the same step size. The
-[growth](../methods/growth.md) and [time](../methods/time.md) pages describe
-their stencils, boundaries, and restrictions.
+## A representative set of methods
 
-Lax–Wendroff and Beam–Warming include their own time updates:
+The comparison uses six pairings. This keeps the plots readable while showing
+first-order transport, limited reconstruction, high-order reconstruction,
+temporal error and a characteristic shift.
+
+| Growth treatment | Time method | Courant number in the smooth/timing comparison |
+|:--|:--|:--|
+| Upwind | Forward Euler | 0.5 |
+| MUSCL | SSPRK33 | 0.5 |
+| WENO5 | SSPRK33 | 0.5 |
+| WENO5 | RK4 | 0.5 |
+| Lax–Wendroff complete update | Built into the scheme | 0.5 |
+| Inguva2022 characteristic update | Matched shift | 1 |
+
+The Courant number is ``C=G\Delta t/\Delta a``. Inguva2022 requires a grid
+uniform in travel time and a step that moves one whole cell. For constant
+``G=0.1``, an ordinary uniform mesh meets that requirement:
 
 ```@example growth_comparison
-lw = compile(model,grid;evolution=LaxWendroff(),bc)
-lw_problem = PBMProblem(lw,N0,(0.0,4.0))
-lw_solution = simulate(lw_problem;dt,check_nonnegative=false)
-minimum(lw_solution.u[end])
+shift_operator = compile(model,grid;evolution=Inguva2022(),bc)
+shift_problem = PBMProblem(shift_operator,initial,(0.,4.))
+shift_solution = simulate(shift_problem;dt=first(grid.widths)/0.1)
+maximum(abs.(last(shift_solution.u).-ConstantGrowthMethods.exact_counts(grid,4.)))
 ```
 
-`evolution=BeamWarming()` selects the other complete update. These compiled
-operators reject variable growth and additional mechanisms. They do not supply
-an ODE residual for a second integrator. Negative values are deliberately
-retained in this benchmark and exported; the normal default state checks
-would reject a run with a substantial undershoot.
+That ``C=1`` is labelled in every comparison. It is not a valid ``C=0.5`` run
+of the characteristic method. Its lower cost includes taking fewer steps and
+using a direct copy rather than reconstructing face fluxes. Other available
+schemes remain documented in [Growth](../methods/growth.md) and
+[Time integration](../methods/time.md); they have not been removed from the package.
 
-## Compare the solutions
+## What happens with Lax–Wendroff?
 
-![Constant-growth solutions with two Courant numbers](../assets/constant_growth/solutions.png)
-
-The upper panels show upwind, limited linear and WENO reconstructions; the lower
-panels show the unlimited reconstructions and complete space–time methods.
-All seven supplied 1D face reconstructions appear. Inguva2022 appears at its
-required matched CFL=1, with paired open boundaries; its tiny outgoing
-exponential tail is negligible here. The other front runs keep the closed
-upper boundary stated above.
-
-At ``C=0.5``, upwind broadens the peak. Increasing its time order does not remove
-the spatial diffusion. MUSCL and WENO reduce that broadening, while the unlimited
-schemes can create appreciable negative lobes. Their negative number and minimum
-density are reported in `errors.csv`.
-
-At ``C=1``, Upwind with ForwardEuler, Lax–Wendroff, and Beam–Warming shift the
-bin numbers one cell per step, within floating-point error. Upwind with RK4
-still solves the semi-discrete upwind equations and remains diffusive. The
-exact cancellation is a property of the complete update, not of the upwind
-spatial stencil alone. The existing `Inguva2022()` method provides a direct
-shift on a matched travel-time grid; its variable-growth extension is explained
-in [Transport along growth trajectories](../methods/characteristics.md).
-
-LinearUpwind needs a smaller step: the runner omits its ``C=1`` pairing,
-which is outside RK4's stability region. A transport CFL of one is not a general
-stability bound for higher-order stencils.
-
-Lax–Wendroff at ``C=0.5`` is stable for periodic constant advection but is not
-monotone. For a Fourier wave of angle ``\theta``, its squared amplification is
+The constant-growth update is
 
 ```math
-|A(\theta)|^2=1-4C^2(1-C^2)\sin^4(\theta/2)\le1,\qquad |C|\le1.
+\bar f_i^{m+1}=\bar f_i^m
+-\frac{C}{2}(\bar f_{i+1}^m-\bar f_{i-1}^m)
++\frac{C^2}{2}(\bar f_{i+1}^m-2\bar f_i^m+\bar f_{i-1}^m).
 ```
 
-The tests compare a signed-velocity step against the expanded difference
-formula and check the discrete squared norm over a full domain transit.
-The front's negative lobes are dispersive oscillations; calling them instability
-would obscure the distinction between bounded error and positivity.
+It is selected as a complete space–time method:
 
-## Measure error and work
+```julia
+operator = compile(model,grid;evolution=LaxWendroff(),bc)
+solution = simulate(PBMProblem(operator,initial,(0.,4.));
+    dt=0.5*first(grid.widths)/0.1,check_nonnegative=false)
+```
 
-For each run, compare numerical bin averages with **analytical bin averages**:
+The audit compares its interior coefficients with
+[`model_1.m` in PBM_Schemes](https://github.com/pavaninguva/PBM_Schemes/blob/02d8016c4aa69e58c0c8e06777bbe579adef6970/Matlab/model_1.m).
+The updates agree to roundoff when supplied the same numerical values. Repeating
+the reference stencil on 201 nodes at ``C=0.5`` gives a minimum density near
+``-16.09``; it also produces negative lobes. The paper's Figure 1 uses ``C=1``,
+where the update reduces to a one-cell shift and this
+particular error disappears.
+
+![The moving front at CFL 0.5 and CFL 1](../assets/constant_growth/solutions.png)
+
+At ``C=0.5`` these are bounded dispersive oscillations. For periodic advection,
+the Fourier amplification satisfies
 
 ```math
-\bar f_i^{\mathrm{exact}}(t)=\frac{1}{\Delta a_i}
-\int_{a_{i-1/2}}^{a_{i+1/2}}f(a,t)\,da,
+|A(\theta)|^2=1-4C^2(1-C^2)\sin^4(\theta/2)\le1,
+\qquad |C|\le1.
 ```
+
+Stability does not imply a nonnegative density. The runner retains negative
+values so their size is visible; a checked physical solve should use a suitable
+positivity-preserving method when these undershoots are unacceptable.
+
+There are also two differences to account for when comparing entire runs:
+
+- The MATLAB solver evolves nodal values, uses a zero left ghost and a reflected
+  right ghost. The package evolves bin integrals with a prescribed zero total
+  inlet flux and an advective outlet. Those boundary updates are distinct.
+- The MATLAB loop keeps its nominal step and can finish beyond the requested
+  final time. For 200 nodes at nominal ``C=1`` it ends near 4.0201. The package
+  lands on 4 by shortening the last step, which then has ``C<1`` and loses the
+  exact-shift cancellation. Using aligned meshes and output times avoids that
+  mismatch. The grids in this comparison are aligned.
+
+These findings do not support changing the interior Lax–Wendroff coefficients.
+They explain why a ``C=0.5`` or unaligned-output result should not be compared
+with the paper's whole-cell ``C=1`` result as if they were the same calculation.
+The [audit CSV](../assets/constant_growth/lax_wendroff_audit.csv) records both
+boundary treatments, requested/actual times, minima and coefficient differences.
+
+## Compare both error norms
+
+For analytical bin averages ``\bar f_i^{\mathrm{exact}}``, we report
 
 ```math
-E_{\mathrm{RMS}}=
-\left[\frac{1}{a_{\max}-a_{\min}}
-\sum_i\Delta a_i(\bar f_i-\bar f_i^{\mathrm{exact}})^2\right]^{1/2}.
+E_{L^1}=\sum_i\Delta a_i\left|\bar f_i-\bar f_i^{\mathrm{exact}}\right|,
+\qquad
+E_{\mathrm{RMS}}=\left[
+\frac{\sum_i\Delta a_i(\bar f_i-\bar f_i^{\mathrm{exact}})^2}
+{a_{\max}-a_{\min}}\right]^{1/2}.
 ```
 
-The runner records absolute errors, total-number drift, negative number,
-step count, and elapsed time. It first warms each calculation, then reports the
-median and range of three runs. Timings include stepping, residual assembly,
-and allocations on the generating machine.
+![L1 and RMSE for the moving exponential front](../assets/constant_growth/performance.png)
 
-![RMSE refinement for sharp and smooth initial distributions](../assets/constant_growth/performance.png)
-
-The paper's exponential and the zero-inflow front are nonsmooth. Their RMSE
-curves measure how well a scheme resolves that front; they cannot establish
-smooth-solution order. A second test uses periodic boundaries and the smooth,
-positive initial density
+The front is discontinuous, so these curves do not establish formal
+smooth-solution order. The companion calculation uses periodic boundaries and
 
 ```math
-f(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a),\qquad 0\le a\le1.
+f(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a),
+\qquad f(a,t)=f(a-0.1t,0)
 ```
 
-Its analytical solution is ``f(a,t)=f(a-0.1t,0)`` with periodic continuation.
-Both initialization and comparison use exact bin integrals. At fixed
-``C=0.5``, Lax–Wendroff and Beam–Warming approach second-order RMSE convergence.
-WENO5 with SSPRK3 approaches third order because time error eventually dominates.
-WENO5 with RK4 reaches much smaller errors. A companion run reduces its time
-step as ``\Delta t\propto h^{5/4}``, so fourth-order time error cannot mask
-fifth-order spatial convergence. Error cancellation and nonlinear weights can
-produce slopes above the formal order over a finite refinement range; those
-slopes do not establish a new order of accuracy.
+with periodic continuation. Both initialization and comparison again use exact
+bin integrals.
 
-![Smooth tests: limited reconstruction and time-step refinement](../assets/constant_growth/smooth_refinement.png)
+![L1 and RMSE for smooth periodic transport](../assets/constant_growth/smooth_refinement.png)
 
-The MUSCL and van Leer slope limiters reduce the reconstruction near extrema,
-even for smooth profiles. Here their integrated absolute errors approach second
-order, while their RMSE slopes remain near 1.8. The norm matters: a local loss
-of accuracy near extrema is more prominent in RMSE than in an integrated
-absolute error. WENO3's fixed smoothing parameter also affects its approach to
-the asymptotic regime. The CSV files retain every measured error rather than
-replacing the curves with fitted formal-order lines.
+Rather than placing arbitrarily anchored ``h^2`` and ``h^5`` lines on these
+plots, we calculate the observed order from each pair of grids:
 
-![Computational time and error versus computational work](../assets/constant_growth/timings.png)
+```math
+p_{\mathrm{obs}}=
+\frac{\log[E(N)/E(2N)]}{\log2}.
+```
 
-The timing plot compares the same smooth problem at fixed CFL; bands show the
-three-run range. It separates cost per grid from accuracy per unit work. These
-results concern this implementation and machine. They are not solver rankings
-for other models or hardware.
-The common-CFL error and timing curves include van Leer, WENO3, Centered and
-LinearUpwind alongside the older choices. The matched Inguva shift is excluded
-from the C=0.5 curves because that time step violates its contract; its C=1
-error and timing remain in the exported CSV files. HOCADI and InguvaBraatz2023
-are two-coordinate methods and are assessed in their own examples.
+![Measured orders in both error norms](../assets/constant_growth/observed_orders.png)
 
-Raw front results are in [errors.csv](../assets/constant_growth/errors.csv);
-the smooth results and their measured refinement slopes are in
-[smooth_errors.csv](../assets/constant_growth/smooth_errors.csv).
+Upwind approaches first order and Lax–Wendroff second order. MUSCL approaches
+second order in ``L^1`` but about 1.8 in RMSE here, because limiting near smooth
+extrema affects the norms differently. WENO5 with SSPRK33 approaches third
+order as time error dominates. RK4 gives much smaller errors on this mesh range;
+its observed slopes above five are finite-range behaviour, not proof of a new
+order or of fifth-order space–time accuracy. At sufficiently fine resolution,
+fourth-order temporal error can dominate that pairing too. The characteristic
+shift is at roundoff, where an inferred convergence order is meaningless.
 
-Regenerate the data and figures from the repository root:
+## Measure computation time once
+
+![Single-run elapsed time and error versus time, including Inguva2022](../assets/constant_growth/timings.png)
+
+Each configuration has **one measured integration**. Small, separate warmups
+compile the method before measuring; the benchmark-sized problem is not run
+three times. Timings include stepping, residual evaluation and allocations,
+and exclude compilation, file output and plotting. They have no averaging or
+repeatability bands and will vary between runs and machines.
+
+Raw results are in [errors.csv](../assets/constant_growth/errors.csv) and
+[smooth_errors.csv](../assets/constant_growth/smooth_errors.csv). They also retain
+negative number, total-number drift and actual step counts.
 
 ```sh
 julia --project=. examples/constant_growth_methods.jl
+julia --project=. examples/audit_lax_wendroff.jl
 python docs/benchmarks/plot_transport_comparisons.py constant --usetex
 julia --project=docs docs/make.jl
 ```
 
-## Complete runnable script
+## Complete runnable scripts
 
-The code below is read from the example source during the documentation build.
-Run it from the repository root using the environment described above.
+The code below is read from the runnable sources during the documentation build.
 
-### `examples/constant_growth_methods.jl`
+### Growth and timing comparison
 
 ```@eval
 using Markdown, PopulationBalanceModels
 Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","constant_growth_methods.jl"),String))])
+```
+
+### Lax–Wendroff audit
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","audit_lax_wendroff.jl"),String))])
 ```

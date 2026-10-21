@@ -1,6 +1,0 @@
-Kim et al. (2023), doi:10.1021/acs.iecr.2c03465. Kinetics: Tables 2 and 6; solubility: SI.
-ILLUSTRATIVE reconstruction of noncycling Figure 13 Case I, not full Figure 13 reproduction.
-Temperature knots (min, Celsius): (0,50),(20,30),(140,30),(460,20),(550,20); c0=0.300 g/g.
-Density assumed 1.293 g/cm^3; shape factor 0.797; molecular weight 151.16 g/mol.
-No extinction closure or PSD reconstruction is inferred from five raw moments.
-Julia 1.10.3; dt=0.02; native step-halving relative difference=3.6510775199633436e-6

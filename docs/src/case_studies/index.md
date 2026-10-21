@@ -10,9 +10,9 @@ boundaries, and numerical choices used in its implementation.
 - [Comparing growth and time methods](constant_growth.md): a translating
   distribution separates spatial diffusion, temporal error, and dispersive
   undershoots; the analytical solution also tests the CFL=1 cell shift.
-- [Crystal growth under a temperature program](moment_crystallization.md): native
-  moment equations and a sectional calculation predict number, material, and mean
-  sizes; a review of temperature cycling explains where extinction needs more information.
+- [Aggregation and nucleation with moments](moment_crystallization.md): an
+  analytical aggregation–fragmentation balance and a short nucleation pulse test
+  quadrature closure, collision conservation and temporal resolution.
 - [Lipid nanoparticle formation](nanoparticles.md): an initially particle-free
   solution nucleates, grows, and coalesces after solvent mixing. Scattering
   observations weight the resulting distribution strongly toward larger particles.

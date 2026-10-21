@@ -143,7 +143,7 @@ def illustrations():
     save_figure(fig,ASSETS/"illustrations"/"lnp","demonstration")
 
 
-def moments(folder):
+def temperature_moments(folder):
     data=np.genfromtxt(folder/"history.csv",delimiter=",",names=True,dtype=None,encoding="utf-8")
     ref=data[data["method"]=="moments"]
     fig,axes=plt.subplots(2,2,figsize=(10,7),layout="constrained")
@@ -166,6 +166,50 @@ def moments(folder):
     for axis in axes.flat:axis.legend(fontsize=8)
     fig.suptitle("Unseeded crystallization: reconstructed monotonic cooling input")
     save_figure(fig,folder,"moment_comparison")
+
+
+def moments(folder):
+    data=load(folder/'aggregation_breakage.csv')
+    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout='constrained')
+    for k in range(6):
+        q=data[(data['nodes']==3)&(data['order']==k)]
+        initial=q['exact'][0]
+        axes[0].plot(q['time'],q['exact']/initial,color=f'C{k}',lw=1.1)
+        axes[0].plot(q['time'][::5],q['moment'][::5]/initial,'o',color=f'C{k}',ms=3,mfc='none',label=rf'$\mu_{k}$')
+        if k!=3:axes[1].plot(q['time'],q['relative_error'],color=f'C{k}',label=rf'$\mu_{k}$')
+    axes[0].set(xlabel=r'$t\ (\mathrm{s})$',ylabel=r'$\mu_k(t)/\mu_k(0)$',title='Lines: analytical; markers: three-node QMOM')
+    axes[1].set(xlabel=r'$t\ (\mathrm{s})$',ylabel='Relative moment error',title='Three-node closure error')
+    for ax in axes:ax.legend(fontsize=8)
+    save_figure(fig,folder,'aggregation_breakage')
+
+    data=np.genfromtxt(folder/'pulse.csv',delimiter=',',names=True,dtype=None,encoding='utf-8');ref=load(folder/'sectional_reference.csv')
+    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout='constrained')
+    for ax,process,title in zip(axes,['growth_nucleation','all'],['Growth and nucleation','Growth, nucleation and collisions']):
+        for k in range(5):
+            q=data[(data['processes']==process)&(data['nodes']==3)&(data['order']==k)]
+            initial=q['moment'][0]
+            if process=='growth_nucleation':ax.semilogy(q['time'],q['reference']/initial,color=f'C{k}',lw=1.1)
+            else:
+                rr=ref[(ref['bins']==max(ref['bins']))&(ref['order']==k)]
+                ax.semilogy(rr['time'],rr['moment']/initial,color=f'C{k}',lw=1.1)
+            ax.semilogy(q['time'][::3],q['moment'][::3]/initial,'o',color=f'C{k}',ms=3,mfc='none',label=rf'$\mu_{k}$')
+        ax.set(xlabel=r'$t\ (\mathrm{s})$',ylabel=r'$\mu_k(t)/\mu_k(0)$',title=title);ax.legend(fontsize=8)
+    save_figure(fig,folder,'nucleation_pulse')
+
+    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout='constrained')
+    for n in np.unique(ref['bins']):
+        for k in (0,3,4):
+            q=data[(data['processes']=='all')&(data['nodes']==3)&(data['order']==k)]
+            r=ref[(ref['bins']==n)&(ref['order']==k)]
+            relative=abs(r['moment']/q['moment']-1)
+            axes[0].semilogy(q['time'][1:],np.maximum(relative[1:],1e-16),color=f'C{k}',ls='-' if n==max(ref['bins']) else '--',label=rf'$\mu_{k}$, {int(n)} bins')
+    for n in np.unique(data['nodes']):
+        q=data[(data['processes']=='growth_nucleation')&(data['nodes']==n)&(data['order']==4)]
+        axes[1].semilogy(q['time'][1:],np.maximum(q['relative_difference'][1:],1e-16),label=rf'Growth/source, $\mu_4$, {int(n)} nodes')
+    axes[0].set(xlabel=r'$t\ (\mathrm{s})$',ylabel='Relative difference from three-node QMOM',title='Sectional-reference refinement')
+    axes[1].set(xlabel=r'$t\ (\mathrm{s})$',ylabel='Relative analytical error',title='Growth/source integration check')
+    for ax in axes:ax.legend(fontsize=7)
+    save_figure(fig,folder,'pulse_verification')
 
 
 def estimation(folder):
@@ -193,7 +237,7 @@ def estimation(folder):
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case",choices=("transport","cooling","lnp","illustrations","moments","estimation"))
+    parser.add_argument("case",choices=("transport","cooling","lnp","illustrations","moments","temperature_moments","estimation"))
     parser.add_argument("--usetex",action="store_true",help="Render with an installed LaTeX distribution instead of Matplotlib MathText.")
     parser.add_argument("--data-dir",type=Path)
     args=parser.parse_args()
@@ -201,5 +245,5 @@ if __name__=="__main__":
     if args.case=="illustrations":
         illustrations()
     else:
-        folder=args.data_dir or ASSETS/{"transport":"inguva_case2","cooling":"gunawan_example2","lnp":"shin_case","moments":"moment_crystallization","estimation":"parameter_estimation"}[args.case]
-        {"transport":transport,"cooling":cooling,"lnp":lnp,"moments":moments,"estimation":estimation}[args.case](folder)
+        folder=args.data_dir or ASSETS/{"transport":"inguva_case2","cooling":"gunawan_example2","lnp":"shin_case","moments":"qamar_moments","temperature_moments":"moment_crystallization","estimation":"parameter_estimation"}[args.case]
+        {"transport":transport,"cooling":cooling,"lnp":lnp,"moments":moments,"temperature_moments":temperature_moments,"estimation":estimation}[args.case](folder)

@@ -1,216 +1,259 @@
-# Crystal growth under a temperature program
+# Aggregation, fragmentation and a nucleation pulse
 
-A cooling policy changes both how many crystals form and how much material each
-crystal acquires. If the quantities we need are total number, crystal material,
-and mean sizes, a few moments may be enough. Resolving every size bin is useful
-when fines counts or the full product distribution are needed instead.
+When particles merge, their number falls and their average size increases.
+Fragmentation reverses that trend. Neither mechanism changes the total solid
+volume in a closed batch. A model that follows only a few moments should retain
+that balance while predicting how the number and size measures change.
 
-This calculation uses the paracetamol–ethanol kinetics of
-[Kim, Kawajiri, Rousseau, and Grover (2023)](https://doi.org/10.1021/acs.iecr.2c03465).
-It compares native moment equations with a sectional calculation during monotonic
-cooling. The cooling history is reconstructed from the noncycling side of
-Figure 13; it is an illustrative model calculation, not a verified reproduction
-of that figure. The distinction matters because Figure 13 also includes
-extinction of fines and distributions that a few raw moments do not determine.
+A second question is harder: can those same moment equations follow a short,
+intense burst of nuclei while existing particles grow and collide? These two
+calculations answer different parts of that question. They use problems 4 and 5
+of [Qamar et al., *A Gaussian quadrature method for solving batch crystallization models*](https://doi.org/10.1002/aic.12264),
+published online in 2010 and in AIChE Journal in 2011. The first has an analytical
+solution; the second has an analytical growth/source limit and a numerical
+reference when collisions are included. They replace the earlier temperature-program
+illustration on this page.
 
-## From the population balance to five ODEs
+## Particle length and conserved volume
 
-Let ``f(L,t)`` count crystals per µm and kg of solvent. With size-independent
-velocity ``G(t)``, the interior equation is
+Let ``n(x,t)`` be number density per suspension volume per particle length.
+Length ``x`` is in metres and time in seconds. Define
 
 ```math
-\frac{\partial f(L,t)}{\partial t}
-+\frac{\partial[G(t)f(L,t)]}{\partial L}=0.
+\mu_k(t)=\int_0^\infty x^k n(x,t)\,dx.
 ```
 
-When supersaturated, primary and secondary nuclei enter at zero size with total
-inward number flux ``B_1+B_2``. Define
+Thus ``\mu_0`` measures number concentration and ``\mu_3`` is proportional to
+solid volume concentration. Two particles of lengths ``x`` and ``y`` form one
+particle of length ``(x^3+y^3)^{1/3}``. Adding lengths instead would violate the
+physical balance.
+
+For a constant aggregation kernel ``\beta_0``, the aggregation contribution is
 
 ```math
-\mu_j(t)=\int_0^\infty L^jf(L,t)\,dL.
+\frac{\partial n(x,t)}{\partial t}
+=\frac{x^2}{2}\int_0^x
+\frac{\beta_0\,n((x^3-y^3)^{1/3},t)n(y,t)}{(x^3-y^3)^{2/3}}\,dy
+-\beta_0 n(x,t)\int_0^\infty n(y,t)\,dy.
 ```
 
-Provided no particles disappear through zero size and the upper boundary is
-unpopulated, the moment equations are
+Fragmentation contributes separately:
 
 ```math
-\frac{d\mu_0(t)}{dt}=B_1(t)+B_2(t),\qquad
-\frac{d\mu_j(t)}{dt}=jG(t)\mu_{j-1}(t),\quad j=1,2,3,4.
+\frac{\partial n(x,t)}{\partial t}
+=\int_x^\infty a(y)b(x\mid y)n(y,t)\,dy-a(x)n(x,t).
 ```
 
-The source at zero size adds no higher moments. Because growth is independent
-of size, each equation depends only on lower tracked moments. ExactClosure
-therefore assembles these equations without a distribution reconstruction.
-Their numerical time integration still has error.
-
-The free-solute balance is
+The daughter count density is
 
 ```math
-\frac{dc(t)}{dt}=-q\frac{d\mu_3(t)}{dt}=-3qG(t)\mu_2(t),
-\qquad q=\rho_c k_v\,10^{-15}.
+b(x\mid y)=\frac{6x^2}{y^3},\qquad 0<x<y.
 ```
 
-Here ``c`` is g solute/g solvent, ``\rho_c`` is in g/cm³, and ``k_v`` is the volume
-shape factor. The conversion includes ``10^{-12}`` cm³/µm³ and ``10^{-3}``
-kg/g: the moments are per **kg** of solvent. The invariant is ``c+q\mu_3``.
-
-## Supply the kinetic laws
-
-The supporting-information solubility correlation uses temperature in kelvin:
+It describes binary fragmentation uniform in daughter **volume**, not two
+identical fragments. Its integral is two expected daughters, while its third
+moment equals the parent's volume:
 
 ```math
-c_s(T)=-8.707+0.09669T-3.610\times10^{-4}T^2+4.590\times10^{-7}T^3.
+\int_0^y b(x\mid y)\,dx=2,\qquad
+\int_0^y x^k b(x\mid y)\,dx=\frac{6}{k+3}y^k.
 ```
 
-For ``S=c/c_s(T)>1``, the nucleation rates are
+`UniformVolumeDaughters()` supplies this law. Moment rules use the last integral
+analytically; sectional rules use positive daughter quadrature followed by
+fixed-pivot deposition. `daughter_moment` is the corresponding extension hook.
+
+## First calculation: competing aggregation and fragmentation
+
+Problem 4 uses ``\beta_0=1`` m³/s, ``a(x)=a_0x^3`` with
+``a_0=1`` m⁻³s⁻¹, ``N_0=1`` m⁻³ and ``V_0=0.001``. In the paper's length-cubed
+volume convention the initial distribution is
 
 ```math
-B_1=k_{b1}\exp\left[-\frac{16\pi V_m^2\sigma^3}
-{3(k_BT)^3(\ln S)^2}\right],\qquad
-B_2=k_{b2}(S-1)^\alpha m_s^\beta,\qquad m_s=q\mu_3.
+n(x,0)=\frac{3N_0^2}{V_0}x^2
+\exp\left(-\frac{N_0x^3}{V_0}\right),
+\qquad
+\mu_k(0)=N_0\left(\frac{V_0}{N_0}\right)^{k/3}
+\Gamma\left(1+\frac{k}{3}\right).
 ```
 
-Both rates are zero below saturation. This implementation takes ``m_s`` in g/g,
-as described beside the source paper's equation 6. Growth and dissolution are
+``V_0=\mu_3(0)`` is the length-cubed concentration scale in this formula;
+it is not a particle length or a size-grid width. The paper prints units of
+m³ beside ``V_0`` while also assigning ``N_0`` units m⁻³. Here the equations
+and their resulting moments fix its convention; no additional shape factor or
+unit conversion is inserted into these stated benchmark values.
+
+The complete moment equations are
 
 ```math
-G(t)=\begin{cases}
-k_g\exp[-E_{a,g}/(RT)]\,[c(t)-c_s(T)]^{\gamma_g},&c\ge c_s,\\
-k_d\exp[-E_{a,d}/(RT)]\,[c_s(T)-c(t)]^{\gamma_d},&c<c_s.
+\frac{d\mu_k}{dt}
+=\frac{\beta_0}{2}\int_0^\infty\int_0^\infty
+\left[(x^3+y^3)^{k/3}-x^k-y^k\right]n(x,t)n(y,t)\,dx\,dy
++a_0\left(\frac{6}{k+3}-1\right)\mu_{k+3}.
+```
+
+In particular,
+
+```math
+\frac{d\mu_0}{dt}=-\frac{\beta_0}{2}\mu_0^2+a_0\mu_3,
+\qquad \frac{d\mu_3}{dt}=0.
+```
+
+The higher equations need closure. A three-node QMOM uses moments 0 through 5
+to recover a quadrature and evaluate those integrals. It does not approximate
+the daughter law by an equal-volume split:
+
+```@example qamar_case
+using PopulationBalanceModels
+include(joinpath(pkgdir(PopulationBalanceModels),"examples","qamar_moment_benchmarks.jl"))
+import .QamarMomentBenchmarks
+const benchmark = QamarMomentBenchmarks
+volume = AdditiveCoordinate(x->x^3,cbrt)
+model = PBMModel(
+    aggregation=Aggregation(ConstantKernel(1.);coordinate_map=volume),
+    breakage=Breakage((x,p,t,ctx)->x^3,UniformVolumeDaughters();
+        coordinate_map=volume),
+)
+basis = MomentSet(0:5;coordinate=:length)
+operator = compile(model,basis;method=QMOM(3))
+problem = PBMProblem(operator,benchmark.exact4(0.),(0.,50.))
+solution = simulate(problem;dt=0.01,saveat=[0.,10.,50.])
+vec(last(solution.u))
+```
+
+The analytical solution retains the initial exponential-in-volume form. With
+``N(t)=N_0\phi(t)``, all moments are
+
+```math
+\mu_k(t)=N(t)\left[\frac{V_0}{N(t)}\right]^{k/3}
+\Gamma\left(1+\frac{k}{3}\right).
+```
+
+`exact4` evaluates the hyperbolic-tangent expression for ``\phi`` in the paper's
+Eq. 42. The printed expression contains a ``C_0`` not defined in problem 4;
+setting it to the stated aggregation coefficient ``\beta_0=1`` is independently
+checked by the number equation above and by ``\mu_3=V_0``.
+
+![Analytical and three-node QMOM moments, with relative errors](../assets/qamar_moments/aggregation_breakage.png)
+
+Three nodes give a maximum relative moment error of about 0.38% over this run.
+Four nodes reduce it to about 0.027%. Halving the integration step changes the
+results by much less than either error: these differences mainly assess
+quadrature closure, rather than time integration. The material moment remains
+constant. The results correspond to the moment comparison in Figure 9; QMOM
+nodes are not plotted as a reconstructed PSD.
+
+## Second calculation: a short burst of nuclei
+
+Problem 5 adds constant growth ``G=1`` m/s and a prescribed boundary density:
+
+```math
+n(0,t)=100+10^6\exp[-10^4(t-0.215)^2].
+```
+
+`Nucleation` expects an inward **number flux**, so its rate is
+``J(t)=G n(0,t)``. The large coefficient is a density amplitude, not a particle
+count. The exponent sets a physical pulse duration independent of mesh spacing.
+The initial condition on the stated window is
+
+```math
+n(x,0)=\begin{cases}
+100,&0.4\le x\le0.6,\\
+0.01,&0\le x\le2\text{ outside that interval},\\
+0,&x>2.
 \end{cases}
 ```
 
-The reported ``k_d`` is negative. Time is in minutes, so ``G`` is in µm/min.
-The recipe stores the constants in Tables 2 and 6; interfacial energy is converted
-from mJ/m² to J/m² before evaluating the nucleation barrier. Molecular volume
-is calculated from molar mass, density, and Avogadro's constant.
+The background must have a finite support to define full moments. We retain
+that support at initialization and include particles that subsequently grow
+past ``x=2``; a reference distribution therefore needs a larger size domain.
+Extending the constant background to infinity would give divergent moments.
 
-```@example moment_case
-using PopulationBalanceModels
-include(joinpath(pkgdir(PopulationBalanceModels),"examples","temperature_programmed_crystallization.jl"))
-import .TemperatureProgrammedCrystallization
-const recipe = TemperatureProgrammedCrystallization
-p = recipe.parameters(density=1.293)
+With collisions included, the PDE is
+
+```math
+\frac{\partial n(x,t)}{\partial t}
++\frac{\partial[G n(x,t)]}{\partial x}
+=\frac{x^2}{2}\int_0^x
+\frac{\beta_0 n((x^3-y^3)^{1/3},t)n(y,t)}{(x^3-y^3)^{2/3}}\,dy
+-\beta_0n(x,t)\int_0^\infty n(y,t)\,dy
++\int_x^\infty y^6\frac{6x^2}{y^3}n(y,t)\,dy-x^6n(x,t),
 ```
 
-Density 1.293 g/cm³ is an explicit material assumption for this illustration;
-it is not estimated here or confirmed by a numerical value in the supplied
-paper. The shape factor 0.797 and kinetic constants come from the paper.
-
-## Declare the moment representation
-
-The builder uses the same physical declarations as a sectional model. It makes
-the size independence visible through PolynomialRate:
-
-```@example moment_case
-model = PBMModel(
-    growth=Growth(rate=PolynomialRate((recipe.growth_velocity,))),
-    primary=Nucleation(rate=recipe.primary_rate,size=0.0),
-    secondary=Nucleation(rate=recipe.secondary_rate,size=0.0),
-)
-operator = compile(model,MomentSet(0:4;coordinate=:length);method=ExactClosure())
-term_methods(operator)
-```
-
-`recipe.secondary_rate` reads `moment(ctx,3)`, so it does not assume a bin layout.
-The concentration uses a moment exchange:
+where ``\beta_0=1.5\times10^{-5}`` m³/s and the breakage hazard is ``a(x)=x^6``
+in the paper's benchmark units. The coefficient of that hazard is one in
+m⁻⁶s⁻¹. There is no solute or temperature balance in either of these tests.
 
 ```julia
-system = PBMSystem((crystals=operator,);
-    fields=(p,t)->(T=temperature(t),),nonnegative_bulk=(:c,),
-    exchanges=(MomentExchange(:crystals,:c,3;
-        factor=(p,t,ctx)->p.material_factor,mechanisms=(:growth,)),))
+boundary_density(t) = 100 + 1e6*exp(-1e4*(t-0.215)^2)
+model = PBMModel(
+    growth=Growth(PolynomialRate((1.,))),
+    primary=Nucleation((p,t,ctx)->p.G*boundary_density(t),0.),
+    aggregation=Aggregation(ConstantKernel(1.5e-5);coordinate_map=volume),
+    breakage=Breakage((x,p,t,ctx)->x^6,UniformVolumeDaughters();
+        coordinate_map=volume),
+)
+operator = compile(model,MomentSet(0:5;coordinate=:length);method=QMOM(3),
+    methods=TermMethods(by_term=(growth=ExactMomentRule(),primary=ExactMomentRule())))
 ```
 
-MomentExchange obtains the third-moment derivative from the selected term rule.
-It does not estimate that derivative by differencing saved values.
+The reconstruction closes collision integrals. Growth and boundary creation use
+exact moment rules: ``d\mu_0/dt`` receives ``J(t)`` and growth adds
+``kG\mu_{k-1}`` to each higher equation. The source at zero adds no higher
+moment directly. That separation makes the treatment of each term visible.
 
-## Initialize a clear solution and prescribe cooling
+Without collisions, characteristics give ``n(x,t)=n(x-t,0)`` for ``x\ge t``
+and ``n(x,t)=n(0,t-x)`` for ``0\le x<t``. `exact5` integrates that solution,
+subdividing around the short pulse. It is an independent analytical check on
+both the moment ODEs and the temporal resolution.
 
-The five moments start at zero. For the illustrated calculation we use
-``c(0)=0.300`` g/g and these graph-read temperature knots:
+![Growth/source moments against the analytical solution and full-process moments against a sectional reference](../assets/qamar_moments/nucleation_pulse.png)
 
-| Time (min) | 0 | 20 | 140 | 460 | 550 |
-|:--|--:|--:|--:|--:|--:|
-| Temperature (°C) | 50 | 30 | 30 | 20 | 20 |
+Lines in the left panel are analytical; lines in the right are a new sectional
+reference, rather than digitized author FVS curves. Markers show three-node
+QMOM. These are the two comparisons made in Figure 10. The narrow population
+appears abruptly in number, then contributes to higher moments as it grows.
+Aggregation and fragmentation alter the full-process histories.
 
-```@example moment_case
-temperature = recipe.linear_temperature([0.,20.,140.,460.,550.],
-    [50.,30.,30.,20.,20.])
-problem = recipe.build_moments(;p,c0=0.300,temperature_profile=temperature,
-    tspan=(0.0,550.0),initial_moments=zeros(5))
-nothing # hide
-```
+## Separate closure and reference errors
 
-These knots and the initial concentration are reconstructed inputs, not an
-author-supplied numerical protocol. They are recorded alongside the results.
-The example therefore tests the two numerical representations for a fully
-stated input set; agreement with the publication's curves remains unverified.
+![Analytical growth/source errors and refinement of the sectional comparison](../assets/qamar_moments/pulse_verification.png)
 
-## Compare the numerical representations
+The runner compares three and four nodes, and halves the native integration
+step. A separate resolved reference uses 600 and 1200 uniform length bins on
+``[0,3]``. It applies Strang splitting: fixed-pivot collision half-steps bracket
+an exact ``C=1`` growth shift. Boundary births are integrated over each shift
+using the Gaussian error function. The collision substeps use SSPRK33 with a conservative outgoing-rate step
+estimate and checks on every Runge–Kutta stage. This is a stated reference algorithm,
+not a claim to implement the paper's FVS solver.
 
-The runner advances the moment system at steps 0.02 and 0.01 min, and the
-sectional system with MUSCL on 400 and 800 bins over 0–2000 µm. The upper
-size boundary is checked for negligible population. Saved moments and
-concentration must be finite and nonnegative; saved native moments must also
-pass the necessary Hankel realizability checks. Intermediate explicit RK moment
-vectors are not projected onto a realizable distribution; their checks are
-disabled for this diagnostic and step refinement is reported explicitly.
+Grid refinement also changes the split step, since its growth update requires
+``\Delta t=\Delta x/G``. Their differences include spatial and splitting error.
+They must not be called QMOM error alone. The initial domain and the extended
+reference domain are stated separately; unresolved fixed-pivot products are
+discarded explicitly. Further domain and time refinement are needed before
+interpreting very small differences as validated closure accuracy. Full raw
+moments do not determine a unique continuous PSD.
 
-The displayed mean sizes are
-
-```math
-\overline L_{30}(t)=\left[\frac{\mu_3(t)}{\mu_0(t)}\right]^{1/3},\qquad
-\overline L_{43}(t)=\frac{\mu_4(t)}{\mu_3(t)}.
-```
-
-They are undefined in the initial empty state, which is omitted from these
-curves. The lower-right panel compares the sectional material moment with the
-native moment solution, normalized by the maximum reference third moment so
-the initially empty population does not produce an undefined relative error.
-All panels use the same explicit input choices.
-
-![Native moments and sectional calculation under reconstructed monotonic cooling](../assets/moment_crystallization/moment_comparison.png)
+Results are in [aggregation_breakage.csv](../assets/qamar_moments/aggregation_breakage.csv),
+[pulse.csv](../assets/qamar_moments/pulse.csv),
+[sectional_reference.csv](../assets/qamar_moments/sectional_reference.csv) and
+[refinement.csv](../assets/qamar_moments/refinement.csv).
+Final unresolved collision rates and the resolved-plus-unresolved volume balance
+are recorded in [reference_checks.csv](../assets/qamar_moments/reference_checks.csv).
+These endpoint rates are not cumulative escaped-volume reservoirs.
 
 ```sh
-julia --project=. examples/temperature_programmed_crystallization.jl
+julia --project=. examples/qamar_moment_benchmarks.jl
 python docs/benchmarks/plot_case_studies.py moments --usetex
+julia --project=docs docs/make.jl
 ```
-
-## What the cycling comparison still needs
-
-Figure 13 uses a resolved CE/SE calculation to report supersaturation, two
-moment-based means, counts below 150 µm, total count, and final volume density.
-The finite set ``\mu_0,\ldots,\mu_4`` determines the means but not the fines
-count or final distribution.
-
-During dissolution the exact number equation has an additional boundary term:
-
-```math
-\frac{d\mu_0(t)}{dt}=B_1(t)+B_2(t)+G(t)f(0,t).
-```
-
-When ``G<0`` the last term removes disappearing particles. Their boundary density
-is not determined by five moments. Setting it to zero would retain extinct
-crystals and bias both total number and ``\overline L_{30}``. The authors used
-the moment method for nonextinguishing dissolution experiments and CE/SE for
-cycling calculations. Our raw-moment builder supplies no extinction closure;
-it must not be used to claim the full cycling result.
-
-A complete Figure 13 reproduction therefore needs a resolved extinction boundary
-or a separately tested reconstruction/closure, the cycling protocol, consistent
-material and secondary-nucleation mass conventions, and a declared procedure
-for computing the final distribution. Those are additional scientific inputs
-and methods, rather than plotting options.
 
 ## Complete runnable script
 
 The code below is read from the example source during the documentation build.
-Run it from the repository root using the environment described above.
-
-### `examples/temperature_programmed_crystallization.jl`
 
 ```@eval
 using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","temperature_programmed_crystallization.jl"),String))])
+Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","qamar_moment_benchmarks.jl"),String))])
 ```

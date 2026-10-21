@@ -18,96 +18,64 @@ def read(path):
 
 def constant_growth():
     folder = ASSETS / "constant_growth"
-    errors = read(folder / "errors.csv")
-    colors = {name: f"C{i}" for i, name in enumerate(
-        ("upwind", "muscl", "vanleer", "weno3", "weno5", "centered",
-         "linear_upwind", "lax_wendroff", "beam_warming"))}
-    def appearance(name, time):
-        return dict(color=colors[name], linestyle={"euler": ":", "ssprk33": "--",
-                    "ssprk54": "-.", "rk4": "-", "coupled": "-"}[time])
-    choices = [("upwind", "euler", "Upwind + Euler"),
-               ("upwind", "rk4", "Upwind + RK4"),
-               ("muscl", "ssprk33", "MUSCL + SSPRK3"),
-               ("muscl", "rk4", "MUSCL + RK4"),
-               ("vanleer", "rk4", "van Leer + RK4"),
-               ("weno3", "rk4", "WENO3 + RK4"),
-               ("weno5", "rk4", "WENO5 + RK4"),
-               ("centered", "rk4", "Centered + RK4"),
-               ("linear_upwind", "rk4", "Linear upwind + RK4"),
-               ("lax_wendroff", "coupled", "Lax--Wendroff"),
-               ("beam_warming", "coupled", "Beam--Warming")]
-    fig, axes = plt.subplots(2, 2, figsize=(11, 8), layout="constrained")
-    for index, ax in enumerate(axes.flat):
-        courant = (0.5, 1.0)[index % 2]
-        profile = read(folder / f"upwind_euler_{courant}_200.csv")
-        # Draw the continuous analytical density, including the zero-inflow front.
-        a = np.linspace(0, 1, 4001)
-        exact = np.where(a >= 0.4, 100 * np.exp(-(a - 0.4) / 0.01), 0)
-        ax.plot(a, exact, "k-", lw=1.3, label="Analytical density")
-        ax.plot(profile["size"], profile["exact"], "k.", ms=2.5, label="Analytical bin averages")
-        for name, time, label in choices:
-            if (index < 2) != (name in ("upwind", "muscl", "vanleer", "weno3", "weno5")):
-                continue
-            if name == "linear_upwind" and courant == 1.0:
-                continue
-            data = read(folder / f"{name}_{time}_{courant}_200.csv")
-            ax.plot(data["size"], data["density"], lw=1.1, label=label, **appearance(name,time))
-        if index == 3:
-            data = read(folder / "inguva2022_coupled_1.0_200.csv")
-            ax.plot(data["size"], data["density"], "--", label="Inguva2022, matched shift")
-        ax.set(xlim=(0.32, 0.62), xlabel="$a$", ylabel="$f(a,4)$",
-               title=fr"$C={courant:g}$, 200 bins")
-        ax.legend(fontsize=7)
-    save_figure(fig, folder, "solutions")
-
+    front = read(folder / "errors.csv")
     smooth = read(folder / "smooth_errors.csv")
-    choices += [("weno5", "ssprk33", "WENO5 + SSPRK3"),
-                ("weno5", "ssprk54", "WENO5 + SSPRK(5,4)")]
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5), layout="constrained")
-    for name, time, label in choices:
-        front = errors[(errors["scheme"] == name) & (errors["time_method"] == time)
-                       & (errors["courant"] == 0.5)]
-        data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
-                      & (smooth["step_policy"] == "fixed_cfl")]
-        axes[0].loglog(front["bins"], front["rmse"], marker="o", ms=3, label=label, **appearance(name,time))
-        axes[1].loglog(data["bins"], data["rmse"], marker="o", ms=3, label=label, **appearance(name,time))
-    axes[0].set(title="Exponential with a moving front", xlabel="Number of bins", ylabel="RMSE")
-    axes[1].set(title="Smooth periodic translation", xlabel="Number of bins", ylabel="RMSE")
-    axes[0].legend(fontsize=7)
-    save_figure(fig, folder, "performance")
+    choices = [("upwind","euler","Upwind + Euler", "C0"),
+               ("muscl","ssprk33","MUSCL + SSPRK3", "C1"),
+               ("weno5","ssprk33","WENO5 + SSPRK3", "C2"),
+               ("weno5","rk4","WENO5 + RK4", "C3"),
+               ("lax_wendroff","coupled","Lax--Wendroff", "C4"),
+               ("inguva2022","coupled","Inguva2022 ($C=1$)", "C5")]
+    fig, axes = plt.subplots(1,2,figsize=(10,3.8),layout="constrained",sharey=True)
+    a=np.linspace(0,1,4001)
+    truth=np.where(a>=.4,100*np.exp(-(a-.4)/.01),0.)
+    for ax,C in zip(axes,(.5,1.)):
+        ax.plot(a,truth,"k-",lw=1.2,label="Analytical density")
+        reference=read(folder/f"upwind_euler_{C}_200.csv")
+        ax.plot(reference["size"],reference["exact"],"k.",ms=3,label="Analytical bin averages")
+        for name,time,label,color in choices:
+            if name=="inguva2022" and C!=1:continue
+            d=read(folder/f"{name}_{time}_{C}_200.csv")
+            ax.plot(d['size'],d['density'],color=color,lw=1.2,label=label)
+        ax.set(xlim=(.32,.62),xlabel="$a$",title=fr"$C={C:g}$, 200 bins")
+    axes[0].set_ylabel("$f(a,4)$");axes[1].legend(fontsize=7)
+    save_figure(fig,folder,"solutions")
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.3), layout="constrained")
-    for name, time, label in choices:
-        data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
-                      & (smooth["step_policy"] == "fixed_cfl")]
-        axes[0].loglog(data["bins"], data["seconds"], marker="o", ms=3, label=label, **appearance(name,time))
-        axes[0].fill_between(data["bins"],data["timing_minimum"],data["timing_maximum"],alpha=.1,color=colors[name])
-        axes[1].loglog(data["seconds"], data["rmse"], marker="o", ms=3, label=label, **appearance(name,time))
-    axes[0].set(xlabel="Number of bins", ylabel="Elapsed time / s", title="Median of three warmed runs")
-    axes[1].set(xlabel="Elapsed time / s", ylabel="RMSE", title="Error versus work")
-    axes[0].legend(fontsize=7)
-    save_figure(fig, folder, "timings")
+    # Two physical inputs, with the SAME two error norms for each.
+    # Exact shifts have roundoff-level cell-integral errors, not a power-law order.
+    for source,filename,title in [(front,'performance','Exponential with zero inflow'),
+                                  (smooth,'smooth_refinement','Smooth periodic translation')]:
+        fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained")
+        for name,time,label,color in choices:
+            data=source[(source['scheme']==name)&(source['time_method']==time)]
+            if source is front:data=data[data['courant']==(1. if name=='inguva2022' else .5)]
+            for ax,key in zip(axes,['l1','rmse']):
+                # Display roundoff as roundoff, without a fitted convergence line.
+                ax.loglog(data['bins'],np.maximum(data[key],1e-16),'o-',ms=3,color=color,label=label)
+        axes[0].set(xlabel='Number of bins',ylabel=r'$L^1$ density error')
+        axes[1].set(xlabel='Number of bins',ylabel='RMSE')
+        axes[0].legend(fontsize=7);fig.suptitle(title)
+        save_figure(fig,folder,filename)
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.3), layout="constrained")
-    for name, time, label in (("muscl","rk4","MUSCL + RK4"),
-                             ("vanleer","rk4","van Leer + RK4"),
-                             ("weno5","ssprk33","WENO5 + SSPRK3"),
-                             ("weno5","rk4","WENO5 + RK4")):
-        data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
-                      & (smooth["step_policy"] == "fixed_cfl")]
-        axes[0].loglog(data["bins"], data["l1"], "o-", ms=3, label=label)
-    for policy,label in (("fixed_cfl",r"$\Delta t\propto h$"),("spatial",r"$\Delta t\propto h^{5/4}$")):
-        data = smooth[(smooth["scheme"] == "weno5") & (smooth["time_method"] == "rk4")
-                      & (smooth["step_policy"] == policy)]
-        axes[1].loglog(data["bins"], data["rmse"], "o-", ms=3,label="WENO5 + RK4, "+label)
-    x=np.array([80.,640.])
-    axes[0].loglog(x,1e-3*(x/80)**-2,"k:",label=r"$h^2$ guide")
-    axes[1].loglog(x,3e-6*(x/80)**-5,"k:",label=r"$h^5$ guide")
-    axes[0].set(xlabel="Number of bins",ylabel=r"$L^1$ density error",title="Limited reconstructions near smooth extrema")
-    axes[1].set(xlabel="Number of bins",ylabel="RMSE",title="Spatial and temporal refinement")
-    for ax in axes: ax.legend(fontsize=8)
-    save_figure(fig,folder,"smooth_refinement")
+    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained")
+    for name,time,label,color in choices:
+        data=smooth[(smooth['scheme']==name)&(smooth['time_method']==time)]
+        axes[0].loglog(data['bins'],data['seconds'],'o-',ms=3,color=color,label=label)
+        axes[1].loglog(data['seconds'],np.maximum(data['rmse'],1e-16),'o-',ms=3,color=color,label=label)
+    axes[0].set(xlabel='Number of bins',ylabel=r'Elapsed time $(\mathrm{s})$',title='One measured solve per configuration')
+    axes[1].set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='RMSE',title='Error versus elapsed work')
+    axes[0].legend(fontsize=7);save_figure(fig,folder,'timings')
 
+    # Measured refinement orders explain the curves without arbitrary h^p guides.
+    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained",sharey=True)
+    for name,time,label,color in choices:
+        if name=='inguva2022':continue # order is undefined at roundoff
+        data=smooth[(smooth['scheme']==name)&(smooth['time_method']==time)]
+        for ax,key in zip(axes,['observed_l1_order','observed_rmse_order']):
+            ax.semilogx(data['bins'],data[key],'o-',ms=3,color=color,label=label)
+    axes[0].set(xlabel='Number of bins',ylabel='Measured refinement order',title=r'$L^1$')
+    axes[1].set(xlabel='Number of bins',title='RMSE');axes[0].legend(fontsize=7)
+    save_figure(fig,folder,'observed_orders')
 
 def cooling():
     folder = ASSETS / "gunawan_example2"

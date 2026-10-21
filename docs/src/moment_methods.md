@@ -96,6 +96,13 @@ realizability at singular truncated-moment boundaries. A closure needs its own
 accuracy and convergence assessment; selecting QMOM does not establish agreement
 with a full size distribution for nonlinear nanoparticle kinetics.
 
+The [aggregation and nucleation case study](case_studies/moment_crystallization.md)
+uses three-node QMOM for Qamar's problems 4 and 5, separates analytical and
+sectional references, and checks closure error independently of time error.
+Continuous daughter laws may supply `daughter_moment(law,parent,k,p,t,ctx)`;
+`UniformVolumeDaughters` gives its exact inner integral. Outer population
+integrals still use the chosen moment reconstruction.
+
 ## Select weak-form rules and couple populations
 
 The reconstruction family and each term's integration rule can be chosen

@@ -83,6 +83,43 @@ end
 (d::SelfSimilarDaughters)(x,p,t,ctx)=((x*d.ratios[i],d.counts[i]) for i in eachindex(d.ratios))
 
 """
+    UniformVolumeDaughters(;quadrature_order=12)
+
+Binary fragmentation uniform in daughter volume, expressed in a length
+coordinate: b(x|y)=6x²/y³ for 0<x<y. The integral is two expected daughters;
+the third length moment is conserved. Use AdditiveCoordinate(x->x^3,cbrt).
+Moment rules integrate each daughter moment analytically; sectional rules use
+positive Gauss–Legendre daughter counts before conservative fixed-pivot
+deposition. These are fragments of one event, not probability weights.
+"""
+struct UniformVolumeDaughters{X,W}
+    ratios::X
+    counts::W
+end
+function UniformVolumeDaughters(;quadrature_order=12)
+    quadrature_order isa Integer && quadrature_order>=3 || throw(ArgumentError("at least three daughter quadrature points required"))
+    q=_gauss_legendre(GaussLegendre(quadrature_order))
+    r=(q.nodes.+1)./2
+    UniformVolumeDaughters(r,3 .*q.weights.*r.^2)
+end
+(d::UniformVolumeDaughters)(y,p,t,ctx)=((y*d.ratios[i],d.counts[i]) for i in eachindex(d.ratios))
+
+"""
+    daughter_moment(law,parent,k,p,t,ctx)
+
+Optional analytical integral ∫x^k b(x|parent)dx per breakage event. Extend it
+for a daughter law to avoid inner quadrature in moment weak forms. The law must
+also supply its ordinary positive daughter quadrature for validation/sectional
+use, conserving the declared additive measure. UniformVolumeDaughters supplies
+6parent^k/(k+3). This is an expected-count moment, not a normalized probability.
+"""
+function daughter_moment end
+function daughter_moment(::UniformVolumeDaughters,parent,k::Integer,p,t,ctx)
+    k>=0 || throw(ArgumentError("daughter raw-moment order must be nonnegative"))
+    6parent^k/(k+3)
+end
+
+"""
 Source raw moment `rate(p,t,ctx)*rawmoment(k,p,t,ctx)`. rawmoment is the kth
 moment per created particle (including k=0). Use this to specify the integral
 of a distributed source explicitly, rather than reconstruct it from population

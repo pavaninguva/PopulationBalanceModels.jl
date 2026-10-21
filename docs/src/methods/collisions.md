@@ -73,6 +73,13 @@ coordinate is `((x/2,2.0),)`. A continuous daughter approximation must include
 quadrature weights and multiplicity in the expected counts. FixedPivot deposits
 those daughters and checks their additive-property sum against the parent.
 
+`UniformVolumeDaughters()` describes a continuous binary law in a length
+coordinate: ``b(x|y)=6x^2/y^3``. Its integral is two and its third moment is
+``y^3``. Use `AdditiveCoordinate(x->x^3,cbrt)`. Moment weak forms use its
+analytical daughter moments through `daughter_moment`; sectional rules use
+positive Gauss–Legendre expected counts followed by fixed-pivot deposition.
+The [moment case study](../case_studies/moment_crystallization.md) shows both.
+
 ## Boundaries, overflow, and conservation
 
 Aggregation lowers total particle number; binary breakage raises it. The conserved

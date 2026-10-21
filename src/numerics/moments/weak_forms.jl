@@ -94,7 +94,10 @@ function _quadrature_term!(dμ,μ,term,op,p,t,ctx,q)
                 all(d->isfinite(d[1]) && 0<=d[1]<=x[i] && isfinite(d[2]) && d[2]>=0,daughters) || throw(ArgumentError("invalid daughters"))
                 isapprox(sum(count*measure(y) for (y,count) in daughters),measure(x[i]);rtol=1e-8) || throw(ArgumentError("daughters must conserve the declared measure"))
                 for k in op.grid.orders
-                    dμ[k+1]+=event*(sum(count*y^k for (y,count) in daughters)-x[i]^k)
+                    integral=applicable(daughter_moment,term.daughters,x[i],k,p,t,ctx) ?
+                        daughter_moment(term.daughters,x[i],k,p,t,ctx) : sum(count*y^k for (y,count) in daughters)
+                    isfinite(integral) && integral>=0 || throw(NumericalFailure("invalid daughter moment"))
+                    dμ[k+1]+=event*(integral-x[i]^k)
                 end
             end
         end

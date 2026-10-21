@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Replaced the active temperature-programmed moment illustration with Qamar problems 4 and 5: analytical aggregation/breakage, a narrow nucleation pulse, moment/time refinement and a resolved sectional comparison.
+- Added UniformVolumeDaughters and an analytical daughter_moment hook so moment breakage rules retain the paper's continuous daughter integrals.
+- Reduced the growth/time benchmark to six representative pairings, included Inguva2022 in timing/error figures, and replaced timing medians with one measured solve per configuration.
+- Plotted L1 and RMSE together in paired panels and replaced arbitrary order guides with measured refinement orders.
+- Audited Lax–Wendroff against PBM_Schemes: retained the matching interior stencil and documented CFL, boundary, nodal/bin-integral and final-time differences. Added regression checks for the reference's CFL=0.5 oscillations and CFL=1 shift.
+
 - Added one-coordinate rank-adaptive QMOM, Gamma EQMOM with explicit density/bin reconstruction, and local DQMOM with scaled source solves and moment-consistent bulk exchange.
 - Added axial transport of named populations and shared scalar bulk states, structured feeds and selectable axial reconstructions while preserving conservative face fluxes.
 - Added a continuous-precipitation Case 7A workflow with transient fields, outlet distributions and measured numerical error/runtime; retained explicit reference and scheme differences from Zhang2024.
@@ -16,7 +22,7 @@
 - Made zero-count Poisson and multinomial contributions differentiable at zero predicted mass, preserving their normalization; added SpecialFunctions for count-likelihood log-factorials.
 
 - Added van Leer limited-linear and geometry-aware third-order WENO reconstructions on uniform or nonuniform 1D meshes, and native five-stage fourth-order SSPRK54 time integration.
-- Replaced the growth/time heatmap with sharp-front and smooth periodic convergence curves, L1/RMSE comparisons, balanced space/time refinement, and median computational-time plots. Checked signed Lax–Wendroff steps against its independent difference formula and bounded periodic norm.
+- Replaced the growth/time heatmap with sharp-front and smooth periodic convergence curves, L1/RMSE comparisons, balanced space/time refinement, and single-run computational-time plots. Checked signed Lax–Wendroff steps against its independent difference formula and bounded periodic norm.
 - Added a literal nodal audit of Li2026 SI S11, including fine-grid variable-growth order loss, singular/unstable large-step boundary cases, and a separately derived/tested fourth-order coefficient variant. Kept the public periodic HOCADI variant distinct from both and from the paper's multilevel ADI algorithm.
 - Added full-horizon reconstructed LNP calculations for FRR 1, 3, and 5, scaled stiff integration, explicit DLVO quadrature, mechanism/consumption histories, and escaped-volume accounting. Documented missing material inputs, assumptions, disagreement with the target diameter history, and unresolved numerical convergence.
 

@@ -48,7 +48,7 @@ makedocs(;
             "Overview" => "case_studies/index.md",
             "Comparing growth and time methods" => "case_studies/constant_growth.md",
             "Batch cooling crystallization" => "case_studies/crystallization.md",
-            "Crystal growth with moments" => "case_studies/moment_crystallization.md",
+            "Aggregation and nucleation with moments" => "case_studies/moment_crystallization.md",
             "Continuous tubular precipitation" => "case_studies/continuous_precipitation.md",
             "Inferring protein crystallization" => "case_studies/protein_crystallization.md",
             "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
