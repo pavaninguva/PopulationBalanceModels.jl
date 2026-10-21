@@ -1,0 +1,5 @@
+Constant-growth model: Inguva, Schickel and Braatz (2022), Case 1, Eq.56 and Figure 1.
+g=0.1; initial f(a)=100exp(-a/0.01), a>=0; domain [0,1]; final time=4.0
+Zero incoming density at left, zero total growth flux at right. Exact comparison uses bin integrals, not center samples.
+No clipping or positivity enforcement: negative density and negative number are exported explicitly.
+Timing is one warmed run, not a portable hardware performance claim; Julia 1.10.3; CPU goldmont

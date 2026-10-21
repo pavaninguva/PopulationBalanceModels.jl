@@ -1,0 +1,8 @@
+Kinetics and cooling: Gunawan et al. (2004), Example 2, Eqs.28–34. Explicit alternative initial condition below.
+Chosen initial condition: 0.08*(1-((L-195.5)/15)^2) on [180.5,210.5] micrometers; saturated solution at 32 C. Not a repair of Eq.34.
+c0=0.11667040000000001; continuum initial moments=[1.6, 312.8, 61224.399999999994, 1.19975222e7]
+MUSCL is the package's limited FV method, not a claim of implementing the paper's HR1.
+Final PSD reference: 12800 nominal bins, dt=0.1; second reference: 6400 bins; temporal check at 6400 bins and dt=0.05
+Relative L1 reference changes: spatial=0.004233520557258692; temporal=1.2593074622815344e-5
+Independent moment RK4 dt=0.05 vs 0.025 final relative change: 2.293180637069608e-13
+Julia 1.10.3; tf=1000.0; zero upper size flux, domain [0,1600] micrometers.
