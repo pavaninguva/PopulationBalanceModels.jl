@@ -42,7 +42,7 @@ def field(path):
 
 def transport(folder):
     names=(("reference","Analytical bin averages"),("upwind","Upwind + SSPRK3"),
-           ("weno5","WENO5 + SSPRK3"),("mapped_shift","Exact shifts on transformed mesh"))
+           ("weno5","WENO5 + SSPRK3"),("mapped_shift","Inguva and Braatz (2023)"))
     fig,axes=plt.subplots(2,2,figsize=(10,8),layout="constrained")
     for ax,(name,title) in zip(axes.flat,names):
         x,y,z=field(folder/f"{name}_100.csv")
@@ -52,7 +52,7 @@ def transport(folder):
     fig.suptitle(r"Coordinate-dependent growth, $t=1$")
     save_figure(fig,folder,"solutions")
     fig,axes=plt.subplots(1,3,figsize=(12,3.8),layout="constrained")
-    for ax,(name,title) in zip(axes,(("upwind","Upwind"),("weno5","WENO5"),("mapped_shift","Mapped exact shift"))):
+    for ax,(name,title) in zip(axes,(("upwind","Upwind"),("weno5","WENO5"),("mapped_shift","Inguva and Braatz (2023)"))):
         x,y,z=field(folder/f"{name}_100.csv")
         ref="mapped_reference" if name=="mapped_shift" else "reference"
         _,_,truth=field(folder/f"{ref}_100.csv");error=z-truth;bound=max(np.max(abs(error)),1e-15)
@@ -62,7 +62,7 @@ def transport(folder):
     save_figure(fig,folder,"errors",vector=False)
     rows=np.genfromtxt(folder/"errors.csv",delimiter=",",names=True,dtype=None,encoding="utf-8")
     fig,axes=plt.subplots(1,2,figsize=(9,3.6),layout="constrained")
-    for name,label in (("upwind","Upwind"),("weno5","WENO5"),("mapped_shift","Mapped exact shift")):
+    for name,label in (("upwind","Upwind"),("weno5","WENO5"),("mapped_shift","Inguva and Braatz (2023)")):
         data=rows[rows["method"]==name]; bins=data["nx"]*data["ny"]
         axes[0].loglog(bins,data["RMS_area"],"o-",label=label)
         axes[1].loglog(bins,np.maximum(data["negative_number"],1e-20),"o-",label=label)

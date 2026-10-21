@@ -1,22 +1,35 @@
-# Observations and Bayesian parameter estimation
+# Parameter estimation
 
-A measured size distribution depends on the kinetics, the initial population,
-and the instrument. Estimating a growth rate therefore means fitting a complete
-measurement model. A concentration trace can provide different information from
-a normalized size histogram, even when both observe the same batch.
+Parameter estimation connects a PBM to noisy measurements. We need a prediction
+at each measurement time, a model for the measurement errors, and priors for
+the unknown parameters. The package uses those same definitions for MAP fitting,
+optional Laplace uncertainty and optional MCMC sampling.
 
-The package uses one statistical model for three calculations: MAP estimation,
-an explicitly requested Laplace approximation, and optional posterior sampling.
-Start with the [size-dependent growth example](case_studies/estimating_growth.md).
-It fits two growth coefficients from dynamic distribution measurements, together
-with uncertain initial population amplitude and concentration noise.
+The [growth example](case_studies/estimating_growth.md) fits
+``G(a)=g_0+g_1a``. It evaluates the analytical density at 281 sizes and six times,
+then adds independent Gaussian noise. The initial density and noise level are
+known; only the two growth coefficients are fitted. The points below are these
+synthetic measurements, and the continuous curves show the fitted densities.
+
+![Gaussian-noisy density measurements at six times and continuous MAP curves](assets/bayesian_growth/distributions.png)
 
 ## Describe the measurements
 
 An observation operator maps a solved PBM state to a predicted measurement.
-The existing MomentObservable, BulkObservable, FunctionObservable and
-SystemObservable can all be used in a Measurement. For a sectional distribution,
-DistributionObservable integrates over the **measurement** bins:
+MomentObservable, BulkObservable, FunctionObservable and SystemObservable can
+all be used in a Measurement. For the analytical growth example, evaluate point
+densities directly and use the known Gaussian error:
+
+```julia
+profile = FunctionObservable((N,operator,p,t)->
+    recipe.exact_density.(data.sizes,t,Ref(p)))
+measurement = Measurement(data.times,data.values,profile;
+    likelihood=GaussianLikelihood(sigma=data.noise))
+```
+
+The case-study builder supplies `recipe`, `data` and the physical problem.
+Other instruments produce histograms or bulk measurements. For a sectional
+distribution, DistributionObservable integrates over the **measurement** bins:
 
 ```julia
 histogram = DistributionObservable(measured_edges;
@@ -123,8 +136,9 @@ noise = ParameterSpec(:noise; initial=0.003, transform=LogTransform(),
     prior=Prior(Normal(log(0.003),0.4); coordinates=:inference))
 ```
 
-Both priors above imply Gaussian log coordinates; the coordinate declaration
-makes their density measures unambiguous. There is no implicit prior-coordinate
+Both priors above imply Gaussian log coordinates. The noise declaration is an
+optional nuisance parameter when noise is unknown; the growth case study keeps
+its noise fixed. The coordinate declaration identifies which density is meant. There is no implicit prior-coordinate
 default. IdentityTransform supports a location and scale; LogTransform supports
 a positive reference scale. LogitTransform(lower,upper) gives an open bounded
 physical interval. Additional physical restrictions belong in the estimation
@@ -247,6 +261,13 @@ Draws include an in_support flag. Predictive propagation reports draws outside
 the declared prior/constraint support as failures; it does not silently truncate
 the Gaussian approximation.
 
+The case study compares the previous lognormal growth priors with physical
+uniform priors bounded by stated growth timescales. These choices express
+different assumptions; neither is a universal default. Both are shown here,
+and their fitted posteriors are compared below.
+
+![Physical lognormal and timescale-bounded uniform growth priors](assets/bayesian_growth/priors.png)
+
 ## Sample the same posterior
 
 Sampling is requested separately and requires AdvancedHMC and
@@ -256,7 +277,13 @@ MCMCDiagnosticTools in the working environment:
 using AdvancedHMC, MCMCDiagnosticTools
 samples = sample_posterior(problem; initial=result, laplace,
     warmup=500, samples=1000, chains=4, seed=24)
-samples.diagnostics
+report = diagnostics(samples)
+report.rhat
+report.ess_bulk
+report.ess_tail
+report.mcse_mean
+report.per_chain
+report.diagnostics_passed
 ```
 
 The adapter uses NUTS and explicit posterior gradients. With a supplied Laplace
@@ -265,16 +292,34 @@ otherwise it uses a diagonal metric. Laplace can inform dispersed chain starts
 and initial scale; explicit
 starts are also accepted. Warmup draws are excluded from the retained sample.
 Diagnostics include rank-normalized split R-hat, bulk and tail effective sample
-sizes, divergences, warmup divergences, maximum-depth hits, gradient checks,
-evaluation counts and time. diagnostics_passed uses the reported thresholds;
-it is a screening flag, not a proof of convergence. A single chain cannot pass
-that screen. Inspect chains and posterior shape before interpreting results.
+sizes, Monte Carlo standard errors of log-coordinate means, per-chain BFMI,
+acceptance rates, step sizes, divergences, warmup divergences, maximum-depth
+hits, gradient checks, evaluation counts and time. The result retains both
+warmup and post-warmup statistics. diagnostics_passed requires the reported
+R-hat/ESS thresholds, BFMI at least 0.3, no retained divergences or depth hits,
+and at least two chains. It is a screen, not proof of convergence. Inspect the
+traces and posterior shape before interpreting intervals.
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
 documentation for sampler and diagnostic definitions. Finite differences cost
 repeated forward solves; adjoint or AD acceleration remains a separately
 verified extension opportunity.
+
+For the growth study, the comparison below shows the inferred growth law,
+the correlation between its two coefficients, and their marginal distributions.
+Both Laplace and NUTS fit the same two growth coefficients under each prior
+scenario. Lines mark the values used to generate the synthetic data; the
+case study explains the two prior choices and the known noise level.
+
+![Growth-law uncertainty and joint and marginal parameter distributions from Laplace and NUTS](assets/bayesian_growth/posterior.png)
+
+The retained traces are shown for each prior scenario. Per-chain energy and
+adaptation diagnostics are exported with the draws; the
+[case study](case_studies/estimating_growth.md) reports the actual diagnostic
+values and the runner stops if its screen fails.
+
+![Four-chain traces for both growth coefficients and prior scenarios](assets/bayesian_growth/chains.png)
 
 ## Check prediction, identifiability and numerical error
 
@@ -316,6 +361,13 @@ prior_sensitive flag uses explicit, configurable shift/scale-ratio thresholds;
 it is a screening rule, not an identifiability theorem.
 Prior dependence is evidence to examine, even when MAP is stable.
 
+For the growth study, the residuals below are the measured density minus the
+fitted density, divided by the known noise standard deviation. The quantile
+plot compares them with a standard Gaussian. The final panel shows how much
+the rate estimates change when lognormal priors are replaced by uniform priors.
+
+![Gaussian residual checks and sensitivity to physical prior choices](assets/bayesian_growth/checks.png)
+
 refinement_study refits explicitly named numerical variants. Keep measurements,
 parameter coordinates and priors consistent. Compare spatial resolution, size
 domain and time step separately; compare moment closures separately again,
@@ -323,6 +375,14 @@ because closure error is a model approximation. The growth case study records
 such refits alongside reference posterior uncertainty. Parameter uncertainty,
 measurement noise, numerical error and physical model inadequacy remain
 different sources of discrepancy.
+
+The growth example refits with Inguva2022 and MUSCL. The first method requires
+a matched travel-time mesh and time step, so they must be refined together.
+The MUSCL checks refine space, time and domain separately. The analytical
+solution supplies the reference; interpolating bin averages to point density
+measurements adds a separate observation-reconstruction error.
+
+![Growth-parameter shifts and prediction changes under grid, time-step, and size-domain refinement](assets/bayesian_growth/refinement.png)
 
 ## Existing Gaussian calibration interface
 

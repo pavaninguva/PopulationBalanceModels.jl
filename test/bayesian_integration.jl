@@ -37,6 +37,13 @@ include("fixtures/bayesian_linear.jl")
     @test minimum(draws.diagnostics.ess_bulk)>100
     @test draws.diagnostics.divergences==0
     @test draws.diagnostics.forward_solves>0
+    @test diagnostics(draws)===draws.diagnostics
+    @test all(isfinite,draws.diagnostics.mcse_mean)
+    @test minimum(draws.diagnostics.ebfmi)>0.3
+    @test size(draws.diagnostics.energy)==(700,2)
+    @test length(draws.diagnostics.warmup_statistics[1])==250
+    @test sum(c.divergences for c in draws.diagnostics.per_chain)==draws.diagnostics.divergences
+    @test all(c->0<c.acceptance_rate<=1 && c.step_size>0,draws.diagnostics.per_chain)
     @test parameter_draws(p,draws;n=12,seed=2).z==parameter_draws(p,draws;n=12,seed=2).z
     short=sample_posterior(p;initial=result,laplace=result.uncertainty,warmup=50,samples=24,chains=2,seed=43)
     repeat=sample_posterior(p;initial=result,laplace=result.uncertainty,warmup=50,samples=24,chains=2,seed=43)
@@ -71,17 +78,22 @@ include("../examples/estimate_size_dependent_growth.jl")
 @testset "Size-dependent growth: analytical and numerical inference" begin
     recipe=EstimateSizeDependentGrowth
     data=recipe.synthetic_measurements()
-    @test data.counts==recipe.synthetic_measurements().counts
-    @test all(vec(sum(data.counts;dims=1)).==400)
+    @test data.values==recipe.synthetic_measurements().values
+    @test size(data.values)==(281,6)
+    @test any(data.values.<0) # Additive Gaussian noise is neither clipped nor normalized.
     p=recipe.estimation_problem(data)
     z=initial_coordinates(p)
     @test check_gradient(p,z).valid
     result=fit(p;uncertainty=:laplace)
     @test result.converged
-    @test abs(result.parameters.shared.g0-recipe.TRUTH.g0)<0.04
-    @test abs(result.parameters.shared.g1-recipe.TRUTH.g1)<0.10
+    @test abs(result.parameters.shared.g0-recipe.TRUTH.g0)<0.01
+    @test abs(result.parameters.shared.g1-recipe.TRUTH.g1)<0.03
+    uniform=fit(recipe.estimation_problem(data;prior=:uniform);uncertainty=:laplace)
+    @test uniform.converged
+    @test norm(uniform.minimizer-result.minimizer)<0.01
+    @test logprior(recipe.estimation_problem(data;prior=:uniform),log.([0.01,0.2]))==-Inf
     # Native exact moment evolution agrees with the independent characteristic moments.
-    model=PBMModel(growth=Growth(rate=PolynomialRate(((p,t,c)->p.g0,(p,t,c)->p.g1))))
+    model=PBMModel(growth=Growth(AffineGrowth(:g0,:g1)))
     op=compile(model,MomentSet(0:3);method=ExactClosure())
     initial=[recipe.exact_moment(k,0.,recipe.TRUTH) for k in 0:3]
     moment_problem=PBMProblem(op,initial,(0.,1.);p=recipe.TRUTH)
@@ -91,6 +103,9 @@ include("../examples/estimate_size_dependent_growth.jl")
     fv=recipe.estimation_problem(data;forward=:sectional,bins=140,dt=0.002)
     @test check_gradient(fv,result.minimizer;tolerance=0.01).valid
     @test isfinite(logposterior(fv,result.minimizer))
+    mapped=recipe.estimation_problem(data;forward=:inguva,dt=0.005)
+    @test isfinite(logposterior(mapped,result.minimizer))
+    @test maximum(abs,predictions(mapped,result.minimizer)[1][1]-predictions(p,result.minimizer)[1][1])<2.0
     moment_data=[recipe.exact_moment(3,t,recipe.TRUTH) for t in [0.5,1.0]]
     measurement=Measurement([0.5,1.0],moment_data,MomentObservable(3);likelihood=GaussianLikelihood(covariance=[1e-5 2e-6;2e-6 1e-5]))
     moment_estimation=EstimationProblem(p.parameters[1:2],(InferenceExperiment(:batch,moment_problem,measurement;dt=0.01),))

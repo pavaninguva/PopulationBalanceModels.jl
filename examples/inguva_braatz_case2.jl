@@ -40,9 +40,8 @@ function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters())
 end
 
 """
-Constant-speed problem in travel-time coordinates tau=log(1+a/2)/alpha.
-Physical edges are obtained by the inverse map a=2expm1(alpha*tau).
-A common tau increment dt makes ExactShift move one cell on both axes.
+Compile the public InguvaBraatz2023 method on its physical travel-time mesh.
+A common travel-time increment dt moves one cell on both axes.
 The end cells are truncated to whole travel-time cells inside [0,2]; the
 physical mesh extent is recorded. No partial final cell is silently remapped.
 """
@@ -51,20 +50,11 @@ function mapped_problem(steps=20;p=parameters())
     all(>(0),p.offset) && all(>=(0),p.slope) ||
         throw(ArgumentError("this travel-time adapter requires positive offsets and nonnegative slopes"))
     dt=FINAL_TIME/steps
-    axes=map(p.offset,p.slope) do b,s
-        tau_end=iszero(s) ? 2/b : log1p(2s/b)/s
-        last_index=floor(Int,tau_end/dt)
-        last_index>=2 || throw(ArgumentError("travel-time step leaves fewer than two bins; increase steps"))
-        collect(0:last_index).*dt
-    end
-    tau_grid=Grid2D(axes...)
-    physical_axes=map(axes,p.offset,p.slope) do tau,b,s
-        iszero(s) ? b.*tau : b/s.*expm1.(s.*tau)
-    end
-    physical_grid=Grid2D(physical_axes...)
+    law=SeparableGrowth2D(AffineGrowth(p.offset[1],p.slope[1]),AffineGrowth(p.offset[2],p.slope[2]))
+    physical_grid=characteristic_grid(law,((0.0,2.0),(0.0,2.0));dt,endpoint=:truncate)
     boundary=SizeBC(OpenBoundary(),OpenBoundary())
-    operator=compile(PBMModel(growth=Growth2D((1.0,1.0))),tau_grid;
-        bc=SizeBC2D(x=boundary,y=boundary))
+    operator=compile(PBMModel(growth=Growth2D(law)),physical_grid;
+        evolution=InguvaBraatz2023(),bc=SizeBC2D(x=boundary,y=boundary))
     problem=PBMProblem(operator,reference(physical_grid,0.0,p),(0.0,FINAL_TIME);p)
     (;problem,physical_grid,dt)
 end
@@ -101,7 +91,7 @@ function run_benchmark(;grids=(50,100,200),output=joinpath(@__DIR__,"..","docs",
             end
         end
         mapped=mapped_problem(max(2,n÷5))
-        sol=simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
+        sol=simulate(mapped.problem;dt=mapped.dt,saveat=[1.0])
         grid=mapped.physical_grid;truth=reference(grid,1.0,mapped.problem.p)
         row=merge((;resolution=n,method="mapped_shift",nx=length(grid.x),ny=length(grid.y),dt=mapped.dt,
             upper_a1=last(grid.x.edges),upper_a2=last(grid.y.edges)),metrics(last(sol.u),truth,grid))
@@ -119,7 +109,7 @@ function run_benchmark(;grids=(50,100,200),output=joinpath(@__DIR__,"..","docs",
         println(io,"Inguva & Braatz (2023), Case 2, Eqs.57–60; Figure 4 at t=1.")
         println(io,"Julia ",VERSION,"; package ",Base.pkgversion(PopulationBalanceModels),"; ",Sys.KERNEL,' ',Sys.ARCH)
         println(io,"Conservative FV comparison uses bin-integrated numbers; output densities are bin averages.")
-        println(io,"Mapped shifts use travel-time coordinates with a common spacing and paired open boundaries.")
+        println(io,"Mapped shifts use the public InguvaBraatz2023 compilation, a common travel-time spacing and paired open boundaries.")
         println(io,"Uniform FV grids cover [0,2]^2; mapped grids omit fractional last cells, extents recorded in errors.csv.")
         println(io,"Mapped comparison is a bin-average adaptation, not the paper's nodal implementation.")
         println(io,"HOCADI cannot solve this variable-growth problem directly and is not included.")

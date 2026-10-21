@@ -18,7 +18,7 @@ including restrictions on grids, boundaries, and positivity.
 
 The [case studies](case_studies/index.md) develop cooling crystallization,
 lipid nanoparticle formation, and growth in two particle dimensions. For fitting
-models to data, see [Observations and estimation](inference.md). Signatures and
+models to data, see [Parameter estimation](inference.md). Signatures and
 extension hooks are collected in the [API reference](api.md) and
 [developer guide](development.md).
 

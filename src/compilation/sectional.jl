@@ -10,19 +10,25 @@ end
 
 """
     compile(model, grid; methods=TermMethods(), growth_scheme=Upwind(), bc=SizeBC(),
-            domain=BatchDomain(), fields=(cell,t)->(;))
+            domain=BatchDomain(), fields=(cell,t)->(;), evolution=nothing, p=(;))
 
 Prepare a conservative sectional operator. Callback context contains `grid`,
 `N` (the local bin concentrations), `cell`, and `fields` (prescribed conditions).
 Methods select numerical treatment by mechanism class or individual term name.
 Named choices in `methods.by_term` take precedence over class choices. Collision
 deposition is evaluated during each residual call.
+
+Alternatively, `evolution=Inguva2022()` compiles eligible homogeneous affine
+growth as a direct characteristic update. Supply p for named coefficients;
+the compiler checks the physical mesh, growth form and boundaries. Residual
+term methods cannot be combined with that complete transport update.
 """
 function compile(model::PBMModel, grid::Grid1D; growth_scheme=Upwind(), bc=SizeBC(),
-                 domain=BatchDomain(),fields=_emptyfields,methods=TermMethods())
+                 domain=BatchDomain(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple())
     growth_scheme isa AbstractReconstruction || throw(ArgumentError("unsupported growth scheme"))
     bc isa SizeBC || throw(ArgumentError("bc must be SizeBC"))
     domain isa BatchDomain || throw(ArgumentError("only BatchDomain is currently implemented; spatial transport is deferred"))
+    evolution===nothing || return _compile_characteristic(model,grid,evolution,bc,p;fields,methods)
     methods isa TermMethods || throw(ArgumentError("methods must be TermMethods"))
     !any(term->term isa Growth,model.terms) && _validate_reconstruction(growth_scheme,grid)
     plan=TermMethods(;by_term=methods.by_term,merge((growth=growth_scheme,),methods.defaults)...)

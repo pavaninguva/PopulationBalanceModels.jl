@@ -88,7 +88,8 @@ velocities. `Grid2D` stores bin numbers over areas. Flux differences in each
 direction are multiplied by the tangential bin width. Upwind and uniform-grid
 WENO5 are supported; 2D MUSCL is not implemented.
 
-The [two-dimensional growth calculation](../case_studies/transport.md) compares variable-growth residuals
-with an analytical solution and a case-specific transformed-mesh adapter. Direct methods
-have additional boundary and constant-growth restrictions, described under
-[Time integration](time.md).
+The [two-dimensional growth calculation](../case_studies/transport.md) compares
+variable-growth residuals with an analytical solution and InguvaBraatz2023.
+The [trajectory methods](characteristics.md) explain the required growth-law
+declarations, physical meshes and CFL=1 time steps for Inguva2022 and
+InguvaBraatz2023.

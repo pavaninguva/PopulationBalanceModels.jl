@@ -34,13 +34,14 @@ makedocs(;
         "Numerical methods" => [
             "Overview and method selection" => "numerical_methods.md",
             "Growth and dissolution" => "methods/growth.md",
+            "Transport along growth trajectories" => "methods/characteristics.md",
             "Nucleation" => "methods/nucleation.md",
             "Birth, death, and dilution" => "methods/sources.md",
             "Aggregation and breakage" => "methods/collisions.md",
             "Time integration" => "methods/time.md",
             "Moment methods" => "moment_methods.md",
         ],
-        "Observations and estimation" => "inference.md",
+        "Parameter estimation" => "inference.md",
         "Case studies" => [
             "Overview" => "case_studies/index.md",
             "Batch cooling crystallization" => "case_studies/crystallization.md",

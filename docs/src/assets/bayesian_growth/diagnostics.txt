@@ -1,31 +1,48 @@
-SYNTHETIC DATA: affine growth adapted from Inguva, Schickel & Braatz (2022), Case 2. doi:10.1016/j.compchemeng.2022.107808
-Paper growth g0=.434, g1=.2604; f0=50 exp(-(a-.2)^2/.0005), a>=0. Size/time units follow scaled benchmark coordinates.
-Added demonstration bulk balance c'= -0.2 mu3', c0=2; independent Gaussian sigma=.003. Not experimental paper data.
-400 sampled particles at each of six times, conditional on [0,1.4]; joint unknowns log(g0), log(g1), log(initial_scale), log(noise).
-MAP coordinates define the posterior density. Physical LogNormal priors include exactly one transform Jacobian.
-MAP converged=true; gradient infinity norm=7.011022673101971e-8; solves=1113
-MAP scaled gradient=7.011022673101971e-8; tolerance=0.001; derivative step=6.0554544523933395e-6; optimizer scales=[1.0, 1.0, 1.0, 1.0]; elapsed seconds=3.94013397
-Laplace Hessian agreement=4.269907902791962e-8; condition=30849.142269818865
-MCMC ess_bulk = [2298.816654400112, 2280.0053627159573, 1797.2096330952559, 2042.0503946594768]
-MCMC ess_tail = [2009.183368738369, 1937.4526593808082, 1545.1672985533264, 1834.5005397155762]
-MCMC rhat = [1.0001564319471357, 1.0003544234445894, 1.0023046951428065, 1.001901241694954]
-MCMC divergences = 0
-MCMC warmup_divergences = 73
-MCMC max_depth_hits = 0
-MCMC diagnostics_passed = true
-MCMC min_ess = 400
-MCMC rhat_limit = 1.01
-MCMC target_acceptance = 0.8
-MCMC metric = dense
-MCMC max_depth = 8
-MCMC warmup = 500
-MCMC samples = 1000
-MCMC chains = 4
-MCMC posterior_evaluations = 728088
-MCMC forward_solves = 728088
-MCMC failed_evaluations = 0
-MCMC failure_messages = String[]
-MCMC elapsed_seconds = 61.120569524
-Predictive propagation uses 40 additional reference solves, returning latent and noisy values separately.
-Julia 1.10.3; RNG seeds data=2022, MAP=22, Laplace=23, NUTS=24, predictive=25/26.
-Versions: Distributions=0.25.132; Optim=2.3.2; AdvancedHMC=0.8.8; MCMCDiagnosticTools=0.3.19
+SYNTHETIC DATA: analytical affine-growth density plus independent Gaussian noise sigma=1.0
+Inguva, Schickel & Braatz (2022), Case 2; doi:10.1016/j.compchemeng.2022.107808
+f0=50 exp(-(a-.2)^2/.0005); g0=.434; g1=.2604. Scaled size/time units from the benchmark.
+281 density observation positions at each of six times; no sampled counts or binning.
+Initial density and noise are fixed. Only g0 and g1 are fitted. All priors are physical-coordinate densities, with log-coordinate Jacobians exactly once.
+Uniform bounds: g0 in [0.05,1], g1 in [0.02,1], corresponding at reference size 1 to offset times 1–20 and stretching times 1–50.
+lognormal MAP=(g0 = 0.43360048776031707, g1 = 0.2621164790946515); converged=true; gradient=2.8042956262004735e-8; Hessian agreement=6.535394020747087e-7
+lognormal rhat = [1.0011369279466067, 1.0011396113142819]
+lognormal ess_bulk = [1035.9325159971265, 1017.9716015163591]
+lognormal ess_tail = [1261.381801204713, 1248.3283617201732]
+lognormal mcse_mean = [7.279161423820067e-5, 0.00029995282404149046]
+lognormal ebfmi = [0.9744640649892737, 0.9865950484733412, 1.0997042800812804, 1.1137976345903393]
+lognormal divergences = 0
+lognormal warmup_divergences = 31
+lognormal max_depth_hits = 0
+lognormal diagnostics_passed = true
+lognormal min_ess = 400
+lognormal rhat_limit = 1.01
+lognormal bfmi_limit = 0.3
+lognormal target_acceptance = 0.9
+lognormal warmup = 1000
+lognormal samples = 1500
+lognormal chains = 4
+lognormal seed = 25
+lognormal forward_solves = 851606
+lognormal elapsed_seconds = 293.028755175
+uniform MAP=(g0 = 0.43359325417686845, g1 = 0.2621348470723506); converged=true; gradient=0.00011114377700355125; Hessian agreement=6.535565709564996e-7
+uniform rhat = [1.00453433294695, 1.0051616219318045]
+uniform ess_bulk = [924.9566731681724, 914.7298332311292]
+uniform ess_tail = [1103.4579528343556, 991.1785012331667]
+uniform mcse_mean = [7.964407202527334e-5, 0.0003299751410783667]
+uniform ebfmi = [1.0655070591969227, 0.9592753466429406, 1.0514883300555014, 0.9702311475075152]
+uniform divergences = 0
+uniform warmup_divergences = 30
+uniform max_depth_hits = 0
+uniform diagnostics_passed = true
+uniform min_ess = 400
+uniform rhat_limit = 1.01
+uniform bfmi_limit = 0.3
+uniform target_acceptance = 0.9
+uniform warmup = 1000
+uniform samples = 1500
+uniform chains = 4
+uniform seed = 26
+uniform forward_solves = 805576
+uniform elapsed_seconds = 268.432572146
+Julia 1.10.3; data seed=2022, MAP seed=22, dispersed-start seed=80, Laplace seed=23.
+Distributions=0.25.132; Optim=2.3.2; AdvancedHMC=0.8.8; MCMCDiagnosticTools=0.3.19

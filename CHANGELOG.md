@@ -2,10 +2,14 @@
 
 ## Unreleased
 
+- Added public Inguva2022 and InguvaBraatz2023 transformed transport methods, structured affine/separable growth laws, physical travel-time meshes, and compilation/runtime eligibility checks. Retained ExactShift for its existing constant-velocity interface.
+- Reworked the growth-fitting study around analytical point densities with additive Gaussian noise, two fitted coefficients, continuous plots, lognormal versus timescale-bounded uniform priors, and chain-level sampling evidence.
+- Exposed per-chain BFMI, acceptance rates, step sizes, energy/transition statistics, warmup statistics and Monte Carlo mean errors through diagnostics(samples).
+- Renamed the estimation chapter and navigation to Parameter estimation.
 - Added a shared Bayesian EstimationProblem for MAP, optional full-posterior Laplace curvature, and optional AdvancedHMC NUTS sampling, with explicit prior coordinates and transform Jacobians.
 - Added multinomial and exposed Poisson count likelihoods, normalized Gaussian likelihoods with inferred noise/covariance, and contrast handling for normalized fractions.
 - Added shared/local/fixed parameter declarations, uncertain initial-condition setup, observation responses, joint nuisance covariance, likelihood/posterior profiles, prior comparisons, and numerical refits.
-- Replaced the manual's introductory trivial kinetic fit with a synthetic size-dependent growth study based on the 2022 affine-growth benchmark, including an explicitly added bulk observable, parameter correlations, predictive checks, sampling diagnostics and numerical-refinement evidence.
+- Replaced the manual's introductory trivial kinetic fit with a synthetic size-dependent growth study based on the 2022 affine-growth benchmark, including parameter correlations, sampling diagnostics and numerical-refinement evidence.
 - Preserved the existing Gaussian CalibrationProblem interface. Reused the Distributions/StatsAPI fit and loglikelihood function bindings to avoid ambiguous imports.
 - Added Random as a standard-library dependency and AdvancedHMC/MCMCDiagnosticTools as optional extension dependencies.
 
@@ -33,6 +37,7 @@
 
 ### Fixes
 
+- Kept independent Gaussian measurement covariance diagonal during factorization, avoiding dense storage and cubic work for large density datasets while retaining likelihood normalization.
 - Integrated narrow moving Gaussian nucleation sources over bins in the nanoparticle recipe, preserving the explicit source-normalization convention.
 - Included boundary nucleation in the crystallization recipe's discrete material exchange.
 - Supplied the operator in two-coordinate callback contexts so `moment(ctx,(kx,ky))` works consistently with other representations.

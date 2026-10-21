@@ -33,9 +33,9 @@ solver for that long horizon. The output schedule includes 1, 40, 100, 170, and
 4320 minutes. Experimental data are not needed to render the model-only panels.
 
 Inguva–Braatz Case 2 is self-contained: it supplies the separable affine growth
-laws, Gaussian initial condition, analytical solution, and a case-specific
-travel-time transform for exact bin shifts. Uniform FV and nonuniform mapped
-mesh differences are recorded in `errors.csv`.
+laws, Gaussian initial condition and analytical solution, and uses the public
+InguvaBraatz2023 compiler with characteristic_grid. Uniform FV and nonuniform
+mapped mesh differences are recorded in `errors.csv`.
 
 New study results are written under `docs/src/assets/gunawan_example2/`,
 `shin_case/`, and `inguva_case2/`. Rebuild the manual after rendering figures.
@@ -89,11 +89,14 @@ julia --project=/path/to/working_environment examples/estimate_size_dependent_gr
 python docs/benchmarks/plot_bayesian_growth.py --usetex
 ```
 
-The default budget is three seeded MAP starts, four chains of 500 warmup and
-1000 retained NUTS draws, forty posterior predictive solves, two profiles, an
-alternative-prior fit and four numerical refits. Sampling uses the inexpensive
-case-specific characteristic solution, not a sectional solve at every leapfrog
-stage. Its reported forward count includes those analytical trajectories.
-The numerical refits use sectional MUSCL. CSVs retain convergence flags; failed
-strict stationarity checks must remain visible in plots and interpretation.
-Outputs, raw draws and provenance are in docs/src/assets/bayesian_growth.
+The study evaluates the analytical density at 281 sizes and six times and adds
+independent Gaussian noise with known standard deviation one. It fits only g0
+and g1. Each of two prior scenarios (lognormal and physical uniform bounds)
+uses three MAP starts and four chains with 1000 warmup and 1500 retained draws.
+Sampling uses the analytical solution, not MUSCL at every leapfrog step.
+The runner checks R-hat, bulk/tail ESS, divergences, tree depth and per-chain
+BFMI before reporting posterior results. Raw draws preserve chain identifiers;
+CSV reports include MCSE, energy, acceptance, step sizes and warmup statistics.
+Six numerical refits compare Inguva2022 and sectional MUSCL. CFL=1 requires
+refining the characteristic mesh and time step together. Failed stationarity
+checks remain visible. Outputs and provenance are in docs/src/assets/bayesian_growth.

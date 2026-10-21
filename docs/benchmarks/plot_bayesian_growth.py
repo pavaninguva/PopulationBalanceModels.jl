@@ -1,12 +1,16 @@
-"""Render only recorded Bayesian-growth results; requires NumPy/Matplotlib and optional LaTeX."""
+"""Plot the recorded Gaussian-noise growth study; no calculations are fabricated."""
 from pathlib import Path
 import argparse
 import csv
+from statistics import NormalDist
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 from plot_style import configure
 
 ROOT = Path(__file__).resolve().parents[1] / "src" / "assets" / "bayesian_growth"
+SCENARIOS = ("lognormal", "uniform")
+LABELS = {"lognormal": "Lognormal prior", "uniform": "Uniform prior"}
 
 
 def read(folder, name):
@@ -23,100 +27,140 @@ def save(fig, folder, name):
     plt.close(fig)
 
 
+def kde(values, x):
+    # A visual smoothing of recorded parameter draws, not a fitted likelihood.
+    bandwidth = 1.06 * np.std(values, ddof=1) * len(values) ** (-0.2)
+    z = (x[:, None] - values[None, :]) / bandwidth
+    return np.exp(-0.5 * z**2).mean(axis=1) / (bandwidth * np.sqrt(2 * np.pi))
+
+
 def plot(folder):
     data = read(folder, "measurements.csv")
-    bulk = read(folder, "bulk.csv")
+    curves = read(folder, "curves.csv")
     parameters = read(folder, "parameters.csv")
     draws = read(folder, "draws.csv")
-    mcmc = draws[draws["method"] == "mcmc"]
-    laplace = draws[draws["method"] == "laplace"]
+    chains = read(folder, "chains.csv")
+    priors = read(folder, "priors.csv")
+    mcmc = {s: draws[(draws["prior"] == s) & (draws["method"] == "mcmc")] for s in SCENARIOS}
+    laplace = {s: draws[(draws["prior"] == s) & (draws["method"] == "laplace")] for s in SCENARIOS}
+    estimates = {s: parameters[parameters["prior"] == s] for s in SCENARIOS}
     with (folder / "credible_summary.csv").open("w", newline="") as stream:
         writer = csv.writer(stream, lineterminator="\n")
-        writer.writerow(["parameter", "map", "mcmc_mean", "mcmc_low95", "mcmc_high95", "laplace_low95", "laplace_high95"])
-        for i, name in enumerate(parameters["name"]):
-            writer.writerow([name, parameters["map"][i], mcmc[name].mean(),
-                             *np.quantile(mcmc[name], [.025, .975]),
-                             *np.quantile(laplace[name], [.025, .975])])
-    fig, axes = plt.subplots(2, 3, figsize=(11, 6), layout="constrained")
-    for axis, time in zip(axes.flat, np.unique(data["time"])):
+        writer.writerow(["prior", "parameter", "map", "mcmc_mean", "mcmc_low95", "mcmc_high95", "laplace_low95", "laplace_high95"])
+        for s in SCENARIOS:
+            for p in estimates[s]:
+                name = p["name"]
+                writer.writerow([s, name, p["map"], mcmc[s][name].mean(),
+                                 *np.quantile(mcmc[s][name], [.025, .975]),
+                                 *np.quantile(laplace[s][name], [.025, .975])])
+
+    # One continuous-size plot, showing every noisy observation at all six times.
+    fig, axis = plt.subplots(figsize=(10, 4.7), layout="constrained")
+    for i, time in enumerate(np.unique(data["time"])):
         block = data[data["time"] == time]
-        width = block["upper"] - block["lower"]
-        centers = (block["upper"] + block["lower"]) / 2
-        axis.bar(centers, block["count"] / block["count"].sum() / width,
-                 width=width, alpha=.35, label="Synthetic sampled particles")
-        axis.stairs(block["model_probability"] / width,
-                    np.r_[block["lower"], block["upper"][-1]], color="C1", label="MAP bin integrals")
-        axis.set(xlabel=r"$a$", ylabel=r"Conditional size density", title=rf"$t={time:g}$")
-    axes[0, 0].legend(fontsize=8)
-    fig.suptitle("Size-dependent growth: synthetic dynamic measurements")
+        curve = curves[(curves["prior"] == "lognormal") & (curves["time"] == time)]
+        axis.scatter(block["size"], block["data"], s=5, alpha=.25, color=f"C{i}", rasterized=True)
+        axis.plot(curve["size"], curve["map"], color=f"C{i}", label=rf"$t={time:g}$")
+    axis.set(xlabel=r"Size $a$", ylabel=r"Number density $f(a,t)$", xlim=(0, 1.4),
+             title="Analytical densities with Gaussian noise; lines show the MAP fit")
+    axis.legend(ncol=2, fontsize=9, title="Observation time")
     save(fig, folder, "distributions")
 
-    fig, axes = plt.subplots(2, 2, figsize=(9, 7), layout="constrained")
-    x = np.linspace(0, 1.4, 120)
-    growth = mcmc["g0"][:, None] + mcmc["g1"][:, None] * x
-    quantiles = np.quantile(growth, [.025, .975], axis=0)
-    axes[0, 0].fill_between(x, *quantiles, alpha=.3, label=r"MCMC pointwise $95\%$")
-    axes[0, 0].plot(x, parameters["map"][0] + parameters["map"][1] * x, label="MAP")
-    axes[0, 0].plot(x, .434 + .2604 * x, "k--", label="Generating law")
-    axes[0, 0].set(xlabel=r"$a$", ylabel=r"$G(a)=g_0+g_1a$")
+    fig, axes = plt.subplots(2, 2, figsize=(9.5, 7), layout="constrained")
+    a = np.linspace(0, 1.4, 180)
+    for k, s in enumerate(SCENARIOS):
+        sample = mcmc[s]
+        growth = sample["g0"][:, None] + sample["g1"][:, None] * a
+        axes[0, 0].fill_between(a, *np.quantile(growth, [.025, .975], axis=0), color=f"C{k}", alpha=.25)
+        axes[0, 0].plot(a, np.median(growth, axis=0), color=f"C{k}", label=LABELS[s])
+        axes[0, 1].scatter(sample["g0"][::8], sample["g1"][::8], s=4, alpha=.2, color=f"C{k}", label=LABELS[s])
+    axes[0, 0].plot(a, .434 + .2604 * a, "k--", lw=1, label="Generating law")
+    axes[0, 0].set(xlabel=r"$a$", ylabel=r"$G(a)=g_0+g_1a$", title=r"Pointwise $95\%$ posterior bands")
     axes[0, 0].legend(fontsize=8)
-    axes[0, 1].scatter(mcmc["g0"][::4], mcmc["g1"][::4], s=3, alpha=.25, rasterized=True, label="NUTS")
-    axes[0, 1].scatter(laplace["g0"][::2], laplace["g1"][::2], s=3, alpha=.15, rasterized=True, label="Laplace")
     axes[0, 1].plot(.434, .2604, "kx", label="Generating parameters")
-    axes[0, 1].set(xlabel=r"$g_0$", ylabel=r"$g_1$")
+    axes[0, 1].set(xlabel=r"$g_0$", ylabel=r"$g_1$", title="Joint posterior draws")
     axes[0, 1].legend(fontsize=8)
-    for axis, name, i in ((axes[1, 0], "g0", 0), (axes[1, 1], "g1", 1)):
-        axis.hist(mcmc[name], bins=35, density=True, alpha=.4, label="NUTS")
-        axis.hist(laplace[name], bins=35, density=True, histtype="step", label="Laplace")
-        axis.axvline(parameters["true"][i], color="k", linestyle="--", label="Generating value")
-        axis.set(xlabel=rf"${'g_0' if i == 0 else 'g_1'}$", ylabel="Marginal density")
-        axis.legend(fontsize=8)
-    fig.suptitle("Joint inference includes initial-amplitude and noise nuisances")
+    for axis, name, truth in ((axes[1, 0], "g0", .434), (axes[1, 1], "g1", .2604)):
+        values = np.r_[mcmc["lognormal"][name], mcmc["uniform"][name]]
+        x = np.linspace(*np.quantile(values, [.001, .999]), 250)
+        for k, s in enumerate(SCENARIOS):
+            axis.plot(x, kde(mcmc[s][name], x), color=f"C{k}", label=LABELS[s] + ": NUTS")
+            axis.plot(x, kde(laplace[s][name], x), color=f"C{k}", linestyle="--", lw=1, label=LABELS[s] + ": Laplace")
+        axis.axvline(truth, color="k", linestyle=":", label="Generating value")
+        axis.set(xlabel=r"$g_0$" if name == "g0" else r"$g_1$", ylabel="Posterior density")
+        axis.legend(fontsize=6)
     save(fig, folder, "posterior")
 
-    predictive = read(folder, "predictive.csv")
-    profile = read(folder, "profiles.csv")
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3.8), layout="constrained")
-    times = bulk["time"]
-    latent = np.array([predictive[predictive["time"] == t]["latent_concentration"] for t in times])
-    noisy = np.array([predictive[predictive["time"] == t]["noisy_concentration"] for t in times])
-    axes[0].fill_between(times, *np.quantile(noisy, [.05, .95], axis=1), alpha=.18, color="C1", label=r"Noisy predictions: empirical $90\%$")
-    axes[0].fill_between(times, *np.quantile(latent, [.05, .95], axis=1), alpha=.4, label=r"Latent predictions: empirical $90\%$")
-    axes[0].plot(times, bulk["map"], label="MAP")
-    axes[0].plot(times, bulk["truth"], "k--", label="Generating trajectory")
-    axes[0].plot(times, bulk["data"], "ko", ms=3, label="Synthetic observations")
-    axes[0].set(xlabel=r"$t$", ylabel=r"Scaled concentration $c$")
-    axes[0].legend(fontsize=6)
-    for name, label in (("likelihood", "Likelihood profile"), ("posterior", "Posterior profile")):
-        p = profile[profile["target"] == name]
-        valid = np.char.lower(p["converged"].astype(str)) == "true"
-        axes[1].plot(np.exp(p["log_g1"][valid]), p["delta"][valid], label=label)
-    axes[1].set(xlabel=r"$g_1$", ylabel=r"Profile negative log density change")
-    axes[1].legend(fontsize=7)
-    shift = np.log(parameters["alternative_map"] / parameters["map"]) / parameters["laplace_sd_z"]
-    axes[2].bar(np.arange(4), shift)
-    axes[2].axhline(0, color=".5", lw=.6)
-    axes[2].set(xticks=np.arange(4), xticklabels=[r"$g_0$", r"$g_1$", r"$A$", r"$\sigma_c$"],
-                ylabel="MAP change / reference posterior SD", title="Broader kinetic priors")
-    fig.suptitle("Independent concentration measurements, profiles and prior sensitivity")
+    fig, axes = plt.subplots(1, 2, figsize=(8.5, 3.7), layout="constrained")
+    for axis, name, truth in zip(axes, ("g0", "g1"), (.434, .2604)):
+        for k, s in enumerate(SCENARIOS):
+            p = priors[(priors["prior"] == s) & (priors["parameter"] == name)]
+            axis.plot(p["value"], p["density"], color=f"C{k}", label=LABELS[s])
+        axis.axvline(truth, color="k", linestyle=":", label="Generating value")
+        axis.set(xlabel=r"$g_0$" if name == "g0" else r"$g_1$", ylabel="Prior density", xlim=(0, 1.2))
+        axis.legend(fontsize=8)
+    save(fig, folder, "priors")
+
+    ref = estimates["lognormal"]
+    residuals = []
+    fig, axes = plt.subplots(1, 3, figsize=(12, 3.7), layout="constrained")
+    # Noise sigma is one in these recorded measurements.
+    for k, time in enumerate(np.unique(data["time"])):
+        d = data[data["time"] == time]
+        curve = curves[(curves["prior"] == "lognormal") & (curves["time"] == time)]
+        residual = d["data"] - np.interp(d["size"], curve["size"], curve["map"])
+        residuals.extend(residual)
+        axes[0].scatter(d["size"], residual, s=4, alpha=.3, color=f"C{k}")
+    axes[0].axhline(0, color="k", lw=.7)
+    axes[0].set(xlabel=r"$a$", ylabel=r"Residual / $\sigma$", title="Gaussian measurement errors")
+    observed = np.sort(residuals)
+    expected = np.array([NormalDist().inv_cdf((i + .5) / len(observed)) for i in range(len(observed))])
+    axes[1].plot(expected, observed, color="C0", lw=1)
+    axes[1].plot(expected, expected, "k--", lw=1)
+    axes[1].set(xlabel="Standard normal quantile", ylabel="Residual quantile")
+    changes = np.log(estimates["uniform"]["map"] / ref["map"]) / ref["laplace_sd_z"]
+    axes[2].bar([0, 1], changes, color=["C0", "C1"])
+    axes[2].axhline(0, color="k", lw=.7)
+    axes[2].set(xticks=[0, 1], xticklabels=[r"$g_0$", r"$g_1$"], ylabel="MAP change / reference posterior SD",
+                title="Uniform versus lognormal prior")
     save(fig, folder, "checks")
 
-    refinement = read(folder, "refinement.csv")
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.8), layout="constrained")
-    labels = ["280 bins", "560 bins", "Half time step", "Larger domain"]
-    for axis, field, symbol in ((axes[0], "g0_shift_sd", r"$\log g_0$"), (axes[1], "g1_shift_sd", r"$\log g_1$")):
-        bars = axis.bar(np.arange(len(refinement)), refinement[field])
-        valid = np.char.lower(refinement["converged"].astype(str)) == "true"
-        for bar, converged in zip(bars, valid):
-            if not converged:
-                bar.set(facecolor=".75", hatch="///", label="Refit did not converge")
+    fig, axes = plt.subplots(2, 2, figsize=(10, 6), layout="constrained")
+    for row, s in enumerate(SCENARIOS):
+        for col, name in enumerate(("g0", "g1")):
+            for c in np.unique(chains["chain"]):
+                block = chains[(chains["prior"] == s) & (chains["chain"] == c)]
+                axes[row, col].plot(block["draw"], block[name], lw=.45, alpha=.65, label=f"Chain {c}")
+            axes[row, col].set(xlabel="Retained draw", ylabel=r"$g_0$" if name == "g0" else r"$g_1$", title=LABELS[s])
+    axes[0, 0].legend(ncol=2, fontsize=7)
+    save(fig, folder, "chains")
+
+    file = folder / "refinement.csv"
+    if file.exists():
+        rows = read(folder, "refinement.csv")
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4), layout="constrained")
+        x = np.arange(len(rows));valid = np.char.lower(rows["converged"].astype(str)) == "true"
+        for offset, name, label in ((-.17, "g0_shift_sd", r"$g_0$"), (.17, "g1_shift_sd", r"$g_1$")):
+            bars = axes[0].bar(x + offset, rows[name], width=.32, label=label)
+            for bar, ok in zip(bars, valid):
+                if not ok:bar.set_hatch("///")
+        axes[0].axhline(0, color="k", lw=.7)
+        axes[0].set(ylabel="Parameter change / analytical posterior SD")
+        axes[0].legend(fontsize=8)
         if not np.all(valid):
-            axis.legend(handles=[next(bar for bar, flag in zip(bars, valid) if not flag)], fontsize=7)
-        axis.axhline(0, color=".5", lw=.6)
-        axis.set(xticks=np.arange(len(refinement)), xticklabels=labels, ylabel=f"{symbol} mode change / reference posterior SD")
-        axis.tick_params(axis="x", labelrotation=18)
-    fig.suptitle("Sectional refits compared with characteristic-solution inference")
-    save(fig, folder, "refinement")
+            axes[0].legend([Patch(facecolor="C0"), Patch(facecolor="C1"),
+                            Patch(facecolor="white", edgecolor="black", hatch="///")],
+                           [r"$g_0$", r"$g_1$", "Unconverged candidate"], fontsize=7)
+        axes[1].bar(x, rows["max_density_error_sigma"], color="C2")
+        axes[1].set(ylabel=r"Maximum density error / $\sigma$")
+        labels = {"inguva_010": r"Inguva, $\Delta t=0.01$",
+                  "inguva_005": r"Inguva, $\Delta t=0.005$",
+                  "space_280": "MUSCL, 280 bins", "space_560": "MUSCL, 560 bins",
+                  "time_half": r"MUSCL, half $\Delta t$", "domain_larger": r"Domain $a_{\max}=2$"}
+        for axis in axes:
+            axis.set(xticks=x, xticklabels=[labels.get(v, v) for v in rows["variant"]])
+            axis.tick_params(axis="x", rotation=35, labelsize=7)
+        save(fig, folder, "refinement")
 
 
 if __name__ == "__main__":

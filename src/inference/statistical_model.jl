@@ -67,7 +67,8 @@ function _observe(o::DistributionObservable,u,op,p,t)
     else
         pop=op;state=vec(u)
     end
-    pop isa CompiledPBM || throw(ArgumentError("distribution observations require a sectional state or an explicit reconstruction"))
+    (pop isa CompiledPBM || (pop isa CompiledCharacteristic && pop.grid isa Grid1D)) ||
+        throw(ArgumentError("distribution observations require a 1D bin-integrated state or an explicit reconstruction"))
     g=pop.grid
     g.coordinate===o.coordinate || throw(ArgumentError("measurement and model coordinates differ; supply a coordinate-response model"))
     first(o.edges)>=first(g.edges) && last(o.edges)<=last(g.edges) || throw(ArgumentError("measurement window lies outside model domain"))
@@ -222,13 +223,15 @@ function _gaussian(l::GaussianLikelihood,Y,P,theta,ex)
         s=s isa Number ? fill(s,size(Y)) : s
         size(s)==size(Y) || throw(DimensionMismatch("Gaussian sigma must match original data"))
         all(x->x isa Real && isfinite(x) && x>0,s) || throw(NumericalFailure("invalid Gaussian noise scale"))
-        C0=Matrix(Diagonal(vec(s).^2))
+        C0=Diagonal(vec(s).^2)
         A===nothing ? C0 : let B=kron(Matrix{Float64}(I,size(Y,2),size(Y,2)),A);B*C0*B';end
     end
     size(C)==(n,n) || throw(DimensionMismatch("Gaussian covariance dimension mismatch"))
-    all(x->x isa Real && isfinite(x),C) && isapprox(C,C';rtol=1e-12,atol=0) || throw(NumericalFailure("invalid Gaussian covariance"))
+    valid=C isa Diagonal ? all(isfinite,C.diag) :
+        all(x->x isa Real && isfinite(x),C) && isapprox(C,C';rtol=1e-12,atol=0)
+    valid || throw(NumericalFailure("invalid Gaussian covariance"))
     factor=try
-        cholesky(Symmetric(C))
+        cholesky(C isa Diagonal ? C : Symmetric(C))
     catch e
         e isa PosDefException || rethrow()
         throw(NumericalFailure("Gaussian covariance is not positive definite after observation projection"))

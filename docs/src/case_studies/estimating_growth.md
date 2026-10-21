@@ -1,268 +1,308 @@
 # Estimating size-dependent growth
 
-A seed population moves toward larger sizes as crystals grow. A single snapshot
-can confound the overall growth speed with its dependence on size. Following
-the changing distribution at several times gives more information. A separate
-concentration measurement can also constrain how much solid is present.
+Suppose a particle population is measured several times while it grows. Can we
+recover how growth depends on particle size? This example answers that question
+with synthetic data: evaluate a known analytical solution, add Gaussian noise,
+and fit the two growth coefficients.
 
-This example generates synthetic measurements, fits growth coefficients and two
-nuisance parameters, then compares MAP, Laplace uncertainty and MCMC. The growth
-problem and initial distribution come from Case 2 of
-[Inguva, Schickel and Braatz (2022)](https://doi.org/10.1016/j.compchemeng.2022.107808).
-The sampling experiment and scaled bulk balance are additions for this inference
-demonstration. No experimental observations or published parameter estimates
-are being reproduced.
+The growth equation and initial density come from
+[Inguva, Schickel and Braatz (2022), Case 2](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2022.pdf).
+The noisy measurements and prior choices below are our estimation exercise;
+they are not experimental data from the paper.
 
-## The population and material balances
+## Model and measurements
 
-Let a be the intrinsic size coordinate. The population equation is
+The number density f follows
 
 ```math
 \frac{\partial f(a,t)}{\partial t}
 +\frac{\partial[(g_0+g_1a)f(a,t)]}{\partial a}=0,
-\qquad a\ge0.
+\qquad
+f(a,0)=50\exp\!\left[-\frac{(a-0.2)^2}{0.0005}\right].
 ```
 
-The paper specifies
+Size a is nonnegative, and no particles enter at a=0. We retain the paper's
+scaled size and time units. The coefficient g₀ has size/time units, while g₁
+has inverse-time units. There is no nucleation, aggregation or concentration
+feedback in this model.
+
+A particle starting at size a₀ reaches
 
 ```math
-f(a,0)=50\exp\left[-\frac{(a-0.2)^2}{0.0005}\right],
-\qquad g_0=0.434,\quad g_1=0.2604.
+a(t)=a_0e^{g_1t}+\frac{g_0}{g_1}(e^{g_1t}-1).
 ```
 
-We retain these scaled size and time coordinates. For fixed units, g₀ has
-size/time units and g₁ has inverse-time units. There is no nucleation or inflow.
-For the numerical calculation, both size boundaries are closed and the upper
-boundary must remain unpopulated. This differs from the paper's outflow-boundary
-discretization; domain enlargement checks whether the difference matters here.
-
-We add an uncertain seed amplitude A and a scaled dissolved concentration:
+The inverse trajectory and the resulting density are
 
 ```math
-f(a,0;A)=A f_0(a),\qquad
-\frac{dc(t)}{dt}=-q\frac{d\mu_3(t)}{dt},\qquad
-\mu_3(t)=\int_0^\infty a^3f(a,t)\,da,
+a_0(a,t)=ae^{-g_1t}+\frac{g_0}{g_1}(e^{-g_1t}-1),\qquad
+f(a,t)=e^{-g_1t}f(a_0(a,t),0).
 ```
 
-with c(0)=2 and q=0.2 in the chosen scaled material units. This is a controlled
-growth experiment: the growth law is prescribed and does not depend on c.
-The invariant is c+qμ₃. We use the concentration as an independent observation
-of material uptake; it is not a moment calculated from the measured histogram.
+Set f=0 when a₀<0. The exponential factor accounts for stretching: particles
+move to larger sizes and the peak becomes wider and lower.
 
-The executable builder uses the normal term and coupling interfaces:
-
-```julia
-model = PBMModel(growth=Growth(rate=(a,p,t,ctx)->p.g0+p.g1*a))
-operator = compile(model,grid; methods=TermMethods(growth=MUSCL()),
-    bc=SizeBC(NoFlux(),NoFlux()))
-system = PBMSystem((crystals=operator,); nonnegative_bulk=(:c,),
-    exchanges=(ConservativeExchange(:crystals,:c,
-        (a,p,t,ctx)->0.2*a^3; mechanisms=(:growth,)),))
-```
-
-## Generate measurements independently of the sectional solver
-
-The size characteristics are
+Generate data with g₀=0.434 and g₁=0.2604. At six times between 0.1 and 1,
+evaluate f at 281 sizes between 0 and 1.4 and add independent Gaussian errors:
 
 ```math
-a(t)=a_0e^{g_1t}+\frac{g_0}{g_1}(e^{g_1t}-1),\qquad
-a_0(a,t)=ae^{-g_1t}+\frac{g_0}{g_1}(e^{-g_1t}-1).
+y_{ij}=f(a_i,t_j;g_0,g_1)+\varepsilon_{ij},\qquad
+\varepsilon_{ij}\sim\mathcal N(0,\sigma_f^2),\qquad \sigma_f=1.
 ```
 
-For a characteristic entering from a negative initial size, the density is zero.
-Elsewhere,
-
-```math
-f(a,t)=e^{-g_1t}A f_0(a_0(a,t)).
-```
-
-Integrating f over a measurement bin is equivalent to integrating f₀ between
-its inverse-characteristic edges, restricted to a₀≥0. The recipe uses Gaussian
-CDF integrals and stable tail differences. Initial moments use the Gaussian
-truncated at zero; affine-growth moment equations provide another independent
-time-integration check. This case-specific solution does not extend the package's
-general ExactShift algorithm to arbitrary variable growth.
-
-At each of six times from 0.1 to 1, sample 400 particles conditional on the
-measurement window [0,1.4]. Separately add independent Gaussian concentration
-noise with true standard deviation 0.003. Random seeds are fixed and recorded.
+The initial density and noise level are known in this exercise. Only g₀ and
+g₁ are fitted. These are density measurements, not sampled particle counts;
+there is no binning, clipping or normalization. Negative noisy values near
+zero density are allowed by this measurement model.
 
 ```@example growth_inference
 using PopulationBalanceModels, Distributions
 include(joinpath(pkgdir(PopulationBalanceModels),"examples","estimate_size_dependent_growth.jl"))
 import .EstimateSizeDependentGrowth
 const recipe = EstimateSizeDependentGrowth
-data = recipe.synthetic_measurements()
-problem = recipe.estimation_problem(data)
-z0 = initial_coordinates(problem)
-posterior_components(problem,z0)
+data = recipe.synthetic_measurements(seed=2022,noise=1.0)
+size(data.values)
 ```
 
-The synthetic distributions and fitted bin-integral probabilities are shown
-below. Histogram heights are divided by the measurement-bin widths.
+All six snapshots appear on one plot. The points are noisy measurements and
+the continuous curves are the MAP fit with the lognormal priors defined below.
 
-![Synthetic dynamic particle counts and fitted size densities](../assets/bayesian_growth/distributions.png)
+![Analytical density with Gaussian noise at six times and continuous MAP curves](../assets/bayesian_growth/distributions.png)
 
-## Fit the growth law and nuisance parameters
+## Specify what the model predicts
 
-The inferred physical parameters are g₀, g₁, A, and σc, all represented by
-logarithmic coordinates. The priors are physical-coordinate LogNormal densities:
-
-| Parameter | LogNormal location | LogNormal scale | Role |
-|:--|--:|--:|:--|
-| g₀ | log(0.4) | 0.4 | growth |
-| g₁ | log(0.25) | 0.6 | size dependence |
-| A | 0 | 0.2 | initial-condition nuisance |
-| σc | log(0.003) | 0.4 | noise nuisance |
-
-For example, the growth intercept is declared as
+FunctionObservable evaluates the analytical density at the measured sizes:
 
 ```julia
-ParameterSpec(:g0; initial=0.4, transform=LogTransform(),
-    prior=Prior(LogNormal(log(0.4),0.4); coordinates=:physical))
+profile = FunctionObservable((N,operator,p,t)->
+    recipe.exact_density.(data.sizes,t,Ref(p)))
+measurement = Measurement(data.times,data.values,profile;
+    likelihood=GaussianLikelihood(sigma=data.noise))
 ```
 
-The experiment setup scales the initial population by A. The measurement
-declarations are
+Here the analytical expression supplies the point densities directly. It does
+not reconstruct them from a sectional histogram. The script's analytical
+solver also returns exact cell integrals for the underlying PBM state. All
+sizes and times contribute to one Gaussian likelihood with the stated noise.
+
+## Compare two prior choices
+
+First retain the previous growth priors:
 
 ```julia
-sizes = Measurement(data.times,data.counts,
-    DistributionObservable(data.edges;coordinate=:length,population=:crystals);
-    likelihood=MultinomialLikelihood(),source=:particle_counter)
-bulk = Measurement(data.times,data.bulk,BulkObservable(:c);
-    likelihood=GaussianLikelihood(sigma=(theta,experiment)->theta.noise),
-    source=:independent_concentration_instrument)
+Prior(LogNormal(log(0.4),0.4);coordinates=:physical) # g₀
+Prior(LogNormal(log(0.25),0.6);coordinates=:physical) # g₁
 ```
 
-The multinomial likelihood supplies shape information, conditional on the
-sampled counts. It cannot determine A by itself. The independent concentration
-observations and declared prior constrain A. The Gaussian determinant changes
-with σc and remains in the likelihood.
+These favour rates near 0.4 and 0.25. To see whether that preference drives
+the answer, compare them with uniform priors:
+
+```julia
+Prior(Uniform(0.05,1.0);coordinates=:physical) # g₀
+Prior(Uniform(0.02,1.0);coordinates=:physical) # g₁
+```
+
+One way to choose these bounds is to state plausible growth times. Take one
+scaled size unit as a reference and one time unit as the observation duration.
+The offset-growth time 1/g₀ then lies between 1 and 20 observation durations;
+the stretching time 1/g₁ lies between 1 and 50 durations. These ranges allow
+much slower growth than the experiment resolves, while excluding changes
+faster than those assumed in this exercise. They are physical assumptions,
+not universal defaults. A uniform density in rates is not uniform in timescales
+or logarithms, and is not uniquely noninformative.
+
+![Lognormal and timescale-bounded uniform priors on the physical growth rates](../assets/bayesian_growth/priors.png)
+
+Both scenarios use log coordinates so rates stay positive. Each prior is
+explicitly a density in physical coordinates, so the posterior in log
+coordinates includes its transformation Jacobian once. In particular, a
+physical uniform prior is not flat in log coordinates. Reported MAP values
+are transformed log-coordinate modes; see [Parameter estimation](../inference.md).
+
+## Fit and calculate local uncertainty
+
+The builder joins the physical problem, measurements and selected priors:
+
+```@example growth_inference
+problem = recipe.estimation_problem(data;prior=:lognormal)
+posterior_components(problem,initial_coordinates(problem))
+```
+
+Load Optim to fit; request Laplace explicitly:
 
 ```julia
 using Optim
 result = fit(problem;nstarts=3,seed=22,uncertainty=:laplace)
 result.parameters.shared
-kinetic_covariance = marginal_covariance(problem,result.uncertainty)
+result.converged
+result.diagnostics.gradient_norm
 ```
 
-The covariance includes A and σc before extracting its kinetic marginal. A
-strong g₀–g₁ correlation reflects the limited size range traversed by the seeds;
-neither optimizer convergence nor a bounded posterior establishes independent
-identification of the two growth coefficients.
+Construct a second problem with `prior=:uniform` and make the same calls. The
+likelihood, data and coordinates remain the same; only the physical priors
+change. Laplace uses the Hessian of that same posterior at its mode.
 
-![Growth-law uncertainty, parameter correlations and marginal distributions](../assets/bayesian_growth/posterior.png)
-
-The following summaries come from the recorded run. The intervals are marginal
-equal-tail MCMC credible intervals, conditional on this model, data and priors.
-The MAP column is the physical transform of the log-coordinate posterior mode.
+The following values are read from the recorded results. Intervals are marginal
+95% MCMC credible intervals for this synthetic dataset and its stated model.
 
 ```@eval
 using Markdown, PopulationBalanceModels
 folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","bayesian_growth")
-rows=readlines(joinpath(folder,"credible_summary.csv"))[2:end]
-table=["| Parameter | MAP | MCMC mean | MCMC 95% interval |",
-       "|:--|--:|--:|:--|"]
+rows=split.(readlines(joinpath(folder,"credible_summary.csv"))[2:end],',')
+table=["| Prior | Parameter | MAP | MCMC mean | MCMC 95% interval |",
+       "|:--|:--|--:|--:|:--|"]
 for row in rows
-    fields=split(row,',')
-    values=round.(parse.(Float64,fields[2:5]);sigdigits=5)
-    push!(table,"| $(fields[1]) | $(values[1]) | $(values[2]) | [$(values[3]), $(values[4])] |")
+    v=round.(parse.(Float64,row[3:6]);sigdigits=6)
+    push!(table,"| $(row[1]) | $(row[2]) | $(v[1]) | $(v[2]) | [$(v[3]), $(v[4])] |")
 end
 Markdown.parse(join(table,'\n'))
 ```
 
-Here the Laplace and MCMC intervals for the growth coefficients are similar,
-while the noise parameter has a longer upper tail under MCMC: its 95% upper
-endpoint is about 0.00425, compared with 0.00340 from the Laplace draws. Six
-concentration observations leave appreciable uncertainty in the noise scale.
-This is a useful distinction between local curvature and the sampled posterior,
-even when a Laplace Hessian passes all numerical checks.
+For these measurements, the two prior scenarios give almost the same estimates
+and intervals: the data are much more concentrated than either prior. This
+conclusion belongs to this noise level and sampling schedule. Fewer snapshots
+or larger errors can make the choice of prior matter more.
 
-## Compare local uncertainty with sampling
+The continuous growth-law bands show uncertainty in the fitted rates, not new
+measurement noise. The joint panel shows their correlation: a larger g₀ can
+partly compensate for a smaller g₁ over the observed size range. The marginal
+curves compare NUTS draws with Laplace draws under both prior choices. They
+are smoothed displays of parameter draws; the raw draws are also exported.
 
-The default runner uses four NUTS chains, each with 500 warmup iterations and
-1000 retained draws. Starts are dispersed using the Laplace scale. MAP, Laplace
-and NUTS use the same posterior in log coordinates, including all Jacobians.
-The Laplace plots use draws from the full four-parameter Gaussian, transformed
-back to physical values.
+![Growth-law bands, correlated rates, and posterior comparisons under both priors](../assets/bayesian_growth/posterior.png)
+
+## Check the chains before using their intervals
+
+Sampling is a separate request:
 
 ```julia
 using AdvancedHMC, MCMCDiagnosticTools
 samples = sample_posterior(problem;initial=result,laplace=result.uncertainty,
-    warmup=500,samples=1000,chains=4,seed=24)
-samples.diagnostics
+    warmup=1000,samples=1500,chains=4,seed=25,
+    target_acceptance=0.9,start_scale=3.0,max_depth=9)
+report = diagnostics(samples)
+report.rhat
+report.ess_bulk
+report.ess_tail
+report.mcse_mean
+report.per_chain
+report.diagnostics_passed
 ```
 
-Raw draws, diagnostic thresholds, R-hat, bulk/tail ESS, divergences, forward
-evaluation counts and timing are exported beside the figures. Inspect those
-diagnostics before treating the retained draws as posterior inference.
-This is one synthetic data realization, not a repeated-experiment coverage study.
-In the recorded run, maximum R-hat was 1.0024, minimum bulk ESS was 1797, minimum
-tail ESS was 1545, and the retained samples had no divergences or maximum-depth
-hits. There were 73 divergences during warmup, when the step size and metric
-were being adapted; these are recorded separately and those draws are discarded.
-About 728,000 analytical forward evaluations were used. A comparable chain budget
-with sectional PBM solves would cost substantially more; it is not run here.
+The runner uses four seeded starts dispersed along both directions of the
+Laplace covariance. It runs 1000 warmup iterations and retains 1500 draws per
+chain, for each prior scenario. Warmup adapts the metric and step size; those
+draws are excluded from posterior summaries.
 
-## Predict measurements and examine the priors
+It checks rank-normalized split R-hat ≤1.01, bulk and tail ESS ≥400, per-chain
+BFMI ≥0.3, no retained divergences and no maximum-depth hits. MCSE reports
+simulation error in posterior mean estimates in log coordinates. BFMI checks
+energy exploration; warmup divergences are recorded separately. The runner
+stops before interpreting results if the screen fails. Passing these checks
+supports using these draws, but cannot prove convergence or rule out an
+unvisited mode.
 
-Forty posterior draws are propagated with a budget of forty reference solves.
-Latent concentration uncertainty and additional measurement noise are returned
-separately. Displayed predictive bands are empirical quantiles of that limited
-draw set; they are a budgeted illustration, not precise tail estimates.
+```@eval
+using Markdown, PopulationBalanceModels
+file=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","bayesian_growth","sampler_diagnostics.csv")
+rows=split.(readlines(file)[2:end],',')
+table=["| Prior | Parameter | R-hat | Bulk ESS | Tail ESS | Mean MCSE (log) | Min BFMI | Retained divergences | Warmup divergences |",
+       "|:--|:--|--:|--:|--:|--:|--:|--:|--:|"]
+for r in rows
+    values=round.(parse.(Float64,r[3:6]);sigdigits=4)
+    bfmi=round(parse(Float64,r[9]);sigdigits=4)
+    push!(table,"| $(r[1]) | $(r[2]) | $(values[1]) | $(values[2]) | $(values[3]) | $(values[4]) | $bfmi | $(r[7]) | $(r[8]) |")
+end
+Markdown.parse(join(table,'\n'))
+```
 
-The likelihood and posterior profiles below refit all three remaining
-parameters at each fixed log(g₁). They have separate reference optima. The
-posterior curve has no ordinary likelihood-confidence interpretation. The
-prior-sensitivity calculation doubles the log-scale widths of the two kinetic
-priors while leaving the nuisance priors unchanged, then refits.
+Inspect the traces as well as the numbers. Chain identifiers, log posterior,
+energy, acceptance rates, step sizes, tree depth and leapfrog counts are retained
+in `chains.csv`. `chain_diagnostics.csv` includes warmup divergences for each
+chain. The package result also exposes `warmup_statistics` and retained
+`statistics` through `diagnostics(samples)`.
 
-![Predictive checks, nuisance-reoptimized profiles and prior sensitivity](../assets/bayesian_growth/checks.png)
+![Four retained chains for each growth coefficient and prior scenario](../assets/bayesian_growth/chains.png)
 
-## Separate discretization from posterior uncertainty
+## Check the fit and the numerical approximation
 
-The characteristic calculation avoids fitting synthetic data with the same
-sectional approximation that generated them. The runner also refits the model
-with MUSCL on 280 and 560 bins, halves the time step on the finer grid, and
-enlarges the size domain at the same fine spacing. These are separate numerical
-experiments, with identical data, likelihoods, priors and coordinate choices.
-The optimizer scales for these refits are the reference posterior marginal
-SDs in log coordinates. The central-difference step is 10⁻⁶. Both raw and
-scaled gradients are retained, and the scaled infinity-norm tolerance is 10⁻³.
+Residuals should be consistent with the noise added to the analytical solution.
+The plot below shows standardized residuals and compares their quantiles with
+a standard Gaussian. This is a model check for one synthetic dataset, not a
+coverage validation across repeated experiments.
 
-![Changes in inferred growth coefficients under numerical refinement](../assets/bayesian_growth/refinement.png)
+![Gaussian residual checks and the change in estimates between prior scenarios](../assets/bayesian_growth/checks.png)
 
-Mode changes are expressed in the reference joint posterior's marginal SD
-units in log coordinates. A small material-balance drift alone would not
-establish an accurate distribution fit. Each numerical refit retains its
-convergence flag. All four recorded refits passed their declared convergence
-checks. The 280-bin fit moves g₀ by about 1.68 reference SDs. At 560 bins, the
-shifts are about −0.13 SD for g₀ and +0.30 SD for g₁. Halving the time step changes
-these shifts by about 0.003 SD, and the enlarged-domain calculation agrees with
-that fine-step result to the displayed precision. Spatial error remains
-measurable: a stricter requirement such as 0.1 SD would need further refinement.
+To generate new measurement predictions, propagate a chosen number of posterior
+draws. Keep the uncertainty in the noise-free density separate from fresh
+Gaussian measurement errors:
 
-The raw tables also report a sample-size-scaled Hellinger difference between
-predicted histogram probabilities and concentration changes relative to its
-noise scale, evaluated at common parameter values. These measure prediction
-changes separately from changes in the fitted parameters. The analytical prior
-sensitivity and MCMC comparison do not
-include a moment closure: a future closure-based fit needs a separate closure
-error assessment, beyond time-step refinement.
+```julia
+draws = parameter_draws(problem,samples;n=40,seed=25)
+prediction = posterior_predictive(problem,draws;
+    max_solves=40,measurement_noise=true,seed=26)
+```
 
-## Run the complete calculation
+The budget counts one forward evaluation per draw for this single experiment.
+Returned predictions contain both the noise-free values and new noisy values.
 
-Use a working Julia environment containing the local package and Optim,
-Distributions, AdvancedHMC 0.8, and MCMCDiagnosticTools 0.3:
+The reference fit uses the analytical solution and has no spatial or time-step
+error. The runner then refits the same data using Inguva2022 on two travel-time
+meshes and MUSCL on uniform meshes. The Inguva mesh and time step are refined
+together to keep CFL=1. The MUSCL checks change spatial resolution, time step
+and domain size separately.
+
+Bin solvers store cell integrals. The numerical comparisons use an explicit
+linear interpolation of cell-average densities to the measured positions;
+that observation reconstruction has its own error. Changing solver does not
+change the Gaussian likelihood or the priors. Parameter shifts are shown in
+units of the analytical fit's posterior standard deviation, and prediction
+errors in units of the known measurement noise. Failed fit flags remain visible.
+
+![Parameter and density errors for the Inguva and MUSCL numerical refits](../assets/bayesian_growth/refinement.png)
+
+Hatched bars mark candidates that did not pass the optimizer's convergence and
+gradient checks; their shifts are not accepted mode estimates. The coarser
+Inguva refit and the 560-bin MUSCL refit at the larger time step fail that check.
+Refining the Inguva mesh to dt=0.005 gives a converged fit within about 0.16
+reference posterior SD of the analytical fit. The converged 560-bin MUSCL fit
+at the smaller step is still about 2.7 SD away in g₁. Its size grid needs further
+refinement for this precise dataset. The right panel compares predictions at
+the same analytical MAP parameters, so that error check does not depend on
+whether a numerical refit converged.
+
+## Use the compiled transport method
+
+The analytical fit is inexpensive because this model has a known continuous
+solution. For a supplied vector of bin integrals, the package also provides the
+paper's transformed transport method directly:
+
+```julia
+p = (g0=0.434,g1=0.2604)
+law = AffineGrowth(:g0,:g1)
+grid = characteristic_grid(law,(0.0,1.4);dt=0.005,p)
+operator = compile(PBMModel(growth=Growth(law)),grid;
+    evolution=Inguva2022(),p,bc=SizeBC(OpenBoundary(),OpenBoundary()))
+initial = recipe.exact_counts(grid.edges,0.0,p)
+solution = simulate(PBMProblem(operator,initial,(0.0,1.0);p);
+    dt=0.005,saveat=data.times)
+```
+
+Compilation checks the declared growth form, positivity, boundaries and mesh.
+The time step and requested outputs must align with the travel-time cells.
+During a numerical refit the builder reconstructs this mesh for each proposed
+parameter vector. See [Transport along growth trajectories](../methods/characteristics.md)
+for the method, conservation properties and restrictions.
+
+## Run the study
 
 ```sh
 julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl
 python docs/benchmarks/plot_bayesian_growth.py --usetex
 ```
 
-The runner records its inputs and results under docs/src/assets/bayesian_growth.
-The documentation build reads those assets and executes only the short setup
-block above. It does not run optimization or sampling on every build. For a
-short local smoke check, call run_example with smaller samples/warmup and
-refine=false; a small chain budget may fail the diagnostic thresholds and must
-remain labelled accordingly.
+The working environment needs Optim, AdvancedHMC and MCMCDiagnosticTools as
+well as this package. The script records all seeds, prior definitions, solver
+settings and diagnostics under `docs/src/assets/bayesian_growth/`. The plotter
+reads those files. It uses LaTeX labels and no grid lines, and exports PNG and
+SVG figures. Rebuild Documenter after changing the figures.

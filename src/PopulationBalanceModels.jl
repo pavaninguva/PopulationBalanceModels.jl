@@ -18,6 +18,8 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        DistributedNucleation, Dilution, AdditiveCoordinate,
        IntegratedBirth, IntegratedNucleation, GaussianNucleation,
        Grid2D, Growth2D, Nucleation2D, SizeBC2D, SSPRK33, HOCADI, ExactShift,
+       AffineGrowth, SeparableGrowth2D, Inguva2022, InguvaBraatz2023,
+       characteristic_grid, characteristic_density,
        MomentSet, ExactClosure, QuadratureClosure, PolynomialRate,
        ConstantKernel, SelfSimilarDaughters, MomentSource, MomentExchange,
        quadrature, realizability,
@@ -75,6 +77,7 @@ include("numerics/tensor/term_dispatch.jl")
 include("time_integration/direct_common.jl")
 include("time_integration/compact_adi.jl")
 include("time_integration/exact_shift.jl")
+include("time_integration/characteristic_transport.jl")
 include("inference/observations.jl")
 include("inference/calibration.jl")
 include("inference/uncertainty.jl")

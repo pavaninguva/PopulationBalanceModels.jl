@@ -15,6 +15,8 @@ Conservative transport in the internal coordinate x, with PDE contribution
 this is a velocity, not a particle birth rate or a precomputed face flux.
 The callback is evaluated at grid faces and at the current integration stage.
 Select Upwind/MUSCL/WENO5 separately through `TermMethods(growth=...)`.
+For eligible homogeneous growth, declare AffineGrowth and select the complete
+Inguva2022 transport update with `compile(...; evolution=Inguva2022(),p)`.
 """
 struct Growth{F} <: AbstractPBMTerm
     rate::F

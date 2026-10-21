@@ -1,3 +1,49 @@
+"""
+    AffineGrowth(offset, slope)
+
+Autonomous size law `G(a)=offset+slope*a`. Each coefficient is a finite number
+or a Symbol naming a parameter in `p`. This declaration rules out hidden time,
+bulk-state and cross-coordinate dependence and permits compilation of the
+Inguva transformation methods. Ordinary Growth/Growth2D callbacks remain valid
+for the residual-based schemes.
+"""
+struct AffineGrowth{B,S}
+    offset::B
+    slope::S
+    function AffineGrowth(offset,slope)
+        all(v->v isa Symbol || (v isa Real && isfinite(v)),(offset,slope)) ||
+            throw(ArgumentError("AffineGrowth coefficients must be finite numbers or parameter names"))
+        new{typeof(offset),typeof(slope)}(offset,slope)
+    end
+end
+function _affine_coefficient(v,p)
+    value=if v isa Symbol
+        hasproperty(p,v) || throw(ArgumentError("missing affine-growth parameter $v; supply p when constructing and compiling the mesh"))
+        getproperty(p,v)
+    else
+        v
+    end
+    value isa Real && isfinite(value) || throw(ArgumentError("affine-growth coefficients must resolve to finite real values"))
+    value
+end
+(g::AffineGrowth)(a,p,t,ctx)=_affine_coefficient(g.offset,p)+_affine_coefficient(g.slope,p)*a
+
+"""
+    SeparableGrowth2D(xlaw, ylaw)
+
+Declare independent autonomous laws `G₁(a₁)` and `G₂(a₂)`, currently AffineGrowth
+instances. Their transport operators commute. Cross-coordinate, time and
+bulk-state dependence cannot be represented by this declaration.
+"""
+struct SeparableGrowth2D{X,Y}
+    x::X
+    y::Y
+    function SeparableGrowth2D(x::AffineGrowth,y::AffineGrowth)
+        new{typeof(x),typeof(y)}(x,y)
+    end
+end
+(g::SeparableGrowth2D)(x,y,p,t,ctx)=(g.x(x,p,t,ctx),g.y(y,p,t,ctx))
+
 """Polynomial a₀+a₁x+…; each coefficient is numeric or a `(p,t,ctx)` callback."""
 struct PolynomialRate{C}
     coefficients::C

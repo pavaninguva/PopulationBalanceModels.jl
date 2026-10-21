@@ -118,6 +118,9 @@ struct PosteriorSamples{P,D,C}
     coordinates::C
 end
 
+"""Return the sampler report, including rank R-hat, bulk/tail ESS, MCSE, per-chain energy/BFMI and adaptation statistics. A passed screen is evidence to assess, not a proof of convergence."""
+diagnostics(samples::PosteriorSamples)=samples.diagnostics
+
 """Draw from an explicitly labelled Laplace approximation and transform every draw to physical coordinates. This performs no forward PBM solves."""
 function parameter_draws(problem::EstimationProblem,approximation::LaplaceApproximation;n=1000,seed=2022)
     n isa Integer && n>0 || throw(ArgumentError("positive draw count required"))

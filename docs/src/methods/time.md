@@ -117,7 +117,8 @@ output time. Periodic or paired open zero-inflow boundaries are supported.
 Fractional remapping is rejected. An integer shift moves bin numbers exactly;
 no interpolation or flux reconstruction is required.
 
-This property does not extend automatically to transformed variable-growth
-meshes, noncommuting velocities, or source terms. The [travel-time adapter](../case_studies/transport.md) explicitly transforms
-the separable affine growth laws to constant velocities before using
-ExactShift. This does not make the core method a general variable-growth solver.
+ExactShift remains the older constant-velocity interface. For autonomous affine
+growth, select Inguva2022 or InguvaBraatz2023 during compilation. These
+[trajectory methods](characteristics.md) construct and check the corresponding
+physical mesh and time-step restrictions. They do not expose a semi-discrete
+residual for SSPRK33 or an external ODE solver.

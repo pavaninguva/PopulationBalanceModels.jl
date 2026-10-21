@@ -106,7 +106,7 @@ include("../examples/inguva_braatz_case2.jl")
     @test case.analytical_density(x,y,1.0)≈50exp(-0.3) rtol=1e-13
     @test sum(case.reference(prob.operator.grid,1.0))≈sum(prob.u0) rtol=1e-13
     mapped=case.mapped_problem(20)
-    sol=simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
+    sol=simulate(mapped.problem;dt=mapped.dt,saveat=[1.0])
     @test sum(abs,last(sol.u).-case.reference(mapped.physical_grid,1.0))<2e-13
     @test sum(last(sol.u))≈sum(mapped.problem.u0) rtol=1e-13
     @test_throws ArgumentError simulate(prob;method=ExactShift(),dt=0.05)
@@ -123,7 +123,7 @@ end
     # A parameter change must affect both the mapped transport and reference.
     for slopes in ((0.1,0.2),(0.0,0.0))
         q=merge(p,(slope=slopes,));mapped=study.mapped_problem(20;p=q)
-        sol=simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
+        sol=simulate(mapped.problem;dt=mapped.dt,saveat=[1.0])
         @test sum(abs,last(sol.u).-study.reference(mapped.physical_grid,1.0,q))<3e-13
     end
     # Subdivide only the low-error region of the same piecewise constant field.

@@ -176,12 +176,22 @@ The density per travel-time area is
 ```
 
 Only in these new coordinates are the velocities constant. A uniform
-travel-time mesh with ``\Delta\tau_1=\Delta\tau_2=\Delta t`` lets ExactShift
+travel-time mesh with ``\Delta\tau_1=\Delta\tau_2=\Delta t`` lets InguvaBraatz2023
 move the state one cell in each direction without interpolation:
 
 ```@example growth2d
-mapped = study.mapped_problem(20;p) # 20 steps of 0.05
-shifted = simulate(mapped.problem;method=ExactShift(),dt=mapped.dt,saveat=[1.0])
+law = SeparableGrowth2D(AffineGrowth(p.offset[1],p.slope[1]),
+    AffineGrowth(p.offset[2],p.slope[2]))
+dt_shift = 0.05
+physical_grid = characteristic_grid(law,((0.0,2.0),(0.0,2.0));
+    dt=dt_shift,endpoint=:truncate)
+open_ends = SizeBC(OpenBoundary(),OpenBoundary())
+shift_operator = compile(PBMModel(growth=Growth2D(law)),physical_grid;
+    evolution=InguvaBraatz2023(),bc=SizeBC2D(x=open_ends,y=open_ends))
+shift_problem = PBMProblem(shift_operator,study.reference(physical_grid,0.0,p),
+    (0.0,1.0);p)
+mapped = (problem=shift_problem,physical_grid=physical_grid,dt=dt_shift)
+shifted = simulate(mapped.problem;dt=mapped.dt,saveat=[1.0])
 physical_density = density(mapped.physical_grid,shifted.u[end])
 sum(abs,shifted.u[end]-study.reference(mapped.physical_grid,1.0,p))
 ```
@@ -190,12 +200,14 @@ Bin number is unchanged by the transformation; do not multiply it by the
 Jacobian a second time. To recover ``f``, divide by the **physical** bin areas,
 as in the last block.
 
-The adapter keeps whole travel-time cells inside the 0–2 domain, omits fractional
+This mesh keeps whole travel-time cells inside the 0–2 domain, omits fractional
 end cells, and uses paired open boundaries. Its nonuniform physical mesh and
 actual extents are recorded with the results. The comparison adapts the
 transformed-mesh method to bin averages; it does not reproduce the paper's
-nodal implementation or SharpClaw settings. ExactShift itself still requires
-constant velocities and integer cell displacements.
+nodal implementation or SharpClaw settings. The compiler checks the independent
+growth laws, positivity, common travel-time spacing and boundaries. The solver
+checks the time step and output alignment before advancing. The older ExactShift
+interface remains restricted to constant velocities.
 
 HOCADI is also restricted to constant velocities, and additionally requires
 periodic boundaries. Applying it directly to this physical problem is unsupported.
@@ -226,7 +238,7 @@ if isfile(file)
     lines=split.(readlines(file),',')
     columns=first(lines)
     value(row,key)=row[findfirst(==(key),columns)]
-    labels=Dict("upwind"=>"Upwind","weno5"=>"WENO5","mapped_shift"=>"Mapped exact shift")
+    labels=Dict("upwind"=>"Upwind","weno5"=>"WENO5","mapped_shift"=>"Inguva–Braatz 2023")
     table=["| Method | Bins (a₁ × a₂) | Area RMS density error | Minimum density |",
            "|:--|--:|--:|--:|"]
     for row in lines[2:end]

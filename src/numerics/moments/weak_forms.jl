@@ -1,5 +1,7 @@
 function _needed_moments(term,k)
-    if term isa Growth && term.rate isa PolynomialRate
+    if term isa Growth && term.rate isa AffineGrowth
+        return k==0 ? Int[] : [k-1,k]
+    elseif term isa Growth && term.rate isa PolynomialRate
         k==0 && return Int[]
         return [k+j-2 for (j,a) in enumerate(term.rate.coefficients) if !(a isa Number && iszero(a))]
     elseif term isa Union{Death,Dilution} && term.rate isa PolynomialRate
@@ -32,7 +34,9 @@ function _exact_moment_term!(dμ,μ,term,op,p,t,ctx)
     for k in op.grid.orders
         if term isa Growth
             k==0 && continue
-            for (j,a) in enumerate(term.rate.coefficients)
+            coefficients=term.rate isa AffineGrowth ?
+                (_affine_coefficient(term.rate.offset,p),_affine_coefficient(term.rate.slope,p)) : term.rate.coefficients
+            for (j,a) in enumerate(coefficients)
                 a isa Number && iszero(a) && continue
                 dμ[k+1]+=k*_source_value(a,p,t,ctx)*μ[k+j-1]
             end

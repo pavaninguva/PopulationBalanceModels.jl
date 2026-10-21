@@ -16,9 +16,9 @@ boundaries, and numerical choices used in its implementation.
 - [Growth in two particle dimensions](transport.md): coordinate-dependent growth
   moves and stretches a joint distribution. An analytical solution exposes
   numerical broadening, oscillations, and errors under grid refinement.
-- [Estimating size-dependent growth](estimating_growth.md): synthetic dynamic
-  particle counts and independent concentration measurements constrain a growth
-  law and nuisance parameters using one shared Bayesian model.
+- [Estimating size-dependent growth](estimating_growth.md): analytical density curves
+  with Gaussian noise illustrate fitting two growth rates, comparing prior choices
+  and checking MCMC chains.
 
 The two-dimensional calculation is self-contained. The crystallization seed has
 an unresolved discrepancy in the printed coefficients; the nanoparticle

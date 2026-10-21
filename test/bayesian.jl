@@ -47,6 +47,11 @@ end
     @test isfinite(ll(normal,fractions,fractions,(;),ex))
     noise=GaussianLikelihood(sigma=(theta,experiment)->theta.s)
     @test ll(noise,zeros(2,2),zeros(2,2),(s=2.0,),ex)-ll(noise,zeros(2,2),zeros(2,2),(s=1.0,),ex)≈-4log(2)
+    # Independent density measurements must not allocate/factor a dense covariance.
+    values=reshape(collect(range(-1.,1.;length=512)),:,1)
+    gaussian=GaussianLikelihood(sigma=0.7)
+    @test ll(gaussian,values,zeros(size(values)),(;),ex)≈sum(logpdf.(Normal(0,0.7),values))
+    @test PopulationBalanceModels._gaussian(gaussian,values,values,(;),ex).factor.factors isa Diagonal
     a=Measurement([0.0],reshape([1.,0.],2,1),g;likelihood=MultinomialLikelihood(),source=:same)
     @test_throws ArgumentError InferenceExperiment(:run,f.pb,a,a;solver=f.solver)
 end

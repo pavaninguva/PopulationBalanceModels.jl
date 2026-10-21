@@ -11,6 +11,7 @@ The manual treats these operations separately:
 | Part of the calculation | Numerical treatment |
 |:--|:--|
 | [Growth and dissolution](methods/growth.md) | Signed face fluxes with Upwind, MUSCL, or eligible WENO5 reconstruction |
+| [Transport along growth trajectories](methods/characteristics.md) | Inguva2022 and InguvaBraatz2023 for eligible autonomous growth, with matched meshes and time steps |
 | [Nucleation](methods/nucleation.md) | Boundary influx, point deposition, or an integrated size distribution |
 | [Birth, death, and dilution](methods/sources.md) | Bin source integration and nonnegative removal hazards |
 | [Aggregation and breakage](methods/collisions.md) | Fixed-pivot event counting and deposition in an additive property |

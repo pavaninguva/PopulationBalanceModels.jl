@@ -12,6 +12,8 @@ PBMModel(; named_terms...)
 TermMethods(; by_term=NamedTuple(), mechanism_methods...)
 compile(model, grid; methods=TermMethods(), bc=SizeBC(), growth_scheme=Upwind())
 compile(model, MomentSet(0:K); method=ExactClosure(), methods=TermMethods())
+characteristic_grid(AffineGrowth(:g0,:g1),(0.0,1.4);dt,p)
+compile(model, grid; evolution=Inguva2022(),p,bc)
 PBMProblem(operator, initial, (t0,tf); p=NamedTuple())
 simulate(problem; dt, saveat=[t0,tf], method=SSPRK33())
 ```
@@ -39,7 +41,7 @@ and `sensitivity_report` use this shared forward model.
 residuals, and numerical sensitivity; `confidence_ellipsoid` and `ellipse_points`
 construct local joint regions. `fit_multistart` and `profile_likelihood` use the
 fitting backend for multiple starts and nuisance-parameter refits.
-See [Observations and estimation](inference.md) for assumptions and examples.
+See [Parameter estimation](inference.md) for assumptions and examples.
 
 New Bayesian calculations use `ParameterSpec`, explicitly coordinated `Prior`
 declarations, `Measurement`, `InferenceExperiment`, and `EstimationProblem`.
@@ -49,6 +51,9 @@ declarations, `Measurement`, `InferenceExperiment`, and `EstimationProblem`.
 `parameter_draws` transforms draws, and `posterior_predictive` requires an explicit
 forward-solve budget. The Bayesian and legacy frequentist uncertainty APIs have
 different interpretations; see the estimation chapter.
+`diagnostics(samples)` exposes per-chain sampling reports, including BFMI,
+acceptance, step sizes, warmup statistics and Monte Carlo errors, alongside
+rank R-hat and bulk/tail ESS.
 
 ## Numerical extensions
 

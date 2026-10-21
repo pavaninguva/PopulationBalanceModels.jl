@@ -27,6 +27,7 @@ struct PBMSolution{T,U,P}
 end
 """Explicit three-stage, third-order strong-stability-preserving Runge–Kutta."""
 struct SSPRK33 end
+_default_evolution(op)=SSPRK33()
 _simulate(prob,method;kwargs...)=throw(ArgumentError("unsupported evolution method $(typeof(method)) for $(typeof(prob.operator))"))
 Base.getindex(sol::PBMSolution,i::Integer)=sol.u[i]
 
@@ -59,7 +60,7 @@ implicit stiffness treatment is performed. Choose dt using `suggest_dt` and
 check convergence. For production adaptive/stiff integration use `odeproblem`.
 """
 function simulate(prob::PBMProblem;dt,saveat=collect(prob.tspan),check_nonnegative=true,
-                  negative_tolerance=1e-12,maxsteps=10^7,method=SSPRK33())
+                  negative_tolerance=1e-12,maxsteps=10^7,method=_default_evolution(prob.operator))
     method isa SSPRK33 || return _simulate(prob,method;dt,saveat,check_nonnegative,negative_tolerance,maxsteps)
     ts=_evolution_args(prob,dt,saveat,negative_tolerance,maxsteps)
     t0=first(prob.tspan)

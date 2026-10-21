@@ -51,6 +51,15 @@ function _observe(obs::MomentObservable,N,op::CompiledPBM2D,p,t)
 end
 _observe(obs::HistogramObservable,N,op::CompiledMomentPBM,p,t)=throw(ArgumentError("histograms require an explicit distribution reconstruction/measurement model for moments"))
 _observe(obs::HistogramObservable,N,op::CompiledPBM2D,p,t)=throw(ArgumentError("use FunctionObservable for a 2D bin or marginal measurement"))
+function _observe(obs::MomentObservable,N,op::CompiledCharacteristic,p,t)
+    op.grid isa Grid1D && return [moment(op.grid,view(N,:,obs.cell),obs.order)]
+    obs.cell==1 && obs.order isa Tuple{Integer,Integer} || throw(ArgumentError("use MomentObservable((kx,ky)) for a 2D characteristic state"))
+    [moment(op.grid,N,obs.order)]
+end
+function _observe(obs::HistogramObservable,N,op::CompiledCharacteristic,p,t)
+    op.grid isa Grid1D || throw(ArgumentError("use FunctionObservable for a 2D bin or marginal measurement"))
+    _observe(obs,N,(;grid=op.grid),p,t)
+end
 _observe(obs::FunctionObservable,N,op,p,t)=_vector(obs.f(N,op,p,t))
 _observe(obs::PopulationMoment,N,op::CompiledSystem,p,t)=
     [population_moment(getproperty(op.system.populations,obs.population),population(op,N,obs.population),obs.order)]
