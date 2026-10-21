@@ -3,8 +3,8 @@
 From the package root, use these calculation/plot pairs:
 
 ```sh
-julia --project=. examples/cooling_crystallization_benchmark.jl /path/to/gunawan_inputs.jl
-python docs/benchmarks/plot_case_studies.py cooling
+julia --project=. examples/cooling_crystallization_benchmark.jl
+python docs/benchmarks/plot_transport_comparisons.py cooling --usetex
 
 julia --project=/path/to/working_environment examples/shin_lnp_reproduction.jl /path/to/shin_inputs.jl
 python docs/benchmarks/plot_case_studies.py lnp
@@ -17,13 +17,16 @@ NumPy and Matplotlib are plotting dependencies only. `--data-dir PATH` selects
 an alternative exported-data directory. The plotter requires the appropriate
 CSV files; it does not fabricate missing curves or substitute demonstration data.
 
-The Gunawan input file returns `initial_density`, `c0`, and `provenance`; it can
-also set `grids`, `dt`, and `initial_moments`. The literal Eq.34 polynomial is
-retained but rejected as negative on its support. Resolve that discrepancy before
-claiming published-figure reproduction. The moderate published spacing is 0.5 µm
-(3200 bins) and the fine reference spacing is 0.05 µm (32000 bins), both with a
-0.01-second time step. Current comparisons use the package's Upwind/MUSCL,
-not the paper's HR1/Lax–Wendroff algorithms.
+The cooling benchmark chooses and records a nonnegative parabolic initial
+condition and a saturated initial solution. The printed Eq.34 is retained
+literally as `reported_initial_density`, not used as a density or silently
+repaired. Upwind and MUSCL at 400–3200 nominal bins are compared with a
+12800-bin MUSCL reference. A 6400-bin comparison and a time-step check quantify
+reference error; independent continuum moment ODEs check its moments. An optional
+input file can override `initial_density`, `c0`, `provenance`, `grids`,
+`reference_bins`, `check_bins`, `dt`, and `tf`. The default is dt=0.1 s, tf=1000 s.
+This is not a claim to implement the paper's HR1 or reproduce its original
+initial-condition curves. Its published reference used 32000 bins and dt=0.01 s.
 
 The Shin input file returns `inputs`, `solver`, and `provenance`, optionally
 `saveat`. `inputs` includes the grid and numerical material closures; the Figure 4
@@ -44,8 +47,8 @@ results have not been generated, the page gives their commands. Separate
 illustrations show explicitly labelled demonstration calculations.
 
 `diagnostics/` retains earlier constant-growth and demonstration-initialization
-data. The cooling and nanoparticle pages display labelled plots of those
-demonstrations, with their provenance. The constant-growth Gaussian is now a
+data. The nanoparticle page retains labelled demonstration plots; the cooling page
+uses the new reference-checked numerical benchmark. The constant-growth Gaussian is now a
 regression fixture in `test/fixtures/`. The original periodic rectangle/smooth
 benchmark and compact/ADI stability audit remain numerical-method diagnostics,
 not additional case-study pages.
@@ -100,3 +103,21 @@ CSV reports include MCSE, energy, acceptance, step sizes and warmup statistics.
 Six numerical refits compare Inguva2022 and sectional MUSCL. CFL=1 requires
 refining the characteristic mesh and time step together. Failed stationarity
 checks remain visible. Outputs and provenance are in docs/src/assets/bayesian_growth.
+
+## Growth/time combinations and axial transport
+
+```sh
+julia --project=. examples/constant_growth_methods.jl
+python docs/benchmarks/plot_transport_comparisons.py constant --usetex
+julia --project=. examples/axially_dispersed_growth.jl
+python docs/benchmarks/plot_transport_comparisons.py axial --usetex
+```
+
+The constant-growth comparison follows the 2022 Case 1 equation, initial
+exponential, and t=4. It compares analytical bin integrals with several
+reconstruction/integrator combinations at C=0.5 and C=1. Negative concentrations
+are retained deliberately; unstable LinearUpwind/C=1 runs are reported rather
+than interpreted as valid solutions. Timings are single warmed runs. The axial
+example feeds a growing population into an initially empty dispersed tube; the
+PDF-independent verification uses analytical periodic advection–diffusion and
+nonuniform-grid inlet/outlet balances in `test/axial.jl`.

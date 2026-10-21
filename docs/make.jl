@@ -31,6 +31,7 @@ makedocs(;
         "Getting started" => "getting_started.md",
         "Defining models" => "defining_models.md",
         "Coupled systems" => "coupled_systems.md",
+        "Axially dispersed reactors" => "axial_reactors.md",
         "Numerical methods" => [
             "Overview and method selection" => "numerical_methods.md",
             "Growth and dissolution" => "methods/growth.md",
@@ -44,6 +45,7 @@ makedocs(;
         "Parameter estimation" => "inference.md",
         "Case studies" => [
             "Overview" => "case_studies/index.md",
+            "Comparing growth and time methods" => "case_studies/constant_growth.md",
             "Batch cooling crystallization" => "case_studies/crystallization.md",
             "Crystal growth with moments" => "case_studies/moment_crystallization.md",
             "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",

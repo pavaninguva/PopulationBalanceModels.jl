@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added uniform-grid 1D Centered and LinearUpwind growth reconstructions, and restricted conservative LaxWendroff and BeamWarming space–time updates with compile-time eligibility and runtime CFL checks.
+- Added ForwardEuler, SSPRK22, and classical RK4 alongside SSPRK33 for the assembled residual, preserving stage checks and simultaneous bulk integration.
+- Added a constant-growth analytical benchmark comparing spatial/time-method combinations, including exact CFL=1 shifts, negative undershoots, unstable combinations, refinement, and measured elapsed work.
+- Added AxialGrid and AxialDispersion for prescribed constant axial flow and dispersion with one or two intrinsic coordinates, conservative nonuniform-mesh fluxes, Danckwerts inlet/zero-gradient outlet, and periodic or closed alternatives.
+- Reworked cooling crystallization around stated nonnegative initial conditions, a finer sectional distribution reference, spatial/time refinement, independent moment verification, and regenerated figures. Retained the printed initial polynomial literally under reported_initial_density, with the old recipe name available for compatibility.
 - Added public Inguva2022 and InguvaBraatz2023 transformed transport methods, structured affine/separable growth laws, physical travel-time meshes, and compilation/runtime eligibility checks. Retained ExactShift for its existing constant-velocity interface.
 - Reworked the growth-fitting study around analytical point densities with additive Gaussian noise, two fitted coefficients, continuous plots, lognormal versus timescale-bounded uniform priors, and chain-level sampling evidence.
 - Exposed per-chain BFMI, acceptance rates, step sizes, energy/transition statistics, warmup statistics and Monte Carlo mean errors through diagnostics(samples).
@@ -31,12 +36,13 @@
 - Made the two-coordinate benchmark and its analytical and mapped references use the same explicit parameters. Added area-weighted density errors and actual physical cell edges to exported fields and plots.
 - Replaced the published manual's constant-growth comparison with the coordinate-dependent growth problem and its analytical solution. Retained earlier diagnostics outside the case studies.
 - Added zero-particle initialization, the full 4320-minute nanoparticle output schedule, adaptive-solver export support, and peak-scaled intensity outputs.
-- Kept the printed crystallization seed literal and checked its nonnegativity before running; removed substitute initialization from the benchmark default.
+- Kept the printed crystallization initial polynomial literal; the current benchmark uses a separately labelled nonnegative initial condition and does not claim to repair the published coefficients.
 - Retained compact/ADI stability, convergence, and sharp-front evidence, including negative undershoots and the restriction to periodic constant growth.
 - Updated navigation, links, versioned documentation deployment, and local contribution instructions. Simplified the README and repository root.
 
 ### Fixes
 
+- Used SciML's parameterless sentinel for empty parameter tuples in the ODE adapter, preventing symbolic-remake recursion while preserving the original empty NamedTuple inside PBM callbacks.
 - Kept independent Gaussian measurement covariance diagonal during factorization, avoiding dense storage and cubic work for large density datasets while retaining likelihood normalization.
 - Integrated narrow moving Gaussian nucleation sources over bins in the nanoparticle recipe, preserving the explicit source-normalization convention.
 - Included boundary nucleation in the crystallization recipe's discrete material exchange.

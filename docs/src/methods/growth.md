@@ -61,6 +61,36 @@ Choose these with `TermMethods(growth=MUSCL())`. The implementation is in
 `src/numerics/sectional/transport.jl`; `prepare_term` checks eligibility and
 `add_term!` adds the conservative flux differences.
 
+Two unlimited alternatives are available on uniform **1D** grids:
+
+| Choice | Density at the face, for positive growth |
+|:--|:--|
+| `Centered()` | ``(\bar n_i+\bar n_{i+1})/2`` |
+| `LinearUpwind()` | ``(3\bar n_i-\bar n_{i-1})/2`` |
+
+Here ``\bar n_i=N_i/\Delta x``. Negative growth reverses the upwind stencil.
+LinearUpwind uses first-order upwind at an interior face where its second
+upstream cell is unavailable. Both schemes conserve number through common
+face fluxes, but neither limits oscillations or guarantees positivity.
+Centered advection paired with forward Euler is unstable. LinearUpwind also
+has a stricter step limit than first-order upwind; a Courant number of one is
+unstable with the supplied SSPRK33 and RK4 integrators. `suggest_dt` is an
+upwind/source heuristic and does not certify these combinations.
+
+Select the reconstruction and integrator independently:
+
+```julia
+operator = compile(model,grid;methods=TermMethods(growth=LinearUpwind()),bc)
+solution = simulate(PBMProblem(operator,N0,tspan);method=RK4(),dt=dt)
+```
+
+Lax–Wendroff and Beam–Warming instead include their own time update. They are
+selected with `evolution=LaxWendroff()` or `evolution=BeamWarming()` during
+compilation, and currently require homogeneous, constant, explicitly declared
+1D growth. See [Time integration](time.md) for their formulas and eligibility.
+The [constant-growth comparison](../case_studies/constant_growth.md) shows why
+a higher time order alone does not remove spatial diffusion.
+
 ## Size boundaries
 
 `NoFlux()` sets the face flux to zero. `OpenBoundary()` allows outward flux and

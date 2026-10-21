@@ -10,12 +10,13 @@ The manual treats these operations separately:
 
 | Part of the calculation | Numerical treatment |
 |:--|:--|
-| [Growth and dissolution](methods/growth.md) | Signed face fluxes with Upwind, MUSCL, or eligible WENO5 reconstruction |
+| [Growth and dissolution](methods/growth.md) | Signed face fluxes with Upwind, MUSCL, WENO5, Centered, or LinearUpwind, subject to grid restrictions |
 | [Transport along growth trajectories](methods/characteristics.md) | Inguva2022 and InguvaBraatz2023 for eligible autonomous growth, with matched meshes and time steps |
 | [Nucleation](methods/nucleation.md) | Boundary influx, point deposition, or an integrated size distribution |
 | [Birth, death, and dilution](methods/sources.md) | Bin source integration and nonnegative removal hazards |
 | [Aggregation and breakage](methods/collisions.md) | Fixed-pivot event counting and deposition in an additive property |
-| [Time evolution](methods/time.md) | SSPRK33 on the assembled residual, optional external ODE solvers, or restricted direct transport updates |
+| [Time evolution](methods/time.md) | Euler, SSPRK22, SSPRK33, RK4, optional external ODE solvers, or restricted complete transport updates |
+| [Axial flow and dispersion](axial_reactors.md) | Upwind axial advection and centered dispersive fluxes, assembled with intrinsic mechanisms |
 
 Each linked page gives the physical equation, callback units, discrete treatment,
 boundary assumptions, and restrictions. Alternative collision methods require

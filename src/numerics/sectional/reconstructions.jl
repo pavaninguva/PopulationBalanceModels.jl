@@ -1,5 +1,9 @@
 abstract type AbstractReconstruction <: AbstractTermMethod end
 struct Upwind <: AbstractReconstruction end
+"""Second-order centered face density on a uniform grid; no positivity limiter."""
+struct Centered <: AbstractReconstruction end
+"""Unlimited second-order upwind face extrapolation on a uniform grid; boundary faces fall back to Upwind."""
+struct LinearUpwind <: AbstractReconstruction end
 """Limited linear FV reconstruction on nonuniform grids; check the time-step bound."""
 struct MUSCL{T<:Real} <: AbstractReconstruction
     theta::T

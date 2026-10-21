@@ -40,6 +40,10 @@ function prepare_term(term::Nucleation,m::GaussianInjection,g::Grid1D;kwargs...)
     GaussianNucleation(term.rate;center=term.size,width=m.width,truncation=m.truncation)
 end
 function _validate_reconstruction(m,g)
+    if m isa Union{Centered,LinearUpwind}
+        length(g)>=3 && maximum(abs.(g.widths.-first(g.widths)))<=1e-10*first(g.widths) ||
+            throw(ArgumentError("Centered and LinearUpwind require a uniform grid with at least three bins"))
+    end
     if m isa WENO5
         length(g)>=6 && maximum(abs.(g.widths.-first(g.widths)))<=1e-10*first(g.widths) ||
             throw(ArgumentError("WENO5 requires a uniform grid with at least six bins"))

@@ -17,7 +17,9 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        moment_state_length, moment_value, moment_rate, validate_moment_state, check_moment_state,
        DistributedNucleation, Dilution, AdditiveCoordinate,
        IntegratedBirth, IntegratedNucleation, GaussianNucleation,
-       Grid2D, Growth2D, Nucleation2D, SizeBC2D, SSPRK33, HOCADI, ExactShift,
+       Grid2D, Growth2D, Nucleation2D, SizeBC2D, ForwardEuler, SSPRK22, SSPRK33, RK4, HOCADI, ExactShift,
+       Centered, LinearUpwind, LaxWendroff, BeamWarming,
+       AxialGrid, AxialDispersion, axial_population, axial_fluxes,
        AffineGrowth, SeparableGrowth2D, Inguva2022, InguvaBraatz2023,
        characteristic_grid, characteristic_density,
        MomentSet, ExactClosure, QuadratureClosure, PolynomialRate,
@@ -78,6 +80,8 @@ include("time_integration/direct_common.jl")
 include("time_integration/compact_adi.jl")
 include("time_integration/exact_shift.jl")
 include("time_integration/characteristic_transport.jl")
+include("time_integration/constant_transport.jl")
+include("compilation/axial.jl")
 include("inference/observations.jl")
 include("inference/calibration.jl")
 include("inference/uncertainty.jl")

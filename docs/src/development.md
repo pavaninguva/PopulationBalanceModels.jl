@@ -11,8 +11,10 @@ to observations and estimation. Optional dependencies live in `ext/`.
 
 This separation lets physical laws survive changes of representation and
 numerical method. `core/interfaces.jl` defines public dispatch contracts and
-method selection. `AbstractPopulationDomain` leaves room for spatial adapters;
-only `BatchDomain` is implemented and CFD remains outside the active scope.
+method selection. `BatchDomain` and `AxialDispersion` implement well-mixed and
+prescribed axial advection–dispersion domains. The axial compiler wraps local
+sectional residuals and adds shared physical face fluxes; it does not treat
+position as another intrinsic coordinate. General CFD remains outside the scope.
 
 ## Add a numerical algorithm
 

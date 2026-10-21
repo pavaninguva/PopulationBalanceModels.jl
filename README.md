@@ -32,8 +32,11 @@ CFL=1 steps, checked during compilation and simulation.
 
 Sectional collisions use fixed pivot. Moment closures and high-order transport
 have method-specific restrictions; see the [numerical manual](docs/src/numerical_methods.md).
-The cooling-crystallization comparison has an unresolved printed seed input;
-the nanoparticle model requires explicit material closures. Their case-study
-pages describe these limits. CFD coupling is deferred.
+The [growth-scheme comparison](docs/src/case_studies/constant_growth.md) separates
+spatial and temporal errors. [Axial reactor transport](docs/src/axial_reactors.md)
+adds prescribed advection and dispersion to one- or two-coordinate populations.
+The cooling benchmark uses explicitly chosen initial conditions and a refined
+sectional reference; the nanoparticle model requires explicit material closures.
+Their case-study pages describe these limits. CFD coupling is deferred.
 
 See [contributing](CONTRIBUTING.md), [changes](CHANGELOG.md), and the [MIT license](LICENSE).

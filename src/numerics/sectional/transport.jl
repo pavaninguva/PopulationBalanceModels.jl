@@ -33,6 +33,16 @@ function _face_density(n, j, scheme::Upwind, vel, periodic)
     m=length(n)
     n[periodic ? mod1(vel >= 0 ? j-1 : j,m) : (vel >= 0 ? j-1 : j)]
 end
+function _face_density(n,j,::Centered,vel,periodic)
+    at(i)=n[periodic ? mod1(i,length(n)) : i]
+    (at(j-1)+at(j))/2
+end
+function _face_density(n,j,::LinearUpwind,vel,periodic)
+    i=vel>=0 ? j-1 : j; upstream=vel>=0 ? i-1 : i+1
+    !periodic && !(1<=upstream<=length(n)) && return n[i]
+    at(k)=n[periodic ? mod1(k,length(n)) : k]
+    (3at(i)-at(upstream))/2
+end
 function _face_density(n, j, scheme::WENO5, vel, periodic)
     m = length(n)
     if !periodic && !(4 <= j <= m-2)

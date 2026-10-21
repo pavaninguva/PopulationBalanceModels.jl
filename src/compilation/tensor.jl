@@ -7,10 +7,11 @@ struct CompiledPBM2D{M,G,S,B,F,P}
     prepared::P
 end
 _uniform(g::Grid1D)=maximum(abs.(g.widths.-first(g.widths)))<=1e-10*first(g.widths)
-function compile(model::PBMModel,g::Grid2D;growth_scheme=Upwind(),bc=SizeBC2D(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple())
+function compile(model::PBMModel,g::Grid2D;growth_scheme=Upwind(),bc=SizeBC2D(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple(),domain=BatchDomain())
+    domain isa BatchDomain || return _compile_axial(model,g,domain;growth_scheme,bc,fields,methods,evolution,p)
     growth_scheme isa Union{Upwind,WENO5} || throw(ArgumentError("2D transport currently supports Upwind or WENO5"))
     bc isa SizeBC2D || throw(ArgumentError("use SizeBC2D for two coordinates"))
-    evolution===nothing || return _compile_characteristic(model,g,evolution,bc,p;fields,methods)
+    evolution===nothing || return _compile_evolution(model,g,evolution,bc,p;fields,methods)
     methods isa TermMethods || throw(ArgumentError("methods must be TermMethods"))
     plan=TermMethods(;by_term=methods.by_term,merge((growth=growth_scheme,),methods.defaults)...)
     count(t->t isa Growth2D,model.terms)<=1 || throw(ArgumentError("combine velocities in one Growth2D"))

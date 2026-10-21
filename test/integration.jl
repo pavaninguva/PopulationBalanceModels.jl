@@ -1,5 +1,23 @@
 using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
 
+@testset "Axial SciML residual adapter" begin
+    g=Grid1D(0:0.5:1);z=AxialGrid(range(0,1;length=11))
+    reactor=AxialDispersion(z;velocity=0.2,dispersion=0.01,boundary=:periodic)
+    op=compile(PBMModel(Death((a,p,t,ctx)->begin
+        p isa NamedTuple && isempty(p) || error("parameterless PBM callbacks must still receive their empty NamedTuple")
+        0.3
+    end)),g;domain=reactor)
+    initial=repeat((1 .+0.1sin.(2pi.*z.centers))',2,1)
+    prob=PBMProblem(op,initial,(0.0,0.2))
+    deprob=odeproblem(prob)
+    @test deprob.p isa SciMLBase.NullParameters
+    adaptive=SciMLBase.solve(deprob,Tsit5();reltol=1e-10,abstol=1e-12)
+    native=simulate(prob;method=RK4(),dt=0.001)
+    @test SciMLBase.successful_retcode(adaptive)
+    @test adaptive.u[end]≈native.u[end] rtol=1e-9
+    @test sum(adaptive.u[end].*z.widths')≈2exp(-0.3*0.2) rtol=1e-10
+end
+
 @testset "Optional package extensions" begin
     grid=Grid1D(range(0,8;length=31))
     op=compile(PBMModel(Death((v,p,t,c)->p.k)),grid)

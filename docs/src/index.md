@@ -22,6 +22,8 @@ models to data, see [Parameter estimation](inference.md). Signatures and
 extension hooks are collected in the [API reference](api.md) and
 [developer guide](development.md).
 
-The implemented models are nonspatial. A two-dimensional distribution has two
-particle coordinates, such as length and width; it does not resolve a vessel's
-spatial flow. Spatial and CFD coupling remain future extensions.
+A two-dimensional particle distribution resolves two intrinsic coordinates,
+such as length and width. The separate [axial reactor domain](axial_reactors.md)
+adds physical position with prescribed constant advection and dispersion to
+one- or two-coordinate sectional populations. General CFD coupling remains
+outside the current scope.

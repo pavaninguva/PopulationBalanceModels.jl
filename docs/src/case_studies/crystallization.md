@@ -106,7 +106,7 @@ callback works with bin numbers or the exactly closed moment representation.
 
 ## Put nucleation at the boundary
 
-We use a finite length range, 0–1600 µm. The seed support is split at its endpoints
+We use a finite length range, 0–1600 µm. The initial distribution is split at its support endpoints
 so a cell does not straddle the jump in the initial density:
 
 ```@example cooling
@@ -156,9 +156,9 @@ first bin is refined.
 Both concentration and distribution are evaluated at every Runge–Kutta stage.
 There is no separate concentration update after the population solve.
 
-## Initialize and solve
+## Choose the initial conditions
 
-The reported seed is
+The printed initial condition is a quadratic on 180.5–210.5 µm:
 
 ```math
 f(L,0)=
@@ -168,78 +168,143 @@ f(L,0)=
 \end{cases}
 ```
 
-There is a numerical discrepancy in these printed coefficients:
+At the displayed precision this polynomial is negative throughout its support;
+its maximum is approximately −0.01264. The recipe retains it literally as
+`reported_initial_density`. This is an initial-condition discrepancy, not a
+missing measured dataset. We do not clip the function or infer new coefficients.
+
+For **our numerical benchmark**, choose a nonnegative parabolic initial
+population on the same size interval:
+
+```math
+f(L,0)=
+\begin{cases}
+0.08\left[1-\left(\dfrac{L-195.5}{15}\right)^2\right],
+&180.5\le L\le210.5,\\
+0,&\text{otherwise}.
+\end{cases}
+\qquad c(0)=c_{\mathrm{sat}}(32)=0.1166704.
+```
+
+This gives a smooth peak with compact support and known moments. The saturated
+start makes growth and nucleation initially zero; cooling then creates the
+driving force. These are stated choices for this calculation, not corrected
+paper coefficients or a claim to reproduce its original distribution curves.
+The kinetics, cooling trajectory, and coupled balances are retained.
 
 ```@example cooling
-recipe.reported_seed_density(195.5)
-```
-
-The polynomial is negative even at its maximum within the stated support.
-The runner retains it literally and rejects it as an initial population. A
-resolved nonnegative seed is needed to complete the published comparison; no
-replacement is used as the benchmark default. A separate numerical illustration
-with explicitly stated seed data is shown below.
-
-Once the initial data are resolved, an input file can return
-`(initial_density=f0,c0=c0,provenance="Source of these initial data")`. A saturated
-start has ``c(0)=c_{\mathrm{sat}}(32)=0.1166704``. State this choice explicitly.
-The remaining construction is:
-
-```julia
-inputs = include("/path/to/cooling_inputs.jl")
-N0 = recipe.initial_counts(grid,inputs.initial_density)
-problem = PBMProblem(system,(crystals=N0,),(0.0,1000.0);
-    bulk0=(c=inputs.c0,),p)
-solution = simulate(problem;method=SSPRK33(),dt=0.01,saveat=0.0:10.0:1000.0)
-
+f0 = recipe.benchmark_initial_density
+c0 = recipe.solubility(recipe.temperature(0.0))
+N0 = recipe.initial_counts(grid,f0)
+problem = PBMProblem(system,(crystals=N0,),(0.0,10.0);
+    bulk0=(c=c0,),p)
+solution = simulate(problem;method=SSPRK33(),dt=0.05,saveat=[0.0,10.0])
 crystals = population(problem,solution.u[end],:crystals)
-final_density = density(grid,crystals)
 final_concentration = bulk(problem,solution.u[end],:c)
+nothing # hide
 ```
 
-## Check the distribution against its moments
+`initial_counts` integrates the initial density over every size bin. For this
+piecewise polynomial, aligning the support endpoints makes its three-point
+Gauss rule exact for the initial bin numbers. The full runner continues to
+1000 s and compares several grids.
 
-For this growth law the first four moment equations close exactly:
+## Construct a numerical reference
+
+There is no analytical distribution solution for this concentration-dependent
+problem. We follow the reference-solution strategy of the source study: run a
+finer sectional calculation, then check its moments independently. Here the
+reference is MUSCL with 12800 bins over 0–1600 µm and SSPRK33 at 0.1 s. A second
+calculation uses 6400 bins at the same time step. Their final relative L1
+distribution difference is about **0.42%**. A time-step check at 6400 bins,
+0.1 versus 0.05 s, changes the distribution by about **0.0013%**.
+
+These differences are refinement diagnostics, not certified error bounds; the
+fine solution is not labelled exact. The paper used its HR1 method at 32000 bins
+and 0.01 s. We use the package's MUSCL implementation and a smaller documented
+budget. The runner exposes `reference_bins`, `check_bins`, and `dt` for a more
+expensive comparison.
+
+The first four continuum moment equations close exactly for the affine growth
+law:
 
 ```math
+\mu_k(t)=\int_0^\infty L^kf(L,t)\,dL,\qquad
 \frac{d\mu_0(t)}{dt}=k_b\mu_3(t)s(t)^b,
-\qquad \mu_k(t)=\int_0^\infty L^kf(L,t)\,dL,
 ```
 
 ```math
-\frac{d\mu_k(t)}{dt}=k k_gs(t)^g[\mu_{k-1}(t)+\alpha\mu_k(t)],
-\quad k=1,2,3,\qquad
+\frac{d\mu_k(t)}{dt}=k k_gs(t)^g
+[\mu_{k-1}(t)+\alpha\mu_k(t)],\quad k=1,2,3,
+\qquad
 \frac{dc(t)}{dt}=-\rho_c\frac{d\mu_3(t)}{dt}.
 ```
 
-These ODEs provide an independent check of the sectional calculation. Material
-balance alone is insufficient: the discrete exchange can conserve material
-while the distribution still has substantial discretization error.
+An independently coded RK4 calculation integrates these five ODEs and halves
+its own time step. The final fine-grid third moment differs from the continuum
+moment result by about ``2.8\times10^{-8}`` in relative terms. Agreement of a
+few moments does not establish pointwise accuracy of the size distribution,
+which is why the sectional refinement check is also needed.
 
-The runner compares upwind and MUSCL with an independent RK4 moment solution,
-checked by halving its time step. It exports concentration, moments, final
-distributions, and material drift:
+## Compare distributions and bulk concentration
 
-```sh
-julia --project=. examples/cooling_crystallization_benchmark.jl /path/to/cooling_inputs.jl
-python docs/benchmarks/plot_case_studies.py cooling
+![Cooling crystallization: concentration, moment verification and final size distributions](../assets/gunawan_example2/coupled_solution.png)
+
+The concentration follows the independent moment calculation closely.
+Nucleation creates a small-size population, while the initial population shifts
+toward larger lengths. Upwind broadens these features; MUSCL resolves them
+more sharply. The panels use the same stated initial conditions and the same
+rate callbacks on every grid.
+
+The final relative L1 distribution errors against the 12800-bin reference are:
+
+| Nominal bins | Upwind | MUSCL |
+|--:|--:|--:|
+| 400 | 104% | 28.7% |
+| 800 | 81.5% | 9.17% |
+| 1600 | 58.6% | 3.99% |
+| 3200 | 38.5% | 1.41% |
+
+These distribution errors are much larger than the corresponding third-moment
+errors. A few accurately predicted moments can hide substantial peak broadening.
+
+ConservativeExchange checks a different property: the resolved material balance
+``c+\rho_c\sum_iL_i^3N_i``. A nearly constant balance cannot by itself establish
+an accurate distribution, because the exchange conserves the discrete material
+even when growth is numerically diffusive.
+
+## Measure grid error
+
+The runner integrates the piecewise-constant fine-grid density over each coarse
+bin. This conservative projection avoids comparing a coarse bin number with a
+fine-grid point sample. If ``\bar f_i^{\mathrm{ref}}`` denotes the projected
+reference, the mean absolute density error is
+
+```math
+E_{\mathrm{mean}}=
+\frac{1}{L_{\max}-L_{\min}}
+\sum_i\Delta L_i\left|\frac{N_i}{\Delta L_i}-\bar f_i^{\mathrm{ref}}\right|.
 ```
 
-The default is 3200 bins with a 0.01 s time step. Include 32000 bins to approach
-the 0.05 µm reference spacing in the source study. This compares solutions of
-the model; the published HR1 and Lax–Wendroff algorithms are not implemented.
+It also reports relative L1 error, RMS and maximum density errors, concentration
+error, moment error, and maximum material-balance drift. Coarse grids have
+400, 800, 1600, and 3200 nominal bins; extra edges split the initial support
+when needed. The reference's own spatial error should be considered when
+interpreting the smallest coarse-grid errors.
 
-## Numerical illustration with stated seed data
+![Distribution and third-moment errors under size-grid refinement](../assets/gunawan_example2/refinement.png)
 
-The panels below retain a separate calculation with
-``f(L,0)=0.08[1-((L-195.5)/15)^2]`` on 180.5–210.5 µm and
-``c(0)=c_{\mathrm{sat}}(32)``. This seed is a demonstration choice, not a correction
-to the printed polynomial. The calculation uses upwind and MUSCL, an independent
-moment reference, and material-balance diagnostics. It does not establish a
-reproduction of the published figures.
+Regenerate the complete comparison without an external input file:
 
-![Cooling crystallization with explicit demonstration seed: concentration, moment errors, distribution, and material drift](../assets/illustrations/cooling/coupled_solution.png)
+```sh
+julia --project=. examples/cooling_crystallization_benchmark.jl
+python docs/benchmarks/plot_transport_comparisons.py cooling --usetex
+julia --project=docs docs/make.jl
+```
 
-The input provenance and raw data remain in
-`docs/benchmarks/diagnostics/cooling_benchmark/`. Re-render this retained evidence with
-`python docs/benchmarks/plot_case_studies.py illustrations --usetex`.
+An optional Julia input file may override `initial_density`, `c0`, `provenance`,
+`grids`, `reference_bins`, `check_bins`, `dt`, and `tf`. Keep the provenance
+accurate when changing initial conditions. Raw results, reference checks, and
+run settings are stored in `docs/src/assets/gunawan_example2/`. These figures
+replace the earlier separate demonstration panels with one runnable,
+consistently specified numerical benchmark.

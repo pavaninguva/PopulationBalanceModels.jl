@@ -16,6 +16,9 @@ characteristic_grid(AffineGrowth(:g0,:g1),(0.0,1.4);dt,p)
 compile(model, grid; evolution=Inguva2022(),p,bc)
 PBMProblem(operator, initial, (t0,tf); p=NamedTuple())
 simulate(problem; dt, saveat=[t0,tf], method=SSPRK33())
+compile(model, grid; evolution=LaxWendroff(),bc)
+compile(model, grid; domain=AxialDispersion(AxialGrid(z_edges);
+    velocity=u,dispersion=D,inlet=(p,t)->feed_bins))
 ```
 
 The displayed calls summarize valid argument shapes, rather than forming one
@@ -24,6 +27,14 @@ in the documentation build. `solution.t` and `solution.u` hold saved times and
 states; standalone 1D sectional and moment states have one column. Use
 `density(grid,N)`, `moment(grid,N,k)`, and `term_methods(operator)` to interpret
 what was stored and how it was computed.
+
+Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, and `RK4`.
+`Centered` and `LinearUpwind` add unlimited uniform-grid 1D reconstructions.
+`LaxWendroff` and `BeamWarming` are complete constant-growth space–time updates;
+they require an eligible model compiled with `evolution`.
+For axial states, `axial_population(operator,u,cell)` restores a local intrinsic
+view and `axial_fluxes(operator,u,p,t)` returns physical face fluxes. See
+[Axially dispersed reactors](axial_reactors.md) for units and boundary contracts.
 
 ## Couple and observe
 

@@ -2,7 +2,8 @@ module Gunawan2004Case2
 using PopulationBalanceModels
 
 export parameters,temperature,solubility,supersaturation,growth_rate,nucleation_rate,
-       reported_seed_density,initial_counts,build,build_moments,moment_rhs!
+       reported_initial_density,reported_seed_density,benchmark_initial_density,
+       initial_counts,build,build_moments,moment_rhs!
 
 """Kinetic constants in µm, seconds, and g/g-water; size_factor has units µm⁻¹."""
 parameters(;kb=4.64e-7,b=1.78,kg=116.0,g=1.32,rho=2.11e-12,size_factor=0.1)=
@@ -10,7 +11,11 @@ parameters(;kb=4.64e-7,b=1.78,kg=116.0,g=1.32,rho=2.11e-12,size_factor=0.1)=
 
 temperature(t)=32.0-4.0*(-expm1(-t/18600.0))
 solubility(T)=1.721e-4*T^2-5.88e-3*T+0.1286
-reported_seed_density(L)=180.5<=L<=210.5 ? -3.48e-4*L^2+0.136*L-13.3 : 0.0
+reported_initial_density(L)=180.5<=L<=210.5 ? -3.48e-4*L^2+0.136*L-13.3 : 0.0
+# Retained for existing user scripts; the function denotes a printed initial condition.
+reported_seed_density(L)=reported_initial_density(L)
+"""Chosen nonnegative initial density for our numerical benchmark, not corrected paper coefficients."""
+benchmark_initial_density(L)=180.5<=L<=210.5 ? 0.08*(1-((L-195.5)/15)^2) : 0.0
 supersaturation(ctx)=max(ctx.bulk.c/solubility(ctx.fields.T)-1,0.0)
 growth_scale(p,t,ctx)=p.kg*supersaturation(ctx)^p.g
 growth_rate(L,p,t,ctx)=growth_scale(p,t,ctx)*(1+p.size_factor*L)
@@ -38,8 +43,9 @@ end
 """
 Gunawan et al. 2004, Example 2, Eqs. 28-34 and Table 3.
 initial_density and c0 are explicit inputs. Eq. 34 is retained verbatim in
-reported_seed_density; its displayed coefficients evaluate to negative values
-on the stated support. Do not silently replace or clip that seed.
+reported_initial_density; its displayed coefficients evaluate to negative values
+on the stated support. The separate benchmark_initial_density is an explicit
+alternative initial condition, not a repair of the printed coefficients.
 
 Units: length in micrometers, time in seconds, concentration in the paper's
 g/g-water basis, crystal density in g/micrometer^3. The state basis and shape

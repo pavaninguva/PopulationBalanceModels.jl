@@ -194,8 +194,27 @@ end
 end
 
 include("../examples/cooling_crystallization_benchmark.jl")
-@testset "Gunawan printed seed is retained and checked before running" begin
+@testset "Cooling initial conditions and numerical reference" begin
     @test CoolingCrystallizationBenchmark.Gunawan2004Case2.reported_seed_density(195.5)≈-0.012647 atol=1e-14
-    @test_throws ArgumentError CoolingCrystallizationBenchmark.run_benchmark(
-        c0=0.1166704,provenance="Verbatim published seed")
+    @test_throws ArgumentError CoolingCrystallizationBenchmark.run_benchmark(;
+        initial_density=CoolingCrystallizationBenchmark.Gunawan2004Case2.reported_initial_density,
+        c0=0.1166704,provenance="Literal printed initial condition")
+    recipe=CoolingCrystallizationBenchmark.Gunawan2004Case2
+    @test recipe.reported_initial_density(195.5)==recipe.reported_seed_density(195.5)
+    @test recipe.benchmark_initial_density(195.5)≈0.08
+    @test minimum(recipe.benchmark_initial_density.(range(180.5,210.5;length=101)))>=0
+    mu=CoolingCrystallizationBenchmark.continuum_moments(recipe.benchmark_initial_density)
+    @test mu[1]≈1.6 atol=1e-13
+    @test mu[2]/mu[1]≈195.5 atol=1e-12
+    fine=Grid1D([0.0,0.2,0.4,0.6,0.8,1.0]);coarse=Grid1D([0.0,0.3,0.7,1.0])
+    projected=CoolingCrystallizationBenchmark.rebin(fine,2fine.widths,coarse)
+    @test projected≈2coarse.widths
+    @test sum(projected)≈2
+    mktempdir() do output
+        result=CoolingCrystallizationBenchmark.run_benchmark(;grids=(20,),reference_bins=40,
+            check_bins=80,dt=0.1,tf=1.0,output)
+        @test result.spatial_reference_change>=0
+        @test result.temporal_reference_change<1e-8
+        @test isfile(joinpath(output,"errors.csv"))
+    end
 end

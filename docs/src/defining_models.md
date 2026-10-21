@@ -153,5 +153,7 @@ The first positive pivot still assigns incoming particles a finite discrete size
 
 For two coordinates, `SizeBC2D(x=...,y=...)` specifies each axis. Its influx is
 per tangential coordinate, integrated over the corresponding face width.
-Only nonspatial batch domains are currently implemented; spatial adapters remain
-an extension of AbstractPopulationDomain.
+`BatchDomain()` describes a well-mixed population. A separate
+[AxialDispersion domain](axial_reactors.md) adds a physical axial mesh, inlet,
+and outlet to a one- or two-coordinate sectional population. Intrinsic size
+boundaries and reactor boundaries are specified independently.

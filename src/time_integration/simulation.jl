@@ -25,8 +25,15 @@ struct PBMSolution{T,U,P}
     problem::P
     steps::Int
 end
+abstract type AbstractExplicitRK end
+"""One-stage, first-order forward Euler; positivity requires an appropriate step bound."""
+struct ForwardEuler <: AbstractExplicitRK end
+"""Two-stage, second-order strong-stability-preserving Runge–Kutta (Heun)."""
+struct SSPRK22 <: AbstractExplicitRK end
 """Explicit three-stage, third-order strong-stability-preserving Runge–Kutta."""
-struct SSPRK33 end
+struct SSPRK33 <: AbstractExplicitRK end
+"""Classical four-stage, fourth-order Runge–Kutta; no general SSP guarantee."""
+struct RK4 <: AbstractExplicitRK end
 _default_evolution(op)=SSPRK33()
 _simulate(prob,method;kwargs...)=throw(ArgumentError("unsupported evolution method $(typeof(method)) for $(typeof(prob.operator))"))
 Base.getindex(sol::PBMSolution,i::Integer)=sol.u[i]
@@ -54,17 +61,18 @@ end
     simulate(problem; dt, saveat=[t0,tf], check_nonnegative=true,
              negative_tolerance=1e-12, maxsteps=10^7)
 
-Explicit SSPRK(3,3) reference integrator. dt is a maximum fixed step; a step is
+Explicit fixed-step reference integrator (SSPRK33 by default). Select
+ForwardEuler(), SSPRK22(), SSPRK33(), or RK4(). dt is a maximum step; a step is
 shortened to land on each output time. No clipping, automatic grid change, or
 implicit stiffness treatment is performed. Choose dt using `suggest_dt` and
 check convergence. For production adaptive/stiff integration use `odeproblem`.
 """
 function simulate(prob::PBMProblem;dt,saveat=collect(prob.tspan),check_nonnegative=true,
                   negative_tolerance=1e-12,maxsteps=10^7,method=_default_evolution(prob.operator))
-    method isa SSPRK33 || return _simulate(prob,method;dt,saveat,check_nonnegative,negative_tolerance,maxsteps)
+    method isa AbstractExplicitRK || return _simulate(prob,method;dt,saveat,check_nonnegative,negative_tolerance,maxsteps)
     ts=_evolution_args(prob,dt,saveat,negative_tolerance,maxsteps)
     t0=first(prob.tspan)
-    N=copy(prob.u0); U1=similar(N); U2=similar(N); k=similar(N)
+    N=copy(prob.u0); cache=ntuple(_->similar(N),6)
     states=typeof(N)[]; t=t0; steps=0
     for target in ts
         while t<target
@@ -72,18 +80,39 @@ function simulate(prob::PBMProblem;dt,saveat=collect(prob.tspan),check_nonnegati
             t+h>t || throw(NumericalFailure("time step is too small to advance"))
             steps+=1
             steps<=maxsteps || throw(NumericalFailure("maximum step count exceeded"))
-            rhs!(k,N,prob.operator,prob.p,t)
-            @. U1=N+h*k
-            check_nonnegative && _check_problem_state(prob,U1,negative_tolerance)
-            rhs!(k,U1,prob.operator,prob.p,t+h)
-            @. U2=3/4*N+1/4*(U1+h*k)
-            check_nonnegative && _check_problem_state(prob,U2,negative_tolerance)
-            rhs!(k,U2,prob.operator,prob.p,t+h/2)
-            @. N=1/3*N+2/3*(U2+h*k)
+            _rk_step!(N,cache,prob,t,h,method,check_nonnegative,negative_tolerance)
             _check_problem_state(prob,N,check_nonnegative ? negative_tolerance : Inf)
             t=h==target-t ? target : t+h
         end
         push!(states,copy(N))
     end
     PBMSolution(ts,states,prob,steps)
+end
+
+function _rk_step!(N,cache,prob,t,h,method::AbstractExplicitRK,check,tol)
+    U1,U2,k1,k2,k3,k4=cache
+    stage(U)=check && _check_problem_state(prob,U,tol)
+    rhs!(k1,N,prob.operator,prob.p,t)
+    if method isa ForwardEuler
+        @. N=N+h*k1
+    elseif method isa SSPRK22
+        @. U1=N+h*k1
+        stage(U1); rhs!(k2,U1,prob.operator,prob.p,t+h)
+        @. N=(N+U1+h*k2)/2
+    elseif method isa SSPRK33
+        @. U1=N+h*k1
+        stage(U1); rhs!(k1,U1,prob.operator,prob.p,t+h)
+        @. U2=3/4*N+1/4*(U1+h*k1)
+        stage(U2); rhs!(k1,U2,prob.operator,prob.p,t+h/2)
+        @. N=1/3*N+2/3*(U2+h*k1)
+    elseif method isa RK4
+        @. U1=N+h/2*k1
+        stage(U1); rhs!(k2,U1,prob.operator,prob.p,t+h/2)
+        @. U1=N+h/2*k2
+        stage(U1); rhs!(k3,U1,prob.operator,prob.p,t+h/2)
+        @. U1=N+h*k3
+        stage(U1); rhs!(k4,U1,prob.operator,prob.p,t+h)
+        @. N=N+h/6*(k1+2k2+2k3+k4)
+    end
+    nothing
 end

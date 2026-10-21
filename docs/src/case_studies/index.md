@@ -7,6 +7,9 @@ boundaries, and numerical choices used in its implementation.
 - [Batch cooling crystallization](crystallization.md): seeds grow and new crystals
   nucleate as cooling changes solubility. The population consumes dissolved
   solute, so the concentration balance is solved with the distribution.
+- [Comparing growth and time methods](constant_growth.md): a translating
+  distribution separates spatial diffusion, temporal error, and dispersive
+  undershoots; the analytical solution also tests the CFL=1 cell shift.
 - [Crystal growth under a temperature program](moment_crystallization.md): native
   moment equations and a sectional calculation predict number, material, and mean
   sizes; a review of temperature cycling explains where extinction needs more information.
@@ -20,8 +23,9 @@ boundaries, and numerical choices used in its implementation.
   with Gaussian noise illustrate fitting two growth rates, comparing prior choices
   and checking MCMC chains.
 
-The two-dimensional calculation is self-contained. The crystallization seed has
-an unresolved discrepancy in the printed coefficients; the nanoparticle
-calculation requires numerical material closures. Those input issues are
-described where the initial state and rates are introduced. Their runners and
-plotting commands are provided without substituting invented inputs.
+The constant-growth and two-dimensional calculations have analytical solutions.
+The cooling calculation uses an explicitly chosen nonnegative initial condition
+and a finer sectional reference, with an independent moment check. The
+nanoparticle calculation requires numerical material closures. These assumptions
+are stated beside the relevant inputs. The [axial reactor tutorial](../axial_reactors.md)
+adds a physical position coordinate to an intrinsic growth model.

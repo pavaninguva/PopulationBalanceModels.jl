@@ -20,6 +20,8 @@ cross-coordinate growth and time-dependent laws are rejected, not split silently
 """
 struct InguvaBraatz2023 end
 
+_compile_evolution(model,grid,method,bc,p;kwargs...)=_compile_characteristic(model,grid,method,bc,p;kwargs...)
+
 function _positive_affine(g::AffineGrowth,lower,upper,p)
     b=_affine_coefficient(g.offset,p);s=_affine_coefficient(g.slope,p)
     min(b+s*lower,b+s*upper)>0 || throw(ArgumentError("the transformation requires strictly positive growth throughout the size domain"))
