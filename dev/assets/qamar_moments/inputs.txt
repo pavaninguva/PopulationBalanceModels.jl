@@ -1,0 +1,8 @@
+Qamar et al., DOI 10.1002/aic.12264, Problems 4 and 5; online 2010, journal 2011.
+Problem 4: β0=a0=N0=1, V0=.001; Eq.42 C0 interpreted as the stated β0, independently checked by the number balance.
+Problem 5: x0=0, G=1, density boundary 100+10^6exp[-10^4(t-.215)^2], β=1.5e-5, a(x)=x^6.
+Initial background .01 restricted to [0,2], square peak 100 on [.4,.6]. Full moments include particles advected beyond x=2.
+Daughters: b(x|y)=6x²/y³, analytically integrated in moment weak forms.
+QMOM 2/3/4 nodes; Julia 1.10.3; dt4=0.01; dt5=0.0002.
+Sectional comparison uses Strang splitting: exact C=1 growth/source cell integrals and SSPRK33 fixed-pivot collisions, not author FVS data.
+Reference bins=(600, 1200), Lmax=3; time/domain and lower-pivot losses must be assessed.
