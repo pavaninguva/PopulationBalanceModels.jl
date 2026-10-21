@@ -30,12 +30,16 @@ accepts a named tuple of compiled populations. Its problem adds named initial
 populations and `bulk0`; use `stateview(problem,u)` to obtain named views.
 See [Coupled systems](coupled_systems.md) for callback and exchange contracts.
 
-`Observation(times,data,observable; sigma)` becomes part of
+`Observation(times,data,observable; sigma)` or a fixed `covariance` block becomes part of
 `Experiment(problem,observations...)` and then
-`CalibrationProblem(experiments; parameters,dt)`. `residuals`, `objective`,
+`CalibrationProblem(experiments; parameters,dt,solver)`. `residuals`, `objective`,
 and `sensitivity_report` use this shared forward model.
 `fit(calibration,z0; ...)` needs Optim; `odeproblem(problem; ...)` needs SciMLBase.
-See [Observations and estimation](inference.md) for measurement semantics.
+`predictions` returns the observation matrices. `fit_diagnostics` assesses rank,
+residuals, and numerical sensitivity; `confidence_ellipsoid` and `ellipse_points`
+construct local joint regions. `fit_multistart` and `profile_likelihood` use the
+fitting backend for multiple starts and nuisance-parameter refits.
+See [Observations and estimation](inference.md) for assumptions and examples.
 
 ## Numerical extensions
 

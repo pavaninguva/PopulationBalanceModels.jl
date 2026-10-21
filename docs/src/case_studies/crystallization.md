@@ -177,7 +177,8 @@ recipe.reported_seed_density(195.5)
 The polynomial is negative even at its maximum within the stated support.
 The runner retains it literally and rejects it as an initial population. A
 resolved nonnegative seed is needed to complete the published comparison; no
-replacement curve is supplied here.
+replacement is used as the benchmark default. A separate numerical illustration
+with explicitly stated seed data is shown below.
 
 Once the initial data are resolved, an input file can return
 `(initial_density=f0,c0=c0,provenance="Source of these initial data")`. A saturated
@@ -228,8 +229,17 @@ The default is 3200 bins with a 0.01 s time step. Include 32000 bins to approach
 the 0.05 µm reference spacing in the source study. This compares solutions of
 the model; the published HR1 and Lax–Wendroff algorithms are not implemented.
 
-```@eval
-using Markdown, PopulationBalanceModels
-file=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","gunawan_example2","coupled_solution.png")
-Markdown.parse(isfile(file) ? "![Concentration, moment errors, distribution, and material drift](../assets/gunawan_example2/coupled_solution.png)" : "The comparison figure will appear here after the resolved-input calculation and plotting commands have been run.")
-```
+## Numerical illustration with stated seed data
+
+The panels below retain a separate calculation with
+``f(L,0)=0.08[1-((L-195.5)/15)^2]`` on 180.5–210.5 µm and
+``c(0)=c_{\mathrm{sat}}(32)``. This seed is a demonstration choice, not a correction
+to the printed polynomial. The calculation uses upwind and MUSCL, an independent
+moment reference, and material-balance diagnostics. It does not establish a
+reproduction of the published figures.
+
+![Cooling crystallization with explicit demonstration seed: concentration, moment errors, distribution, and material drift](../assets/illustrations/cooling/coupled_solution.png)
+
+The input provenance and raw data remain in
+`docs/benchmarks/diagnostics/cooling_benchmark/`. Re-render this retained evidence with
+`python docs/benchmarks/plot_case_studies.py illustrations --usetex`.

@@ -44,6 +44,7 @@ makedocs(;
         "Case studies" => [
             "Overview" => "case_studies/index.md",
             "Batch cooling crystallization" => "case_studies/crystallization.md",
+            "Crystal growth with moments" => "case_studies/moment_crystallization.md",
             "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
             "Growth in two particle dimensions" => "case_studies/transport.md",
         ],

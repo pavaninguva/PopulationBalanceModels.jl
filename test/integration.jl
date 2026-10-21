@@ -1,4 +1,4 @@
-using Test, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
+using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
 
 @testset "Optional package extensions" begin
     grid=Grid1D(range(0,8;length=31))
@@ -97,4 +97,30 @@ include("../examples/shin_lnp_reproduction.jl")
         @test solution.t==[0.0,0.0003,0.001]
         @test all(u->iszero(sum(population(prob,u,:lnp))),solution.u)
     end
+end
+
+@testset "Multistart estimation and nuisance-reoptimized profiles" begin
+    g=Grid1D([0.0,0.5,1.0])
+    pb=PBMProblem(compile(PBMModel(),g),[0.0,0.0],(0.0,5.0))
+    times=collect(0.0:1.0:5.0);A=hcat(ones(6),times)
+    y=A*[1.2,0.3]+[0.02,-0.03,0.01,0.04,-0.02,0.0]
+    obs=Observation(times,y,FunctionObservable((N,op,p,t)->p.a+p.b*t);sigma=0.1)
+    cal=CalibrationProblem((Experiment(pb,obs),);parameters=(z,e)->(a=z[1],b=z[2]),dt=0.1)
+    fits=fit_multistart(cal,([0.0,0.0],[2.0,1.0]);maxiters=100)
+    expected=A\y
+    @test fits.best.converged
+    @test fits.best.minimizer≈expected rtol=1e-6
+    @test length(fits.results)==2
+    region=confidence_ellipsoid(cal,fits.best)
+    @test region.covariance≈0.01*inv(A'*A) rtol=1e-8
+    values=range(expected[1]-0.1,expected[1]+0.1;length=7)
+    profile=profile_likelihood(cal,fits.best,1,values;maxiters=100)
+    @test all(profile.converged)
+    @test profile.twice_delta_nll≈(collect(values).-expected[1]).^2/region.covariance[1,1] atol=1e-7
+    for (fixed,z) in zip(profile.values,profile.minimizers)
+        conditional=dot(times,y.-fixed)/sum(abs2,times)
+        @test z[2]≈conditional atol=1e-7
+    end
+    @test_throws ArgumentError profile_likelihood(cal,fits.best,3,values)
+    @test_throws ArgumentError profile_likelihood(cal,fits.best,1,reverse(values))
 end

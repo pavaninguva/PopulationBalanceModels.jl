@@ -18,44 +18,66 @@ _observation_size(obs::PopulationHistogram)=length(obs.histogram.edges)-1
 _observation_size(::Union{FunctionObservable,SystemObservable})=nothing
 
 """
-    CalibrationProblem(experiments; parameters=(z,experiment)->z, dt)
+    CalibrationProblem(experiments; parameters=(z,experiment)->z, dt=nothing, solver=nothing)
 
 parameters maps unconstrained optimization coordinates into physical model
 parameters separately for each experiment, e.g. positive rate = exp(z[1]).
 Initial conditions/fields differ by experiment. The same parameter vector can
 therefore be fitted jointly to several experiments and measurement types.
+Supply `dt` for SSPRK33, or `solver=(problem,times)->solution` for an external
+integrator. A solver must return precisely those output times and must check
+its own success code. Initial data that depend on fitted parameters require a
+separate model construction; the parameter map changes p, not u0.
 """
-struct CalibrationProblem{E,F,T}
+struct CalibrationProblem{E,F,T,S}
     experiments::E
     parameters::F
     dt::T
+    solver::S
 end
-function CalibrationProblem(experiments;parameters=(z,experiment)->z,dt)
+function CalibrationProblem(experiments;parameters=(z,experiment)->z,dt=nothing,solver=nothing)
     ex=Tuple(experiments)
     !isempty(ex) && all(e->e isa Experiment,ex) || throw(ArgumentError("provide at least one Experiment"))
-    isfinite(dt) && dt>0 || throw(ArgumentError("calibration dt must be positive"))
-    CalibrationProblem(ex,parameters,dt)
+    (dt===nothing ? solver!==nothing : isfinite(dt) && dt>0) ||
+        throw(ArgumentError("supply a positive dt or solver=(problem,times)->solution"))
+    CalibrationProblem(ex,parameters,dt,solver)
 end
-function residuals(cal::CalibrationProblem,z)
-    result=Vector{promote_type(eltype(z),Float64)}()
-    for ex in cal.experiments
+
+"""Predicted output matrices, grouped by experiment and observation. Uses the calibration's solver and parameter map."""
+function predictions(cal::CalibrationProblem,z)
+    all(isfinite,z) || throw(ArgumentError("parameters must be finite"))
+    map(cal.experiments) do ex
         p=cal.parameters(z,ex)
         # The reference solver is a Float64-oriented finite-difference fitting
         # backend. Generic AD/sensitivity backends belong in dedicated extensions.
         prob=remake(ex.problem;p)
         ts=sort!(unique(vcat((o.times for o in ex.observations)...)))
-        sol=simulate(prob;dt=cal.dt,saveat=ts)
-        for obs in ex.observations, j in eachindex(obs.times)
-            index=searchsortedfirst(sol.t,obs.times[j])
-            pred=_observe(obs.observable,sol.u[index],prob.operator,p,obs.times[j])
-            length(pred)==size(obs.data,1) || throw(DimensionMismatch("observable changed output dimension"))
-            append!(result,(pred .- obs.data[:,j]) ./ obs.sigma[:,j])
+        sol=cal.solver===nothing ? simulate(prob;dt=cal.dt,saveat=ts) : cal.solver(prob,ts)
+        length(sol.t)==length(ts)==length(sol.u) &&
+            all(isapprox.(sol.t,ts;rtol=1e-12,atol=1e-12)) ||
+            throw(ArgumentError("calibration solver must return exactly the requested output times"))
+        all(u->all(isfinite,u),sol.u) || throw(NumericalFailure("calibration solver returned nonfinite states"))
+        map(ex.observations) do obs
+            values=map(eachindex(obs.times)) do j
+                index=searchsortedfirst(ts,obs.times[j])
+                pred=_observe(obs.observable,sol.u[index],prob.operator,p,obs.times[j])
+                length(pred)==size(obs.data,1) || throw(DimensionMismatch("observable changed output dimension"))
+                all(isfinite,pred) || throw(NumericalFailure("nonfinite observation prediction"))
+                pred
+            end
+            hcat(values...)
         end
+    end
+end
+function residuals(cal::CalibrationProblem,z)
+    result=Vector{promote_type(eltype(z),Float64)}()
+    for (ex,outputs) in zip(cal.experiments,predictions(cal,z)),(obs,pred) in zip(ex.observations,outputs)
+        append!(result,_whiten(obs,vec(pred.-obs.data)))
     end
     result
 end
 """
-Known-variance independent Gaussian negative log likelihood. NumericalFailure
+Known-covariance Gaussian negative log likelihood, including normalization. NumericalFailure
 alone can optionally be mapped to Inf. Programming/model-definition errors are
 never silently turned into optimizer penalties.
 """
@@ -69,18 +91,20 @@ function objective(cal::CalibrationProblem,z;on_failure=:throw)
         end
         rethrow()
     end
-    0.5*sum(abs2,r)+sum(sum(log,obs.sigma)+length(obs.data)*log(2π)/2
+    0.5*sum(abs2,r)+sum(_noise_logdet(obs)/2+length(obs.data)*log(2π)/2
         for ex in cal.experiments for obs in ex.observations)
 end
 
 """
 Finite-difference residual Jacobian in optimization coordinates, its singular
 values and numerical rank. Local covariance is (J'J)^(-1) ONLY at full column
-rank. This is a local Gaussian approximation, not a confidence interval or
-structural-identifiability proof; use profiles/bootstrap/posteriors in a release.
+rank. This local covariance alone specifies neither a confidence level nor
+structural identifiability. Use confidence_ellipsoid with its assumptions and
+checks, and profile_likelihood to investigate local asymmetry.
 """
 function sensitivity_report(cal::CalibrationProblem,z;relative_step=cbrt(eps(Float64)),rank_tolerance=sqrt(eps(Float64)))
-    relative_step>0 && rank_tolerance>0 || throw(ArgumentError("steps and rank tolerance must be positive"))
+    isfinite(relative_step) && relative_step>0 && isfinite(rank_tolerance) && 0<rank_tolerance<1 ||
+        throw(ArgumentError("step must be positive and finite; rank tolerance must lie in (0,1)"))
     z=float.(copy(z)); r=residuals(cal,z); J=zeros(length(r),length(z))
     isempty(z) && throw(ArgumentError("provide at least one parameter"))
     for j in eachindex(z)
@@ -88,9 +112,10 @@ function sensitivity_report(cal::CalibrationProblem,z;relative_step=cbrt(eps(Flo
         zp[j]+=h; zm[j]-=h
         J[:,j]=(residuals(cal,zp)-residuals(cal,zm))/(2h)
     end
-    s=svdvals(J); maxs=isempty(s) ? 0.0 : maximum(s)
+    decomposition=svd(J); s=decomposition.S; maxs=isempty(s) ? 0.0 : maximum(s)
     rank=count(x->x>rank_tolerance*maxs,s)
-    covariance=rank==length(z) ? inv(Symmetric(J'*J)) : nothing
+    # Avoid forming normal equations, which square the Jacobian condition number.
+    covariance=rank==length(z) ? Matrix(Symmetric(decomposition.V*Diagonal(inv.(s.^2))*decomposition.V')) : nothing
     (;jacobian=J,singular_values=s,rank,covariance,
       condition_number=rank==length(z) ? first(s)/last(s) : Inf)
 end

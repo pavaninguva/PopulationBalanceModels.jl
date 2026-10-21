@@ -187,6 +187,112 @@ dissolution; there is no extinction model at the lower diameter edge. Choose
 positive diameter limits and check that neither edge controls the result.
 The dilution hazard is zero for instantaneous mixing.
 
+## [DLVO interactions and the collision kernel](@id lnp_dlvo)
+
+DLVO theory modifies the chance that a Brownian encounter leads to attachment.
+It does not change the additive-volume deposition rule. Separate three steps:
+calculate an interaction energy, convert it into an attachment modifier, then
+multiply the Brownian encounter kernel. The recipe's callback
+`attachment_without_peg(L,M,w,T)` supplies the second step, excluding the PEG
+factor. The builder computes
+
+```math
+K(L,M,t)=k_{\mathrm{PEG}}\,\alpha_{\mathrm{base}}(L,M,w,T)\,
+K_{\mathrm{Brownian}}(L,M,T,\eta).
+```
+
+The fixed-pivot implementation receives this final kernel in process-volume/time
+units. It does not evaluate an electrostatic potential internally. In particular,
+setting `attachment_without_peg=(L,M,w,T)->1.0` disables the DLVO size dependence;
+it is a material assumption, not a default DLVO calculation.
+
+### Radii, gaps, and energy units
+
+The population coordinate is **diameter**, while the supplement's energy laws
+use radii ``r_1=L/2`` and ``r_2=M/2``. Let ``h>0`` be the surface-to-surface gap.
+The centre separation is ``r_1+r_2+h``. The reported van der Waals contribution is
+
+```math
+U_{\mathrm{vdW}}(h)=-\frac{A_H}{6}\left[
+\frac{2r_1r_2}{h^2+2h(r_1+r_2)}
++\frac{2r_1r_2}{h^2+2h(r_1+r_2)+4r_1r_2}
++\ln\!\frac{h^2+2h(r_1+r_2)}{h^2+2h(r_1+r_2)+4r_1r_2}
+\right].
+```
+
+The recipe now provides `vdw_energy(r1,r2,gap,hamaker)` for this component in
+joules. Its far-field series avoids subtracting nearly equal terms. The
+Hamaker constant used in the supplement is ``A_H=1.7\times10^{-22}`` J.
+
+For an ideal electrolyte, the inverse Debye length is
+
+```math
+\kappa=\sqrt{\frac{2e^2N_AI}{\epsilon_0\epsilon_r k_BT}},
+```
+
+where ionic strength ``I`` is in **mol/m³**, not mol/L. `debye_wavenumber`
+implements this expression; ``1/\kappa`` is the Debye length. The supplement
+calls ``\kappa`` a length, but its formula has inverse-length units.
+
+```@example lnp_dlvo
+using PopulationBalanceModels
+include(joinpath(pkgdir(PopulationBalanceModels),"examples","papers","cej2025_lnp.jl"))
+import .CEJ2025LNP
+kappa = CEJ2025LNP.debye_wavenumber(1.0,298.15,78.4) # 1 mol/m³ = 1 mmol/L
+u = CEJ2025LNP.vdw_energy(25e-9,25e-9,1e-9,1.7e-22)
+(debye_length_nm=1e9/kappa,vdw_energy_in_kBT=u/(CEJ2025LNP.kB*298.15))
+```
+
+Temperature 298.15 K and relative permittivity 78.4 are explicit illustrative
+values here. The mixture's ionic strength and permittivity must be supplied as
+functions of its composition and temperature for the actual material system.
+Electrostatic repulsion also needs a surface potential. The supplement uses
+10 mV, adjusted from a reported zeta potential of 7 mV; surface and zeta
+potentials are not identical physical quantities.
+
+### Convert energy into attachment
+
+An attachment calculation combines attraction and repulsion through
+``U(h)=U_{\mathrm{vdW}}(h)+U_{\mathrm{elec}}(h)`` and a stability integral.
+For example, one common no-hydrodynamic-correction convention is
+
+```math
+W=(r_1+r_2)\int_0^\infty
+\frac{\exp[U(h)/(k_BT)]}{(r_1+r_2+h)^2}\,dh,
+\qquad \alpha_{\mathrm{base}}=\frac1W.
+```
+
+This convention has ``W=1`` when ``U=0``. A finite contact gap or a hydrodynamic
+mobility correction changes the integral and its normalization. It must be
+specified and tested explicitly. The main paper's printed attachment expression
+and the supplement's electrostatic prefactor leave reciprocal, separation,
+and concentration/energy conventions to be reconciled. The recipe does **not**
+silently substitute the expression above as a verified implementation of that
+paper. Only the dimensionally specified Debye and van der Waals helpers are
+provided; the complete attachment closure remains an explicit input.
+
+Once an independently checked closure is available, connect it without changing
+the population or collision discretization:
+
+```julia
+attachment_without_peg = (L,M,w,T)->dlvo_attachment(L/2,M/2,w,T)
+material = merge(material,(attachment_without_peg=attachment_without_peg,))
+problem = ShinLNPReproduction.figure4_problem(;grid,material...)
+```
+
+Here `dlvo_attachment(r1,r2,w,T)` is the supplied, audited stability calculation.
+It must return a finite nonnegative dimensionless modifier and must exclude
+``k_{\mathrm{PEG}}``. Verify the neutral-energy limit, radius symmetry, energy
+and ionic-strength units, and gap-integral convergence. Physical cutoffs stay
+fixed when diameter bins are refined. Logarithmic evaluation may be needed for
+large energy barriers; clipping exponentials is not a convergence treatment.
+
+The fitted PEG factor is a phenomenological suppression of contact. The current
+recipe does not resolve a polymer-brush steric potential. Its material closures
+are fixed functions; fitting additional closure parameters requires making them
+explicit parameters in the physical rate callbacks rather than mutating captured
+constants during optimization.
+
 ## Return particle uptake to the lipid balance
 
 Nucleation and growth consume free lipid; volume-conserving coalescence does
@@ -314,3 +420,21 @@ folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","shin_case
 ready=all(isfile(joinpath(folder,f)) for f in ("figure4a_model.png","figure4b_model.png"))
 Markdown.parse(ready ? "![Intensity-weighted distributions](../assets/shin_case/figure4a_model.png)\n\n![Mean diameter through formation and incubation](../assets/shin_case/figure4b_model.png)" : "The distribution and mean-diameter panels will appear here after the full-horizon calculation and plotting commands have been run.")
 ```
+
+
+## Numerical illustration of the coupling
+
+The retained run below uses the explicit synthetic inputs in
+`examples/lipid_nanoparticle_demo.jl`: delayed mixing with ``\tau=0.01`` s,
+constant viscosity ``10^{-3}`` Pa s, a demonstration solubility correlation,
+``S^*=1``, and ``\alpha_{\mathrm{base}}=1``. It starts with zero particles.
+The source and coupling are evaluated by the same recipe, but these choices
+neither exercise a DLVO barrier nor reproduce the 4320-minute model curves.
+
+![Synthetic nanoparticle calculation: number, free lipid, intensity density, and material drift](../assets/illustrations/lnp/demonstration.png)
+
+The panels use real exported simulation data from
+`docs/benchmarks/diagnostics/lnp_demo/`; their provenance remains alongside the
+CSVs. They illustrate the numerical coupling over 20 ms. Re-render with
+`python docs/benchmarks/plot_case_studies.py illustrations --usetex`. The
+full-horizon Figure 4 exporter above is kept separate from this illustration.

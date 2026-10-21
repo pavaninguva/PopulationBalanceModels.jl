@@ -84,27 +84,49 @@ function _observe(obs::HistogramObservable,N,op,p,t)
 end
 
 """
-    Observation(times, data, observable; sigma=1.0)
+    Observation(times, data, observable; sigma=1.0, covariance=nothing)
 
 Rows are measured outputs; columns are times. Known independent Gaussian
 standard deviations can be a scalar or a matrix matching data. For a scalar
 observable, a vector of data is accepted. Missing data must be explicitly
-selected before construction; correlated/normalized histograms need a custom
-likelihood rather than this independent-Gaussian observation.
+selected before construction. Alternatively supply a fixed positive-definite
+`covariance` for `vec(data)` (outputs within each time, then times). It can
+include correlations across outputs and times within this observation. Do not
+supply sigma as well. Different Observation objects are independent blocks.
+Normalized histograms have a singular covariance and need independent contrasts
+or a likelihood for compositional data.
 """
-struct Observation{T,Y,O,S}
+struct Observation{T,Y,O,S,F}
     times::T
     data::Y
     observable::O
     sigma::S
+    factor::F
 end
-function Observation(times,data,observable::AbstractObservable;sigma=1.0)
+function Observation(times,data,observable::AbstractObservable;sigma=nothing,covariance=nothing)
     ts=float.(collect(times)); Y=data isa AbstractVector ? reshape(float.(copy(data)),1,:) : float.(copy(data))
     !isempty(ts) && all(isfinite,ts) && all(diff(ts).>0) || throw(ArgumentError("observation times must increase"))
     Y isa AbstractMatrix && size(Y,2)==length(ts) || throw(DimensionMismatch("one data column per time required"))
-    all(isfinite,Y) || throw(ArgumentError("data must be finite"))
+    all(x->x isa Real && isfinite(x),Y) || throw(ArgumentError("data must be finite and real"))
+    if covariance!==nothing
+        sigma===nothing || throw(ArgumentError("supply sigma or covariance, not both"))
+        C=float.(Matrix(covariance))
+        size(C)==(length(Y),length(Y)) || throw(DimensionMismatch("covariance must match vec(data)"))
+        all(x->x isa Real && isfinite(x),C) && issymmetric(C) || throw(ArgumentError("covariance must be finite, real and symmetric"))
+        factor=try
+            cholesky(Symmetric(C))
+        catch e
+            e isa PosDefException || rethrow()
+            throw(ArgumentError("covariance must be positive definite; remove dependent measurements"))
+        end
+        return Observation(ts,Y,observable,reshape(sqrt.(diag(C)),size(Y)),factor)
+    end
+    sigma===nothing && (sigma=1.0)
     S=sigma isa Number ? fill(float(sigma),size(Y)) : float.(copy(sigma))
     size(S)==size(Y) || throw(DimensionMismatch("sigma must match data"))
-    all(isfinite,S) && all(S.>0) || throw(ArgumentError("standard deviations must be positive"))
-    Observation(ts,Y,observable,S)
+    all(x->x isa Real && isfinite(x) && x>0,S) || throw(ArgumentError("standard deviations must be positive, finite and real"))
+    Observation(ts,Y,observable,S,nothing)
 end
+
+_whiten(obs,raw)=obs.factor===nothing ? raw./vec(obs.sigma) : obs.factor.L\raw
+_noise_logdet(obs)=obs.factor===nothing ? 2sum(log,obs.sigma) : 2sum(log,diag(obs.factor.L))

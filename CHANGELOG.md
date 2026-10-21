@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added fixed correlated Gaussian observation blocks, forward-solver adapters, predictions, and SVD-based local covariance calculations.
+- Added fit diagnostics, checked joint confidence ellipsoids, multiple-start fitting, and nuisance-reoptimized likelihood profiles, with explicit known-error/estimated-scale assumptions.
+- Added a synthetic two-rate uncertainty example with residuals, mapped confidence regions, profiles, and solver-refinement checks.
+- Added a native-moment crystallization study using reported paracetamol kinetics and explicitly reconstructed monotonic cooling inputs; documented the additional extinction and distribution information needed for the full cycling figure.
+- Added visible simulation and accuracy figures, including clearly labelled retained demonstration results. Applied LaTeX typography and removed plot grid lines.
+- Documented the DLVO-to-collision interface and added unit-specified inverse-Debye-length and unequal-sphere van der Waals helpers to the LNP recipe; retained the unresolved full attachment convention.
+
+
 - Renamed the package and optional extensions to PopulationBalanceModels, preserving its UUID and version.
 - Made `docs/src/` the authoritative manual and consolidated standalone architecture, numerical, validation, and publishing reports.
 - Rewrote the model tutorials around equations, parameters, rate callbacks, boundaries, numerical treatment, and observations, with executable code blocks.

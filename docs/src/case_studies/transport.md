@@ -249,8 +249,12 @@ matches its own analytical bin integrals to roundoff because this separable
 growth law permits an exact travel-time map and compatible integer shifts.
 That result does not apply to arbitrary size-dependent velocities.
 
-```@eval
-using Markdown, PopulationBalanceModels
-file=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","inguva_case2","solutions.png")
-Markdown.parse(isfile(file) ? "![Analytical and computed densities for coordinate-dependent growth](../assets/inguva_case2/solutions.png)\n\n![Signed density errors](../assets/inguva_case2/errors.png)" : "Run the commands above and rebuild the manual to display the solution and signed-error panels.")
-```
+![Analytical and computed densities for coordinate-dependent growth](../assets/inguva_case2/solutions.png)
+
+![Signed density errors](../assets/inguva_case2/errors.png)
+
+![Accuracy and negative population under refinement](../assets/inguva_case2/convergence.png)
+
+The last figure uses actual total bin counts for each mesh. It compares accuracy
+and undershoots, not elapsed runtime. The transformed mesh exploits the known
+characteristics; its near-roundoff error is specific to this compatible problem.

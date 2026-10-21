@@ -1,0 +1,12 @@
+SYNTHETIC DATA: exact creation/removal solution with independent Gaussian sigma=0.03; RNG seed=20261020.
+Local 95% joint region is in log(J),log(k), then mapped through exp; not a physical-space ellipse.
+rank = 2
+condition_number = 11.842973278668271
+degrees_of_freedom = 18
+rss = 9.032233269347598
+goodness_of_fit_pvalue = 0.9589913308219591
+scaled_gradient = 7.897309798904343e-10
+difference_error = 2.540208638613885e-10
+numerical = (prediction_change = 1.2989373665561743e-7, jacobian_change = 5.490471400469599e-9, rank = 2)
+Converged starting points: 3/3
+Forward SSPRK dt=0.01, refined=0.005; Julia 1.10.3

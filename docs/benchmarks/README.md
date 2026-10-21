@@ -1,4 +1,4 @@
-# Running the three case studies
+# Running the case studies
 
 From the package root, use these calculation/plot pairs:
 
@@ -39,12 +39,41 @@ mesh differences are recorded in `errors.csv`.
 
 New study results are written under `docs/src/assets/gunawan_example2/`,
 `shin_case/`, and `inguva_case2/`. Rebuild the manual after rendering figures.
-The docs build does not run these expensive simulations. When results have not
-been generated, the page gives the commands rather than displaying substitute
-figures.
+The docs build does not run these expensive simulations. When publication-input
+results have not been generated, the page gives their commands. Separate
+illustrations show explicitly labelled demonstration calculations.
 
 `diagnostics/` retains earlier constant-growth and demonstration-initialization
-results outside the published manual. The constant-growth Gaussian is now a
+data. The cooling and nanoparticle pages display labelled plots of those
+demonstrations, with their provenance. The constant-growth Gaussian is now a
 regression fixture in `test/fixtures/`. The original periodic rectangle/smooth
 benchmark and compact/ADI stability audit remain numerical-method diagnostics,
 not additional case-study pages.
+
+## Typesetting and additional figures
+
+`plot_case_studies.py` applies serif typography, LaTeX mathematical labels, and
+no grid lines. `--usetex` uses an installed LaTeX distribution (including amsmath);
+omitting it uses Matplotlib's Computer Modern MathText. The committed case-study
+figures were rendered with LaTeX. PNG and compact SVG exports are retained.
+
+```sh
+python docs/benchmarks/plot_case_studies.py transport --usetex
+python docs/benchmarks/plot_case_studies.py illustrations --usetex
+julia --project=. examples/temperature_programmed_crystallization.jl
+python docs/benchmarks/plot_case_studies.py moments --usetex
+julia --project=/path/to/working_environment examples/kinetic_parameter_uncertainty.jl
+python docs/benchmarks/plot_case_studies.py estimation --usetex
+```
+
+`illustrations` re-renders the retained cooling and LNP demonstration data into
+`docs/src/assets/illustrations/`. Their input provenance is in the diagnostic
+folders. They do not replace the unresolved publication inputs or represent
+published-figure reproductions. The moment calculation records its reconstructed
+monotonic protocol and material assumptions in `moment_crystallization/inputs.txt`;
+it does not implement the extinction/distribution parts of Figure 13.
+
+The estimation example uses seeded synthetic Gaussian data. Its raw exports
+include whitened residuals, mapped joint-region points, a nuisance-reoptimized
+profile, and numerical diagnostics. The output is a local uncertainty example,
+not a coverage validation for physical models.

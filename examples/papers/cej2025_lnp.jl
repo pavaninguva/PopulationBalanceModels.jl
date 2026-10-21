@@ -2,9 +2,38 @@ module CEJ2025LNP
 using PopulationBalanceModels
 
 export build,loglinear_mole_solubility,critical_length,nucleation_rate,
-       brownian_kernel,kelvin_ratio,paper_intensity_mean,aqueous_fraction
+       brownian_kernel,kelvin_ratio,paper_intensity_mean,aqueous_fraction,
+       debye_wavenumber,vdw_energy
 
 const kB=1.380649e-23
+const NA=6.02214076e23
+const elementary_charge=1.602176634e-19
+const vacuum_permittivity=8.8541878128e-12
+
+"""Inverse Debye length (m⁻¹) for ionic strength I in mol/m³, kelvin, and dimensionless relative permittivity."""
+function debye_wavenumber(I,T,relative_permittivity)
+    isfinite(I) && I>=0 && all(x->isfinite(x) && x>0,(T,relative_permittivity)) ||
+        throw(ArgumentError("invalid ionic strength, temperature or permittivity"))
+    sqrt(2elementary_charge^2*NA*I/(vacuum_permittivity*relative_permittivity*kB*T))
+end
+
+"""Unequal-sphere van der Waals energy in joules. Radii and positive surface gap are meters; Hamaker constant is joules. No electrostatic or steric energy is included."""
+function vdw_energy(r1,r2,gap,hamaker)
+    all(x->isfinite(x) && x>0,(r1,r2,gap)) && isfinite(hamaker) && hamaker>=0 ||
+        throw(ArgumentError("radii and gap must be positive; Hamaker constant nonnegative"))
+    z=4r1*r2/(gap*(gap+2(r1+r2)))
+    bracket=if z<0.1
+        # Avoid cancellation of the first two asymptotic orders at large gap.
+        polynomial=zero(z)
+        for j in 16:-1:0
+            polynomial=-z*polynomial+(j+1)/(2(j+3))
+        end
+        z^3*polynomial
+    else
+        z/2+z/(2(1+z))-log1p(z)
+    end
+    -hamaker/6*bracket
+end
 loglinear_mole_solubility(xwater,xethanol,w)=exp(w*log(xwater)+(1-w)*log(xethanol))
 critical_length(S,T,gamma,Vm)=S>1 ? 4gamma*Vm/(kB*T*log(S)) : Inf
 nucleation_rate(S,T,gamma,Vm,An)=S>1 ? An*exp(-16π*gamma^3*Vm^2/(3*(kB*T)^3*log(S)^2)) : 0.0

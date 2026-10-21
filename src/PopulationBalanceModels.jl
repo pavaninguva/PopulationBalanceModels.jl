@@ -1,6 +1,7 @@
 module PopulationBalanceModels
 
 using LinearAlgebra
+import Distributions
 
 export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        AbstractPBMTerm, AbstractPopulationRepresentation, AbstractMomentBasis,
@@ -23,7 +24,9 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        rhs!, simulate, PBMSolution, density, moment, number_concentration,
        diagnostics, suggest_dt, NumericalFailure, MomentObservable,
        HistogramObservable, FunctionObservable, Observation, Experiment,
-       CalibrationProblem, residuals, objective, sensitivity_report,
+       CalibrationProblem, predictions, residuals, objective, sensitivity_report,
+       fit_diagnostics, confidence_ellipsoid, ConfidenceEllipsoid, ellipse_points,
+       fit_multistart, profile_likelihood,
        PBMSystem, SystemContext, PopulationTransfer, CrossAggregation,
        ConservativeExchange, CustomCoupling, population, bulk, stateview,
        PopulationMoment, BulkObservable, PopulationHistogram, SystemObservable,
@@ -64,6 +67,7 @@ include("time_integration/compact_adi.jl")
 include("time_integration/exact_shift.jl")
 include("inference/observations.jl")
 include("inference/calibration.jl")
+include("inference/uncertainty.jl")
 
 """Load `Optim` to enable `fit(calibration, initial_parameters; ...)`."""
 function fit end
