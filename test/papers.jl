@@ -43,3 +43,28 @@ include("../examples/papers/cej2025_lnp.jl")
     @test all(isfinite,derivative)
     @test CEJ2025LNP.paper_intensity_mean(g,N)≈g.centers[18]
 end
+
+@testset "DLVO reconstruction and LNP mechanism accounting" begin
+    kw=(temperature=298.15,ionic_strength=75.,relative_permittivity=65.)
+    @test CEJ2025LNP.dlvo_attachment(25e-9,75e-9;kw...,potential=0.,hamaker=0.)≈1 atol=1e-14
+    a=CEJ2025LNP.dlvo_attachment(25e-9,75e-9;kw...,order=128)
+    b=CEJ2025LNP.dlvo_attachment(75e-9,25e-9;kw...,order=128)
+    refined=CEJ2025LNP.dlvo_attachment(25e-9,75e-9;kw...,order=256)
+    @test a≈b rtol=1e-13
+    @test a≈refined rtol=0.005
+    @test CEJ2025LNP.debye_wavenumber(100.,298.15,78.4)≈10CEJ2025LNP.debye_wavenumber(1.,298.15,78.4)
+    @test_throws ArgumentError CEJ2025LNP.dlvo_attachment(0.,1.;kw...)
+    g=Grid1D(exp.(range(log(1e-9),log(2e-6);length=21));coordinate=:diameter)
+    N=zeros(length(g));N[10]=1e15;N[end]=1e10
+    prob=CEJ2025LNP.build(;grid=g,initial_distribution=N,initial_lipid=10.,FRR=3.,tau=0.,
+        temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->.01,
+        equilibrium_ratio=(L,w,T)->1.,attachment_without_peg=(L,M,w,T)->1.,
+        molecular_volume=5e-28,particle_density=1000.,nucleation_width=1e-9,
+        nucleation_normalization=:total_rate,tspan=(0.,.02),kg=.05,overflow=:discard,track_consumption=true)
+    d=similar(prob.u0);rhs!(d,prob.u0,prob.operator,prob.p,0.)
+    @test bulk(prob,d,:lipid)+bulk(prob,d,:nucleated_lipid)+bulk(prob,d,:grown_lipid)≈0 atol=1e-10
+    particle_mass_rate=prob.p.rho*π/6*moment(g,population(prob,d,:lnp),3)
+    @test particle_mass_rate+bulk(prob,d,:lipid)+bulk(prob,d,:escaped_lipid)≈0 atol=1e-10
+    @test bulk(prob,d,:escaped_lipid)>0
+    @test bulk(prob,d,:nucleated_lipid)>0
+end

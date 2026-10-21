@@ -26,6 +26,7 @@ boundaries, and numerical choices used in its implementation.
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition
 and a finer sectional reference, with an independent moment check. The
-nanoparticle calculation requires numerical material closures. These assumptions
+nanoparticle reconstruction includes full-horizon runs and mechanism profiles,
+with material assumptions and explicit failed domain/convergence checks. These assumptions
 are stated beside the relevant inputs. The [axial reactor tutorial](../axial_reactors.md)
 adds a physical position coordinate to an intrinsic growth model.

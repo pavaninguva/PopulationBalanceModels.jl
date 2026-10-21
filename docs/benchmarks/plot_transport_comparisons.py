@@ -41,36 +41,55 @@ def constant_growth():
     axes[0].legend(fontsize=8)
     save_figure(fig, folder, "solutions")
 
-    fig, axes = plt.subplots(1, 3, figsize=(14, 5.8), layout="constrained")
-    rows = list(dict.fromkeys(zip(errors["scheme"], errors["time_method"])))
-    matrix = np.array([[errors[(errors["scheme"] == s) & (errors["time_method"] == t)
-                              & (errors["bins"] == 200) & (errors["courant"] == c)]["rmse"][0]
-                        for c in (0.5, 1.0)] for s, t in rows])
-    im = axes[0].imshow(np.log10(np.maximum(matrix, 1e-13)), aspect="auto", vmin=-13, vmax=1)
-    for row in range(len(rows)):
-        for column in range(2):
-            value = matrix[row, column]
-            label = f"{value:.1e}" if value < 1e-8 or value > 100 else f"{value:.2f}"
-            if value > 100:
-                label = "unstable: " + label
-            axes[0].text(column, row, label, color="white" if value < 1e-8 else "black",
-                         ha="center", va="center", fontsize=7)
-    axes[0].set(xticks=[0, 1], xticklabels=["0.5", "1.0"], xlabel="Courant number",
-                yticks=np.arange(len(rows)), yticklabels=[f"{s.replace('_', ' ')} / {t}" for s, t in rows],
-                title="RMSE at 200 bins")
-    axes[0].tick_params(axis="y", labelsize=8)
-    fig.colorbar(im, ax=axes[0], label=r"$\log_{10}(\mathrm{RMSE})$")
+    smooth = read(folder / "smooth_errors.csv")
+    choices += [("weno5", "ssprk33", "WENO5 + SSPRK3"),
+                ("vanleer", "rk4", "van Leer + RK4"),
+                ("weno3", "rk4", "WENO3 + RK4"),
+                ("weno5", "ssprk54", "WENO5 + SSPRK(5,4)")]
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5), layout="constrained")
     for name, time, label in choices:
-        data = errors[(errors["scheme"] == name) & (errors["time_method"] == time)
-                      & (errors["courant"] == 0.5)]
+        front = errors[(errors["scheme"] == name) & (errors["time_method"] == time)
+                       & (errors["courant"] == 0.5)]
+        data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
+                      & (smooth["step_policy"] == "fixed_cfl")]
+        axes[0].loglog(front["bins"], front["rmse"], "o-", ms=3, label=label)
         axes[1].loglog(data["bins"], data["rmse"], "o-", ms=3, label=label)
-        axes[2].loglog(data["seconds"], data["rmse"], "o-", ms=3)
-    axes[1].set(xlabel="Number of bins", ylabel="RMSE", title="$C=0.5$")
-    axes[1].set_xticks([50, 100, 200, 400], labels=["50", "100", "200", "400"])
-    axes[1].xaxis.set_minor_locator(NullLocator())
-    axes[1].legend(fontsize=7)
-    axes[2].set(xlabel="Elapsed time / s", ylabel="RMSE", title="One warmed run, $C=0.5$")
+    axes[0].set(title="Exponential with a moving front", xlabel="Number of bins", ylabel="RMSE")
+    axes[1].set(title="Smooth periodic translation", xlabel="Number of bins", ylabel="RMSE")
+    axes[0].legend(fontsize=7)
     save_figure(fig, folder, "performance")
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.3), layout="constrained")
+    for name, time, label in choices:
+        data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
+                      & (smooth["step_policy"] == "fixed_cfl")]
+        axes[0].loglog(data["bins"], data["seconds"], "o-", ms=3, label=label)
+        axes[0].fill_between(data["bins"],data["timing_minimum"],data["timing_maximum"],alpha=.1)
+        axes[1].loglog(data["seconds"], data["rmse"], "o-", ms=3, label=label)
+    axes[0].set(xlabel="Number of bins", ylabel="Elapsed time / s", title="Median of three warmed runs")
+    axes[1].set(xlabel="Elapsed time / s", ylabel="RMSE", title="Error versus work")
+    axes[0].legend(fontsize=7)
+    save_figure(fig, folder, "timings")
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.3), layout="constrained")
+    for name, time, label in (("muscl","rk4","MUSCL + RK4"),
+                             ("vanleer","rk4","van Leer + RK4"),
+                             ("weno5","ssprk33","WENO5 + SSPRK3"),
+                             ("weno5","rk4","WENO5 + RK4")):
+        data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
+                      & (smooth["step_policy"] == "fixed_cfl")]
+        axes[0].loglog(data["bins"], data["l1"], "o-", ms=3, label=label)
+    for policy,label in (("fixed_cfl",r"$\Delta t\propto h$"),("spatial",r"$\Delta t\propto h^{5/4}$")):
+        data = smooth[(smooth["scheme"] == "weno5") & (smooth["time_method"] == "rk4")
+                      & (smooth["step_policy"] == policy)]
+        axes[1].loglog(data["bins"], data["rmse"], "o-", ms=3,label="WENO5 + RK4, "+label)
+    x=np.array([80.,640.])
+    axes[0].loglog(x,1e-3*(x/80)**-2,"k:",label=r"$h^2$ guide")
+    axes[1].loglog(x,3e-6*(x/80)**-5,"k:",label=r"$h^5$ guide")
+    axes[0].set(xlabel="Number of bins",ylabel=r"$L^1$ density error",title="Limited reconstructions near smooth extrema")
+    axes[1].set(xlabel="Number of bins",ylabel="RMSE",title="Spatial and temporal refinement")
+    for ax in axes: ax.legend(fontsize=8)
+    save_figure(fig,folder,"smooth_refinement")
 
 
 def cooling():

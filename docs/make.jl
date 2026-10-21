@@ -40,6 +40,7 @@ makedocs(;
             "Birth, death, and dilution" => "methods/sources.md",
             "Aggregation and breakage" => "methods/collisions.md",
             "Time integration" => "methods/time.md",
+            "Compact-method verification" => "methods/compact_verification.md",
             "Moment methods" => "moment_methods.md",
         ],
         "Parameter estimation" => "inference.md",

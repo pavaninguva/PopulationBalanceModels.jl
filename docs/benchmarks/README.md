@@ -116,8 +116,37 @@ python docs/benchmarks/plot_transport_comparisons.py axial --usetex
 The constant-growth comparison follows the 2022 Case 1 equation, initial
 exponential, and t=4. It compares analytical bin integrals with several
 reconstruction/integrator combinations at C=0.5 and C=1. Negative concentrations
-are retained deliberately; unstable LinearUpwind/C=1 runs are reported rather
-than interpreted as valid solutions. Timings are single warmed runs. The axial
+are retained deliberately; LinearUpwind/C=1 is omitted because it is outside
+the integrator stability region. A smooth periodic companion separates formal
+order from sharp-front behavior; time-step refinement separates time error from
+spatial error. Timings are medians of three warmed runs with their ranges. The axial
 example feeds a growing population into an initially empty dispersed tube; the
 PDF-independent verification uses analytical periodic advection–diffusion and
 nonuniform-grid inlet/outlet balances in `test/axial.jl`.
+
+## Full-horizon nanoparticle reconstruction and compact audit
+
+```sh
+julia --project=/path/to/lnp_environment examples/shin_lnp_long_time.jl 80 1e-7 docs/src/assets/shin_case
+julia --project=/path/to/lnp_environment examples/shin_lnp_long_time.jl 160 1e-8 docs/src/assets/shin_case/refinement 1,3
+python docs/benchmarks/plot_lnp_dynamics.py --comparison docs/src/assets/shin_case/refinement --usetex
+julia --project=. examples/audit_li2026_supplement.jl
+python docs/benchmarks/plot_compact_audit.py --usetex
+```
+
+The LNP environment needs the local package, SciMLBase,
+OrdinaryDiffEqRosenbrock and ADTypes. The runner supplies explicitly recorded
+reconstruction assumptions where the paper/SI do not specify numerical material
+inputs. It integrates FRR 1, 3 and 5 to 4320 minutes, records early mechanism
+rates and cumulative lipid uptake, and accounts for discarded collision volume.
+The current late-time outputs show substantial escaped mass and do not establish
+reproduction or convergence. Read the conservation/domain plots alongside the
+mean-diameter curve. No data are fitted to the target figure.
+
+The Li audit uses nodal densities and the literal S11 coefficients, with
+constant, affine and exponential growth in 1D and separable 2D. It retains fine
+mesh order loss and singular/growing large-step cases. A separate CSV records an
+independently derived accuracy correction, never attributed to the paper.
+Neither diagnostic is a general public nodal PBM solver or a verified
+transcription of the main multilevel HOC–ADI algorithm. The public periodic
+constant-growth HOCADI variant remains unchanged.

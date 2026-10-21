@@ -34,6 +34,8 @@ struct SSPRK22 <: AbstractExplicitRK end
 struct SSPRK33 <: AbstractExplicitRK end
 """Classical four-stage, fourth-order Runge–Kutta; no general SSP guarantee."""
 struct RK4 <: AbstractExplicitRK end
+"""Five-stage, fourth-order SSP Runge–Kutta of Spiteri and Ruuth; SSP coefficient approximately 1.508. Uses the published nonautonomous stage times."""
+struct SSPRK54 <: AbstractExplicitRK end
 _default_evolution(op)=SSPRK33()
 _simulate(prob,method;kwargs...)=throw(ArgumentError("unsupported evolution method $(typeof(method)) for $(typeof(prob.operator))"))
 Base.getindex(sol::PBMSolution,i::Integer)=sol.u[i]
@@ -62,7 +64,7 @@ end
              negative_tolerance=1e-12, maxsteps=10^7)
 
 Explicit fixed-step reference integrator (SSPRK33 by default). Select
-ForwardEuler(), SSPRK22(), SSPRK33(), or RK4(). dt is a maximum step; a step is
+ForwardEuler(), SSPRK22(), SSPRK33(), SSPRK54(), or RK4(). dt is a maximum step; a step is
 shortened to land on each output time. No clipping, automatic grid change, or
 implicit stiffness treatment is performed. Choose dt using `suggest_dt` and
 check convergence. For production adaptive/stiff integration use `odeproblem`.
@@ -113,6 +115,20 @@ function _rk_step!(N,cache,prob,t,h,method::AbstractExplicitRK,check,tol)
         @. U1=N+h*k3
         stage(U1); rhs!(k4,U1,prob.operator,prob.p,t+h)
         @. N=N+h/6*(k1+2k2+2k3+k4)
+    elseif method isa SSPRK54
+        @. U1=N+0.391752226571890*h*k1
+        stage(U1);rhs!(k1,U1,prob.operator,prob.p,t+0.391752226571890*h)
+        @. U2=0.444370493651235*N+0.555629506348765*U1+0.368410593050371*h*k1
+        stage(U2);rhs!(k1,U2,prob.operator,prob.p,t+0.586079689311540*h)
+        @. k2=0.620101851488403*N+0.379898148511597*U2+0.251891774271694*h*k1
+        stage(k2);rhs!(k3,k2,prob.operator,prob.p,t+0.474542363121400*h)
+        @. U1=0.178079954393132*N+0.821920045606868*k2+0.544974750228521*h*k3
+        stage(U1);rhs!(k4,U1,prob.operator,prob.p,t+0.935010630967653*h)
+        # Increment form preserves a constant state despite the final published
+        # decimal weights summing to 1+1e-15 in floating-point arithmetic.
+        @. N=N+0.517231671970585*(U2-N)+0.096059710526147*(k2-N)+0.386708617503269*(U1-N)+h*(0.063692468666290*k3+0.226007483236906*k4)
+    else
+        throw(ArgumentError("unsupported native explicit integrator $(typeof(method))"))
     end
     nothing
 end

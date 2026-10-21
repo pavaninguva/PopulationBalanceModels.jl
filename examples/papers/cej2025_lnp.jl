@@ -1,9 +1,10 @@
 module CEJ2025LNP
 using PopulationBalanceModels
+using LinearAlgebra
 
 export build,loglinear_mole_solubility,critical_length,nucleation_rate,
        brownian_kernel,kelvin_ratio,paper_intensity_mean,aqueous_fraction,
-       debye_wavenumber,vdw_energy
+       debye_wavenumber,vdw_energy,dlvo_attachment,dlvo_quadrature,mechanism_rates
 
 const kB=1.380649e-23
 const NA=6.02214076e23
@@ -15,6 +16,41 @@ function debye_wavenumber(I,T,relative_permittivity)
     isfinite(I) && I>=0 && all(x->isfinite(x) && x>0,(T,relative_permittivity)) ||
         throw(ArgumentError("invalid ionic strength, temperature or permittivity"))
     sqrt(2elementary_charge^2*NA*I/(vacuum_permittivity*relative_permittivity*kB*T))
+end
+
+"""
+    dlvo_attachment(r1,r2; temperature, ionic_strength, relative_permittivity,
+                    potential=0.010, hamaker=1.7e-22, order=128)
+
+Dimensionless inverse Fuchs stability integral, without hydrodynamic correction
+or PEG. Uses a constant-potential Derjaguin approximation in SI units. This is
+an explicitly specified reconstruction, not a transcription of the ambiguous
+electrostatic prefactor printed in the Shin supplement. `ionic_strength` is
+mol/m³, radii are meters, potential is volts. No contact cutoff is introduced.
+"""
+function dlvo_quadrature(order)
+    order isa Integer && order>=8 || throw(ArgumentError("quadrature order must be at least eight"))
+    pair=eigen(SymTridiagonal(zeros(order),[j/sqrt(4j^2-1) for j in 1:order-1]))
+    (;nodes=(pair.values.+1)./2,weights=pair.vectors[1,:].^2)
+end
+function dlvo_attachment(r1,r2;temperature,ionic_strength,relative_permittivity,
+                         potential=0.010,hamaker=1.7e-22,order=128,quadrature=dlvo_quadrature(order))
+    all(x->isfinite(x) && x>0,(r1,r2,temperature,relative_permittivity)) ||
+        throw(ArgumentError("positive radii, temperature and permittivity required"))
+    isfinite(potential) && isfinite(hamaker) && hamaker>=0 || throw(ArgumentError("invalid potential or Hamaker constant"))
+    order isa Integer && order>=8 || throw(ArgumentError("quadrature order must be at least eight"))
+    kappa=debye_wavenumber(ionic_strength,temperature,relative_permittivity)
+    # q=(r1+r2)/(r1+r2+h) maps the infinite stability integral to [0,1].
+    q=quadrature.nodes;weights=quadrature.weights
+    prefactor=64π*vacuum_permittivity*relative_permittivity*(r1*r2/(r1+r2))*
+        (kB*temperature/elementary_charge)^2*tanh(elementary_charge*potential/(4kB*temperature))^2
+    logterms=map(eachindex(q)) do i
+        gap=(r1+r2)*(1-q[i])/q[i]
+        U=vdw_energy(r1,r2,gap,hamaker)+prefactor*exp(-kappa*gap)
+        log(weights[i])+U/(kB*temperature)
+    end
+    peak=maximum(logterms)
+    exp(-(peak+log(sum(exp.(logterms.-peak)))))
 end
 
 """Unequal-sphere van der Waals energy in joules. Radii and positive surface gap are meters; Hamaker constant is joules. No electrostatic or steric energy is included."""
@@ -74,7 +110,7 @@ function build(;grid,initial_lipid,FRR,tau,temperature,viscosity,solubility,
                 particle_density,nucleation_width,nucleation_normalization,
                 tspan,scheme=MUSCL(),initial_distribution=zeros(length(grid)),
                 An=2.0e22,kg=11.88,kPEG=6.5e-6,gamma=0.010,
-                overflow=:error)
+                overflow=:error,track_consumption=false)
     grid.coordinate in (:diameter,:length) || throw(ArgumentError("CEJ recipe requires a length/diameter grid in meters"))
     all(x->isfinite(x) && x>0,(initial_lipid,molecular_volume,particle_density,nucleation_width,gamma)) ||
         throw(ArgumentError("concentration and physical input scales must be positive"))
@@ -125,9 +161,35 @@ function build(;grid,initial_lipid,FRR,tau,temperature,viscosity,solubility,
     op=compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
     exchange=ConservativeExchange(:lnp,:lipid,(L,p,t,ctx)->p.rho*π/6*L^3;
         mechanisms=(:growth,:nucleation))
-    sys=PBMSystem((lnp=op,);fields,exchanges=(exchange,),nonnegative_bulk=(:lipid,),
-        bulk_rhs=(ctx,p,t)->(lipid=-ctx.fields.dilution*ctx.bulk.lipid,))
+    function balances(ctx,p,t)
+        lipid=-ctx.fields.dilution*ctx.bulk.lipid
+        track_consumption || return (;lipid)
+        rates=mechanism_rates(op,ctx.populations.lnp,p,t,ctx.fields,ctx.bulk)
+        (;lipid,nucleated_lipid=rates.nucleation-ctx.fields.dilution*ctx.bulk.nucleated_lipid,
+          grown_lipid=rates.growth-ctx.fields.dilution*ctx.bulk.grown_lipid,
+          escaped_lipid=rates.overflow-ctx.fields.dilution*ctx.bulk.escaped_lipid)
+    end
+    sys=PBMSystem((lnp=op,);fields,exchanges=(exchange,),nonnegative_bulk=(:lipid,),bulk_rhs=balances)
     w0=aqueous_fraction(0.0,FRR,tau)
-    PBMProblem(sys,(lnp=initial_distribution,),tspan;bulk0=(lipid=initial_lipid*(1-w0),),p)
+    initial=(lipid=initial_lipid*(1-w0),)
+    bulk0=track_consumption ? merge(initial,(nucleated_lipid=0.0,grown_lipid=0.0,escaped_lipid=0.0)) : initial
+    PBMProblem(sys,(lnp=initial_distribution,),tspan;bulk0,p)
+end
+
+"""Actual discrete mass-transfer rates in kg/m³/s, including discarded collision products."""
+function mechanism_rates(op,N,p,t,fields,bulk)
+    ctx=(;grid=op.grid,operator=op,N,cell=1,fields,bulk)
+    scratch=similar(N); nucleation=zero(eltype(N)); growth=nucleation; overflow=nucleation
+    for item in op.prepared
+        kind=mechanism(item.term)
+        kind in (:growth,:nucleation,:aggregation) || continue
+        fill!(scratch,0)
+        _,lostvolume=add_term!(scratch,N,item.term,item.method,item.cache,op,p,t,ctx)
+        uptake=p.rho*π/6*moment(op.grid,scratch,3)
+        kind===:growth && (growth+=uptake)
+        kind===:nucleation && (nucleation+=uptake)
+        kind===:aggregation && (overflow+=p.rho*π/6*lostvolume)
+    end
+    (;nucleation,growth,overflow)
 end
 end

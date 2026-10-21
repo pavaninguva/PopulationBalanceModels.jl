@@ -69,9 +69,9 @@ solution = simulate(problem;method=SSPRK33(),dt)
 nothing # hide
 ```
 
-Changing `MUSCL()` to `Upwind()`, `WENO5()`, `Centered()`, or `LinearUpwind()`
+Changing `MUSCL()` to `Upwind()`, `VanLeer()`, `WENO3()`, `WENO5()`, `Centered()`, or `LinearUpwind()`
 changes the growth face flux. Changing `SSPRK33()` to `ForwardEuler()`,
-`SSPRK22()`, or `RK4()` changes how the assembled residual advances in time.
+`SSPRK22()`, `SSPRK54()`, or `RK4()` changes how the assembled residual advances in time.
 The runner compares selected combinations, rather than assuming every pairing
 is stable at the same step size. The
 [growth](../methods/growth.md) and [time](../methods/time.md) pages describe
@@ -109,10 +109,21 @@ spatial stencil alone. The existing `Inguva2022()` method provides a direct
 shift on a matched travel-time grid; its variable-growth extension is explained
 in [Transport along growth trajectories](../methods/characteristics.md).
 
-The unlimited LinearUpwind pairing is a useful counterexample: ``C=1`` is
-outside the stability region of both SSPRK33 and RK4 for that residual. Those
-runs grow enormously and are retained as failed choices in the comparison.
-A transport CFL of one is not a general guarantee for a higher-order stencil.
+LinearUpwind needs a smaller step: the runner omits its ``C=1`` pairing,
+which is outside RK4's stability region. A transport CFL of one is not a general
+stability bound for higher-order stencils.
+
+Lax–Wendroff at ``C=0.5`` is stable for periodic constant advection but is not
+monotone. For a Fourier wave of angle ``\theta``, its squared amplification is
+
+```math
+|A(\theta)|^2=1-4C^2(1-C^2)\sin^4(\theta/2)\le1,\qquad |C|\le1.
+```
+
+The tests compare a signed-velocity step against the expanded difference
+formula and check the discrete squared norm over a full domain transit.
+The front's negative lobes are dispersive oscillations; calling them instability
+would obscure the distinction between bounded error and positivity.
 
 ## Measure error and work
 
@@ -129,21 +140,52 @@ E_{\mathrm{RMS}}=
 \sum_i\Delta a_i(\bar f_i-\bar f_i^{\mathrm{exact}})^2\right]^{1/2}.
 ```
 
-The runner also records mean and maximum absolute errors, total-number drift,
-negative number, step count, and elapsed time. The initial condition and its
-zero-inflow front are nonsmooth; the smooth-solution formal orders should not
-be read off this refinement curve. The reference is integrated analytically,
-not obtained by refining one of the numerical schemes.
+The runner records absolute errors, total-number drift, negative number,
+step count, and elapsed time. It first warms each calculation, then reports the
+median and range of three runs. Timings include stepping, residual assembly,
+and allocations on the generating machine.
 
-![Errors, refinement, and elapsed work for growth and time-method combinations](../assets/constant_growth/performance.png)
+![RMSE refinement for sharp and smooth initial distributions](../assets/constant_growth/performance.png)
 
-The heatmap uses a display floor of ``10^{-13}``; annotations identify errors
-above its color range. Timings are individual warmed runs on the generating
-machine, and include residual assembly and allocations. They are suitable for
-understanding this calculation's tradeoffs, not for ranking Julia solvers on
-other hardware. These finite-volume errors also differ from a nodal
-finite-difference RMSE; this is a comparison of the same physical benchmark,
-not a digitization of the paper's figure.
+The paper's exponential and the zero-inflow front are nonsmooth. Their RMSE
+curves measure how well a scheme resolves that front; they cannot establish
+smooth-solution order. A second test uses periodic boundaries and the smooth,
+positive initial density
+
+```math
+f(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a),\qquad 0\le a\le1.
+```
+
+Its analytical solution is ``f(a,t)=f(a-0.1t,0)`` with periodic continuation.
+Both initialization and comparison use exact bin integrals. At fixed
+``C=0.5``, Lax–Wendroff and Beam–Warming approach second-order RMSE convergence.
+WENO5 with SSPRK3 approaches third order because time error eventually dominates.
+WENO5 with RK4 reaches much smaller errors. A companion run reduces its time
+step as ``\Delta t\propto h^{5/4}``, so fourth-order time error cannot mask
+fifth-order spatial convergence. Error cancellation and nonlinear weights can
+produce slopes above the formal order over a finite refinement range; those
+slopes do not establish a new order of accuracy.
+
+![Smooth tests: limited reconstruction and time-step refinement](../assets/constant_growth/smooth_refinement.png)
+
+The MUSCL and van Leer slope limiters reduce the reconstruction near extrema,
+even for smooth profiles. Here their integrated absolute errors approach second
+order, while their RMSE slopes remain near 1.8. The norm matters: a local loss
+of accuracy near extrema is more prominent in RMSE than in an integrated
+absolute error. WENO3's fixed smoothing parameter also affects its approach to
+the asymptotic regime. The CSV files retain every measured error rather than
+replacing the curves with fitted formal-order lines.
+
+![Computational time and error versus computational work](../assets/constant_growth/timings.png)
+
+The timing plot compares the same smooth problem at fixed CFL; bands show the
+three-run range. It separates cost per grid from accuracy per unit work. These
+results concern this implementation and machine. They are not solver rankings
+for other models or hardware.
+
+Raw front results are in [errors.csv](../assets/constant_growth/errors.csv);
+the smooth results and their measured refinement slopes are in
+[smooth_errors.csv](../assets/constant_growth/smooth_errors.csv).
 
 Regenerate the data and figures from the repository root:
 

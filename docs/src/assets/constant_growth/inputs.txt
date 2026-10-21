@@ -1,5 +1,6 @@
-Constant-growth model: Inguva, Schickel and Braatz (2022), Case 1, Eq.56 and Figure 1.
-g=0.1; initial f(a)=100exp(-a/0.01), a>=0; domain [0,1]; final time=4.0
-Zero incoming density at left, zero total growth flux at right. Exact comparison uses bin integrals, not center samples.
-No clipping or positivity enforcement: negative density and negative number are exported explicitly.
-Timing is one warmed run, not a portable hardware performance claim; Julia 1.10.3; CPU goldmont
+Paper problem: Inguva et al. (2022), Case 1 Eq.56: g=0.1, f0=100exp(-a/0.01), domain [0,1], tf=4.0
+Zero inflow and closed upper boundary; front is discontinuous. Errors compare analytical bin integrals; no formal smooth order is claimed for this front.
+Smooth order check: f0=1+0.2sin(2πa)+0.1cos(4πa), periodic domain [0,1].
+Fixed-CFL runs use C=0.5. Spatial checks use dt=0.5*h^max(1,p/q)/g for spatial order p and time order q; actual dt/CFL are exported.
+Timings are medians of 3 warmed integrations, excluding compilation/plotting; minima/maxima exported.
+No clipping; signed density minima and number drift are retained. Julia 1.10.3; CPU goldmont

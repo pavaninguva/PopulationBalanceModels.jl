@@ -50,6 +50,25 @@ nonuniform grids. It is first order in space and can diffuse narrow peaks.
 1D. The implementation rescales slopes so reconstructed endpoints of a
 nonnegative cell average remain nonnegative. A suitable time step is still needed.
 
+`VanLeer()` is a limited linear alternative. It uses the harmonic mean of the
+left and right physical slopes when they have the same sign, and zero slope
+otherwise. It also caps reconstructed endpoints at zero for nonnegative bin
+averages. Both linear limiters use actual center distances on nonuniform grids;
+neither makes an arbitrary time integrator positivity preserving.
+
+`WENO3(epsilon=...)` combines two linear reconstructions using squared-slope
+smoothness indicators. Its ideal weights are calculated from local cell widths,
+so it supports uniform and nonuniform 1D grids. It is a third-order interior
+finite-volume reconstruction, with first-order upwind fallback where a boundary
+removes a required neighbor. Fixed epsilon, smooth extrema, mesh stretching,
+and time integration affect observed convergence. It has no positivity limiter.
+For both WENO choices, epsilon regularizes squared-density smoothness indicators;
+rescaling a density changes its relative size. It is distinct from bin width
+and from a physical nucleation spread.
+This two-stencil option follows the WENO23 construction discussed by
+[Zhang et al. (2024)](https://doi.org/10.1016/j.compchemeng.2024.108612);
+it is distinct from the five-cell fifth-order option below.
+
 `WENO5(epsilon=...)` reconstructs a face state from five cell averages using
 nonlinear smoothness weights. It requires uniform grids with at least six bins.
 The fifth-order statement applies to the smooth interior reconstruction. Near

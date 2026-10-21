@@ -1,5 +1,5 @@
 @testset "Growth reconstructions and explicit time methods" begin
-    for (method,order) in ((ForwardEuler(),1),(SSPRK22(),2),(SSPRK33(),3),(RK4(),4))
+    for (method,order) in ((ForwardEuler(),1),(SSPRK22(),2),(SSPRK33(),3),(RK4(),4),(SSPRK54(),4))
         g=Grid1D(0:0.5:1)
         prob=PBMProblem(compile(PBMModel(Death((a,p,t,ctx)->1.0)),g),ones(2),(0.0,1.0))
         errors=[abs(simulate(prob;method,dt).u[end][1]-exp(-1)) for dt in (0.1,0.05)]
@@ -32,6 +32,63 @@
         @test errors[2]/errors[3]>3.8
         @test_throws ArgumentError compile(PBMModel(Growth(AffineGrowth(v,0))),Grid1D([0,1,2,4]);growth_scheme=scheme)
     end
+end
+
+@testset "Independent transport and time-order checks" begin
+    # A time-dependent rate tests the nonautonomous SSPRK(5,4) stage times.
+    g=Grid1D(0:0.5:1)
+    problem=PBMProblem(compile(PBMModel(Death((a,p,t,ctx)->t)),g),ones(2),(0.,1.))
+    errors=[abs(simulate(problem;method=SSPRK54(),dt).u[end][1]-exp(-0.5)) for dt in (0.1,0.05)]
+    @test errors[1]/errors[2]>14
+    # Compare to the independently expanded Lax--Wendroff difference formula.
+    for v in (-1.,1.),C in (0.25,0.5,1.)
+        grid=Grid1D(range(0,1;length=65))
+        initial=[2+sin(2pi*i/64)+0.1cos(22pi*i/64) for i in 1:64]
+        op=compile(PBMModel(Growth(AffineGrowth(v,0))),grid;evolution=LaxWendroff(),bc=SizeBC(Periodic(),Periodic()))
+        dt=C/64;signedC=v*C
+        truth=initial.-signedC/2 .* (circshift(initial,-1).-circshift(initial,1)).+
+            signedC^2/2 .* (circshift(initial,-1).-2initial.+circshift(initial,1))
+        sol=simulate(PBMProblem(op,initial,(0.,dt));dt,check_nonnegative=false)
+        @test vec(sol.u[end])≈truth atol=1e-14
+        long=simulate(PBMProblem(op,initial,(0.,1.));dt,check_nonnegative=false)
+        @test sum(abs2,long.u[end])<=sum(abs2,initial)*(1+1e-12)
+    end
+    for stretched in (false,true),v in (-0.7,0.7)
+        errors=Float64[]
+        for n in (320,640)
+            s=collect(range(0,2pi;length=n+1));edges=stretched ? s.+0.2sin.(s) : s
+            grid=Grid1D(edges);initial=reshape(2grid.widths.+cos.(edges[1:end-1]).-cos.(edges[2:end]),:,1)
+            op=compile(PBMModel(Growth(AffineGrowth(v,0))),grid;
+                methods=TermMethods(growth=WENO3()),bc=SizeBC(Periodic(),Periodic()))
+            d=similar(initial);rhs!(d,initial,op,(;),0.)
+            truth=v.*(sin.(edges[1:end-1]).-sin.(edges[2:end]))
+            push!(errors,sum(abs.(vec(d).-truth)))
+            @test abs(sum(d))<1e-12
+        end
+        @test errors[1]/errors[2]>6
+    end
+    # New limited linear method: signed transport and conserved number.
+    for v in (-1.,1.)
+        grid=Grid1D(0:0.01:1);initial=grid.widths.*(1 .+0.2sin.(2pi.*grid.centers))
+        op=compile(PBMModel(Growth(AffineGrowth(v,0))),grid;
+            methods=TermMethods(growth=VanLeer()),bc=SizeBC(Periodic(),Periodic()))
+        out=simulate(PBMProblem(op,initial,(0.,0.2));method=SSPRK54(),dt=.002)
+        @test minimum(out.u[end])>0
+        @test sum(out.u[end])≈sum(initial) rtol=1e-12
+        stretched=Grid1D([0.,.1,.3,.6,1.,1.5,2.1])
+        for (scheme,initial,truth) in (
+            (VanLeer(),(1 .+stretched.centers).*stretched.widths,-v*stretched.widths[3]),
+            # Large epsilon isolates the ideal geometric weights: a quadratic
+            # reconstructed from nonuniform cell integrals must be exact.
+            (WENO3(epsilon=1e12),stretched.widths.+diff(stretched.edges.^3)./3,
+             -v*(stretched.edges[4]^2-stretched.edges[3]^2)))
+            op=compile(PBMModel(Growth(AffineGrowth(v,0))),stretched;methods=TermMethods(growth=scheme))
+            d=similar(reshape(initial,:,1));rhs!(d,reshape(initial,:,1),op,(;),0.)
+            @test d[3]≈truth atol=1e-12
+        end
+    end
+    @test_throws ArgumentError WENO3(epsilon=0)
+    @test_throws ArgumentError compile(PBMModel(Growth(AffineGrowth(1,0))),Grid1D([0,1,2]);growth_scheme=WENO3())
 end
 
 @testset "Constant-growth space–time methods" begin

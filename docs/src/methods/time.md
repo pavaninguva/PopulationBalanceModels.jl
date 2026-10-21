@@ -19,6 +19,7 @@ The native residual-based choices are:
 | `ForwardEuler()` | 1 | 1 | Baseline forward-Euler step restriction |
 | `SSPRK22()` | 2 | 2 | Inherits a forward-Euler stability property under the same bound |
 | `SSPRK33()` (default) | 3 | 3 | Inherits that property under the same bound |
+| `SSPRK54()` | 5 | 4 | SSP coefficient about 1.508 relative to forward Euler |
 | `RK4()` | 4 | 4 | No general SSP guarantee |
 
 These methods advance the same compiled residual for sectional, tensor, moment,
@@ -163,8 +164,10 @@ sweep costs linear work in the number of tensor cells.
 
 This is a specified variant, not a verified transcription of Li et al.,
 [doi:10.1016/j.partic.2026.01.024](https://doi.org/10.1016/j.partic.2026.01.024).
-The paper's supplementary coefficients and printed-update ambiguities have not
-been resolved. Its name does not establish reproduction of that paper.
+The supplement is now available. Its one-dimensional coefficients can be checked
+independently, as described in [Compact-method verification](compact_verification.md).
+Those coefficients define a different update from this periodic variant. The
+main paper's multilevel update and physical boundary closure still need reconciliation.
 
 ## Stability is different from positivity
 

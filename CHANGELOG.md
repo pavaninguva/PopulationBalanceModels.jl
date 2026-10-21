@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added van Leer limited-linear and geometry-aware third-order WENO reconstructions on uniform or nonuniform 1D meshes, and native five-stage fourth-order SSPRK54 time integration.
+- Replaced the growth/time heatmap with sharp-front and smooth periodic convergence curves, L1/RMSE comparisons, balanced space/time refinement, and median computational-time plots. Checked signed Lax–Wendroff steps against its independent difference formula and bounded periodic norm.
+- Added a literal nodal audit of Li2026 SI S11, including fine-grid variable-growth order loss, singular/unstable large-step boundary cases, and a separately derived/tested fourth-order coefficient variant. Kept the public periodic HOCADI variant distinct from both and from the paper's multilevel ADI algorithm.
+- Added full-horizon reconstructed LNP calculations for FRR 1, 3, and 5, scaled stiff integration, explicit DLVO quadrature, mechanism/consumption histories, and escaped-volume accounting. Documented missing material inputs, assumptions, disagreement with the target diameter history, and unresolved numerical convergence.
+
+
 - Added uniform-grid 1D Centered and LinearUpwind growth reconstructions, and restricted conservative LaxWendroff and BeamWarming space–time updates with compile-time eligibility and runtime CFL checks.
 - Added ForwardEuler, SSPRK22, and classical RK4 alongside SSPRK33 for the assembled residual, preserving stage checks and simultaneous bulk integration.
 - Added a constant-growth analytical benchmark comparing spatial/time-method combinations, including exact CFL=1 shifts, negative undershoots, unstable combinations, refinement, and measured elapsed work.
@@ -41,6 +47,8 @@
 - Updated navigation, links, versioned documentation deployment, and local contribution instructions. Simplified the README and repository root.
 
 ### Fixes
+
+- Evaluated the constant-growth exponential reference with a factored exponential and expm1, avoiding cancellation of tiny tails when subtracting nearly saturated cumulative integrals.
 
 - Used SciML's parameterless sentinel for empty parameter tuples in the ODE adapter, preventing symbolic-remake recursion while preserving the original empty NamedTuple inside PBM callbacks.
 - Kept independent Gaussian measurement covariance diagonal during factorization, avoiding dense storage and cubic work for large density datasets while retaining likelihood normalization.

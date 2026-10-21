@@ -31,7 +31,7 @@ problem. `provenance` records the input source, figure target, and unresolved
 conventions. Exported intensity is a normalized density per meter, not a raw
 count per logarithmic bin. This routine does not certify paper reproduction.
 """
-function run_case(problem;dt=nothing,saveat,provenance,output,solver=nothing)
+function run_case(problem;dt=nothing,saveat,provenance,output,solver=nothing,psd_times=nothing)
     isempty(strip(provenance)) && throw(ArgumentError("record input provenance and figure target"))
     if solver===nothing
         dt===nothing && throw(ArgumentError("supply dt for SSPRK or solver=(problem,times)->solution"))
@@ -51,18 +51,37 @@ function run_case(problem;dt=nothing,saveat,provenance,output,solver=nothing)
     grid=problem.operator.system.populations.lnp.grid
     mkpath(output)
     open(joinpath(output,"history.csv"),"w") do io
-        println(io,"time,number,free_lipid,intensity_mean_m,material_element_lipid")
+        println(io,"time,number,free_lipid,intensity_mean_m,material_element_lipid,supersaturation,nucleation_rate,critical_diameter_m,number_mean_growth_m_s,nucleation_uptake_kg_m3_s,growth_uptake_kg_m3_s,overflow_kg_m3_s,nucleated_lipid,grown_lipid,escaped_lipid,lower_volume_fraction,upper_volume_fraction,negative_number_fraction,negative_volume_fraction,negative_intensity_fraction")
         for (t,u) in zip(solution.t,solution.u)
             N=population(problem,u,:lnp); c=bulk(problem,u,:lipid)
             mean=sum(N)>0 ? paper_intensity_mean(grid,N) : NaN
             w=aqueous_fraction(t,problem.p.FRR,problem.p.tau)
             material=(c+problem.p.rho*π/6*moment(grid,N,3))/(1-w)
-            println(io,join((t,sum(N),c,mean,material),','))
+            fields=problem.operator.system.fields(problem.p,t)
+            state=stateview(problem,u)
+            op=problem.operator.system.populations.lnp
+            ctx=(;grid,operator=op,N,cell=1,fields,bulk=state.bulk)
+            S=c/fields.Cinfinity
+            J=nucleation_rate(S,fields.T,problem.p.gamma,problem.p.Vm,problem.p.An)
+            Lc=critical_length(S,fields.T,problem.p.gamma,problem.p.Vm)
+            term=only(filter(item->item.term isa Growth,op.prepared)).term
+            G=sum(N)>0 ? sum(N[i]*term.rate(grid.centers[i],problem.p,t,ctx) for i in eachindex(N))/sum(N) : NaN
+            rates=mechanism_rates(op,N,problem.p,t,fields,state.bulk)
+            accumulator(name)=hasproperty(state.bulk,name) ? getproperty(state.bulk,name) : NaN
+            volumes=grid.centers.^3 .* N; totalvolume=sum(volumes)
+            edge_bins=min(2,length(grid))
+            lower=totalvolume>0 ? sum(volumes[1:edge_bins])/totalvolume : 0.0
+            upper=totalvolume>0 ? sum(volumes[end-edge_bins+1:end])/totalvolume : 0.0
+            negative_fraction(weights)=sum(max.(weights,0))>0 ? -sum(min.(weights,0))/sum(max.(weights,0)) : 0.0
+            println(io,join((t,sum(N),c,mean,material,S,J,Lc,G,rates.nucleation,rates.growth,rates.overflow,
+                accumulator(:nucleated_lipid),accumulator(:grown_lipid),accumulator(:escaped_lipid),lower,upper,
+                negative_fraction(N),negative_fraction(volumes),negative_fraction(grid.centers.^6 .*N)),','))
         end
     end
     open(joinpath(output,"psd.csv"),"w") do io
         println(io,"time,diameter_m,number_density_per_m,intensity_density_per_m,intensity_peak_scaled")
         for (t,u) in zip(solution.t,solution.u)
+            psd_times===nothing || any(s->isapprox(t,s;rtol=1e-12,atol=1e-12),psd_times) || continue
             N=population(problem,u,:lnp);weights=grid.centers.^6 .*N;total=sum(weights)
             peak=maximum(weights./grid.widths)
             for i in 1:length(grid)

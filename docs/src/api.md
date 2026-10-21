@@ -28,7 +28,8 @@ states; standalone 1D sectional and moment states have one column. Use
 `density(grid,N)`, `moment(grid,N,k)`, and `term_methods(operator)` to interpret
 what was stored and how it was computed.
 
-Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, and `RK4`.
+Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`, and `RK4`.
+`VanLeer` and geometry-aware `WENO3` support nonuniform 1D grids.
 `Centered` and `LinearUpwind` add unlimited uniform-grid 1D reconstructions.
 `LaxWendroff` and `BeamWarming` are complete constant-growth space–time updates;
 they require an eligible model compiled with `evolution`.

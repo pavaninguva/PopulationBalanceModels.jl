@@ -114,6 +114,11 @@ include("../examples/shin_lnp_reproduction.jl")
             provenance="Synthetic zero-kinetics adapter check; not a paper reproduction",output)
         @test solution.t==[0.0,0.0003,0.001]
         @test all(u->iszero(sum(population(prob,u,:lnp))),solution.u)
+        history=readlines(joinpath(output,"history.csv"))
+        names=split(first(history),',')
+        negative_index=findfirst(==("negative_intensity_fraction"),names)
+        @test negative_index!==nothing
+        @test all(row->parse(Float64,split(row,',')[negative_index])==0.,history[2:end])
     end
 end
 
