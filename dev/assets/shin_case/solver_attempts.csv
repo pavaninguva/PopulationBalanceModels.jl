@@ -1,0 +1,2 @@
+scheme,bins,reltol,last_reported_time_s,last_reported_rhs_evaluations,status
+MUSCL,120,1e-7,1881.6344452099615,300000,interrupted_for_computational_cost_not_completed_horizon
