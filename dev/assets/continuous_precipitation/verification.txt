@@ -1,0 +1,6 @@
+Zhang et al. 2024 Case 7A; SI S8.
+Reference (36, 48), MUSCL; temporal step-halving L1 difference=1.0044683726039999e-11.
+Finite reference, not an exact solution; refine both size and axial meshes.
+Solute exchange conserves the resolved discrete x^3 measure; differs from independently discretized continuum sinks at finite resolution.
+Case 7B is not claimed: the printed lognormal centre lacks an unambiguous SI conversion.
+Julia 1.10.3; full Figure 10 CADET scheme/timing reproduction is not claimed.

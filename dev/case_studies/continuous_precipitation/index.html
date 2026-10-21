@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Continuous tubular precipitation · PopulationBalanceModels.jl</title><meta name="title" content="Continuous tubular precipitation · PopulationBalanceModels.jl"/><meta property="og:title" content="Continuous tubular precipitation · PopulationBalanceModels.jl"/><meta property="twitter:title" content="Continuous tubular precipitation · PopulationBalanceModels.jl"/><meta name="description" content="Documentation for PopulationBalanceModels.jl."/><meta property="og:description" content="Documentation for PopulationBalanceModels.jl."/><meta property="twitter:description" content="Documentation for PopulationBalanceModels.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PopulationBalanceModels.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting started</a></li><li><a class="tocitem" href="../../defining_models/">Defining models</a></li><li><a class="tocitem" href="../../coupled_systems/">Coupled systems</a></li><li><a class="tocitem" href="../../axial_reactors/">Axially dispersed reactors</a></li><li><span class="tocitem">Numerical methods</span><ul><li><a class="tocitem" href="../../numerical_methods/">Overview and method selection</a></li><li><a class="tocitem" href="../../methods/growth/">Growth and dissolution</a></li><li><a class="tocitem" href="../../methods/characteristics/">Transport along growth trajectories</a></li><li><a class="tocitem" href="../../methods/nucleation/">Nucleation</a></li><li><a class="tocitem" href="../../methods/sources/">Birth, death, and dilution</a></li><li><a class="tocitem" href="../../methods/collisions/">Aggregation and breakage</a></li><li><a class="tocitem" href="../../methods/time/">Time integration</a></li><li><a class="tocitem" href="../../methods/compact_verification/">Compact-method verification</a></li><li><a class="tocitem" href="../../moment_methods/">Moment methods</a></li></ul></li><li><a class="tocitem" href="../../inference/">Parameter estimation</a></li><li><span class="tocitem">Case studies</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><a class="tocitem" href="../constant_growth/">Comparing growth and time methods</a></li><li><a class="tocitem" href="../crystallization/">Batch cooling crystallization</a></li><li><a class="tocitem" href="../moment_crystallization/">Crystal growth with moments</a></li><li class="is-active"><a class="tocitem" href>Continuous tubular precipitation</a><ul class="internal"><li><a class="tocitem" href="#Model-and-boundaries"><span>Model and boundaries</span></a></li><li><a class="tocitem" href="#Assemble-local-precipitation,-then-add-axial-transport"><span>Assemble local precipitation, then add axial transport</span></a></li><li><a class="tocitem" href="#Startup,-outlet-and-numerical-performance"><span>Startup, outlet and numerical performance</span></a></li><li><a class="tocitem" href="#Complete-runnable-script"><span>Complete runnable script</span></a></li></ul></li><li><a class="tocitem" href="../protein_crystallization/">Inferring protein crystallization</a></li><li><a class="tocitem" href="../nanoparticles/">Lipid nanoparticle formation</a></li><li><a class="tocitem" href="../transport/">Growth in two particle dimensions</a></li><li><a class="tocitem" href="../estimating_growth/">Estimating size-dependent growth</a></li></ul></li><li><a class="tocitem" href="../../api/">API reference</a></li><li><a class="tocitem" href="../../development/">Contributing and internals</a></li><li><a class="tocitem" href="../../publishing/">Publishing</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Case studies</a></li><li class="is-active"><a href>Continuous tubular precipitation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Continuous tubular precipitation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/pavaninguva/PopulationBalanceModels.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/docs/src/case_studies/continuous_precipitation.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Precipitation-in-a-continuous-tubular-reactor"><a class="docs-heading-anchor" href="#Precipitation-in-a-continuous-tubular-reactor">Precipitation in a continuous tubular reactor</a><a id="Precipitation-in-a-continuous-tubular-reactor-1"></a><a class="docs-heading-anchor-permalink" href="#Precipitation-in-a-continuous-tubular-reactor" title="Permalink"></a></h1><p>A supersaturated feed enters a tube that initially contains no solute or particles. Nuclei form as the feed advances, crystals grow, and precipitation reduces the dissolved concentration. Axial dispersion spreads the residence-time distribution. The outlet PSD therefore depends on both reaction kinetics and mixing along the tube; a well-mixed batch model cannot describe its startup.</p><p>This calculation uses Case 7A of <a href="https://doi.org/10.1016/j.compchemeng.2024.108612">Zhang et al. (2024)</a>. It targets the transient fields and outlet distributions in Figure 9(a,c) and the error-versus-runtime comparison in Figure 10(a,b). It uses this package&#39;s upwind and MUSCL methods, rather than claiming to reproduce CADET&#39;s WENO35 algorithm or its computational times. Case 7B is not included: the printed lognormal centre needs an unambiguous conversion to SI units before it can be used as a reproduction input.</p><h2 id="Model-and-boundaries"><a class="docs-heading-anchor" href="#Model-and-boundaries">Model and boundaries</a><a id="Model-and-boundaries-1"></a><a class="docs-heading-anchor-permalink" href="#Model-and-boundaries" title="Permalink"></a></h2><p>Let <span>$n(x,z,t)$</span> be number density per reactor-fluid volume per particle length, <span>$c(z,t)$</span> dissolved concentration, <span>$x$</span> particle length and <span>$z$</span> axial position. The particles obey</p><p class="math-container">\[\frac{\partial n(x,z,t)}{\partial t}
++v_{\mathrm{ax}}\frac{\partial n(x,z,t)}{\partial z}
++\frac{\partial[G(z,t)n(x,z,t)]}{\partial x}
+=D_{\mathrm{ax}}\frac{\partial^2n(x,z,t)}{\partial z^2}.\]</p><p>Nucleation supplies the size-boundary flux</p><p class="math-container">\[G(z,t)n(x_c,z,t)=B_0(z,t),\qquad
+B_0=k_p s^{u}+k_b s^{b}M,\qquad
+G=k_gs,\]</p><p>where</p><p class="math-container">\[s(z,t)=\max\!\left(\frac{c(z,t)-c_{\mathrm{eq}}}{c_{\mathrm{eq}}},0\right),
+\qquad
+M(z,t)=\rho k_v\int_{x_c}^{\infty}x^3n(x,z,t)\,dx.\]</p><p>Primary nucleation starts the population. Secondary nucleation is proportional to the crystal mass concentration <span>$M$</span>. There is no aggregation, breakage or growth-rate dispersion in this case. The solute balance is</p><p class="math-container">\[\frac{\partial c(z,t)}{\partial t}
++v_{\mathrm{ax}}\frac{\partial c(z,t)}{\partial z}
+=D_{\mathrm{ax}}\frac{\partial^2c(z,t)}{\partial z^2}
+-\rho k_v\left[B_0(z,t)x_c^3+
+3\int_{x_c}^{\infty}G(z,t)x^2n(x,z,t)\,dx\right].\]</p><p>Both balances use Danckwerts inflow and a zero-gradient outlet:</p><p class="math-container">\[v_{\mathrm{ax}}n(x,0,t)-D_{\mathrm{ax}}\frac{\partial n(x,0,t)}{\partial z}=0,
+\qquad \frac{\partial n(x,L,t)}{\partial z}=0,\]</p><p class="math-container">\[v_{\mathrm{ax}}c(0,t)-D_{\mathrm{ax}}\frac{\partial c(0,t)}{\partial z}
+=v_{\mathrm{ax}}c_{\mathrm{feed}},
+\qquad \frac{\partial c(L,t)}{\partial z}=0.\]</p><p>Initially <span>$n(x,z,0)=0$</span> and <span>$c(z,0)=0$</span>. Concentrations are based on total process volume. The axial velocity is <span>$Q/(A\varepsilon)$</span>, not <span>$Q/A$</span>; porosity changes the residence time substantially.</p><table><tr><th style="text-align: left">Input</th><th style="text-align: left">Value and units</th></tr><tr><td style="text-align: left"><span>$c_{\mathrm{feed}}$</span>, <span>$c_{\mathrm{eq}}$</span></td><td style="text-align: left">9, 0.4 kg m⁻³</td></tr><tr><td style="text-align: left"><span>$\rho$</span>, <span>$k_v$</span></td><td style="text-align: left">1200 kg m⁻³, 0.524</td></tr><tr><td style="text-align: left"><span>$k_p$</span>, <span>$u$</span></td><td style="text-align: left">5 m⁻³ s⁻¹, 10</td></tr><tr><td style="text-align: left"><span>$k_b$</span>, <span>$b$</span></td><td style="text-align: left">4×10⁸ kg⁻¹ s⁻¹, 2</td></tr><tr><td style="text-align: left"><span>$k_g$</span></td><td style="text-align: left">7×10⁻⁶ m s⁻¹</td></tr><tr><td style="text-align: left"><span>$x_c$</span>, <span>$x_{\max}$</span></td><td style="text-align: left">1, 900 µm</td></tr><tr><td style="text-align: left"><span>$Q$</span>, <span>$A$</span>, <span>$\varepsilon$</span></td><td style="text-align: left">1.67×10⁻⁷ m³ s⁻¹, 1.46×10⁻⁴ m², 0.21</td></tr><tr><td style="text-align: left"><span>$L$</span>, <span>$D_{\mathrm{ax}}$</span></td><td style="text-align: left">0.47 m, 4.2×10⁻⁵ m² s⁻¹</td></tr></table><p>These are <a href="https://ars.els-cdn.com/content/image/1-s2.0-S0098135424000309-mmc1.pdf">supporting-information Table S8</a> inputs. The authors&#39; public <a href="https://github.com/cadet/CADET-Verification/blob/090606762fc657510a9e31c547890bf9a17ffb59/src/benchmark_models/settings_crystallization.py">verification script</a> confirms the empty initial state and porosity convention. Its flow uses exactly 10 mL/min; this script retains the SI table&#39;s rounded <span>$Q$</span>. The coefficients have the units above because <span>$s$</span> is dimensionless.</p><h2 id="Assemble-local-precipitation,-then-add-axial-transport"><a class="docs-heading-anchor" href="#Assemble-local-precipitation,-then-add-axial-transport">Assemble local precipitation, then add axial transport</a><a id="Assemble-local-precipitation,-then-add-axial-transport-1"></a><a class="docs-heading-anchor-permalink" href="#Assemble-local-precipitation,-then-add-axial-transport" title="Permalink"></a></h2><p>The kinetic callbacks read the local dissolved concentration. They do not need to know how the reactor is divided into cells:</p><pre><code class="language-julia hljs">supersaturation(p,ctx) = max(ctx.bulk.c/p.ceq-1,zero(ctx.bulk.c))
+growth(x,p,t,ctx) = p.kg*supersaturation(p,ctx)
+function nucleation(p,t,ctx)
+    s = supersaturation(p,ctx)
+    M = 1e12*p.rho*p.kv*moment(ctx.grid,ctx.N,3)
+    (p.kp*s^p.u + p.kb*s^p.b*M)/1e12
+end
+model = PBMModel(
+    growth=Growth(rate=growth),
+    primary_secondary=Nucleation(rate=nucleation,size=first(grid.edges)),
+)
+operator = compile(model,grid;methods=TermMethods(
+    growth=MUSCL(),by_term=(primary_secondary=BoundaryInjection(:left),)))
+system = PBMSystem((crystals=operator,);nonnegative_bulk=(:c,),
+    exchanges=(ConservativeExchange(:crystals,:c,
+        (x,p,t,ctx)-&gt;1e12*p.rho*p.kv*x^3),))
+local_problem = PBMProblem(system,(crystals=zeros(length(grid)),),(0.,200.);
+    bulk0=(c=0.,),p)
+reactor = AxialDispersion(AxialGrid(range(0.,p.L;length=nz+1));
+    velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
+    inlet=(p,t)-&gt;(populations=(crystals=zeros(length(grid)),),
+                  bulk=(c=p.cfeed,)))
+problem = axial_problem(local_problem,reactor;axial_scheme=MUSCL())</code></pre><p>For numerical scaling the internal particle counts are divided by <span>$10^{12}$</span>. The rate divides by that scale, the mass callback multiplies by it, and exported densities restore physical units. This changes no physical coefficient.</p><p><code>ConservativeExchange</code> subtracts the <strong>resolved discrete</strong> crystal-mass increase from solute. This balances material exactly cell by cell before axial fluxes are added. At finite resolution it differs from separately quadraturing the continuum sink above, including the mass assigned to the first bin. That difference must shrink under size refinement; it is not evidence of a different physical source. The upper size boundary is closed. Check its occupancy before treating the finite-domain calculation as an approximation on an infinite size domain.</p><h2 id="Startup,-outlet-and-numerical-performance"><a class="docs-heading-anchor" href="#Startup,-outlet-and-numerical-performance">Startup, outlet and numerical performance</a><a id="Startup,-outlet-and-numerical-performance-1"></a><a class="docs-heading-anchor-permalink" href="#Startup,-outlet-and-numerical-performance" title="Permalink"></a></h2><p><img src="../../assets/continuous_precipitation/fields.png" alt="Particle-size fields at 80 and 200 seconds"/></p><p><img src="../../assets/continuous_precipitation/outlets.png" alt="Outlet number and volume distributions"/></p><p>The fields distinguish the physical axial coordinate from particle size. The outlet plots use number density and a separately normalized volume-weighted density. Neither is a histogram of sampled particles.</p><p><img src="../../assets/continuous_precipitation/performance.png" alt="Outlet error against elapsed computation time"/></p><p>Errors integrate the absolute outlet-density difference on the common partition of each grid and a finer MUSCL reference, then divide by the reference&#39;s number integral. The reference is numerical, not exact. The committed figure uses a small documentation budget; it demonstrates the comparison workflow, not a completed reproduction of all Figure 10 convergence curves. Elapsed times exclude a warmup but remain machine dependent. <a href="../../assets/continuous_precipitation/verification.txt">verification.txt</a> records the reference mesh and a step-halving check. Reference spatial error remains to be assessed with a larger run.</p><pre><code class="language-sh hljs">julia --project=. examples/continuous_precipitation.jl
+# Expensive size/axial refinement and the SI-scale reference:
+julia --project=. examples/continuous_precipitation.jl --full
+python docs/benchmarks/plot_new_case_studies.py precipitation --usetex</code></pre><p>The driver selects an explicit step from size advection, axial advection and dispersion, and local solute depletion. It does not clip negative states. A fine logarithmic size mesh can make this expensive; the same assembled residual is available through <code>odeproblem</code> for a suitable implicit solver.</p><h2 id="Complete-runnable-script"><a class="docs-heading-anchor" href="#Complete-runnable-script">Complete runnable script</a><a id="Complete-runnable-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-runnable-script" title="Permalink"></a></h2><p>The code below is read from the example source during the documentation build. Run it from the repository root using the environment described above.</p><h3 id="examples/continuous_precipitation.jl"><a class="docs-heading-anchor" href="#examples/continuous_precipitation.jl"><code>examples/continuous_precipitation.jl</code></a><a id="examples/continuous_precipitation.jl-1"></a><a class="docs-heading-anchor-permalink" href="#examples/continuous_precipitation.jl" title="Permalink"></a></h3><pre><code class="language-julia hljs">module ContinuousPrecipitation
+using PopulationBalanceModels
+export parameters,build,run_benchmark
+
+&quot;&quot;&quot;Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³.&quot;&quot;&quot;
+parameters()=(cfeed=9.,ceq=.4,rho=1200.,kv=.524,kp=5.,u=10.,kb=4e8,b=2.,
+    kg=7e-6,xc=1e-6,xmax=900e-6,Q=1.67e-7,area=1.46e-4,porosity=.21,L=.47,Dax=4.2e-5)
+supersaturation(p,ctx)=max(ctx.bulk.c/p.ceq-1,zero(ctx.bulk.c))
+growth(x,p,t,ctx)=p.kg*supersaturation(p,ctx)
+function nucleation(p,t,ctx)
+    s=supersaturation(p,ctx)
+    solid=1e12*p.rho*p.kv*moment(ctx.grid,ctx.N,3)
+    (p.kp*s^p.u+p.kb*s^p.b*solid)/1e12
+end
+
+&quot;&quot;&quot;Closed size domain; conservative discrete solute coupling; solute and particles share axial transport.&quot;&quot;&quot;
+function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=parameters(),tf=200.)
+    mesh in (:log,:uniform) || throw(ArgumentError(&quot;mesh must be :log or :uniform&quot;))
+    edges=mesh===:log ? exp.(range(log(p.xc),log(p.xmax);length=nx+1)) : collect(range(p.xc,p.xmax;length=nx+1))
+    grid=Grid1D(edges;coordinate=:length)
+    model=PBMModel(growth=Growth(rate=growth),primary_secondary=Nucleation(rate=nucleation,size=first(edges)))
+    op=compile(model,grid;methods=TermMethods(growth=scheme,by_term=(primary_secondary=BoundaryInjection(:left),)))
+    system=PBMSystem((crystals=op,);nonnegative_bulk=(:c,),
+        exchanges=(ConservativeExchange(:crystals,:c,(x,p,t,ctx)-&gt;1e12*p.rho*p.kv*x^3),))
+    localpb=PBMProblem(system,(crystals=zeros(nx),),(0.,tf);bulk0=(c=0.,),p)
+    z=AxialGrid(range(0.,p.L;length=nz+1))
+    domain=AxialDispersion(z;velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
+        inlet=(p,t)-&gt;(populations=(crystals=zeros(nx),),bulk=(c=p.cfeed,)))
+    axial_problem(localpb,domain;axial_scheme)
+end
+
+# Strongly graded meshes and initial supersaturation bursts require small steps.
+# This explicit driver chooses a conservative step at every state, including
+# the local solute-consumption rate. It never clips populations or concentration.
+function advance(problem,times;fraction=.3)
+    times=collect(times);u=copy(problem.u0);t=first(problem.tspan);op=problem.operator
+    grid=first(op.local_operators).system.populations.crystals.grid
+    p=problem.p;dz=minimum(op.domain.grid.widths);dx=minimum(grid.widths)
+    transport=op.domain.velocity/dz+2p.Dax/dz^2
+    cache=ntuple(_-&gt;similar(u),6);du=similar(u);states=typeof(u)[];steps=0
+    for target in times
+        while t&lt;target
+            rhs!(du,u,op,p,t)
+            maxG=p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
+            h=fraction/(transport+maxG/dx+eps())
+            for j in axes(u,2)
+                c=bulk(problem,u,:c)[j];dc=bulk(problem,du,:c)[j]
+                dc&lt;0 &amp;&amp; (h=min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
+            end
+            h=min(h,target-t,.25)
+            h&gt;1e-12 || throw(NumericalFailure(&quot;precipitation step collapsed; inspect the state&quot;))
+            PopulationBalanceModels._rk_step!(u,cache,problem,t,h,SSPRK33(),true,1e-8)
+            PopulationBalanceModels._check_problem_state(problem,u,1e-8)
+            t=h==target-t ? target : t+h;steps+=1
+        end
+        push!(states,copy(u))
+    end
+    PBMSolution(times,states,problem,steps)
+end
+
+function outlet_error(problem,u,reference,v)
+    g=first(problem.operator.local_operators).system.populations.crystals.grid
+    gr=first(reference.operator.local_operators).system.populations.crystals.grid
+    # Compare both cell-average densities on their exact common partition.
+    e=sort!(unique(vcat(g.edges,gr.edges)));a=population(problem,u,:crystals)[:,end]./g.widths
+    b=population(reference,v,:crystals)[:,end]./gr.widths
+    total=0.;norm=0.
+    for i in 1:length(e)-1
+        x=(e[i]+e[i+1])/2;da=a[clamp(searchsortedlast(g.edges,x),1,length(g))]
+        db=b[clamp(searchsortedlast(gr.edges,x),1,length(gr))]
+        total+=abs(da-db)*(e[i+1]-e[i]);norm+=abs(db)*(e[i+1]-e[i])
+    end
+    total/norm
+end
+
+&quot;&quot;&quot;Figure-9-style fields/outlets and Figure-10-style measured error/runtime.
+quick=true is a documentation budget; full mode is expensive and still needs
+reference refinement. Timings describe this Julia implementation, not CADET.
+&quot;&quot;&quot;
+function run_benchmark(;output=joinpath(@__DIR__,&quot;..&quot;,&quot;docs&quot;,&quot;src&quot;,&quot;assets&quot;,&quot;continuous_precipitation&quot;),quick=true)
+    mkpath(output);p=parameters();levels=quick ? [(8,12),(12,18),(24,32)] : [(25,37),(50,75),(100,150),(200,300)]
+    refsize=quick ? (36,48) : (250,750)
+    reference=build(nx=refsize[1],nz=refsize[2],scheme=MUSCL());println(&quot;Reference &quot;,refsize);flush(stdout)
+    ref=advance(reference,[80.,200.]);rf=last(ref.u)
+    open(joinpath(output,&quot;field.csv&quot;),&quot;w&quot;) do io
+        println(io,&quot;time,z_m,size_m,number_density,concentration_kg_m3,z_left,z_right,x_left,x_right&quot;)
+        g=first(reference.operator.local_operators).system.populations.crystals.grid
+        for (t,u) in zip(ref.t,ref.u),j in axes(u,2),i in eachindex(g.centers)
+            println(io,join((t,reference.operator.domain.grid.centers[j],g.centers[i],1e12*u[i,j]/g.widths[i],bulk(reference,u,:c)[j],reference.operator.domain.grid.edges[j],reference.operator.domain.grid.edges[j+1],g.edges[i],g.edges[i+1]),&#39;,&#39;))
+        end
+    end
+    open(joinpath(output,&quot;outlets.csv&quot;),&quot;w&quot;) do oi
+        println(oi,&quot;method,nx,nz,size_m,number_density,volume_density&quot;)
+        open(joinpath(output,&quot;performance.csv&quot;),&quot;w&quot;) do pi
+            println(pi,&quot;method,nx,nz,seconds,normalized_L1,steps&quot;)
+            for (label,scheme) in ((&quot;upwind&quot;,Upwind()),(&quot;muscl&quot;,MUSCL()))
+                # Compile a tiny run before timing; record warm elapsed times.
+                advance(build(nx=6,nz=6,scheme=scheme,tf=.01),[.01])
+                for (nx,nz) in levels
+                    problem=build(;nx,nz,scheme);println(label,&quot; &quot;,(nx,nz));flush(stdout)
+                    elapsed=@elapsed solution=advance(problem,[200.])
+                    u=last(solution.u);err=outlet_error(problem,u,reference,rf)
+                    println(pi,join((label,nx,nz,elapsed,err,solution.steps),&#39;,&#39;))
+                    g=first(problem.operator.local_operators).system.populations.crystals.grid
+                    N=population(problem,u,:crystals)[:,end];volume=sum(N.*g.centers.^3)
+                    for i in eachindex(N)
+                        println(oi,join((label,nx,nz,g.centers[i],1e12*N[i]/g.widths[i],N[i]*g.centers[i]^3/(g.widths[i]*volume)),&#39;,&#39;))
+                    end
+                end
+            end
+        end
+    end
+    # A separate refinement check prevents treating the reference as exact.
+    check=build(nx=refsize[1],nz=refsize[2],scheme=MUSCL())
+    half=advance(check,[200.];fraction=.15)
+    time_error=outlet_error(check,last(half.u),reference,rf)
+    write(joinpath(output,&quot;verification.txt&quot;),&quot;Zhang et al. 2024 Case 7A; SI S8.\n&quot;*
+        &quot;Reference $(refsize), MUSCL; temporal step-halving L1 difference=$time_error.\n&quot;*
+        &quot;Finite reference, not an exact solution; refine both size and axial meshes.\n&quot;*
+        &quot;Solute exchange conserves the resolved discrete x^3 measure; differs from independently discretized continuum sinks at finite resolution.\n&quot;*
+        &quot;Case 7B is not claimed: the printed lognormal centre lacks an unambiguous SI conversion.\n&quot;*
+        &quot;Julia $(VERSION); full Figure 10 CADET scheme/timing reproduction is not claimed.\n&quot;)
+    (;reference=ref,time_error)
+end
+if abspath(PROGRAM_FILE)==@__FILE__;run_benchmark(quick=!(&quot;--full&quot; in ARGS));end
+end
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../moment_crystallization/">« Crystal growth with moments</a><a class="docs-footer-nextpage" href="../protein_crystallization/">Inferring protein crystallization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Wednesday 21 October 2026 21:03">Wednesday 21 October 2026</span>. Using Julia version 1.10.12.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
