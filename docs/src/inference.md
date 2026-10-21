@@ -7,24 +7,25 @@ optional Laplace uncertainty and optional MCMC sampling.
 
 The [growth example](case_studies/estimating_growth.md) fits
 ``G(a)=g_0+g_1a``. It evaluates the analytical density at 281 sizes and six times,
-then adds independent Gaussian noise. The initial density and noise level are
+then samples independent Gaussian measurements conditioned to be nonnegative.
+The likelihood includes that truncation. The initial density and noise level are
 known; only the two growth coefficients are fitted. The points below are these
 synthetic measurements, and the continuous curves show the fitted densities.
 
-![Gaussian-noisy density measurements at six times and continuous MAP curves](assets/bayesian_growth/distributions.png)
+![Nonnegative noisy density measurements at six times and continuous MAP curves](assets/bayesian_growth/distributions.png)
 
 ## Describe the measurements
 
 An observation operator maps a solved PBM state to a predicted measurement.
 MomentObservable, BulkObservable, FunctionObservable and SystemObservable can
 all be used in a Measurement. For the analytical growth example, evaluate point
-densities directly and use the known Gaussian error:
+densities directly and use the known truncated-Gaussian error:
 
 ```julia
 profile = FunctionObservable((N,operator,p,t)->
     recipe.exact_density.(data.sizes,t,Ref(p)))
 measurement = Measurement(data.times,data.values,profile;
-    likelihood=GaussianLikelihood(sigma=data.noise))
+    likelihood=TruncatedGaussianLikelihood(sigma=data.noise))
 ```
 
 The case-study builder supplies `recipe`, `data` and the physical problem.
@@ -72,6 +73,7 @@ The choice follows how the instrument produced the data.
 | Actual particle counts in bins, with a sampled total at each time | MultinomialLikelihood() | Conditional size probabilities in the measurement window |
 | Absolute counts from a known sampled volume or exposure | PoissonLikelihood(exposure=...) | Expected counts equal predicted bin concentration times exposure |
 | Suitable continuous outputs | GaussianLikelihood(sigma=...) or covariance=... | Absolute errors or an explicitly fitted noise model |
+| Nonnegative continuous measurements | TruncatedGaussianLikelihood(sigma=...,lower=0) | Independent Gaussian measurements conditioned above the specified lower bound; not a clipping model |
 | Normalized continuous fractions | GaussianLikelihood with independent contrasts | Continuous instrument fractions, without an invented particle count |
 
 For sampled counts ``y_i``, let ``N=\sum_i y_i`` and normalize the predicted
@@ -103,6 +105,22 @@ For Gaussian outputs with covariance ``\Sigma(\theta)``,
 The determinant is essential when noise parameters are inferred. Covariance
 may be a fixed matrix or `(theta,experiment)->matrix` and applies to
 `vec(data)`: outputs within a time, then successive times.
+
+For independent truncated-Gaussian measurements with lower bound zero, retain
+the normalization for every observation:
+
+```math
+\log p(y_i\mid\theta)
+=-\frac{[y_i-\mu_i(\theta)]^2}{2\sigma_i^2}
+-\log\sigma_i-\frac12\log(2\pi)
+-\log\Phi\!\left(\frac{\mu_i(\theta)}{\sigma_i}\right),\qquad y_i\ge0.
+```
+
+The location ``\mu_i`` is the model's latent prediction; the conditional
+measurement mean differs near zero. `sigma` may be fixed or a
+`(theta,experiment)->scales` callback. Correlated truncation is not implemented.
+Use this likelihood when measurements follow that model; censored instruments
+and clipped outputs require different likelihoods.
 
 Normalized fractions have a sum constraint. Supply a full-row-rank contrast
 matrix A with ``A\boldsymbol1=0`` and their covariance:
@@ -206,7 +224,7 @@ result = fit(problem; nstarts=3, seed=22, scaling=ones(length(problem.parameters
 result = fit(problem; starts=[z_start_1,z_start_2])
 ```
 
-The reference method is BFGS with central finite-difference derivatives.
+The default is BFGS with ForwardDiff derivatives of the shared posterior.
 The supplied scaling affects the optimizer coordinates, not the statistical
 density being optimized. Convergence uses the gradient in those optimizer
 coordinates; diagnostics retain both raw z gradients and scaled gradients,
@@ -214,18 +232,87 @@ together with the requested tolerance. Choosing scales is therefore part of
 the numerical specification. A seeded perturbation generates extra starts.
 Multiple starts improve exploration but do not establish a global optimum.
 
-A supplied posterior-gradient callback is checked against step-halved central
-differences. Solver/representation combinations are not presumed to support
-automatic differentiation. The verified combinations include affine-growth
-characteristics, the native moment reference, a specified sectional MUSCL
-calculation, and a linear Gaussian reference. Limiters can produce nonsmooth
-objectives; a local derivative check does not establish global smoothness.
+The selected gradient is checked against step-halved central differences before
+fitting and sampling. Those differences verify the derivative; they are not the
+default optimizer or NUTS gradient. Limiters can produce nonsmooth objectives;
+a local derivative check does not establish global smoothness.
 
 Results retain separate likelihood/prior contributions, convergence, gradients,
 objective history, start outcomes, instrumented forward-solve counts and timing.
 NumericalFailure rejects an evaluation and records a message. Programming errors
 propagate. An external solver must check its success code and return exactly
-the requested output times. Gradient stencils crossing failed solves are reported.
+the requested output times. Invalid derivatives are reported rather than replaced
+silently with finite differences.
+
+## Choose how derivatives are calculated
+
+`EstimationProblem(...;derivatives=:auto)` and the legacy CalibrationProblem use
+ForwardDiff by default. This propagates parameter derivatives through the
+actual calculation, including transforms, prior Jacobians, observation responses
+and inferred noise. For a small parameter vector it usually requires one
+dual-number solve per experiment, rather than two perturbed solves per parameter.
+Larger vectors are processed in ForwardDiff chunks. Evaluation counts describe
+these solves, not the number of underlying arithmetic operations.
+
+```julia
+posterior_gradient(problem,z)
+likelihood_gradient(problem,z) # excludes the prior
+check_gradient(problem,z)     # independent finite-difference verification
+result.diagnostics.derivative_backend
+result.diagnostics.gradient_evaluations
+result.diagnostics.forward_solves
+```
+
+Callbacks must preserve their numeric input types: use `similar(u)` or
+`zeros(eltype(u),...)` for state-dependent storage, and avoid converting fitted
+values to Float64. See [ForwardDiff's limitations](https://juliadiff.org/ForwardDiff.jl/dev/user/limitations/).
+AD has been checked for the analytical growth observable, native sectional
+growth/removal, exactly closed moments, and coupled bulk balances. A fixed grid
+is important. The Inguva fitting recipe rebuilds a mesh whose number of cells can
+change with parameters; it explicitly requests finite differences. Eigen-based
+QMOM inversion is also outside the verified AD path. Select
+`derivatives=:finite_difference` for such a calculation and inspect step-size
+checks. An incompatible AD callback raises DifferentiationFailure.
+
+For a differentiable ODE residual, the optional adapter instead integrates
+continuous forward sensitivities or an interpolating adjoint:
+
+```julia
+import SciMLBase
+using SciMLSensitivity, OrdinaryDiffEqTsit5
+solver = SciMLSensitivitySolver(Tsit5();sensitivity=:auto,
+    reltol=1e-8,abstol=1e-10)
+experiment = InferenceExperiment(:batch,physical_problem,measurements...;
+    setup,solver)
+problem = EstimationProblem(parameters,(experiment,))
+```
+
+Install these optional packages in the working environment. SciMLSensitivity
+loads ReverseDiff, which the adapter uses for the scalar likelihood's state
+gradient. No sensitivity packages are loaded for a native fit.
+The automatic rule chooses forward sensitivities for at most 16 fitted
+coordinates and the adjoint otherwise. This is a starting heuristic, not a cost
+guarantee; choose `sensitivity=:forward` or `:adjoint` and compare timings for the
+actual problem. Both include parameter-dependent initial states, shared and
+experiment-specific parameters, and direct observation/noise dependence.
+Correlations across measurement times enter one joint likelihood.
+
+Forward sensitivities integrate ``\partial u/\partial z`` alongside the state.
+The adjoint retains a dense forward trajectory, then integrates backward with
+measurement contributions. It avoids an augmented state for every parameter,
+but the current adapter forms local residual Jacobians and retains the
+trajectory; it is not a memory-free or matrix-free implementation. Tighten
+solver tolerances and check gradients when changing the residual or integrator.
+ODE adapters do not enforce the native CFL or positivity stage checks.
+Event callbacks are rejected because sensitivity jump rules are not implemented;
+prescribed time histories can use fixed `tstops` instead.
+Direct cell-shift methods are not ODE residuals and cannot use this adapter.
+
+This uses the [direct forward](https://docs.sciml.ai/SciMLSensitivity/stable/tutorials/direct_sensitivity/)
+and [direct adjoint](https://docs.sciml.ai/SciMLSensitivity/stable/manual/direct_adjoint_sensitivities/)
+interfaces. Merely adding `sensealg` to an ODE solve differentiated with
+ForwardDiff does not select an adjoint. The adapter explicitly invokes the
+sensitivity equations while reusing the package's likelihood.
 
 ## Request Laplace uncertainty
 
@@ -237,8 +324,8 @@ kinetics = marginal_covariance(problem,laplace; role=:kinetic)
 draws = parameter_draws(problem,laplace; n=1000,seed=23)
 ```
 
-The Hessian is computed from the actual negative log posterior and checked
-under step halving:
+The Hessian uses nested ForwardDiff on the actual negative log posterior.
+Independent step-halved differences of its AD gradient verify the curvature:
 
 ```math
 H=\left.\frac{\partial^2[-\log p(z\mid y)]}{\partial z\,\partial z^\mathsf T}
@@ -249,6 +336,9 @@ p(z\mid y)\approx\mathcal N(\widehat z,H^{-1}).
 All nuisance parameters enter this joint curvature. A kinetic marginal uses
 the corresponding block of the full covariance; inverting the kinetic Hessian
 subblock would instead condition on fixed nuisance parameters.
+With a SciML sensitivity adapter, this second derivative passes through the
+primal ODE solve; it does not differentiate a first-order adjoint. An explicitly
+selected finite-difference backend also uses finite-difference curvature.
 
 Factorizations and solves form the covariance and draws. Nonconvergence,
 nonstationarity, unstable derivatives, nonpositive curvature or excessive
@@ -302,9 +392,8 @@ traces and posterior shape before interpreting intervals.
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
-documentation for sampler and diagnostic definitions. Finite differences cost
-repeated forward solves; adjoint or AD acceleration remains a separately
-verified extension opportunity.
+documentation for sampler and diagnostic definitions. NUTS uses the same
+selected AD or ODE-sensitivity gradient as MAP; diagnostics record its backend.
 
 For the growth study, the comparison below shows the inferred growth law,
 the correlation between its two coefficients, and their marginal distributions.
@@ -361,12 +450,13 @@ prior_sensitive flag uses explicit, configurable shift/scale-ratio thresholds;
 it is a screening rule, not an identifiability theorem.
 Prior dependence is evidence to examine, even when MAP is stable.
 
-For the growth study, the residuals below are the measured density minus the
-fitted density, divided by the known noise standard deviation. The quantile
-plot compares them with a standard Gaussian. The final panel shows how much
+For the growth study, the residuals below apply the fitted truncated-Gaussian
+CDF to each measurement, then the inverse standard-normal CDF. This accounts
+for the asymmetric errors near zero density. The quantile plot compares these
+normal quantile residuals with a standard Gaussian. The final panel shows how much
 the rate estimates change when lognormal priors are replaced by uniform priors.
 
-![Gaussian residual checks and sensitivity to physical prior choices](assets/bayesian_growth/checks.png)
+![Truncated-Gaussian quantile residuals and sensitivity to physical prior choices](assets/bayesian_growth/checks.png)
 
 refinement_study refits explicitly named numerical variants. Keep measurements,
 parameter coordinates and priors consistent. Compare spatial resolution, size

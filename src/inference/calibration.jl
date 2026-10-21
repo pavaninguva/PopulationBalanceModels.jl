@@ -34,13 +34,14 @@ struct CalibrationProblem{E,F,T,S}
     parameters::F
     dt::T
     solver::S
+    derivatives::Symbol
 end
-function CalibrationProblem(experiments;parameters=(z,experiment)->z,dt=nothing,solver=nothing)
+function CalibrationProblem(experiments;parameters=(z,experiment)->z,dt=nothing,solver=nothing,derivatives=:auto)
     ex=Tuple(experiments)
     !isempty(ex) && all(e->e isa Experiment,ex) || throw(ArgumentError("provide at least one Experiment"))
     (dt===nothing ? solver!==nothing : isfinite(dt) && dt>0) ||
         throw(ArgumentError("supply a positive dt or solver=(problem,times)->solution"))
-    CalibrationProblem(ex,parameters,dt,solver)
+    CalibrationProblem(ex,parameters,dt,solver,_derivative_choice(derivatives))
 end
 
 """Predicted output matrices, grouped by experiment and observation. Uses the calibration's solver and parameter map."""
@@ -48,9 +49,7 @@ function predictions(cal::CalibrationProblem,z)
     all(isfinite,z) || throw(ArgumentError("parameters must be finite"))
     map(cal.experiments) do ex
         p=cal.parameters(z,ex)
-        # The reference solver is a Float64-oriented finite-difference fitting
-        # backend. Generic AD/sensitivity backends belong in dedicated extensions.
-        prob=remake(ex.problem;p)
+        prob=_inference_problem(remake(ex.problem;p),z)
         ts=sort!(unique(vcat((o.times for o in ex.observations)...)))
         sol=cal.solver===nothing ? simulate(prob;dt=cal.dt,saveat=ts) : cal.solver(prob,ts)
         length(sol.t)==length(ts)==length(sol.u) &&
@@ -96,27 +95,24 @@ function objective(cal::CalibrationProblem,z;on_failure=:throw)
 end
 
 """
-Finite-difference residual Jacobian in optimization coordinates, its singular
+Residual Jacobian (ForwardDiff by default) in optimization coordinates, its singular
 values and numerical rank. Local covariance is (J'J)^(-1) ONLY at full column
 rank. This local covariance alone specifies neither a confidence level nor
 structural identifiability. Use confidence_ellipsoid with its assumptions and
-checks, and profile_likelihood to investigate local asymmetry.
+checks, and profile_likelihood to investigate local asymmetry. Select
+`derivatives=:finite_difference` explicitly for an incompatible forward model.
 """
-function sensitivity_report(cal::CalibrationProblem,z;relative_step=cbrt(eps(Float64)),rank_tolerance=sqrt(eps(Float64)))
+function sensitivity_report(cal::CalibrationProblem,z;relative_step=cbrt(eps(Float64)),rank_tolerance=sqrt(eps(Float64)),derivatives=cal.derivatives)
     isfinite(relative_step) && relative_step>0 && isfinite(rank_tolerance) && 0<rank_tolerance<1 ||
         throw(ArgumentError("step must be positive and finite; rank tolerance must lie in (0,1)"))
-    z=float.(copy(z)); r=residuals(cal,z); J=zeros(length(r),length(z))
+    z=float.(copy(z))
     isempty(z) && throw(ArgumentError("provide at least one parameter"))
-    for j in eachindex(z)
-        h=relative_step*max(1,abs(z[j])); zp=copy(z); zm=copy(z)
-        zp[j]+=h; zm[j]-=h
-        J[:,j]=(residuals(cal,zp)-residuals(cal,zm))/(2h)
-    end
+    J=_differentiate_jacobian(v->residuals(cal,v),z;derivatives,step=relative_step)
     decomposition=svd(J); s=decomposition.S; maxs=isempty(s) ? 0.0 : maximum(s)
     rank=count(x->x>rank_tolerance*maxs,s)
     # Avoid forming normal equations, which square the Jacobian condition number.
     covariance=rank==length(z) ? Matrix(Symmetric(decomposition.V*Diagonal(inv.(s.^2))*decomposition.V')) : nothing
-    (;jacobian=J,singular_values=s,rank,covariance,
+    (;jacobian=J,singular_values=s,rank,covariance,derivatives=derivatives===:auto ? :forwarddiff : derivatives,
       condition_number=rank==length(z) ? first(s)/last(s) : Inf)
 end
 

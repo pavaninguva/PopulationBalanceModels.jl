@@ -38,12 +38,13 @@ function exact_moment(k,t,p=TRUTH)
     sum(binomial(k,j)*growth^j*translation^(k-j)*initial_moment(j) for j in 0:k)
 end
 
-"""Evaluate the analytical density and add independent N(0,noise²) errors. No bins, particle-count sampling, clipping or renormalization are used."""
+"""Evaluate analytical densities and sample independent Gaussian observations conditioned to be nonnegative. The fitted likelihood includes this truncation; no clipping, counts or renormalization are used."""
 function synthetic_measurements(;seed=2022,noise=1.0,sizes=SIZES,times=TIMES)
     noise>0 && isfinite(noise) || throw(ArgumentError("noise must be positive"))
     truth=[exact_density(a,t) for a in sizes,t in times]
-    values=truth+noise*randn(MersenneTwister(seed),size(truth))
-    (;values,truth,noise,sizes=collect(sizes),times=collect(times),seed)
+    rng=MersenneTwister(seed)
+    values=[rand(rng,truncated(Normal(truth[i,j],noise),0.0,Inf)) for i in axes(truth,1),j in axes(truth,2)]
+    (;values,truth,noise,sizes=collect(sizes),times=collect(times),seed,noise_model=:truncated_gaussian)
 end
 
 function physical_problem(;p=TRUTH,forward=:analytic,bins=280,upper=1.4,dt=0.005,scheme=MUSCL())
@@ -79,7 +80,7 @@ function sample_sectional(N,op,points)
 end
 
 """
-Two fitted kinetic parameters; the initial density and Gaussian noise are known.
+Two fitted kinetic parameters; the initial density and truncated Gaussian error scale are known.
 `prior=:lognormal` retains the previous growth priors. `prior=:uniform` uses
 physical bounds from stated growth/stretching timescales. Both use log inference
 coordinates, so uniform physical priors still receive their Jacobians.
@@ -93,7 +94,7 @@ function estimation_problem(data=synthetic_measurements();prior=:lognormal,forwa
         FunctionObservable((N,op,p,t)->exact_density.(data.sizes,t,Ref(p))) :
         FunctionObservable((N,op,p,t)->sample_sectional(N,op,data.sizes))
     measurement=Measurement(data.times,data.values,observable;
-        likelihood=GaussianLikelihood(sigma=data.noise),source=:density_measurements)
+        likelihood=TruncatedGaussianLikelihood(sigma=data.noise),source=:density_measurements)
     setup=(theta,pb)->forward===:inguva ? physical_problem(;p=theta,forward,bins,upper,dt,scheme) : remake(pb;p=theta)
     solver=forward===:analytic ? analytical_solver : forward===:inguva ?
         ((pb,ts)->simulate(pb;dt=pb.operator.dt,saveat=ts)) : nothing
@@ -102,7 +103,7 @@ function estimation_problem(data=synthetic_measurements();prior=:lognormal,forwa
         (Uniform(UNIFORM_BOUNDS[1]...),Uniform(UNIFORM_BOUNDS[2]...))
     specs=[ParameterSpec(name;initial,transform=LogTransform(),prior=Prior(d;coordinates=:physical))
         for (name,initial,d) in zip((:g0,:g1),(0.40,0.23),distributions)]
-    EstimationProblem(specs,(ex,))
+    EstimationProblem(specs,(ex,);derivatives=forward===:inguva ? :finite_difference : :auto)
 end
 
 function write_table(path,header,rows)
@@ -163,6 +164,9 @@ function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayes
     end
     write_table(joinpath(output,"measurements.csv"),"time,size,data,truth",
         [(t,a,data.values[i,j],data.truth[i,j]) for (j,t) in enumerate(data.times) for (i,a) in enumerate(data.sizes)])
+    write_table(joinpath(output,"residuals.csv"),"time,size,quantile_residual",
+        [(t,a,quantile(Normal(),cdf(truncated(Normal(exact_density(a,t,runs[:lognormal].fitted.parameters.shared),data.noise),0.0,Inf),data.values[i,j])))
+            for (j,t) in enumerate(data.times) for (i,a) in enumerate(data.sizes)])
     x=range(0.0,1.4;length=1401)
     write_table(joinpath(output,"curves.csv"),"prior,time,size,truth,map",
         [(s,t,a,exact_density(a,t),exact_density(a,t,r.fitted.parameters.shared))
@@ -191,7 +195,7 @@ function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayes
     reference=runs[:lognormal]
     numerical=refine ? refit_numerics(reference.problem,reference.fitted,data;output) : nothing
     open(joinpath(output,"diagnostics.txt"),"w") do io
-        println(io,"SYNTHETIC DATA: analytical affine-growth density plus independent Gaussian noise sigma=",data.noise)
+        println(io,"SYNTHETIC DATA: nonnegative truncated-Gaussian observations of analytical affine-growth density, underlying sigma=",data.noise)
         println(io,"Inguva, Schickel & Braatz (2022), Case 2; doi:10.1016/j.compchemeng.2022.107808")
         println(io,"f0=50 exp(-(a-.2)^2/.0005); g0=.434; g1=.2604. Scaled size/time units from the benchmark.")
         println(io,length(data.sizes)," density observation positions at each of six times; no sampled counts or binning.")
@@ -199,7 +203,7 @@ function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayes
         println(io,"Uniform bounds: g0 in [0.05,1], g1 in [0.02,1], corresponding at reference size 1 to offset times 1–20 and stretching times 1–50.")
         for (s,r) in sort!(collect(runs);by=first)
             println(io,s," MAP=",r.fitted.parameters.shared,"; converged=",r.fitted.converged,
-                "; gradient=",r.fitted.diagnostics.gradient_norm,"; Hessian agreement=",r.fitted.uncertainty.diagnostics.hessian_agreement)
+                "; derivative backend=",r.fitted.diagnostics.derivative_backend,"; gradient=",r.fitted.diagnostics.gradient_norm,"; Hessian agreement=",r.fitted.uncertainty.diagnostics.hessian_agreement)
             d=r.mcmc.diagnostics
             for k in (:rhat,:ess_bulk,:ess_tail,:mcse_mean,:ebfmi,:divergences,:warmup_divergences,:max_depth_hits,
                     :diagnostics_passed,:min_ess,:rhat_limit,:bfmi_limit,:target_acceptance,:warmup,:samples,:chains,:seed,:forward_solves,:elapsed_seconds)

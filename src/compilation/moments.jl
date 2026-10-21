@@ -59,7 +59,7 @@ function _validate_population_state(op::CompiledMomentPBM,u)
     validate_moment_state(op.closure,op.grid,u)
 end
 function validate_moment_state(method::AbstractMomentClosure,g,u)
-    realizability(g,u).valid || throw(ArgumentError("initial moments fail nonnegative-support Hankel checks"))
+    realizability(g,_primal.(u)).valid || throw(ArgumentError("initial moments fail nonnegative-support Hankel checks"))
     method isa Union{QuadratureClosure,LogNormalClosure} && quadrature(g,u,method)
     nothing
 end
@@ -68,7 +68,7 @@ function check_moment_state(method::AbstractMomentClosure,g,u,tolerance)
     isinf(tolerance) && return
     # Relative Hankel tests are scale-sensitive near a newly empty population.
     # Do not mutate/project moments to enforce them.
-    realizability(g,u;rtol=max(1e-10,tolerance)).valid || throw(NumericalFailure("moments fail Hankel positivity during integration; reduce dt or change closure"))
+    realizability(g,_primal.(u);rtol=max(1e-10,tolerance)).valid || throw(NumericalFailure("moments fail Hankel positivity during integration; reduce dt or change closure"))
 end
 check_moment_state(::AbstractDirectMomentMethod,g,u,tolerance)=throw(ArgumentError("direct moment family must check its solver state"))
 _check_population_state(op::CompiledMomentPBM,u,tolerance)=check_moment_state(op.closure,op.grid,u,tolerance)

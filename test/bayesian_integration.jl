@@ -80,12 +80,14 @@ include("../examples/estimate_size_dependent_growth.jl")
     data=recipe.synthetic_measurements()
     @test data.values==recipe.synthetic_measurements().values
     @test size(data.values)==(281,6)
-    @test any(data.values.<0) # Additive Gaussian noise is neither clipped nor normalized.
+    @test all(data.values.>=0) # Draws and the likelihood use the same nonnegative truncation.
     p=recipe.estimation_problem(data)
     z=initial_coordinates(p)
     @test check_gradient(p,z).valid
-    result=fit(p;uncertainty=:laplace)
+    result=fit(p;nstarts=3,seed=22,uncertainty=:laplace)
     @test result.converged
+    @test result.diagnostics.scaled_gradient_norm<=result.diagnostics.gradient_tolerance
+    @test all(r->!r.converged || r.scaled_gradient_norm<=result.diagnostics.gradient_tolerance,result.diagnostics.starts)
     @test abs(result.parameters.shared.g0-recipe.TRUTH.g0)<0.01
     @test abs(result.parameters.shared.g1-recipe.TRUTH.g1)<0.03
     uniform=fit(recipe.estimation_problem(data;prior=:uniform);uncertainty=:laplace)

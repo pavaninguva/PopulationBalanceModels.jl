@@ -10,25 +10,52 @@ function _fd_gradient(f,z;step=cbrt(eps(Float64)))
     g
 end
 
-"""Log-posterior gradient in z, using an explicitly supplied callback or central differences. Finite differences apply to all fitted nuisance parameters too."""
-function posterior_gradient(problem::EstimationProblem,z;step=cbrt(eps(Float64)),_counts=nothing)
-    if problem.gradient===nothing
-        _fd_gradient(v->logposterior(problem,v;on_failure=:reject,_counts),z;step)
+# Extension dispatch keeps the same experiment likelihood for direct AD,
+# continuous forward sensitivities and adjoints.
+function _experiment_gradient(solver,problem,z,ex,counts)
+    _differentiate_gradient(v->_experiment_loglikelihood(problem,v,ex,counts),z;derivatives=:forwarddiff)
+end
+function _gradient_backend(problem,derivatives)
+    derivatives===:finite_difference && return :finite_difference
+    derivatives===:auto && problem.gradient!==nothing && return :callback
+    derivatives===:auto && any(ex->ex.solver isa SciMLSensitivitySolver,problem.experiments) && return :sciml_sensitivities
+    :forwarddiff
+end
+
+"""Log-likelihood gradient in inference coordinates. Automatic mode uses a configured SciML sensitivity adapter or ForwardDiff; finite differences require an explicit request."""
+function likelihood_gradient(problem::EstimationProblem,z;derivatives=problem.derivatives,step=cbrt(eps(Float64)),_counts=nothing)
+    _derivative_choice(derivatives)
+    if derivatives===:auto && any(ex->ex.solver isa SciMLSensitivitySolver,problem.experiments)
+        _ad_evaluate(()->sum(_experiment_gradient(ex.solver,problem,z,ex,_counts) for ex in problem.experiments))
     else
-        g=collect(problem.gradient(z))
-        length(g)==length(z) && all(isfinite,g) || throw(NumericalFailure("invalid supplied posterior gradient"))
-        g
+        _differentiate_gradient(v->loglikelihood(problem,v;_counts),z;derivatives,step)
     end
 end
 
-"""Compare the actual posterior gradient with step-halved central differences at a specified z. This is a local check, not an automatic AD guarantee for arbitrary solvers."""
-function check_gradient(problem::EstimationProblem,z;step=cbrt(eps(Float64)),tolerance=1e-3,_counts=nothing)
+"""Log-posterior gradient in declared inference coordinates. The default uses ForwardDiff or configured SciML sensitivities; a supplied callback is honored in automatic mode. Finite differences are explicit and are also used for independent verification."""
+function posterior_gradient(problem::EstimationProblem,z;derivatives=problem.derivatives,step=cbrt(eps(Float64)),_counts=nothing)
+    _derivative_choice(derivatives)
+    _counts===nothing || (_counts.gradient_evaluations+=1)
+    backend=_gradient_backend(problem,derivatives)
+    g=if backend===:callback
+        collect(problem.gradient(z))
+    elseif backend===:sciml_sensitivities
+        likelihood_gradient(problem,z;derivatives,step,_counts)+_differentiate_gradient(v->logprior(problem,v),z)
+    else
+        _differentiate_gradient(v->logposterior(problem,v;_counts),z;derivatives,step)
+    end
+    length(g)==length(z) && all(isfinite,g) || throw(NumericalFailure("invalid posterior gradient"))
+    g
+end
+
+"""Verify the selected gradient against independent step-halved central differences at a specified z. Local agreement does not establish global smoothness of limiter or mesh branches."""
+function check_gradient(problem::EstimationProblem,z;derivatives=problem.derivatives,step=cbrt(eps(Float64)),tolerance=1e-3,_counts=nothing)
     f=v->logposterior(problem,v;_counts)
     coarse=_fd_gradient(f,z;step);fine=_fd_gradient(f,z;step=step/2)
-    supplied=problem.gradient===nothing ? coarse : posterior_gradient(problem,z)
+    supplied=posterior_gradient(problem,z;derivatives,step,_counts)
     error=norm(supplied-fine)/max(1,norm(fine))
     halving=norm(coarse-fine)/max(1,norm(fine))
-    (;valid=error<=tolerance && halving<=tolerance,error,halving,gradient=supplied,reference=fine)
+    (;valid=error<=tolerance && halving<=tolerance,error,halving,gradient=supplied,reference=fine,backend=_gradient_backend(problem,derivatives))
 end
 
 function _fd_hessian(f,z;step=eps(Float64)^(1/4))
@@ -70,30 +97,41 @@ end
 
 Explicitly requested approximation from the actual negative log posterior, not
 a likelihood-only/Gauss–Newton substitute. Checks optimizer convergence,
-stationarity, gradient and Hessian step halving, positive curvature and condition
-number. Invalid or weak curvature is reported through LaplaceFailure. A local
+stationarity, gradients, independent step-halved verification of the AD Hessian,
+positive curvature and condition number. Explicit finite differences use a
+step-halved finite-difference Hessian. Invalid or weak curvature is reported
+through LaplaceFailure. A local
 check cannot establish Gaussian shape, unimodality or accurate tail coverage.
 """
 function laplace_approximation(problem::EstimationProblem,result::MAPResult;
         step=eps(Float64)^(1/4),hessian_tolerance=0.01,gradient_tolerance=1e-3,
-        condition_limit=1e10)
+        condition_limit=1e10,derivatives=problem.derivatives)
     result.converged || throw(LaplaceFailure((reason="MAP optimization did not converge",)))
     counts=_InferenceCounts();started=time_ns()
     z=result.minimizer;f=v->-logposterior(problem,v;_counts=counts)
-    H1=_fd_hessian(f,z;step);H=_fd_hessian(f,z;step=step/2)
-    agreement=norm(H-H1)/max(norm(H),eps(Float64))
+    if derivatives===:finite_difference
+        H1=_fd_hessian(f,z;step);H=_fd_hessian(f,z;step=step/2)
+        verification=norm(H-H1)
+    else
+        H=_differentiate_hessian(f,z;derivatives=:forwarddiff)
+        gradient_function=v->_differentiate_gradient(f,v;derivatives=:forwarddiff)
+        H1=_fd_jacobian(gradient_function,z;step)
+        H2=_fd_jacobian(gradient_function,z;step=step/2)
+        verification=max(norm(H-H2),norm(H2-H1))
+    end
+    agreement=verification/max(norm(H),eps(Float64))
     eigenpair=eigen(Symmetric(H));s=eigenpair.values
     condition=minimum(s)>0 ? maximum(s)/minimum(s) : Inf
-    curvature_resolution=max(norm(H-H1),eps(Float64)*max(norm(H),1.0))
-    gradient=posterior_gradient(problem,z;_counts=counts)
-    gradient_check=check_gradient(problem,z;_counts=counts)
+    curvature_resolution=max(verification,eps(Float64)*max(norm(H),1.0))
+    gradient=posterior_gradient(problem,z;derivatives,_counts=counts)
+    gradient_check=check_gradient(problem,z;derivatives,_counts=counts)
     reason=agreement>hessian_tolerance ? "Hessian has not converged under step halving" :
         minimum(s)<=0 ? "negative or zero posterior curvature" :
-        minimum(s)<=curvature_resolution ? "weak curvature is unresolved by the Hessian stencil" :
+        minimum(s)<=curvature_resolution ? "weak curvature is unresolved by derivative verification" :
         condition>condition_limit ? "posterior curvature is ill-conditioned" :
         norm(gradient,Inf)>gradient_tolerance ? "posterior mode is not stationary" :
         !gradient_check.valid ? "posterior gradient check failed" : ""
-    report=(;valid=isempty(reason),reason,hessian_agreement=agreement,eigenvalues=s,
+    report=(;valid=isempty(reason),reason,hessian_agreement=agreement,hessian_backend=derivatives===:finite_difference ? :finite_difference : :forwarddiff,eigenvalues=s,
         weak_direction=eigenpair.vectors[:,1],condition_number=condition,gradient,gradient_check,
         curvature_resolution,forward_solves=counts.solves,posterior_evaluations=counts.evaluations,elapsed_seconds=(time_ns()-started)/1e9)
     isempty(reason) || throw(LaplaceFailure(report))
@@ -139,6 +177,11 @@ end
 
 function _predictive_block(rng,m,P,theta,ex,noise)
     l=m.likelihood
+    if l isa TruncatedGaussianLikelihood
+        s=_truncated_scales(l,m.data,theta,ex)
+        observed=noise ? [rand(rng,Distributions.truncated(Distributions.Normal(P[i,j],s[i,j]),l.lower,Inf)) for i in axes(P,1),j in axes(P,2)] : nothing
+        return (;latent=P,observed,coordinates=:measurement)
+    end
     if l isa GaussianLikelihood
         g=_gaussian(l,m.data,P,theta,ex)
         latent=g.mean
@@ -196,17 +239,13 @@ function posterior_predictive(problem::EstimationProblem,draws;max_solves,measur
 end
 
 """Likelihood-only local prediction sensitivities/SVD and observed curvature, reported separately from prior curvature. Prediction rank alone omits information in inferred noise/covariance parameters; observed likelihood curvature includes it. Neither establishes global identifiability."""
-function identifiability_report(problem::EstimationProblem,z;step=cbrt(eps(Float64)))
+function identifiability_report(problem::EstimationProblem,z;step=cbrt(eps(Float64)),derivatives=problem.derivatives)
     flatten(v)=vcat((vec(P) for blocks in predictions(problem,v) for P in blocks)...)
-    base=flatten(z);J=zeros(length(base),length(z))
-    for i in eachindex(z)
-        h=step*max(1,abs(z[i]));a=copy(z);b=copy(z);a[i]+=h;b[i]-=h
-        J[:,i]=(flatten(a)-flatten(b))/(2h)
-    end
+    J=_differentiate_jacobian(flatten,z;derivatives,step)
     decomposition=svd(J);s=decomposition.S
     numerical_rank=count(x->x>sqrt(eps())*maximum(s),s)
-    likelihood_hessian=_fd_hessian(v->-loglikelihood(problem,v),z)
-    prior_hessian=_fd_hessian(v->-logprior(problem,v),z)
+    likelihood_hessian=_differentiate_hessian(v->-loglikelihood(problem,v),z;derivatives)
+    prior_hessian=_differentiate_hessian(v->-logprior(problem,v),z;derivatives)
     eig=eigen(Symmetric(likelihood_hessian))
     (;prediction_jacobian=J,prediction_singular_values=s,prediction_rank=numerical_rank,
       likelihood_hessian,prior_hessian,likelihood_eigenvalues=eig.values,weak_direction=eig.vectors[:,1])
@@ -216,7 +255,7 @@ end
 function replace_priors(problem::EstimationProblem,priors)
     length(priors)==length(problem.parameters) || throw(DimensionMismatch("one replacement prior per parameter required"))
     ps=[ParameterSpec(p.name;initial=p.initial,prior=q,transform=p.transform,role=p.role,experiment=p.experiment) for (p,q) in zip(problem.parameters,priors)]
-    EstimationProblem(ps,problem.experiments;fixed=problem.fixed,constraints=problem.constraints)
+    EstimationProblem(ps,problem.experiments;fixed=problem.fixed,constraints=problem.constraints,derivatives=problem.derivatives)
 end
 
 """Fit explicitly supplied alternative-prior problems; compare z modes, Laplace standard deviations, and shifts in reference posterior SD units. This reports prior dependence without treating it as data identifiability."""

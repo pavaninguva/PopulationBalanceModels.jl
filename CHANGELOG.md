@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Made ForwardDiff the default for inference gradients, prediction sensitivities and posterior Hessians, with independent finite-difference checks and an explicit finite-difference option for incompatible calculations.
+- Added an optional SciMLSensitivity adapter for continuous forward and interpolating-adjoint gradients, including initial-state, observation, noise and shared/local parameter dependence. Added ForwardDiff as a dependency and SciMLSensitivity/ReverseDiff as optional dependencies.
+- Corrected the synthetic growth-estimation study to generate nonnegative truncated-Gaussian measurements and use the matching normalized likelihood, predictive noise and quantile residual checks.
+- Included all supplied 1D growth reconstructions in the comparison figures, added matched Inguva shifts, and documented term-by-term scheme availability and restrictions.
+- Fixed MAP multistart selection to check each candidate's stationarity before choosing among converged runs; an objective-rounding stop cannot displace a stationary fit.
+- Made zero-count Poisson and multinomial contributions differentiable at zero predicted mass, preserving their normalization; added SpecialFunctions for count-likelihood log-factorials.
+
 - Added van Leer limited-linear and geometry-aware third-order WENO reconstructions on uniform or nonuniform 1D meshes, and native five-stage fourth-order SSPRK54 time integration.
 - Replaced the growth/time heatmap with sharp-front and smooth periodic convergence curves, L1/RMSE comparisons, balanced space/time refinement, and median computational-time plots. Checked signed Lax–Wendroff steps against its independent difference formula and bounded periodic norm.
 - Added a literal nodal audit of Li2026 SI S11, including fine-grid variable-growth order loss, singular/unstable large-step boundary cases, and a separately derived/tested fourth-order coefficient variant. Kept the public periodic HOCADI variant distinct from both and from the paper's multilevel ADI algorithm.
@@ -14,7 +21,7 @@
 - Added AxialGrid and AxialDispersion for prescribed constant axial flow and dispersion with one or two intrinsic coordinates, conservative nonuniform-mesh fluxes, Danckwerts inlet/zero-gradient outlet, and periodic or closed alternatives.
 - Reworked cooling crystallization around stated nonnegative initial conditions, a finer sectional distribution reference, spatial/time refinement, independent moment verification, and regenerated figures. Retained the printed initial polynomial literally under reported_initial_density, with the old recipe name available for compatibility.
 - Added public Inguva2022 and InguvaBraatz2023 transformed transport methods, structured affine/separable growth laws, physical travel-time meshes, and compilation/runtime eligibility checks. Retained ExactShift for its existing constant-velocity interface.
-- Reworked the growth-fitting study around analytical point densities with additive Gaussian noise, two fitted coefficients, continuous plots, lognormal versus timescale-bounded uniform priors, and chain-level sampling evidence.
+- Reworked the growth-fitting study around analytical point densities with nonnegative truncated-Gaussian measurements, two fitted coefficients, continuous plots, lognormal versus timescale-bounded uniform priors, and chain-level sampling evidence.
 - Exposed per-chain BFMI, acceptance rates, step sizes, energy/transition statistics, warmup statistics and Monte Carlo mean errors through diagnostics(samples).
 - Renamed the estimation chapter and navigation to Parameter estimation.
 - Added a shared Bayesian EstimationProblem for MAP, optional full-posterior Laplace curvature, and optional AdvancedHMC NUTS sampling, with explicit prior coordinates and transform Jacobians.

@@ -32,7 +32,8 @@ function combinations()
      ("centered","rk4",Centered(),RK4(),2,4),
      ("linear_upwind","rk4",LinearUpwind(),RK4(),2,4),
      ("lax_wendroff","coupled",nothing,LaxWendroff(),2,2),
-     ("beam_warming","coupled",nothing,BeamWarming(),2,2)]
+     ("beam_warming","coupled",nothing,BeamWarming(),2,2),
+     ("inguva2022","coupled",nothing,Inguva2022(),1,1)]
 end
 
 function measure(grid,initial,truth,scheme,time,tf,dt,bc;repeats=3)
@@ -62,10 +63,11 @@ function run(;grids=(50,100,200,400,800,1600),smooth_grids=(40,80,160,320,640),
         for n in grids,C in courants,(name,tname,scheme,time,_,_) in choices
             # LinearUpwind/RK4 at CFL=1 is outside its linear stability interval.
             name=="linear_upwind" && C>0.65 && continue
+            name=="inguva2022" && C!=1.0 && continue
             grid=Grid1D(range(0,1;length=n+1);coordinate=:length)
             truth=exact_counts(grid,tf)
             result=measure(grid,exact_counts(grid,0),truth,scheme,time,tf,C/(n*growth),
-                SizeBC(OpenBoundary(),NoFlux());repeats)
+                name=="inguva2022" ? SizeBC(OpenBoundary(),OpenBoundary()) : SizeBC(OpenBoundary(),NoFlux());repeats)
             println(io,join((name,tname,C,n,result.rmse,result.l1,result.maximum_error,
                 result.minimum_density,result.negative_number,result.number_drift,result.seconds,result.steps),','))
             if n==200
@@ -79,13 +81,14 @@ function run(;grids=(50,100,200,400,800,1600),smooth_grids=(40,80,160,320,640),
     open(joinpath(output,"smooth_errors.csv"),"w") do io
         println(io,"scheme,time_method,step_policy,bins,dt,courant,rmse,l1,observed_rmse_order,seconds,timing_minimum,timing_maximum,steps,minimum_density,number_drift")
         for (name,tname,scheme,time,space_order,time_order) in choices,policy in ("fixed_cfl","spatial")
+            name=="inguva2022" && policy=="spatial" && continue
             # Avoid presenting a prohibitively small RK3 step as a timing comparison.
             policy=="spatial" && !(tname in ("euler","rk4","ssprk54","coupled")) && continue
             previous=NaN;previous_n=0
             for n in smooth_grids
                 grid=Grid1D(range(0,1;length=n+1);coordinate=:length);h=1/n
                 exponent=policy=="fixed_cfl" ? 1.0 : max(1.0,space_order/time_order)
-                dt=0.5*h^exponent/growth
+                dt=(name=="inguva2022" ? 1.0 : 0.5)*h^exponent/growth
                 result=measure(grid,smooth_counts(grid,0),smooth_counts(grid,tf),scheme,time,tf,dt,
                     SizeBC(Periodic(),Periodic());repeats)
                 order=isfinite(previous) ? log(previous/result.rmse)/log(n/previous_n) : NaN
@@ -100,6 +103,7 @@ function run(;grids=(50,100,200,400,800,1600),smooth_grids=(40,80,160,320,640),
         println(io,"Zero inflow and closed upper boundary; front is discontinuous. Errors compare analytical bin integrals; no formal smooth order is claimed for this front.")
         println(io,"Smooth order check: f0=1+0.2sin(2πa)+0.1cos(4πa), periodic domain [0,1].")
         println(io,"Fixed-CFL runs use C=0.5. Spatial checks use dt=0.5*h^max(1,p/q)/g for spatial order p and time order q; actual dt/CFL are exported.")
+        println(io,"Inguva2022 uses its required C=1 (not the C=.5 common comparison) and paired open boundaries for the front; the outgoing initial tail is negligible at tf=4. Smooth tests are periodic.")
         println(io,"Timings are medians of ",repeats," warmed integrations, excluding compilation/plotting; minima/maxima exported.")
         println(io,"No clipping; signed density minima and number drift are retained. Julia ",VERSION,"; CPU ",Sys.CPU_NAME)
     end

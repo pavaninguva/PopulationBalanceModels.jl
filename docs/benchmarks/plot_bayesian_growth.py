@@ -1,4 +1,4 @@
-"""Plot the recorded Gaussian-noise growth study; no calculations are fabricated."""
+"""Plot the recorded nonnegative truncated-Gaussian growth study."""
 from pathlib import Path
 import argparse
 import csv
@@ -36,6 +36,8 @@ def kde(values, x):
 
 def plot(folder):
     data = read(folder, "measurements.csv")
+    if np.any(data["data"] < 0):
+        raise ValueError("Regenerate observations with the nonnegative measurement model before plotting")
     curves = read(folder, "curves.csv")
     parameters = read(folder, "parameters.csv")
     draws = read(folder, "draws.csv")
@@ -62,7 +64,7 @@ def plot(folder):
         axis.scatter(block["size"], block["data"], s=5, alpha=.25, color=f"C{i}", rasterized=True)
         axis.plot(curve["size"], curve["map"], color=f"C{i}", label=rf"$t={time:g}$")
     axis.set(xlabel=r"Size $a$", ylabel=r"Number density $f(a,t)$", xlim=(0, 1.4),
-             title="Analytical densities with Gaussian noise; lines show the MAP fit")
+             title="Nonnegative noisy densities; lines show the MAP fit")
     axis.legend(ncol=2, fontsize=9, title="Observation time")
     save(fig, folder, "distributions")
 
@@ -102,17 +104,14 @@ def plot(folder):
     save(fig, folder, "priors")
 
     ref = estimates["lognormal"]
-    residuals = []
+    residual_data = read(folder, "residuals.csv")
+    residuals = residual_data["quantile_residual"]
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.7), layout="constrained")
-    # Noise sigma is one in these recorded measurements.
     for k, time in enumerate(np.unique(data["time"])):
-        d = data[data["time"] == time]
-        curve = curves[(curves["prior"] == "lognormal") & (curves["time"] == time)]
-        residual = d["data"] - np.interp(d["size"], curve["size"], curve["map"])
-        residuals.extend(residual)
-        axes[0].scatter(d["size"], residual, s=4, alpha=.3, color=f"C{k}")
+        d = residual_data[residual_data["time"] == time]
+        axes[0].scatter(d["size"], d["quantile_residual"], s=4, alpha=.3, color=f"C{k}")
     axes[0].axhline(0, color="k", lw=.7)
-    axes[0].set(xlabel=r"$a$", ylabel=r"Residual / $\sigma$", title="Gaussian measurement errors")
+    axes[0].set(xlabel=r"$a$", ylabel="Normal quantile residual", title="Truncated-Gaussian measurement check")
     observed = np.sort(residuals)
     expected = np.array([NormalDist().inv_cdf((i + .5) / len(observed)) for i in range(len(observed))])
     axes[1].plot(expected, observed, color="C0", lw=1)

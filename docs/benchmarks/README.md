@@ -92,11 +92,16 @@ julia --project=/path/to/working_environment examples/estimate_size_dependent_gr
 python docs/benchmarks/plot_bayesian_growth.py --usetex
 ```
 
-The study evaluates the analytical density at 281 sizes and six times and adds
-independent Gaussian noise with known standard deviation one. It fits only g0
+The study evaluates the analytical density at 281 sizes and six times and draws
+independent Gaussian measurements conditioned to be nonnegative, with underlying
+standard deviation one. Its likelihood includes that truncation; no values are
+clipped. Normal quantile residuals account for the asymmetric errors near zero.
+It fits only g0
 and g1. Each of two prior scenarios (lognormal and physical uniform bounds)
 uses three MAP starts and four chains with 1000 warmup and 1500 retained draws.
-Sampling uses the analytical solution, not MUSCL at every leapfrog step.
+Sampling uses ForwardDiff through the analytical solution, not MUSCL at every
+leapfrog step. Finite differences independently verify gradients. The mesh-changing
+Inguva refits explicitly use finite differences; fixed-grid MUSCL refits use AD.
 The runner checks R-hat, bulk/tail ESS, divergences, tree depth and per-chain
 BFMI before reporting posterior results. Raw draws preserve chain identifiers;
 CSV reports include MCSE, energy, acceptance, step sizes and warmup statistics.
@@ -123,6 +128,11 @@ spatial error. Timings are medians of three warmed runs with their ranges. The a
 example feeds a growing population into an initially empty dispersed tube; the
 PDF-independent verification uses analytical periodic advection–diffusion and
 nonuniform-grid inlet/outlet balances in `test/axial.jl`.
+
+The figures include every supplied 1D face reconstruction, including van Leer,
+WENO3, Centered and LinearUpwind. Inguva2022 is reported at its required C=1;
+its timing cannot be treated as a common-C=0.5 comparison. HOCADI and
+InguvaBraatz2023 belong to the separate two-coordinate studies.
 
 ## Full-horizon nanoparticle reconstruction and compact audit
 

@@ -2,7 +2,7 @@
 
 Suppose a particle population is measured several times while it grows. Can we
 recover how growth depends on particle size? This example answers that question
-with synthetic data: evaluate a known analytical solution, add Gaussian noise,
+with synthetic data: evaluate a known analytical solution, add nonnegative noisy measurements,
 and fit the two growth coefficients.
 
 The growth equation and initial density come from
@@ -43,17 +43,26 @@ Set f=0 when a₀<0. The exponential factor accounts for stretching: particles
 move to larger sizes and the peak becomes wider and lower.
 
 Generate data with g₀=0.434 and g₁=0.2604. At six times between 0.1 and 1,
-evaluate f at 281 sizes between 0 and 1.4 and add independent Gaussian errors:
+evaluate f at 281 sizes between 0 and 1.4. Draw each measurement independently
+from a Gaussian centred on that density, conditioned to be nonnegative:
 
 ```math
-y_{ij}=f(a_i,t_j;g_0,g_1)+\varepsilon_{ij},\qquad
-\varepsilon_{ij}\sim\mathcal N(0,\sigma_f^2),\qquad \sigma_f=1.
+y_{ij}\sim\mathcal N\!\left(f(a_i,t_j;g_0,g_1),\sigma_f^2\right)
+\ \text{conditioned on }y_{ij}\ge0,\qquad \sigma_f=1.
 ```
 
 The initial density and noise level are known in this exercise. Only g₀ and
 g₁ are fitted. These are density measurements, not sampled particle counts;
-there is no binning, clipping or normalization. Negative noisy values near
-zero density are allowed by this measurement model.
+there is no binning, clipping or normalization of the density. Far from zero
+this is nearly ordinary additive Gaussian noise. Near zero the noise is
+asymmetric, so its conditional mean exceeds the underlying density. The
+likelihood accounts for that difference using its normalization factor
+``\Phi(f/\sigma_f)``. Clipping negative Gaussian draws would instead create
+an artificial point mass at zero.
+
+```julia
+value = rand(rng,truncated(Normal(density,sigma),0.0,Inf))
+```
 
 ```@example growth_inference
 using PopulationBalanceModels, Distributions
@@ -67,7 +76,7 @@ size(data.values)
 All six snapshots appear on one plot. The points are noisy measurements and
 the continuous curves are the MAP fit with the lognormal priors defined below.
 
-![Analytical density with Gaussian noise at six times and continuous MAP curves](../assets/bayesian_growth/distributions.png)
+![Nonnegative noisy density measurements at six times and continuous MAP curves](../assets/bayesian_growth/distributions.png)
 
 ## Specify what the model predicts
 
@@ -77,13 +86,13 @@ FunctionObservable evaluates the analytical density at the measured sizes:
 profile = FunctionObservable((N,operator,p,t)->
     recipe.exact_density.(data.sizes,t,Ref(p)))
 measurement = Measurement(data.times,data.values,profile;
-    likelihood=GaussianLikelihood(sigma=data.noise))
+    likelihood=TruncatedGaussianLikelihood(sigma=data.noise))
 ```
 
 Here the analytical expression supplies the point densities directly. It does
 not reconstruct them from a sectional histogram. The script's analytical
 solver also returns exact cell integrals for the underlying PBM state. All
-sizes and times contribute to one Gaussian likelihood with the stated noise.
+sizes and times contribute to one normalized truncated-Gaussian likelihood.
 
 ## Compare two prior choices
 
@@ -141,6 +150,11 @@ result.diagnostics.gradient_norm
 Construct a second problem with `prior=:uniform` and make the same calls. The
 likelihood, data and coordinates remain the same; only the physical priors
 change. Laplace uses the Hessian of that same posterior at its mode.
+ForwardDiff supplies the default MAP and NUTS gradients, and the Laplace
+Hessian. Finite differences independently check those derivatives. The
+[derivative guide](../inference.md#Choose-how-derivatives-are-calculated)
+explains ODE forward sensitivities and adjoints for models without an
+analytical solution.
 
 The following values are read from the recorded results. Intervals are marginal
 95% MCMC credible intervals for this synthetic dataset and its stated model.
@@ -227,15 +241,18 @@ chain. The package result also exposes `warmup_statistics` and retained
 ## Check the fit and the numerical approximation
 
 Residuals should be consistent with the noise added to the analytical solution.
-The plot below shows standardized residuals and compares their quantiles with
-a standard Gaussian. This is a model check for one synthetic dataset, not a
+The plot below transforms each measurement through its fitted truncated-Gaussian
+CDF and then the inverse standard-normal CDF. These normal quantile residuals
+should follow a standard Gaussian under the measurement model. Ordinary
+residuals divided by sigma would be asymmetric near zero. This is a model check
+for one synthetic dataset, not a
 coverage validation across repeated experiments.
 
-![Gaussian residual checks and the change in estimates between prior scenarios](../assets/bayesian_growth/checks.png)
+![Normal quantile residual checks and the change in estimates between prior scenarios](../assets/bayesian_growth/checks.png)
 
 To generate new measurement predictions, propagate a chosen number of posterior
 draws. Keep the uncertainty in the noise-free density separate from fresh
-Gaussian measurement errors:
+truncated-Gaussian measurement errors:
 
 ```julia
 draws = parameter_draws(problem,samples;n=40,seed=25)
@@ -255,21 +272,31 @@ and domain size separately.
 Bin solvers store cell integrals. The numerical comparisons use an explicit
 linear interpolation of cell-average densities to the measured positions;
 that observation reconstruction has its own error. Changing solver does not
-change the Gaussian likelihood or the priors. Parameter shifts are shown in
+change the truncated-Gaussian likelihood or the priors. Parameter shifts are shown in
 units of the analytical fit's posterior standard deviation, and prediction
 errors in units of the known measurement noise. Failed fit flags remain visible.
 
 ![Parameter and density errors for the Inguva and MUSCL numerical refits](../assets/bayesian_growth/refinement.png)
 
 Hatched bars mark candidates that did not pass the optimizer's convergence and
-gradient checks; their shifts are not accepted mode estimates. The coarser
-Inguva refit and the 560-bin MUSCL refit at the larger time step fail that check.
-Refining the Inguva mesh to dt=0.005 gives a converged fit within about 0.16
-reference posterior SD of the analytical fit. The converged 560-bin MUSCL fit
-at the smaller step is still about 2.7 SD away in g₁. Its size grid needs further
-refinement for this precise dataset. The right panel compares predictions at
-the same analytical MAP parameters, so that error check does not depend on
-whether a numerical refit converged.
+gradient checks; their shifts are not accepted mode estimates. The table records
+the actual flags and shifts. A shift of several posterior standard deviations
+means numerical error matters for this dataset, even if the fitted curves look
+close. The right panel compares predictions at the same analytical MAP
+parameters, so that check does not depend on whether a numerical refit converged.
+
+```@eval
+using Markdown, PopulationBalanceModels
+file=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","bayesian_growth","refinement.csv")
+rows=split.(readlines(file)[2:end],',')
+table=["| Numerical variant | Converged | g₀ shift / SD | g₁ shift / SD | Maximum density error / sigma |",
+       "|:--|:--|--:|--:|--:|"]
+for row in rows
+    v=round.(parse.(Float64,row[3:5]);sigdigits=4)
+    push!(table,"| $(row[1]) | $(row[2]) | $(v[1]) | $(v[2]) | $(v[3]) |")
+end
+Markdown.parse(join(table,'\n'))
+```
 
 ## Use the compiled transport method
 

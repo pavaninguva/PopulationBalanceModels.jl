@@ -10,7 +10,7 @@ constraints, multistart, uncertainty intervals or convergence guarantees are
 added implicitly. Rerun at multiple starts and refined dt/grid.
 """
 function PopulationBalanceModels.fit(cal::PopulationBalanceModels.CalibrationProblem,z0::AbstractVector;
-                 algorithm=Optim.BFGS(initial_stepnorm=0.5),maxiters=500,options=NamedTuple())
+                 algorithm=Optim.BFGS(initial_stepnorm=0.5),maxiters=500,options=NamedTuple(),derivatives=cal.derivatives)
     failures=Ref(0)
     messages=String[]
     function loss(z)
@@ -27,7 +27,8 @@ function PopulationBalanceModels.fit(cal::PopulationBalanceModels.CalibrationPro
         end
     end
     isfinite(loss(z0)) || throw(PopulationBalanceModels.NumericalFailure("initial parameters do not give a valid forward solve; check the initial guess, grid and dt"))
-    result=Optim.optimize(loss,float.(copy(z0)),algorithm,
+    gradient! = (g,z)->copyto!(g,PopulationBalanceModels._differentiate_gradient(loss,z;derivatives))
+    result=Optim.optimize(loss,gradient!,float.(copy(z0)),algorithm,
         Optim.Options(;iterations=maxiters,options...))
     PopulationBalanceModels.FitResult(Optim.minimizer(result),Optim.minimum(result),Optim.converged(result),result,
         failures[],messages)
@@ -50,7 +51,7 @@ function PopulationBalanceModels.profile_likelihood(cal::PopulationBalanceModels
     losses=Float64[]; converged=Bool[]; minimizers=Vector{Float64}[]
     for value in fixed
         function expand(v)
-            full=copy(center); full[index]=value; full[nuisance]=v; full
+            full=eltype(v).(center); full[index]=value; full[nuisance]=v; full
         end
         if isempty(nuisance)
             full=expand(Float64[])
@@ -58,7 +59,7 @@ function PopulationBalanceModels.profile_likelihood(cal::PopulationBalanceModels
             push!(losses,loss);push!(converged,isfinite(loss));push!(minimizers,full)
         else
             conditional=PopulationBalanceModels.CalibrationProblem(cal.experiments;
-                parameters=(v,ex)->cal.parameters(expand(v),ex),dt=cal.dt,solver=cal.solver)
+                parameters=(v,ex)->cal.parameters(expand(v),ex),dt=cal.dt,solver=cal.solver,derivatives=cal.derivatives)
             result=try
                 PopulationBalanceModels.fit_multistart(conditional,[s[nuisance] for s in seeds];kwargs...).best
             catch e
@@ -86,10 +87,11 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
         method=:map,initial=initial_coordinates(problem),starts=nothing,nstarts=1,
         seed=2022,start_scale=0.3,scaling=ones(length(initial)),maxiters=500,
         algorithm=Optim.BFGS(linesearch=Optim.LineSearches.BackTracking()),gradient_tolerance=1e-3,
-        derivative_step=cbrt(eps(Float64)),uncertainty=:none)
+        derivative_step=cbrt(eps(Float64)),uncertainty=:none,derivatives=problem.derivatives)
     method===:map || throw(ArgumentError("fit defaults to MAP; request sampling separately with sample_posterior"))
     uncertainty in (:none,:laplace) || throw(ArgumentError("uncertainty must be :none or :laplace"))
     n=length(problem.parameters)
+    isfinite(gradient_tolerance) && gradient_tolerance>0 || throw(ArgumentError("gradient_tolerance must be positive and finite"))
     length(scaling)==n && all(x->isfinite(x) && x>0,scaling) || throw(ArgumentError("one positive optimizer scale per coordinate required"))
     nstarts isa Integer && nstarts>0 && isfinite(start_scale) && start_scale>=0 || throw(ArgumentError("invalid multistart settings"))
     seeds=starts===nothing ? [Float64.(initial)] : [Float64.(s) for s in starts]
@@ -107,12 +109,12 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
         value
     end
     function gradient!(g,w)
-        g.=-posterior_gradient(problem,w.*scaling;step=derivative_step,_counts=counts).*scaling
+        g.=-posterior_gradient(problem,w.*scaling;derivatives,step=derivative_step,_counts=counts).*scaling
     end
     for start in seeds
         check=try
             isfinite(loss(start./scaling)) || throw(NumericalFailure("initial posterior is not finite"))
-            checked=check_gradient(problem,start;step=derivative_step,_counts=counts)
+            checked=check_gradient(problem,start;derivatives,step=derivative_step,_counts=counts)
             checked.valid || throw(ArgumentError("posterior gradient check failed at a start"))
             checked
         catch e
@@ -123,7 +125,7 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
         end
         raw=try
             Optim.optimize(loss,gradient!,start./scaling,algorithm,
-                Optim.Options(iterations=maxiters,g_abstol=1e-7))
+                Optim.Options(iterations=maxiters,g_abstol=min(1e-7,gradient_tolerance)))
         catch e
             e isa NumericalFailure || rethrow()
             PopulationBalanceModels._record_failure!(counts,e)
@@ -132,7 +134,14 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
         if raw===nothing
             push!(runs,(start=start,converged=false,result=nothing,message="failed derivative or forward solve"))
         else
-            push!(runs,(start=start,converged=Optim.converged(raw),result=raw,gradient_check=check))
+            final_gradient=posterior_gradient(problem,Optim.minimizer(raw).*scaling;
+                derivatives,step=derivative_step,_counts=counts).*scaling
+            # Optim may stop because the objective rounded to the same value.
+            # Filter starts using the same stationarity criterion as MAPResult
+            # before selecting the best converged candidate.
+            stationary=norm(final_gradient,Inf)<=gradient_tolerance
+            push!(runs,(start=start,converged=Optim.converged(raw) && stationary,
+                result=raw,gradient_check=check,scaled_gradient_norm=norm(final_gradient,Inf)))
         end
     end
     valid=[r for r in runs if r.result!==nothing && isfinite(Optim.minimum(r.result))]
@@ -142,19 +151,21 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
     best=candidates[argmin([Optim.minimum(r.result) for r in candidates])]
     z=Float64.(Optim.minimizer(best.result).*scaling)
     components=posterior_components(problem,z;_counts=counts)
-    gradient=posterior_gradient(problem,z;step=derivative_step,_counts=counts)
+    gradient=posterior_gradient(problem,z;derivatives,step=derivative_step,_counts=counts)
     scaled_gradient=gradient.*scaling
     diagnostics=(;gradient,gradient_norm=norm(gradient,Inf),scaled_gradient,
         scaled_gradient_norm=norm(scaled_gradient,Inf),gradient_tolerance,history,
         history_truncated=length(history)==10000,starts=runs,seed,scaling,derivative_step,
         objective_evaluations=counts.evaluations,forward_solves=counts.solves,
+        gradient_evaluations=counts.gradient_evaluations,adjoint_solves=counts.adjoint_solves,
+        derivative_backend=PopulationBalanceModels._gradient_backend(problem,derivatives),
         failed_evaluations=counts.failures,failure_messages=counts.messages,
         elapsed_seconds=(time_ns()-started)/1e9,optimizer=best.result)
     result=MAPResult(z,physical_parameters(problem,z),components.loglikelihood,
         components.logprior,components.logposterior,best.converged && norm(scaled_gradient,Inf)<=gradient_tolerance,
         diagnostics,ParameterSpec[problem.parameters...],nothing)
     if uncertainty===:laplace
-        approximation=laplace_approximation(problem,result)
+        approximation=laplace_approximation(problem,result;derivatives)
         return MAPResult(result.minimizer,result.parameters,result.loglikelihood,result.logprior,
             result.logposterior,result.converged,result.diagnostics,result.coordinates,approximation)
     end
@@ -166,7 +177,7 @@ PopulationBalanceModels.fit_multistart(p::EstimationProblem,starts;kwargs...)=le
 end
 
 function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,result::MAPResult,index::Integer,values;
-        target,maxiters=400,starts=(result.minimizer,))
+        target,maxiters=400,starts=(result.minimizer,),derivatives=problem.derivatives)
     target in (:likelihood,:posterior) || throw(ArgumentError("target must explicitly be :likelihood or :posterior"))
     result.converged || throw(ArgumentError("reference MAP did not converge"))
     n=length(result.minimizer)
@@ -177,9 +188,10 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
     !isempty(seeds) && all(s->length(s)==n && all(isfinite,s),seeds) || throw(ArgumentError("invalid profile starts"))
     f=z->target===:likelihood ? -loglikelihood(problem,z;on_failure=:reject) : -logposterior(problem,z;on_failure=:reject)
     # Likelihood profiles require their own unpenalized optimum, not the MAP baseline.
-    function optimize_profile(loss,start)
+    full_gradient=z->target===:likelihood ? -likelihood_gradient(problem,z;derivatives) : -posterior_gradient(problem,z;derivatives)
+    function optimize_profile(loss,start,gradient)
         isfinite(loss(start)) || return nothing
-        grad! = (g,z)->copyto!(g,PopulationBalanceModels._fd_gradient(loss,z))
+        grad! = (g,z)->copyto!(g,gradient(z))
         try
             Optim.optimize(loss,grad!,start,Optim.BFGS(linesearch=Optim.LineSearches.BackTracking()),Optim.Options(iterations=maxiters))
         catch e
@@ -187,7 +199,7 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
             nothing
         end
     end
-    reference=optimize_profile(f,result.minimizer)
+    reference=optimize_profile(f,result.minimizer,full_gradient)
     reference===nothing && throw(NumericalFailure("profile reference has an invalid solve/derivative"))
     Optim.converged(reference) || throw(NumericalFailure("profile reference optimization failed"))
     reference_z=Optim.minimizer(reference);minimum_value=Optim.minimum(reference)
@@ -198,7 +210,7 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
         if isempty(nuisance)
             z=expand(Float64[]);loss=f(z);flag=isfinite(loss)
         else
-            results=[optimize_profile(v->f(expand(v)),s[nuisance]) for s in seeds]
+            results=[optimize_profile(v->f(expand(v)),s[nuisance],v->full_gradient(expand(v))[nuisance]) for s in seeds]
             valid=[r for r in results if r!==nothing && Optim.converged(r) && isfinite(Optim.minimum(r))]
             flag=!isempty(valid)
             chosen=flag ? valid[argmin([Optim.minimum(r) for r in valid])] : nothing

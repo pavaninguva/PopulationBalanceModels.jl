@@ -19,14 +19,26 @@ def read(path):
 def constant_growth():
     folder = ASSETS / "constant_growth"
     errors = read(folder / "errors.csv")
+    colors = {name: f"C{i}" for i, name in enumerate(
+        ("upwind", "muscl", "vanleer", "weno3", "weno5", "centered",
+         "linear_upwind", "lax_wendroff", "beam_warming"))}
+    def appearance(name, time):
+        return dict(color=colors[name], linestyle={"euler": ":", "ssprk33": "--",
+                    "ssprk54": "-.", "rk4": "-", "coupled": "-"}[time])
     choices = [("upwind", "euler", "Upwind + Euler"),
                ("upwind", "rk4", "Upwind + RK4"),
                ("muscl", "ssprk33", "MUSCL + SSPRK3"),
+               ("muscl", "rk4", "MUSCL + RK4"),
+               ("vanleer", "rk4", "van Leer + RK4"),
+               ("weno3", "rk4", "WENO3 + RK4"),
                ("weno5", "rk4", "WENO5 + RK4"),
+               ("centered", "rk4", "Centered + RK4"),
+               ("linear_upwind", "rk4", "Linear upwind + RK4"),
                ("lax_wendroff", "coupled", "Lax--Wendroff"),
                ("beam_warming", "coupled", "Beam--Warming")]
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), layout="constrained")
-    for ax, courant in zip(axes, (0.5, 1.0)):
+    fig, axes = plt.subplots(2, 2, figsize=(11, 8), layout="constrained")
+    for index, ax in enumerate(axes.flat):
+        courant = (0.5, 1.0)[index % 2]
         profile = read(folder / f"upwind_euler_{courant}_200.csv")
         # Draw the continuous analytical density, including the zero-inflow front.
         a = np.linspace(0, 1, 4001)
@@ -34,17 +46,22 @@ def constant_growth():
         ax.plot(a, exact, "k-", lw=1.3, label="Analytical density")
         ax.plot(profile["size"], profile["exact"], "k.", ms=2.5, label="Analytical bin averages")
         for name, time, label in choices:
+            if (index < 2) != (name in ("upwind", "muscl", "vanleer", "weno3", "weno5")):
+                continue
+            if name == "linear_upwind" and courant == 1.0:
+                continue
             data = read(folder / f"{name}_{time}_{courant}_200.csv")
-            ax.plot(data["size"], data["density"], lw=1.1, label=label)
+            ax.plot(data["size"], data["density"], lw=1.1, label=label, **appearance(name,time))
+        if index == 3:
+            data = read(folder / "inguva2022_coupled_1.0_200.csv")
+            ax.plot(data["size"], data["density"], "--", label="Inguva2022, matched shift")
         ax.set(xlim=(0.32, 0.62), xlabel="$a$", ylabel="$f(a,4)$",
                title=fr"$C={courant:g}$, 200 bins")
-    axes[0].legend(fontsize=8)
+        ax.legend(fontsize=7)
     save_figure(fig, folder, "solutions")
 
     smooth = read(folder / "smooth_errors.csv")
     choices += [("weno5", "ssprk33", "WENO5 + SSPRK3"),
-                ("vanleer", "rk4", "van Leer + RK4"),
-                ("weno3", "rk4", "WENO3 + RK4"),
                 ("weno5", "ssprk54", "WENO5 + SSPRK(5,4)")]
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5), layout="constrained")
     for name, time, label in choices:
@@ -52,8 +69,8 @@ def constant_growth():
                        & (errors["courant"] == 0.5)]
         data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
                       & (smooth["step_policy"] == "fixed_cfl")]
-        axes[0].loglog(front["bins"], front["rmse"], "o-", ms=3, label=label)
-        axes[1].loglog(data["bins"], data["rmse"], "o-", ms=3, label=label)
+        axes[0].loglog(front["bins"], front["rmse"], marker="o", ms=3, label=label, **appearance(name,time))
+        axes[1].loglog(data["bins"], data["rmse"], marker="o", ms=3, label=label, **appearance(name,time))
     axes[0].set(title="Exponential with a moving front", xlabel="Number of bins", ylabel="RMSE")
     axes[1].set(title="Smooth periodic translation", xlabel="Number of bins", ylabel="RMSE")
     axes[0].legend(fontsize=7)
@@ -63,9 +80,9 @@ def constant_growth():
     for name, time, label in choices:
         data = smooth[(smooth["scheme"] == name) & (smooth["time_method"] == time)
                       & (smooth["step_policy"] == "fixed_cfl")]
-        axes[0].loglog(data["bins"], data["seconds"], "o-", ms=3, label=label)
-        axes[0].fill_between(data["bins"],data["timing_minimum"],data["timing_maximum"],alpha=.1)
-        axes[1].loglog(data["seconds"], data["rmse"], "o-", ms=3, label=label)
+        axes[0].loglog(data["bins"], data["seconds"], marker="o", ms=3, label=label, **appearance(name,time))
+        axes[0].fill_between(data["bins"],data["timing_minimum"],data["timing_maximum"],alpha=.1,color=colors[name])
+        axes[1].loglog(data["seconds"], data["rmse"], marker="o", ms=3, label=label, **appearance(name,time))
     axes[0].set(xlabel="Number of bins", ylabel="Elapsed time / s", title="Median of three warmed runs")
     axes[1].set(xlabel="Elapsed time / s", ylabel="RMSE", title="Error versus work")
     axes[0].legend(fontsize=7)

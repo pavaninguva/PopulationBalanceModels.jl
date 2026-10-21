@@ -38,3 +38,25 @@ jobs:
           Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "AdvancedHMC", "MCMCDiagnosticTools"])
           include(joinpath(root,"test","integration.jl"))
           include(joinpath(root,"test","bayesian_integration.jl"))
+  sensitivities:
+    runs-on: ubuntu-latest
+    env:
+      JULIA_PKG_PRECOMPILE_AUTO: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+      - uses: julia-actions/cache@v2
+      - name: Continuous forward and adjoint inference tests
+        # Avoid the Enzyme precompile failure observed with the optional stack
+        # on Julia 1.10.3; exercise the sensitivity implementation directly.
+        shell: julia --compiled-modules=no --color=yes {0}
+        run: |
+          import Pkg
+          root = pwd()
+          Pkg.activate(mktempdir())
+          Pkg.develop(path=root)
+          Pkg.add(["Optim", "SciMLBase", "SciMLSensitivity", "ReverseDiff",
+                   "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff"])
+          include(joinpath(root,"test","sensitivity_integration.jl"))

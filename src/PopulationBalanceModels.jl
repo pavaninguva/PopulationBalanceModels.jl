@@ -3,6 +3,8 @@ module PopulationBalanceModels
 using LinearAlgebra
 using Random
 import Distributions
+import ForwardDiff
+using SpecialFunctions: loggamma
 import Distributions: loglikelihood, fit
 
 export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
@@ -35,9 +37,10 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        fit_multistart, profile_likelihood,
        ParameterSpec, Prior, IdentityTransform, LogTransform, LogitTransform,
        InferenceExperiment, Measurement, EstimationProblem, DistributionObservable,
-       GaussianLikelihood, PoissonLikelihood, MultinomialLikelihood,
+       GaussianLikelihood, TruncatedGaussianLikelihood, PoissonLikelihood, MultinomialLikelihood,
        initial_coordinates, physical_parameters, loglikelihood, logprior, logposterior,
-       posterior_components, posterior_gradient, check_gradient, MAPResult,
+       posterior_components, posterior_gradient, likelihood_gradient, check_gradient, MAPResult,
+       SciMLSensitivitySolver, DifferentiationFailure,
        LaplaceApproximation, LaplaceFailure, laplace_approximation, marginal_covariance,
        parameter_draws, posterior_predictive, identifiability_report, estimation_profile,
        replace_priors, prior_sensitivity, refinement_study, sample_posterior, PosteriorSamples,
@@ -83,6 +86,7 @@ include("time_integration/characteristic_transport.jl")
 include("time_integration/constant_transport.jl")
 include("compilation/axial.jl")
 include("inference/observations.jl")
+include("inference/differentiation.jl")
 include("inference/calibration.jl")
 include("inference/uncertainty.jl")
 include("inference/parameters.jl")

@@ -6,7 +6,7 @@ import MCMCDiagnosticTools as MCD
 function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         initial=initial_coordinates(problem),starts=nothing,laplace=nothing,
         warmup=500,samples=1000,chains=4,seed=2022,target_acceptance=0.8,
-        max_depth=8,start_scale=0.5,min_ess=400,rhat_limit=1.01,bfmi_limit=0.3,metric=:auto)
+        max_depth=8,start_scale=0.5,min_ess=400,rhat_limit=1.01,bfmi_limit=0.3,metric=:auto,derivatives=problem.derivatives)
     warmup isa Integer && warmup>=50 && samples isa Integer && samples>=8 &&
         chains isa Integer && chains>0 || throw(ArgumentError("require warmup>=50, samples>=8, chains>0"))
     0<target_acceptance<1 && max_depth isa Integer && max_depth>0 && isfinite(start_scale) && start_scale>0 &&
@@ -30,7 +30,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         value=logdensity(z)
         isfinite(value) || return (value,zeros(n))
         gradient=try
-            posterior_gradient(problem,z;_counts=counts)
+            posterior_gradient(problem,z;derivatives,_counts=counts)
         catch e
             e isa NumericalFailure || rethrow()
             PopulationBalanceModels._record_failure!(counts,e)
@@ -42,7 +42,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
     warmup_divergences=0
     for c in 1:chains
         isfinite(logdensity(seeds[c])) || throw(ArgumentError("chain $c starts outside the posterior support"))
-        check=check_gradient(problem,seeds[c];_counts=counts)
+        check=check_gradient(problem,seeds[c];derivatives,_counts=counts)
         check.valid || throw(ArgumentError("gradient verification failed for chain $c"))
         push!(gradient_checks,check)
         mass=dense ? (laplace===nothing ? HMC.DenseEuclideanMetric(n) : HMC.DenseEuclideanMetric(copy(laplace.covariance))) :
@@ -84,6 +84,8 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         max_depth_hits=depth_hits,diagnostics_passed=passed,gradient_checks,statistics,warmup_statistics,
         seed,warmup,samples,chains,target_acceptance,max_depth,min_ess,rhat_limit,bfmi_limit,metric=dense ? :dense : :diagonal,
         forward_solves=counts.solves,posterior_evaluations=counts.evaluations,
+        gradient_evaluations=counts.gradient_evaluations,adjoint_solves=counts.adjoint_solves,
+        derivative_backend=PopulationBalanceModels._gradient_backend(problem,derivatives),
         failed_evaluations=counts.failures,failure_messages=counts.messages,
         elapsed_seconds=(time_ns()-started)/1e9)
     physical=[physical_parameters(problem,Z[:,i,c]) for i in 1:samples,c in 1:chains]

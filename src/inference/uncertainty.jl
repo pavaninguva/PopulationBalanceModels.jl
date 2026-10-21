@@ -20,7 +20,7 @@ end
 
 Assess a fit in its optimization coordinates. Returns whitened residuals,
 Gauss–Newton covariance/correlation, rank, residual degrees of freedom,
-stationarity, and central-difference step-halving agreement. `variance=:known`
+stationarity, and agreement with an independent central-difference check. `variance=:known`
 uses the supplied absolute observation errors; `:estimated` treats them as
 relative weights with one unknown common variance, estimated as RSS/(n-rank).
 
@@ -32,12 +32,12 @@ These diagnostics do not establish model validity or global identifiability.
 """
 function fit_diagnostics(cal::CalibrationProblem,estimate;variance=:known,
         relative_step=cbrt(eps(Float64)),rank_tolerance=sqrt(eps(Float64)),
-        gradient_tolerance=1e-4,refined=nothing)
+        gradient_tolerance=1e-4,refined=nothing,derivatives=cal.derivatives)
     variance in (:known,:estimated) || throw(ArgumentError("variance must be :known or :estimated"))
     isfinite(gradient_tolerance) && gradient_tolerance>0 || throw(ArgumentError("invalid gradient tolerance"))
     z=_estimate(estimate); r=residuals(cal,z)
-    coarse=sensitivity_report(cal,z;relative_step,rank_tolerance)
-    fine=sensitivity_report(cal,z;relative_step=relative_step/2,rank_tolerance)
+    coarse=sensitivity_report(cal,z;relative_step,rank_tolerance,derivatives=:finite_difference)
+    fine=sensitivity_report(cal,z;relative_step=relative_step/2,rank_tolerance,derivatives)
     J=fine.jacobian; rss=sum(abs2,r); n=length(r); p=length(z); dof=n-fine.rank
     difference_error=norm(J-coarse.jacobian)/max(norm(J),eps(Float64))
     gradient=J'*r
@@ -58,7 +58,7 @@ function fit_diagnostics(cal::CalibrationProblem,estimate;variance=:known,
     else
         _same_measurements(cal,refined) || throw(ArgumentError("refinement must retain the same measurements and noise model"))
         rf=residuals(refined,z)
-        sf=sensitivity_report(refined,z;relative_step=relative_step/2,rank_tolerance)
+        sf=sensitivity_report(refined,z;relative_step=relative_step/2,rank_tolerance,derivatives)
         (;prediction_change=norm(rf-r,Inf),
           jacobian_change=norm(sf.jacobian-J)/max(norm(J),eps(Float64)),rank=sf.rank)
     end
@@ -66,7 +66,7 @@ function fit_diagnostics(cal::CalibrationProblem,estimate;variance=:known,
       rank=fine.rank,condition_number=fine.condition_number,covariance,correlation,
       observations=n,parameters=p,degrees_of_freedom=dof,rss,variance,variance_scale,
       gradient,scaled_gradient=score,stationary,difference_error,numerical,
-      goodness_of_fit_pvalue=pvalue)
+      goodness_of_fit_pvalue=pvalue,derivative_backend=fine.derivatives)
 end
 
 """A local joint confidence ellipsoid in optimization coordinates; construct with `confidence_ellipsoid`."""
@@ -84,7 +84,7 @@ end
 Local Gauss–Newton joint region `(z-ẑ)' inv(C) (z-ẑ) <= cutoff`.
 Known absolute errors use chi-square(p); relative weights with an estimated
 common variance use p*F(p,n-p). Rejects rank deficiency, a nonstationary fit,
-unstable finite differences, and a nonconverged FitResult. If a `refined`
+unverified derivatives, and a nonconverged FitResult. If a `refined`
 calibration is supplied, also checks forward and derivative convergence.
 A nonlinear parameter transform maps the region to a generally nonellipsoidal
 physical region. The approximation is not a global coverage guarantee.
@@ -92,15 +92,15 @@ physical region. The approximation is not a global coverage guarantee.
 function confidence_ellipsoid(cal::CalibrationProblem,estimate;level=0.95,
         variance=:known,relative_step=cbrt(eps(Float64)),rank_tolerance=sqrt(eps(Float64)),
         gradient_tolerance=1e-4,difference_tolerance=1e-3,refined=nothing,
-        prediction_tolerance=0.01,jacobian_tolerance=0.01)
+        prediction_tolerance=0.01,jacobian_tolerance=0.01,derivatives=cal.derivatives)
     isfinite(level) && 0<level<1 || throw(ArgumentError("confidence level must lie in (0,1)"))
     all(x->isfinite(x) && x>0,(difference_tolerance,prediction_tolerance,jacobian_tolerance)) ||
         throw(ArgumentError("diagnostic tolerances must be positive and finite"))
     estimate isa FitResult && !estimate.converged && throw(ArgumentError("optimizer did not converge"))
-    report=fit_diagnostics(cal,estimate;variance,relative_step,rank_tolerance,gradient_tolerance,refined)
+    report=fit_diagnostics(cal,estimate;variance,relative_step,rank_tolerance,gradient_tolerance,refined,derivatives)
     report.rank==report.parameters || throw(ArgumentError("rank-deficient fit has no bounded joint ellipsoid"))
     report.stationary || throw(ArgumentError("estimate is not stationary; inspect scaled_gradient and refit"))
-    report.difference_error<=difference_tolerance || throw(ArgumentError("finite-difference derivatives have not converged"))
+    report.difference_error<=difference_tolerance || throw(ArgumentError("selected derivatives disagree with the independent finite-difference check"))
     if report.numerical!==nothing
         report.numerical.prediction_change<=prediction_tolerance &&
         report.numerical.jacobian_change<=jacobian_tolerance &&

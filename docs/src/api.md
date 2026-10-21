@@ -67,6 +67,14 @@ different interpretations; see the estimation chapter.
 acceptance, step sizes, warmup statistics and Monte Carlo errors, alongside
 rank R-hat and bulk/tail ESS.
 
+`posterior_gradient` and `likelihood_gradient` default to ForwardDiff.
+`check_gradient` compares against independent finite differences. Both inference
+problem constructors accept `derivatives=:finite_difference` when explicitly
+needed. `SciMLSensitivitySolver(algorithm;sensitivity=:auto)` enables optional
+continuous forward/adjoint ODE sensitivities; see the estimation chapter for
+dependencies and compatibility. `TruncatedGaussianLikelihood(sigma=...)`
+provides normalized independent nonnegative measurements.
+
 ## Numerical extensions
 
 A sectional policy supplies `prepare_term(term,method,representation; kwargs...)`

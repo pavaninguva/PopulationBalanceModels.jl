@@ -180,7 +180,8 @@ function characteristic_density(op::CompiledCharacteristic,f0,position,elapsed;p
     axes=one_dim ? (op.grid,) : (op.grid.x,op.grid.y)
     boundaries=one_dim ? (op.bc,) : (op.bc.x,op.bc.y)
     length(positions)==length(axes) || throw(DimensionMismatch("one position per intrinsic coordinate required"))
-    feet=Float64[];jacobian=1.0
+    T=promote_type(_numeric_type(p),_numeric_type(position),typeof(elapsed))
+    feet=T[];jacobian=one(T)
     for (law,axis,boundary,a) in zip(op.rates,axes,boundaries,positions)
         isfinite(a) && first(axis.edges)<=a<=last(axis.edges) || throw(ArgumentError("observation position lies outside the compiled domain"))
         _positive_affine(law,first(axis.edges),last(axis.edges),p)

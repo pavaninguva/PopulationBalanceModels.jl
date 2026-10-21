@@ -23,6 +23,25 @@ function GaussianLikelihood(;sigma=nothing,covariance=nothing,contrasts=nothing)
     GaussianLikelihood(sigma,covariance,contrasts)
 end
 
+"""
+    TruncatedGaussianLikelihood(;sigma,lower=0.0)
+
+Independent Gaussian measurements conditioned to be at least `lower`. The
+normalization depends on the predicted density and sigma and is retained in
+MAP, Laplace, profiles and sampling. Sigma may be scalar, data-shaped, or a
+`(theta,experiment)->value` callback. Correlated truncation is not implemented.
+The latent PBM density is the underlying Gaussian location, not the conditional
+mean. This model neither clips measurements nor assigns particle counts.
+"""
+struct TruncatedGaussianLikelihood{S,T} <: AbstractMeasurementLikelihood
+    sigma::S
+    lower::T
+end
+function TruncatedGaussianLikelihood(;sigma,lower=0.0)
+    isfinite(lower) || throw(ArgumentError("finite truncation boundary required"))
+    TruncatedGaussianLikelihood(sigma,float(lower))
+end
+
 """Bin counts conditional on each column's observed sampled-particle total. Predictions are nonnegative bin integrals, normalized over the declared measurement window."""
 struct MultinomialLikelihood <: AbstractMeasurementLikelihood end
 
@@ -72,7 +91,7 @@ function _observe(o::DistributionObservable,u,op,p,t)
     g=pop.grid
     g.coordinate===o.coordinate || throw(ArgumentError("measurement and model coordinates differ; supply a coordinate-response model"))
     first(o.edges)>=first(g.edges) && last(o.edges)<=last(g.edges) || throw(ArgumentError("measurement window lies outside model domain"))
-    result=zeros(length(o.edges)-1)
+    result=zeros(promote_type(eltype(state),_numeric_type(p)),length(o.edges)-1)
     for j in eachindex(result),i in eachindex(state)
         lo=o.response===nothing ? max(o.edges[j],g.edges[i]) : g.edges[i]
         hi=o.response===nothing ? min(o.edges[j+1],g.edges[i+1]) : g.edges[i+1]
@@ -120,10 +139,12 @@ function Measurement(times,data,observable::AbstractObservable;likelihood::Abstr
     all(x->x isa Real && isfinite(x),Y) || throw(ArgumentError("measurements must be finite and real"))
     expected=_observation_size(observable)
     expected===nothing || expected==size(Y,1) || throw(DimensionMismatch("observable and data sizes differ"))
+    likelihood isa TruncatedGaussianLikelihood && any(Y.<likelihood.lower) && throw(ArgumentError("measurement below the likelihood truncation boundary"))
     if likelihood isa Union{PoissonLikelihood,MultinomialLikelihood}
         all(x->x>=0 && isinteger(x),Y) || throw(ArgumentError("count likelihoods require actual nonnegative integer counts"))
         likelihood isa PoissonLikelihood && hasproperty(observable,:normalize) && observable.normalize && throw(ArgumentError("absolute Poisson counts require unnormalized predictions"))
     elseif hasproperty(observable,:normalize) && observable.normalize
+        likelihood isa GaussianLikelihood || throw(ArgumentError("normalized fractions require a joint contrast likelihood"))
         A=likelihood.contrasts
         A!==nothing && size(A,2)==size(Y,1) && norm(A*ones(size(Y,1)))<1e-10 ||
             throw(ArgumentError("normalized fractions need independent contrasts and their covariance"))
@@ -173,8 +194,10 @@ Shared statistical model for MAP, Laplace and sampling. Priors are independent
 scalar declarations; use inference transforms for bounds and constraints for
 additional physical restrictions. `gradient(z)` may supply a log-posterior
 gradient; it is checked against finite differences before fitting/sampling.
-Otherwise central finite differences are used. No automatic AD compatibility is
-assumed for a solver/representation. All fitted nuisance parameters are included.
+`derivatives=:auto` uses ForwardDiff or a SciMLSensitivitySolver adapter.
+Finite differences require `derivatives=:finite_difference`. Differentiability
+depends on the solver, representation and callbacks; failures never silently
+switch methods. All fitted nuisance parameters are included.
 """
 struct EstimationProblem{P,E,F,C,G}
     parameters::P
@@ -182,8 +205,9 @@ struct EstimationProblem{P,E,F,C,G}
     fixed::F
     constraints::C
     gradient::G
+    derivatives::Symbol
 end
-function EstimationProblem(parameters,experiments;fixed=NamedTuple(),constraints=p->true,gradient=nothing)
+function EstimationProblem(parameters,experiments;fixed=NamedTuple(),constraints=p->true,gradient=nothing,derivatives=:auto)
     ps=Tuple(parameters);es=Tuple(experiments)
     !isempty(ps) && all(p->p isa ParameterSpec,ps) || throw(ArgumentError("declare fitted parameters"))
     !isempty(es) && all(e->e isa InferenceExperiment,es) || throw(ArgumentError("provide inference experiments"))
@@ -199,7 +223,7 @@ function EstimationProblem(parameters,experiments;fixed=NamedTuple(),constraints
         isempty(intersect(localnames,collect(Base.keys(e.fixed)))) || throw(ArgumentError("local parameter is both fixed and fitted"))
     end
     all(p->p.experiment===nothing || p.experiment in names,ps) || throw(ArgumentError("parameter names an unknown experiment"))
-    EstimationProblem(ps,es,fixed,constraints,gradient)
+    EstimationProblem(ps,es,fixed,constraints,gradient,_derivative_choice(derivatives))
 end
 
 _noise_value(x,theta,ex)=applicable(x,theta,ex) ? x(theta,ex) : x
@@ -243,6 +267,20 @@ function _measurement_loglikelihood(l::GaussianLikelihood,Y,P,theta,ex)
     r=g.factor.L\vec(g.mean-g.data)
     -(sum(abs2,r)+2sum(log,diag(g.factor.L))+length(r)*log(2π))/2
 end
+function _truncated_scales(l,Y,theta,ex)
+    s=_noise_value(l.sigma,theta,ex)
+    s=s isa Number ? fill(s,size(Y)) : s
+    size(s)==size(Y) || throw(DimensionMismatch("truncated Gaussian sigma must match data"))
+    all(x->x isa Real && isfinite(x) && x>0,s) || throw(NumericalFailure("invalid truncated Gaussian noise scale"))
+    s
+end
+function _measurement_loglikelihood(l::TruncatedGaussianLikelihood,Y,P,theta,ex)
+    any(Y.<l.lower) && return -Inf
+    s=_truncated_scales(l,Y,theta,ex)
+    sum(Distributions.logpdf(Distributions.Normal(P[i],s[i]),Y[i])-
+        Distributions.logcdf(Distributions.Normal(),(P[i]-l.lower)/s[i]) for i in eachindex(Y))
+end
+
 function _count_means(l::PoissonLikelihood,Y,P)
     all(P.>=0) || throw(NumericalFailure("negative predicted bin count"))
     exposure=l.exposure
@@ -267,7 +305,9 @@ function _count_means(::MultinomialLikelihood,Y,P)
 end
 function _measurement_loglikelihood(l::PoissonLikelihood,Y,P,theta,ex)
     mu=_count_means(l,Y,P)
-    sum(Distributions.logpdf(Distributions.Poisson(mu[i]),Y[i]) for i in eachindex(Y))
+    # For zero counts log p(0|mu)=-mu, including mu=0. Avoid the
+    # indeterminate derivative of the generic 0*log(mu) expression.
+    sum(iszero(Y[i]) ? -mu[i] : Y[i]*log(mu[i])-mu[i]-loggamma(Y[i]+1) for i in eachindex(Y))
 end
 function _measurement_loglikelihood(::MultinomialLikelihood,Y,P,theta,ex)
     all(P.>=0) || throw(NumericalFailure("negative predicted bin integral"))
@@ -275,7 +315,11 @@ function _measurement_loglikelihood(::MultinomialLikelihood,Y,P,theta,ex)
     for j in axes(Y,2)
         n=Int(sum(Y[:,j]));n==0 && continue
         mass=sum(P[:,j]);mass>0 || throw(NumericalFailure("empty predicted measurement window"))
-        total+=Distributions.logpdf(Distributions.Multinomial(n,P[:,j]/mass),Int.(Y[:,j]))
+        total+=loggamma(n+1)-sum(loggamma(y+1) for y in Y[:,j])
+        # A zero count contributes exactly zero even when its probability is
+        # zero. Keep every predicted bin in mass so its normalization derivative
+        # remains present; do not evaluate an indeterminate 0*log(0).
+        total+=sum(Y[i,j]*log(P[i,j]/mass) for i in axes(Y,1) if !iszero(Y[i,j]))
     end
     total
 end
@@ -285,8 +329,10 @@ mutable struct _InferenceCounts
     solves::Int
     failures::Int
     messages::Vector{String}
+    gradient_evaluations::Int
+    adjoint_solves::Int
 end
-_InferenceCounts()=_InferenceCounts(0,0,0,String[])
+_InferenceCounts()=_InferenceCounts(0,0,0,String[],0,0)
 function _record_failure!(counts,e)
     counts===nothing && return
     counts.failures+=1
@@ -294,26 +340,47 @@ function _record_failure!(counts,e)
     length(counts.messages)<10 && !(message in counts.messages) && push!(counts.messages,message)
 end
 
-function _inference_predictions(problem::EstimationProblem,z,counts=nothing)
+function _experiment_problem(problem,z,ex)
     physical=physical_parameters(problem,z)
     all(isfinite(_physical(p.transform,v)) for (p,v) in zip(problem.parameters,z)) || throw(NumericalFailure("nonfinite physical parameters"))
     problem.constraints(physical) || throw(NumericalFailure("physical parameter constraint failed"))
+    theta=merge(physical.shared,getproperty(physical.experiments,ex.name))
+    pb=ex.setup(theta,ex.problem)
+    pb isa PBMProblem || throw(ArgumentError("setup must return a PBMProblem"))
+    _inference_problem(pb,z)
+end
+_experiment_times(ex)=sort!(unique(vcat((m.times for m in ex.measurements)...)))
+function _experiment_solution(problem,z,ex,counts)
+    pb=_experiment_problem(problem,z,ex);ts=_experiment_times(ex)
+    counts===nothing || (counts.solves+=1)
+    sol=ex.solver===nothing ? simulate(pb;dt=ex.dt,saveat=ts) : ex.solver(pb,ts)
+    length(sol.t)==length(ts)==length(sol.u) && all(isapprox.(sol.t,ts;rtol=1e-12,atol=1e-12)) || throw(NumericalFailure("inference solver did not return requested times; check its success code"))
+    all(u->all(isfinite,u),sol.u) || throw(NumericalFailure("nonfinite inference state"))
+    pb,ts,sol
+end
+function _experiment_predictions(problem,z,ex,pb,ts,states)
+    theta=physical_parameters(problem,z,ex.name)
+    map(ex.measurements) do m
+        raw=hcat([_observe(m.observable,states[searchsortedfirst(ts,t)],pb.operator,pb.p,t) for t in m.times]...)
+        output=m.response(raw,theta,ex)
+        size(output)==size(m.data) || throw(DimensionMismatch("measurement response changed output dimension"))
+        all(x->x isa Real && isfinite(x),output) || throw(NumericalFailure("measurement predictions must be finite and real"))
+        output
+    end
+end
+function _experiment_loglikelihood(problem,z,ex,pb,ts,states)
+    predictions=_experiment_predictions(problem,z,ex,pb,ts,states)
+    theta=physical_parameters(problem,z,ex.name)
+    sum(_measurement_loglikelihood(m.likelihood,m.data,P,theta,ex) for (m,P) in zip(ex.measurements,predictions))
+end
+function _experiment_loglikelihood(problem,z,ex,counts)
+    pb,ts,sol=_experiment_solution(problem,z,ex,counts)
+    _experiment_loglikelihood(problem,z,ex,pb,ts,sol.u)
+end
+function _inference_predictions(problem::EstimationProblem,z,counts=nothing)
     map(problem.experiments) do ex
-        theta=merge(physical.shared,getproperty(physical.experiments,ex.name))
-        pb=ex.setup(theta,ex.problem)
-        pb isa PBMProblem || throw(ArgumentError("setup must return a PBMProblem"))
-        ts=sort!(unique(vcat((m.times for m in ex.measurements)...)))
-        counts===nothing || (counts.solves+=1)
-        sol=ex.solver===nothing ? simulate(pb;dt=ex.dt,saveat=ts) : ex.solver(pb,ts)
-        length(sol.t)==length(ts)==length(sol.u) && all(isapprox.(sol.t,ts;rtol=1e-12,atol=1e-12)) || throw(NumericalFailure("inference solver did not return requested times; check its success code"))
-        all(u->all(isfinite,u),sol.u) || throw(NumericalFailure("nonfinite inference state"))
-        map(ex.measurements) do m
-            raw=hcat([_observe(m.observable,sol.u[searchsortedfirst(ts,t)],pb.operator,pb.p,t) for t in m.times]...)
-            output=m.response(raw,theta,ex)
-            size(output)==size(m.data) || throw(DimensionMismatch("measurement response changed output dimension"))
-            all(x->x isa Real && isfinite(x),output) || throw(NumericalFailure("measurement predictions must be finite and real"))
-            output
-        end
+        pb,ts,sol=_experiment_solution(problem,z,ex,counts)
+        _experiment_predictions(problem,z,ex,pb,ts,sol.u)
     end
 end
 predictions(problem::EstimationProblem,z)=_inference_predictions(problem,z)
@@ -322,9 +389,7 @@ predictions(problem::EstimationProblem,z)=_inference_predictions(problem,z)
 function loglikelihood(problem::EstimationProblem,z;on_failure=:throw,_counts=nothing)
     on_failure in (:throw,:reject) || throw(ArgumentError("failure policy must be :throw or :reject"))
     try
-        outputs=_inference_predictions(problem,z,_counts)
-        sum(_measurement_loglikelihood(m.likelihood,m.data,P,physical_parameters(problem,z,ex.name),ex)
-            for (ex,blocks) in zip(problem.experiments,outputs) for (m,P) in zip(ex.measurements,blocks))
+        sum(_experiment_loglikelihood(problem,z,ex,_counts) for ex in problem.experiments)
     catch e
         e isa NumericalFailure || rethrow()
         _record_failure!(_counts,e)

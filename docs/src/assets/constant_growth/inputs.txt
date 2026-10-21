@@ -2,5 +2,6 @@ Paper problem: Inguva et al. (2022), Case 1 Eq.56: g=0.1, f0=100exp(-a/0.01), do
 Zero inflow and closed upper boundary; front is discontinuous. Errors compare analytical bin integrals; no formal smooth order is claimed for this front.
 Smooth order check: f0=1+0.2sin(2πa)+0.1cos(4πa), periodic domain [0,1].
 Fixed-CFL runs use C=0.5. Spatial checks use dt=0.5*h^max(1,p/q)/g for spatial order p and time order q; actual dt/CFL are exported.
+Inguva2022 uses its required C=1 (not the C=.5 common comparison) and paired open boundaries for the front; the outgoing initial tail is negligible at tf=4. Smooth tests are periodic.
 Timings are medians of 3 warmed integrations, excluding compilation/plotting; minima/maxima exported.
 No clipping; signed density minima and number drift are retained. Julia 1.10.3; CPU goldmont

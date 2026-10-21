@@ -96,6 +96,13 @@ would reject a run with a substantial undershoot.
 
 ![Constant-growth solutions with two Courant numbers](../assets/constant_growth/solutions.png)
 
+The upper panels show upwind, limited linear and WENO reconstructions; the lower
+panels show the unlimited reconstructions and complete space–time methods.
+All seven supplied 1D face reconstructions appear. Inguva2022 appears at its
+required matched CFL=1, with paired open boundaries; its tiny outgoing
+exponential tail is negligible here. The other front runs keep the closed
+upper boundary stated above.
+
 At ``C=0.5``, upwind broadens the peak. Increasing its time order does not remove
 the spatial diffusion. MUSCL and WENO reduce that broadening, while the unlimited
 schemes can create appreciable negative lobes. Their negative number and minimum
@@ -182,6 +189,11 @@ The timing plot compares the same smooth problem at fixed CFL; bands show the
 three-run range. It separates cost per grid from accuracy per unit work. These
 results concern this implementation and machine. They are not solver rankings
 for other models or hardware.
+The common-CFL error and timing curves include van Leer, WENO3, Centered and
+LinearUpwind alongside the older choices. The matched Inguva shift is excluded
+from the C=0.5 curves because that time step violates its contract; its C=1
+error and timing remain in the exported CSV files. HOCADI and InguvaBraatz2023
+are two-coordinate methods and are assessed in their own examples.
 
 Raw front results are in [errors.csv](../assets/constant_growth/errors.csv);
 the smooth results and their measured refinement slopes are in
