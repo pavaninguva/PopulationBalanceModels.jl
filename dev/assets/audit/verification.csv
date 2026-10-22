@@ -1,0 +1,16 @@
+check,command,count,outcome
+core_minimum,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /tmp/julia-1.10.0/bin/julia --project=. -e 'using Pkg; Pkg.test()',1130,passed
+core,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /home/pavan/julia-1.10.3/bin/julia --project=. -e 'using Pkg; Pkg.test()',1130,passed
+core_current,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /tmp/julia-1.13.2/bin/julia --project=. -e 'using Pkg; Pkg.test()',1130,passed
+optional,"OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /home/pavan/julia-1.10.3/bin/julia --project=/tmp/pbm-case-study-env -e 'include(""test/integration.jl""); include(""test/bayesian_integration.jl"")'",150,passed
+optional_current,"OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /tmp/julia-1.13.2/bin/julia --project=/tmp/pbm-audit-current -e 'using Pkg; Pkg.status(); include(""test/integration.jl""); include(""test/bayesian_integration.jl""); include(""test/sensitivity_integration.jl"")'",171,passed
+sensitivity_lts,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /tmp/julia-1.10.12/bin/julia --project=/tmp/pbm-sens-env test/sensitivity_integration.jl,21,passed
+jet,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /tmp/julia-1.13.2/bin/julia --project=/tmp/pbm-audit-current test/jet.jl,2,passed concrete residuals; availability checked
+protein,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /home/pavan/julia-1.10.3/bin/julia --project=/tmp/pbm-case-study-env test/audit_protein.jl docs/src/assets/audit/protein_checks.csv,6229,passed
+examples,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /home/pavan/julia-1.10.3/bin/julia --project=. test/audit_examples.jl,,executed; assertions pass
+qamar,OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /home/pavan/julia-1.10.3/bin/julia --project=. examples/qamar_moment_benchmarks.jl --methods-only,15,configurations attempted; failures retained
+qamar_plots,MPLCONFIGDIR=/tmp/pbm-matplotlib /home/pavan/miniconda3/envs/pbm/bin/python docs/benchmarks/plot_moment_comparison.py --usetex,,passed
+docs,CI=true POPULATIONBALANCEMODELS_DOCS_DEPLOY=false OPENBLAS_NUM_THREADS=1 JULIA_DEPOT_PATH=/tmp/pbm-julia-depot:/home/pavan/.julia JULIA_PKG_OFFLINE=true /home/pavan/julia-1.10.3/bin/julia --project=docs docs/make.jl,,passed; API soft size warning
+docs_links,python3 test/docs_links.py,2203,zero broken local references
+whitespace,git diff --check,,passed
+protein_data,PYTHONPATH=/tmp/pbm-pdf-tools MPLCONFIGDIR=/tmp/pbm-matplotlib /home/pavan/miniconda3/envs/pbm/bin/python test/audit_protein_data.py,32,source PDF hash and independent marker extraction matched

@@ -1,0 +1,5 @@
+revision,julia,path,evaluations,bytes_per_evaluation,seconds_per_evaluation,squared_residual_norm
+9e2c6fa,1.10.3,sectional_200,1000,3680.0,1.073018e-6,4.68985630049752
+9e2c6fa,1.10.3,QMOM_3_collision,500,20640.0,2.4533198e-5,0.24988511026493188
+audited_tree,1.10.3,sectional_200,1000,3680.0,1.1759030000000001e-6,4.68985630049752
+audited_tree,1.10.3,QMOM_3_collision,500,8720.0,8.336212000000001e-6,0.24988511026493188
