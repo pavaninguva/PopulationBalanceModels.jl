@@ -1,0 +1,16 @@
+scenario,method,states,tracked_M3,status,last_time,seconds,time_refinement,fine_status,fine_last_time,max_source_condition,third_moment_relative_change,min_rank,max_rank,failure
+aggregation_breakage,QMOM,6,true,completed,50.0,0.482897302,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
+aggregation_breakage,RankAdaptive,6,true,completed,50.0,0.362410927,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
+aggregation_breakage,GammaEQMOM,7,true,completed,50.0,7.365794824,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
+aggregation_breakage,DQMOM,6,true,completed,50.0,0.326355157,5.669042935085855e-8,completed,50.0,25636.90385572849,4.2520917453714446e-8,3,3,
+aggregation_breakage,LogNormal,3,false,completed,50.0,0.601763724,5.670691549664042e-8,completed,50.0,NaN,0.20455195538352466,NaN,NaN,
+growth_nucleation,QMOM,6,true,completed,0.5,0.180585087,1.0372815524295476e-6,completed,0.5,NaN,163.00223563654578,3,3,
+growth_nucleation,RankAdaptive,6,true,completed,0.5,0.339264492,1.0372815524295476e-6,completed,0.5,NaN,163.00223563654578,3,3,
+growth_nucleation,GammaEQMOM,7,true,failed,0.475,6.372679833,1.0372815524295476e-6,failed,0.475,NaN,124.88906749751534,3,3,no quadrature resolves every tracked moment at the requested tolerance; no moments were repaired
+growth_nucleation,DQMOM,6,true,completed,0.5,0.186373246,0.0015444104812456505,completed,0.5,5.5171838611539345e10,163.0123345661471,3,3,
+growth_nucleation,LogNormal,3,false,completed,0.5,0.069320843,1.0372815524295476e-6,completed,0.5,NaN,160.8883861479121,NaN,NaN,
+growth_nucleation_collisions,QMOM,6,true,completed,0.5,0.195437865,1.0303090751673238e-6,completed,0.5,NaN,160.0835429909723,3,3,
+growth_nucleation_collisions,RankAdaptive,6,true,completed,0.5,0.363019828,1.0303090751673238e-6,completed,0.5,NaN,160.0835429909723,3,3,
+growth_nucleation_collisions,GammaEQMOM,7,true,failed,0.445,6.755888353,2.8047278427534295e-6,failed,0.445,NaN,86.58417769503163,3,3,moments fail Hankel positivity during integration; reduce dt or change closure
+growth_nucleation_collisions,DQMOM,6,true,completed,0.5,0.206799253,0.0015454748290493203,completed,0.5,4.887011742146201e10,160.09499846773934,3,3,
+growth_nucleation_collisions,LogNormal,3,false,failed,0.09,0.116632176,6.394878503401813e-5,failed,0.09,NaN,2.4699405812641215,NaN,NaN,negative concentration during time integration; reduce dt; use Upwind; or add a proven positivity limiter
