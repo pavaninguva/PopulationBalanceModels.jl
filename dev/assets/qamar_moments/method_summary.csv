@@ -1,16 +1,16 @@
 scenario,method,states,tracked_M3,status,last_time,seconds,time_refinement,fine_status,fine_last_time,max_source_condition,third_moment_relative_change,min_rank,max_rank,failure
-aggregation_breakage,QMOM,6,true,completed,50.0,0.281069265,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
-aggregation_breakage,RankAdaptive,6,true,completed,50.0,0.285050351,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
-aggregation_breakage,GammaEQMOM,7,true,completed,50.0,5.261108345,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
-aggregation_breakage,DQMOM,6,true,completed,50.0,0.228548317,5.669042935085855e-8,completed,50.0,25636.90385572849,4.2520917453714446e-8,3,3,
-aggregation_breakage,LogNormal,3,false,completed,50.0,0.695443364,5.6706917050952654e-8,completed,50.0,NaN,0.20455195538348447,NaN,NaN,
-growth_nucleation,QMOM,6,true,completed,0.5,0.13081518,1.0372815524295476e-6,completed,0.5,NaN,163.00223563654578,3,3,
-growth_nucleation,RankAdaptive,6,true,completed,0.5,0.260165376,1.0372815524295476e-6,completed,0.5,NaN,163.00223563654578,3,3,
-growth_nucleation,GammaEQMOM,7,true,failed,0.475,4.744514695,1.0372815524295476e-6,failed,0.475,NaN,124.88906749751534,3,3,no quadrature resolves every tracked moment at the requested tolerance; no moments were repaired
-growth_nucleation,DQMOM,6,true,completed,0.5,0.167046641,0.0015444104812456505,completed,0.5,5.5171838611539345e10,163.0123345661471,3,3,
-growth_nucleation,LogNormal,3,false,completed,0.5,0.044442572,1.0372815524295476e-6,completed,0.5,NaN,160.8883861479121,NaN,NaN,
-growth_nucleation_collisions,QMOM,6,true,completed,0.5,0.17528213,1.0303090751673238e-6,completed,0.5,NaN,160.0835429909723,3,3,
-growth_nucleation_collisions,RankAdaptive,6,true,completed,0.5,0.314854655,1.0303090751673238e-6,completed,0.5,NaN,160.0835429909723,3,3,
-growth_nucleation_collisions,GammaEQMOM,7,true,failed,0.445,6.140642801,2.8047278427534295e-6,failed,0.445,NaN,86.58417769503163,3,3,moments fail Hankel positivity during integration; reduce dt or change closure
-growth_nucleation_collisions,DQMOM,6,true,completed,0.5,0.336375109,0.0015454748290493203,completed,0.5,4.887011742146201e10,160.09499846773934,3,3,
-growth_nucleation_collisions,LogNormal,3,false,failed,0.09,0.1586199,6.394878515891822e-5,failed,0.09,NaN,2.469940581263158,NaN,NaN,nonfinite moment derivative
+aggregation_breakage,QMOM,6,true,completed,50.0,0.177086231,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
+aggregation_breakage,RankAdaptive,6,true,completed,50.0,0.283998531,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
+aggregation_breakage,GammaEQMOM,7,true,completed,50.0,5.859429804,5.6694761774167546e-8,completed,50.0,NaN,0.0,3,3,
+aggregation_breakage,DQMOM,6,true,completed,50.0,0.21361732,5.669042935085855e-8,completed,50.0,25636.90385572849,4.2520917453714446e-8,3,3,
+aggregation_breakage,LogNormal,3,false,completed,50.0,0.698425821,5.6706917050952654e-8,completed,50.0,NaN,0.20455195538348447,NaN,NaN,
+growth_nucleation,QMOM,6,true,completed,0.5,0.149431341,1.0372815524295476e-6,completed,0.5,NaN,163.00223563654578,3,3,
+growth_nucleation,RankAdaptive,6,true,completed,0.5,0.289318201,1.0372815524295476e-6,completed,0.5,NaN,163.00223563654578,3,3,
+growth_nucleation,GammaEQMOM,7,true,failed,0.475,6.657769684,1.0372815524295476e-6,failed,0.475,NaN,124.88906749751534,3,3,Gamma EQMOM cannot reconstruct all tracked moments after 256-bit inversion; inspect common-scale kernel feasibility; rank and conditioning (increasing secondary_nodes does not fix primary inversion)
+growth_nucleation,DQMOM,6,true,completed,0.5,0.190236847,0.0015444104812456505,completed,0.5,5.5171838611539345e10,163.0123345661471,3,3,
+growth_nucleation,LogNormal,3,false,completed,0.5,0.062581045,1.0372815524295476e-6,completed,0.5,NaN,160.8883861479121,NaN,NaN,
+growth_nucleation_collisions,QMOM,6,true,completed,0.5,0.156950859,1.0303090751673238e-6,completed,0.5,NaN,160.0835429909723,3,3,
+growth_nucleation_collisions,RankAdaptive,6,true,completed,0.5,0.317675962,1.0303090751673238e-6,completed,0.5,NaN,160.0835429909723,3,3,
+growth_nucleation_collisions,GammaEQMOM,7,true,failed,0.445,5.395097503,2.8047278427534295e-6,failed,0.445,NaN,86.58417769503163,3,3,moments fail Hankel positivity during integration; reduce dt or change closure
+growth_nucleation_collisions,DQMOM,6,true,completed,0.5,0.206537261,0.0015454748290493203,completed,0.5,4.887011742146201e10,160.09499846773934,3,3,
+growth_nucleation_collisions,LogNormal,3,false,failed,0.09,0.134155493,6.394878515891822e-5,failed,0.09,NaN,2.469940581263158,NaN,NaN,nonfinite moment derivative
