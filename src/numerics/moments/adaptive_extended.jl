@@ -81,9 +81,9 @@ end
 # E[X^k | mean=xi, scale=sigma] = product(xi+j*sigma, j=0:k-1).
 # Polynomial coefficients are unsigned Stirling numbers of the first kind.
 function _gamma_coefficients(k,sigma)
-    coefficients=[1.0]
+    coefficients=[one(sigma)]
     for j in 0:k-1
-        next=zeros(length(coefficients)+1)
+        next=zeros(eltype(coefficients),length(coefficients)+1)
         for i in eachindex(coefficients)
             next[i]+=j*sigma*coefficients[i]
             next[i+1]+=coefficients[i]
@@ -106,17 +106,47 @@ function _deconvolution_margin(v,n)
     H1=Symmetric([v[i+j] for i in 1:n,j in 1:n])
     min(eigmin(H0),eigmin(H1))
 end
+
+# A small tail weight can make the deconvolution boundary much harder to
+# locate than the final Jacobi eigenproblem. Retry that SAME inversion in
+# higher precision, starting from the original moments (not Float64-scaled
+# moments). This is arithmetic refinement, not a change of closure or state.
+function _gamma_primary_precise(mu,m)
+    setprecision(BigFloat,256) do
+        b=BigFloat.(mu);scale=b[2]/b[1]
+        v=[b[k+1]/b[1]/scale^k for k in 0:length(b)-1]
+        lower=zero(BigFloat);upper=(v[3]-v[2]^2)/v[2]
+        upper>0 || throw(NumericalFailure("Gamma EQMOM has no positive width"))
+        for _ in 1:m.maxiters
+            mid=(lower+upper)/2;raw=_gamma_deconvolve(v,mid)
+            H0=Symmetric([raw[i+j-1] for i in 1:m.nodes+1,j in 1:m.nodes+1])
+            H1=Symmetric([raw[i+j] for i in 1:m.nodes,j in 1:m.nodes])
+            all(>=(0),raw) && isposdef(H0) && isposdef(H1) ? (lower=mid) : (upper=mid)
+        end
+        raw=_gamma_deconvolve(v,lower);n=m.nodes
+        A=Symmetric([raw[i+j-1] for i in 1:n,j in 1:n])
+        isposdef(A) || throw(NumericalFailure("Gamma EQMOM primary Hankel matrix remains singular; inspect rank and moment conditioning"))
+        L=cholesky(A).L;B=[raw[i+j] for i in 1:n,j in 1:n]
+        J=L\B/L';eig=eigen(Symmetric(Float64.((J+J')/2)))
+        x=eig.values;w=eig.vectors[1,:].^2
+        all(>=(0),x) || throw(NumericalFailure("Gamma EQMOM deconvolution requires negative primary support"))
+        error=maximum(abs(sum(BigFloat.(w).*_gamma_moment.(BigFloat.(x),lower,k))-v[k+1])/max(1,abs(v[k+1])) for k in 0:length(v)-1)
+        error<=m.rtol || throw(NumericalFailure("Gamma EQMOM cannot reconstruct all tracked moments after 256-bit inversion; inspect common-scale kernel feasibility, rank and conditioning (increasing secondary_nodes does not fix primary inversion)"))
+        (;nodes=x.*Float64(scale),weights=w.*Float64(b[1]),width=Float64(lower*scale),
+          rank=n,moment_error=Float64(error),inversion_precision=256)
+    end
+end
 function _gamma_primary(g,u,m)
     mu,scale,v=_normalized_moments(g,u)
     length(mu)==2m.nodes+1 || throw(DimensionMismatch("EQMOM needs 2nodes+1 moments"))
-    iszero(mu[1]) && return (nodes=Float64[],weights=Float64[],width=0.0,rank=0,moment_error=0.0)
+    iszero(mu[1]) && return (nodes=Float64[],weights=Float64[],width=0.0,rank=0,moment_error=0.0,inversion_precision=53)
     # The width-zero limit must match the extra moment too.
     discrete=try _adaptive_quadrature(v,m.nodes,min(m.rtol,1e-10)) catch e
         e isa NumericalFailure || rethrow(); nothing
     end
     if discrete!==nothing
         return (;nodes=discrete.nodes.*scale,weights=discrete.weights.*mu[1],width=0.0,
-            discrete.rank,discrete.moment_error)
+            discrete.rank,discrete.moment_error,inversion_precision=53)
     end
     upper=max(0.0,v[3]-v[2]^2)/v[2]
     upper>0 || throw(NumericalFailure("no positive Gamma EQMOM width"))
@@ -129,11 +159,16 @@ function _gamma_primary(g,u,m)
     end
     sigma=lower
     raw=_gamma_deconvolve(v,sigma)
-    primary=_adaptive_quadrature(raw,m.nodes,m.rtol)
+    primary=try
+        _adaptive_quadrature(raw,m.nodes,m.rtol)
+    catch e
+        e isa NumericalFailure || rethrow()
+        return _gamma_primary_precise(mu,m)
+    end
     error=maximum(abs(sum(primary.weights.*_gamma_moment.(primary.nodes,sigma,k))-v[k+1])/max(1,abs(v[k+1])) for k in g.orders)
-    error<=m.rtol || throw(NumericalFailure("Gamma EQMOM inversion failed moment reconstruction; this kernel family may be ineligible"))
+    error<=m.rtol || return _gamma_primary_precise(mu,m)
     (;nodes=primary.nodes.*scale,weights=primary.weights.*mu[1],width=sigma*scale,
-      primary.rank,moment_error=error)
+      primary.rank,moment_error=error,inversion_precision=53)
 end
 function quadrature(g::MomentSet,u,m::EQMOM)
     primary=_gamma_primary(g,u,m);x=Float64[];w=Float64[]
@@ -148,7 +183,7 @@ function quadrature(g::MomentSet,u,m::EQMOM)
         append!(x,primary.width.*e.values);append!(w,wi.*e.vectors[1,:].^2)
     end
     (;nodes=x,weights=w,primary_nodes=primary.nodes,primary_weights=primary.weights,
-      width=primary.width,primary.rank,primary.moment_error)
+      width=primary.width,primary.rank,primary.moment_error,primary.inversion_precision)
 end
 prepare_moment_state(m::Union{RankAdaptiveQMOM,EQMOM},g,u,p,t,ctx)=quadrature(g,u,m)
 _prepare_checked_moment_state(m::Union{RankAdaptiveQMOM,EQMOM},g,u,p,t,ctx)=

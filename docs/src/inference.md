@@ -445,6 +445,13 @@ values and the runner stops if its screen fails.
 
 ![Four-chain traces for both growth coefficients and prior scenarios](assets/bayesian_growth/chains.png)
 
+MCMC `parameter_draws` also returns `indices` into
+`reshape(samples.z, number_of_parameters, :)`, with draws varying before chains.
+Retain these identities when exporting predictive curves. A seed alone need not
+reproduce `randperm` selection across Julia versions; the protein example
+exports `posterior_predictive_indices.csv` for that purpose. Sampling tuning
+matrices and transformed Hamiltonian energies retain their separate meanings.
+
 ## Check prediction, identifiability and numerical error
 
 Numerical-refinement and prior-sensitivity comparisons retain data, times,

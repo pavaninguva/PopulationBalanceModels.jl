@@ -139,6 +139,16 @@ returns shrinkage material to solute and sends computational-boundary material
 to its escape ledger. It never assigns that same escaped material to both.
 Use `cumulative(problem,u,:crystals,:upper_escape,:volume)` to read a ledger and
 `accounting_rates(problem,u,p,t)` for instantaneous sectional loss rates.
+The optional final `property` argument defaults to `:number`; other names must
+be declared in `properties`. Unknown population, mechanism and property names
+raise `ArgumentError` listing the available names. An axial accessor returns a
+view across reactor cells; those historical entries remain stationary.
+Accounting adds `9 * (1 + length(properties))` states per declared population,
+including `:nucleation_underflow` and `:nucleation_overflow`. Use named accessors
+instead of assumptions about the packed offsets or total state length.
+Old packed states require repacking against the new operator. Restore named
+populations, bulk values and matching histories; the added birth-loss histories
+cannot be inferred from an old saved state that never recorded them.
 [The accounting contract](methods/realizable_evolution.md) defines units,
 endpoint-pivot weighting, collision restrictions and the discrete invariant.
 The [dissolution example](case_studies/dissolution.md) couples both representations

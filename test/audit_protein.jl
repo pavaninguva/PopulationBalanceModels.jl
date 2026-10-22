@@ -92,8 +92,11 @@ function audit_protein()
     @testset "Retained protein predictions and temporal checks" begin
         fine=PC.estimation_problem(bins=80,solver=(pb,ts)->PC.scheduled_solver(pb,ts;scale=.5))
         uniform=PC.estimation_problem(bins=80,dt=.5)
-        # Repeat the original seeded draw selection used by the retained export.
-        indices=randperm(MersenneTwister(2029),size(available,2))[1:100]
+        # Retain the original draw identities; randperm is not stable across
+        # Julia releases even when MersenneTwister has the same seed.
+        selection=table("posterior_predictive_indices.csv")
+        indices=[(parse(Int,r[2])-1)*samples+parse(Int,r[3]) for r in selection]
+        @test [parse(Int,r[1]) for r in selection]==collect(1:100)
         predicted=table("posterior_predictive.csv")
         maxprediction=0.
         for (i,index) in enumerate(indices)

@@ -272,6 +272,9 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
     count=min(predictive_draws,samples*chains)
     if count>0
         selected=parameter_draws(problem,draws;n=count,seed=seed+2)
+        # A seed alone does not preserve randperm selections across Julia releases.
+        _table(joinpath(output,"posterior_predictive_indices.csv"),"prediction,chain,draw",
+            [(i,cld(index,samples),mod1(index,samples)) for (i,index) in enumerate(selected.indices)])
         predictive=posterior_predictive(problem,selected;max_solves=count,measurement_noise=true,seed=seed+3)
         predictive.failed_draws==0 || throw(NumericalFailure("protein posterior prediction failed for $(predictive.failed_draws) draws; inspect the parameter draws instead of silently dropping them"))
         rows=Tuple[]

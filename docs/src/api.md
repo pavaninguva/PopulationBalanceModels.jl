@@ -50,6 +50,9 @@ initialize it with `quadrature_state(method,nodes,weights)`. Read
 `PBMSystem(populations; bulk_rhs, interactions, exchanges, fields, nonnegative_bulk, accounting)`
 accepts a named tuple of compiled populations. Its problem adds named initial
 populations and `bulk0`; use `stateview(problem,u)` to obtain named views.
+Use `population(problem,u,name)`, `bulk(problem,u,name)` and
+`cumulative(problem,u,population,mechanism,property=:number)` for packed states.
+`accounting_rates(problem,u,p,t)` returns a named tree of instantaneous rates.
 See [Coupled systems](coupled_systems.md) for callback and exchange contracts.
 `axial_problem(local_problem,reactor;axial_scheme=...)` adds axial transport to
 local sectional/raw-moment systems, including every scalar bulk state.

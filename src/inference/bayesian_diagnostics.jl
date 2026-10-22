@@ -167,12 +167,16 @@ function parameter_draws(problem::EstimationProblem,approximation::LaplaceApprox
     (;z=Z,physical=[physical_parameters(problem,z) for z in eachcol(Z)],
       in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],coordinates=approximation.coordinates,method=:laplace,seed)
 end
+"""Select retained MCMC draws. `indices` records their columns in
+`reshape(samples.z, length(problem.parameters), :)`; preserve it with exported
+predictions because seeded permutations can differ across Julia releases."""
 function parameter_draws(problem::EstimationProblem,samples::PosteriorSamples;n=size(samples.z,2)*size(samples.z,3),seed=2022)
     available=reshape(samples.z,size(samples.z,1),:)
     n isa Integer && 0<n<=size(available,2) || throw(ArgumentError("select no more than the available MCMC draws"))
     indices=randperm(MersenneTwister(seed),size(available,2))[1:n];Z=available[:,indices]
     (;z=Z,physical=[physical_parameters(problem,z) for z in eachcol(Z)],
-      in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],coordinates=samples.coordinates,method=:mcmc,seed)
+      in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],coordinates=samples.coordinates,
+      method=:mcmc,seed,indices)
 end
 
 function _predictive_block(rng,m,P,theta,ex,noise)

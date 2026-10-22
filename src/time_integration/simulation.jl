@@ -44,10 +44,12 @@ _default_evolution(op)=SSPRK33()
 _simulate(prob,method;kwargs...)=throw(ArgumentError("unsupported evolution method $(typeof(method)) for $(typeof(prob.operator))"))
 Base.getindex(sol::PBMSolution,i::Integer)=sol.u[i]
 
-function _checkstate(N,negative_tolerance)
-    all(isfinite,N) || throw(NumericalFailure("nonfinite state during time integration"))
+_checkstate(N,negative_tolerance)=_checkstate(N,negative_tolerance,"concentration",
+    "reduce dt, use Upwind, or add a proven positivity limiter")
+function _checkstate(N,negative_tolerance,description,remedy)
+    all(isfinite,N) || throw(NumericalFailure("nonfinite $description during time integration; $remedy"))
     minimum(N)>=-negative_tolerance ||
-        throw(NumericalFailure("negative concentration during time integration; reduce dt, use Upwind, or add a proven positivity limiter"))
+        throw(NumericalFailure("negative $description during time integration; $remedy"))
     nothing
 end
 

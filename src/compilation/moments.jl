@@ -98,7 +98,9 @@ function PBMProblem(op::CompiledMomentPBM,u0,tspan;p=NamedTuple())
     PBMProblem(op,μ,(float(tspan[1]),float(tspan[2])),p)
 end
 function _check_problem_state(prob::PBMProblem{O},u,tolerance) where {O<:CompiledMomentPBM}
-    _checkstate(u,tolerance); _check_population_state(prob.operator,u,tolerance)
+    _checkstate(u,tolerance,"moment-method state",
+        "reduce dt; inspect closure admissibility, conditioning and weak-form quadrature")
+    _check_population_state(prob.operator,u,tolerance)
 end
 
 

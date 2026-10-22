@@ -345,6 +345,12 @@ argument accepts a checked SciML solver adapter when adaptive integration is
 preferred. `examples/data/protein_crystallization/README.md` gives extraction
 provenance and the assumptions that still need experimental confirmation.
 
+For exact reuse of the retained predictive curves, the accompanying
+[draw identities](../assets/protein_crystallization/posterior_predictive_indices.csv)
+record the original chain and draw for each curve. The original seed alone
+selects different draws on newer Julia releases. This provenance correction
+changes neither the posterior nor the residual/model-adequacy conclusions.
+
 ## Complete runnable script
 
 The code below is read from the example source during the documentation build.

@@ -195,3 +195,17 @@ end
         @test [v[2] for v in profile.minimizers]≈expected atol=1e-6
     end
 end
+
+@testset "Upstream sampler metric and mapped Hamiltonian convention" begin
+    # Check the installed official implementation against the analytic
+    # Hamiltonian; a tuning covariance is the inverse MASS, not its inverse.
+    C=[2. .3;.3 .7]
+    target(y)=-sum(abs2,[sinh(y[1]),y[2]])/2+log(cosh(y[1]))
+    gradient(y)=[-sinh(y[1])*cosh(y[1])+tanh(y[1]),-y[2]]
+    h=AdvancedHMC.Hamiltonian(AdvancedHMC.DenseEuclideanMetric(C),target,y->(target(y),gradient(y)))
+    for y in ([.3,-.7],[-2.,1.]),momentum in ([.2,.8],[-1.,.4])
+        point=AdvancedHMC.phasepoint(h,y,momentum)
+        @test AdvancedHMC.energy(point)≈-target(y)+dot(momentum,C*momentum)/2 rtol=1e-13
+        @test AdvancedHMC.∂H∂r(h,momentum)≈C*momentum rtol=1e-13
+    end
+end

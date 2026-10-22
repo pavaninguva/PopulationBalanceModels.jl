@@ -67,7 +67,8 @@ op = compile(model,MomentSet(0:3);method=QMOM(2),
 Thus analytic affine-growth moments can coexist with quadrature-based
 collision integration. A global moment reconstruction is shared within one
 residual evaluation rather than inverted independently for every term.
-examples/moment_closures.jl exercises the three implemented families.
+`examples/moment_closures.jl` exercises exact, quadrature and lognormal closure
+selection; `examples/quadrature_moment_methods.jl` exercises the extended families.
 
 A new moment family supplies:
 
@@ -98,6 +99,13 @@ moment_term!(du, u, term, rule, cache, method, reconstructed, op, p, t, ctx)
 compiled moment residual prepares reconstruction once per evaluation. The
 external examples in `test/method_interfaces.jl` show both term dispatch and
 a direct-state family with explicit moment chain rules.
+
+Underscored helpers such as `_prepare_checked_moment_state`,
+`_gamma_primary_precise` and `_ledger_index` are private. Third-party families
+should implement the public hooks above; native accepted states are checked
+through `validate_moment_state` as well as the necessary stage checks. Rate and
+reconstruction callbacks must be pure: rejected trials must leave no state,
+ledger or externally visible cache changes.
 
 The moment_rate hook lets MomentExchange remain correct for nonlinear
 weight/node-to-moment maps. Direct-state families must implement their

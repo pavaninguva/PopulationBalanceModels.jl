@@ -182,6 +182,13 @@ A tolerance-based rank decision is discontinuous. Inference through these
 eigenvalue inversions is not supported by ForwardDiff; select explicit finite
 differences and check the stability of the rank under perturbation.
 
+A lognormal quadrature must resolve both the evolved moments and the rate
+integrands. For example a size-sixth-power breakage law in a three-moment model
+uses inferred M6, M7 and M8. Passing the M0–M2 reconstruction check says nothing
+about their integration error; refine `quadrature_order` and the timestep
+independently. A rapidly growing inferred tail can also make the closure's own
+equations singular. Neither effect is a particle/material conservation law.
+
 ## Reconstruct a density with Gamma EQMOM
 
 A quadrature rule represents integrals. It does not by itself define a smooth
@@ -199,12 +206,23 @@ scale ``\sigma``. `EQMOM(N)` uses moments 0:2N, one more than ordinary QMOM.
 Triangular deconvolution removes the Gamma-kernel contributions from the raw
 moments. A bracketed search finds the realizability boundary of the deconvolved
 Hankel matrices. The primary quadrature is accepted only if the original
-mixture reproduces all input moments. Some nonnegative moment vectors cannot
-be represented by this family; those inputs fail explicitly.
+mixture reproduces all input moments. A failed Float64 primary inversion is
+retried with a 256-bit width search and factorization of the same moment vector;
+`q.inversion_precision` reports 53 or 256 bits. The small final Jacobi eigenproblem
+and returned nodes/weights remain Float64. This arithmetic refinement does not
+change the kernel family, the requested reconstruction tolerance or the evolved
+moments. It cannot remove genuine family infeasibility or uncertain input moments.
+Some nonnegative moment vectors cannot be represented by this family; those
+inputs fail explicitly. The [audit diagnosis](audit.md)
+gives independent examples of ill-conditioning and failure of three-kernel
+Gamma feasibility.
 
 The rates are integrated with a secondary Gauss–Laguerre rule within each
 kernel. `secondary_nodes` controls that integration accuracy independently of
-`N`, the number of mixture components. At zero width the reconstruction becomes
+`N`, the number of mixture components. Refine `rtol` and the timestep separately:
+a small reconstruction error can still produce a large error in an untracked
+high-order rate integral. Increasing `secondary_nodes` does not repair a failed
+primary inversion. At zero width the reconstruction becomes
 atomic and no ordinary density exists. Empty populations are allowed; growth
 through zero still requires a separate extinction model.
 

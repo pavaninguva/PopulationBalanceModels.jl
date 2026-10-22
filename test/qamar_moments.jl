@@ -95,3 +95,61 @@ end
     run=q.comparison_run((;method)->q.problem4(;method,tf=.02),QMOM(3),[0.,.01,.02],.005)
     @test run.status=="completed" && last(run.t)==.02
 end
+
+include("fixtures/qamar_reference.jl")
+@testset "Independent characteristic and Gamma feasibility references" begin
+    ref=QamarReference
+    setprecision(256) do
+        # Every required order, including the extra EQMOM order M6; resolve the pulse analytically.
+        for time in ("0.0","0.205","0.215","0.225","0.475","0.4788","0.48","0.5")
+            moments=ref.characteristic_moments(time)
+            @test Float64.(moments)≈QamarMomentBenchmarks.exact5(parse(Float64,time),0:6) rtol=3e-12
+        end
+        g=MomentSet(0:6)
+        moments=ref.characteristic_moments(".4788")
+        certificate=ref.gamma_certificate(moments)
+        @test certificate.error<1e-12
+        @test certificate.condition>1e10
+        @test minimum(certificate.weights)>0
+        q=quadrature(g,Float64.(moments),EQMOM(3))
+        @test q.inversion_precision in (53,256)
+        @test [sum(q.weights.*q.nodes.^k)/Float64(moments[k+1]) for k in 0:6]≈ones(7) rtol=1e-7
+        @test q.width≈Float64(certificate.width) rtol=1e-8
+        # A reproduced RK predictor triggers arithmetic refinement even when
+        # nearby rounded reference inputs happen to pass the Float64 path.
+        predictor=[17792.436509054474,4706.799347088809,1257.2789062897127,
+            346.44390790325554,105.63609414313751,41.987184420369886,25.450594713550938]
+        refined=quadrature(g,predictor,EQMOM(3))
+        @test refined.inversion_precision in (53,256)
+        @test [sum(refined.weights.*refined.nodes.^k)/predictor[k+1] for k in 0:6]≈ones(7) rtol=1e-7
+        retry=PopulationBalanceModels._gamma_primary_precise(predictor,EQMOM(3))
+        @test retry.inversion_precision==256
+        @test [sum(w*prod((x+j*retry.width for j in 0:k-1);init=1.) for
+            (x,w) in zip(retry.nodes,retry.weights))/predictor[k+1] for k in 0:6]≈ones(7) rtol=1e-7
+        # A full allowed-width search, independent of the package's boundary bisection.
+        for bits in (256,512)
+            reference=setprecision(()->ref.characteristic_moments(".48"),BigFloat,bits)
+            roots=ref.gamma_width_roots(reference;bits)
+            @test length(roots)==1
+            @test only(roots).shifted_margin< -1e-5
+            @test realizability(g,Float64.(reference)).valid
+            @test_throws NumericalFailure quadrature(g,Float64.(reference),EQMOM(3))
+        end
+    end
+end
+
+@testset "Independent lognormal high-order breakage rates" begin
+    for variance in (.1,.3,.6,1.),order in (32,64,128)
+        g=MomentSet(0:2;coordinate=:length);mu=[20.,10.,5exp(variance)]
+        model=PBMModel(Breakage((x,p,t,c)->x^6,UniformVolumeDaughters();coordinate_map=AdditiveCoordinate(x->x^3,cbrt)))
+        op=compile(model,g;method=LogNormalClosure(quadrature_order=order));du=zeros(3,1)
+        rhs!(du,reshape(mu,:,1),op,NamedTuple(),0.)
+        expected=QamarReference.lognormal_breakage_rates(20.,.5,variance)
+        if order==32 && variance==1.
+            # Resolving tracked M2 does not certify the rate's M8 integral.
+            @test abs(du[3]/expected[3]-1)>1e-4
+        else
+            @test vec(du)≈expected rtol=2e-7
+        end
+    end
+end

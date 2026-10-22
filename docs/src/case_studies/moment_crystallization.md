@@ -310,25 +310,49 @@ material moment or size distribution.
 
 The 16-point default lognormal quadrature becomes unresolved during this pulse.
 Increasing it to 32 or 64 points lets the growth/source calculation finish.
-The current tables and comparison figures were regenerated after correcting
-unit scaling of reconstruction checks and high-order normal quadrature weights;
-the [audit register](../audit.md) records both defects and their analytical tests.
-This is a quadrature issue, not evidence that the three exact lower equations
-are incorrect. The committed comparison uses 64 points. With the size-sixth-
-power breakage hazard added, the explicit lognormal calculation still stops
-near `t=0.09 s`, including after halving the timestep. A single lognormal shape
-replaces an old population and a narrow newborn population by a broad tail;
-large particles in that inferred tail strongly affect the high-order breakage
-integrals. These results do not distinguish every possible stiff-solver remedy,
-but they rule out interpreting this run as an accurate full-process solution.
+The comparison uses 64 points. A reconstruction check tests the tracked moments;
+it does not certify higher moments in a kinetic rate. With a size-sixth-power
+breakage hazard, the three lower equations need inferred M6, M7 and M8:
 
-The current Gamma EQMOM/RK calculation cannot certify a reconstruction beyond
-about `0.475 s` without collisions, or `0.445 s` with them. Increasing secondary
-quadrature from 12 to 48 points per kernel does not resolve these failures.
-That finding concerns this inversion and integration path; it does not prove
-that no Gamma representation exists. Crosses show the last completed output
-interval. Curves are never extended beyond a failed solve or replaced with
-another method.
+```math
+\left.\frac{dM_k}{dt}\right|_{\rm breakage}
+=\left(\frac{6}{k+3}-1\right)M_{k+6},\qquad k=0,1,2.
+```
+
+Independent analytic lognormal moments reproduce the 64/128-point rates. An
+adaptive calculation also finds rapidly increasing log-variance near
+`0.090468223635 s`. The corresponding analytic closure equations approach a
+finite-time runaway while number and mean stay finite. The native calculation's
+first overflow is later, at `0.0908 s` for `dt=2e-4`; its last saved point is
+`0.09 s`. These are three different quantities. Halving that step cannot turn
+this broad-tail closure trajectory into a resolved physical collision solution.
+Reconstructed M3 remains an inferred quantity, not conserved material. This runaway
+precedes the Gaussian source maximum at 0.215 s; the constant background births
+are already enough to broaden the inferred shape.
+
+For Gamma EQMOM, independent characteristic moments through M6 clarify the
+no-collision limit. A three-kernel representation exists at 0.4788 s but has a
+primary Hankel condition number around `1.65e11` and an extremely small tail
+weight. The package now retries failed primary inversions in 256-bit arithmetic,
+without changing the family or moments. At 0.48–0.50 s an independent search of
+the full allowed width interval finds no nonnegative three-kernel Gamma
+representation of those reference moments. This family restriction is distinct
+from physical moment realizability; the characteristic solution is nonnegative.
+
+With collisions, the first coarse SSPRK33 failure is a nonrealizable predictor
+at `0.4459 s`, after the saved `0.445 s` output. Smaller steps change the outcome
+non-monotonically, and independently controlled integration stalls earlier
+near ill-conditioned tail reconstruction. Tightening primary tolerance and
+increasing secondary quadrature do not establish a converged trajectory.
+**The collision EQMOM evolution remains unresolved**; its failed inversion alone
+is not evidence of intrinsic family nonrepresentability. The
+[audit register](../audit.md) gives the offending states, high-precision
+feasibility calculation and compact reproduction commands.
+
+Crosses mark the last completed output interval. The audit tables also record
+the first failed internal stage. Each timing measures one solve after warmup;
+state counts and completed horizons are reported with it. Compare those
+quantities together when interpreting solve costs.
 
 DQMOM completes both pulse calculations, but its lower-moment timestep difference
 is about `1.5e-3`, compared with about `1e-6` for the raw three-node formulations.

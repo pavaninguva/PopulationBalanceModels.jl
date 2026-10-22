@@ -193,3 +193,80 @@ end
         logabsdetjac=y->y[1],label=:wrong_support)
     @test_throws DomainError check_sampling_map(problem,restricted,[-2.,1.])
 end
+
+@testset "Follow-up: independent units, tails and analytic derivatives" begin
+    g=MomentSet(0:2)
+    for number in (1e-20,1.,1e20),sizeunit in (1e-12,1.,1e3)
+        mu=number.*[1.,sizeunit,exp(10.)*sizeunit^2]
+        @test_throws NumericalFailure quadrature(g,mu,LogNormalClosure(quadrature_order=16))
+        q=quadrature(g,mu,LogNormalClosure(quadrature_order=64))
+        @test [sum(q.weights.*q.nodes.^k)/mu[k+1] for k in 0:2]≈ones(3) rtol=1e-8
+    end
+    # Gaussian even moments are (2j-1)!!, not computed by another quadrature.
+    for order in (32,64,128)
+        rule=LogNormalClosure(quadrature_order=order)
+        for k in (8,16,30)
+            truth=Float64(prod(big(1):2:big(k-1)))
+            @test sum(rule.weights.*rule.nodes.^k)≈truth rtol=2e-12
+        end
+        @test abs(sum(rule.weights.*rule.nodes.^15))<1e-10*Float64(prod(big(1):2:big(15)))
+    end
+    # Exponential tilting probes tail contributions independently of M0:M2.
+    for order in (64,128),a in (3.,5.,7.)
+        rule=LogNormalClosure(quadrature_order=order)
+        @test sum(rule.weights.*exp.(a.*rule.nodes))≈exp(a*a/2) rtol=1e-10
+    end
+    for x in (-40.,-.7,0.,.7,40.)
+        @test ForwardDiff.derivative(PopulationBalanceModels._softplus,x)≈1/(1+exp(-x)) rtol=1e-13
+        @test ForwardDiff.derivative(z->PopulationBalanceModels._logjac(LogitTransform(-2,3),z),x)≈-tanh(x/2) atol=1e-14
+    end
+end
+
+@testset "Follow-up: unequal collision events and both discarded birth boundaries" begin
+    grid=Grid1D([0.,1.,2.])
+    term=Aggregation(ConstantKernel(1.))
+    op=compile(PBMModel(term),grid;methods=TermMethods(aggregation=FixedPivot(overflow=:discard)))
+    sys=PBMSystem((particles=op,);accounting=(CumulativeAccounting(:particles;properties=(material=1,)),),
+        exchanges=(ConservativeExchange(:particles,:c,(x,p,t,ctx)->x),))
+    pb=PBMProblem(sys,(particles=[2.,3.],),(0.,.001);bulk0=(c=5.,))
+    du=zero(pb.u0);rhs!(du,pb.u0,pb.operator,pb.p,0.)
+    # Cross events: 2*3; equal large-particle pairs: 3^2/2.
+    @test cumulative(pb,du,:particles,:aggregation_overflow)≈10.5
+    @test cumulative(pb,du,:particles,:aggregation_overflow,:material)≈25.5
+    @test sum(population(pb,du,:particles))+10.5≈-(2+3)^2/2
+    @test dot(grid.centers,population(pb,du,:particles))+25.5≈0 atol=1e-13
+    @test bulk(pb,du,:c)≈0 atol=1e-13
+    for size in (.1,3.)
+        term=Nucleation((p,t,c)->2.,size)
+        op=compile(PBMModel(term),grid;methods=TermMethods(nucleation=FixedPivot(overflow=:discard)))
+        sys=PBMSystem((particles=op,);accounting=(CumulativeAccounting(:particles),),
+            exchanges=(ConservativeExchange(:particles,:c,(x,p,t,c)->x^3),))
+        pb=PBMProblem(sys,(particles=zeros(2),),(0.,.01);bulk0=(c=100.,))
+        mechanism=size<.5 ? :nucleation_underflow : :nucleation_overflow
+        for method in (SSPRK33(),MeasureEuler())
+            u=last(simulate(pb;dt=.005,method).u)
+            @test cumulative(pb,u,:particles,mechanism)≈.02
+            @test cumulative(pb,u,:particles,mechanism,:material)≈.02size^3
+            @test bulk(pb,u,:c)≈100-.02size^3 atol=8eps(100.)
+        end
+    end
+end
+
+@testset "Follow-up: independent mapped Gaussian target" begin
+    pb=PBMProblem(compile(PBMModel(),Grid1D([0.,1.,2.])),ones(2),(0.,1.))
+    measurement=Measurement([0.],reshape([1.2,-.4],2,1),
+        FunctionObservable((u,op,p,t)->[p.a,p.b]);likelihood=GaussianLikelihood(sigma=1.))
+    specs=(ParameterSpec(:a;initial=0.,prior=Prior(Normal();coordinates=:physical)),
+           ParameterSpec(:b;initial=0.,prior=Prior(Normal();coordinates=:inference)))
+    problem=EstimationProblem(specs,(InferenceExperiment(:run,pb,measurement;dt=.1),))
+    map=(to_sampler=z->[asinh(z[1]),z[2]],from_sampler=y->[sinh(y[1]),y[2]],
+        logabsdetjac=y->log(cosh(y[1])),label=:sinh_independent)
+    for z in ([0.,0.],[.6,-.2],[-5.,3.],[7.,-4.])
+        report=check_sampling_map(problem,map,z);y=report.y
+        # Four normalized standard-normal factors, derived without package likelihood/prior calls.
+        density=-2log(2pi)-((1.2-z[1])^2+(-.4-z[2])^2+z[1]^2+z[2]^2)/2
+        @test report.logdensity_inference≈density
+        @test report.logdensity_sampler≈density+log(cosh(y[1]))
+        @test report.gradient≈[(1.2-2z[1])*cosh(y[1])+tanh(y[1]),-.4-2z[2]] rtol=1e-12 atol=1e-12
+    end
+end

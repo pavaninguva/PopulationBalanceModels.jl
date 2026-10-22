@@ -1,6 +1,7 @@
 """Compare actual Qamar moment-family runs, retaining incomplete trajectories."""
 from pathlib import Path
 import argparse
+from difflib import SequenceMatcher
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -15,7 +16,17 @@ STYLES=('-', '--', '-.', ':', '-')
 
 def save(fig,folder,name):
     fig.tight_layout()
-    for ext in ('png','svg'):fig.savefig(folder/f'{name}.{ext}',dpi=210,bbox_inches='tight')
+    for ext in ('png','svg'):
+        path=folder/f'{name}.{ext}'
+        before=path.read_text().splitlines() if ext=='svg' and path.exists() else []
+        fig.savefig(path,dpi=210,bbox_inches='tight')
+        if ext=='svg':
+            lines=[line.rstrip() for line in path.read_text().splitlines()]
+            # Keep unchanged path formatting; new paths have no trailing spaces.
+            matcher=SequenceMatcher(None,[line.rstrip() for line in before],lines,autojunk=False)
+            for block in matcher.get_matching_blocks():
+                lines[block.b:block.b+block.size]=before[block.a:block.a+block.size]
+            path.write_text('\n'.join(lines)+'\n')
     plt.close(fig)
 
 def main(folder=FOLDER,usetex=False):

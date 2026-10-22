@@ -25,18 +25,31 @@ function _validate_accounting(a,op)
     end
 end
 
-"""Historical unresolved number or property, by population and removal mechanism.
+"""
+    cumulative(problem_or_operator, state, population, mechanism, property=:number)
+
+Historical unresolved number or declared property, by named population and removal
+mechanism. `state` may be a physical state or a derivative (instantaneous rate).
+Use `accounting_rates(problem,state,p,t)` for a named tree of rate values.
 For axial systems return one history per reactor cell; these histories do not flow.
 """
 cumulative(prob::PBMProblem,u,population::Symbol,mechanism::Symbol,property::Symbol=:number)=
     cumulative(prob.operator,u,population,mechanism,property)
-function cumulative(op::CompiledSystem,u,population,mechanism,property=:number)
-    i=getproperty(getproperty(getproperty(op.ledger_indices,population),mechanism),property)
+function _ledger_index(op,population,mechanism,property)
+    haskey(op.ledger_indices,population) || throw(ArgumentError("no cumulative accounting for population :$population; available populations: $(keys(op.ledger_indices))"))
+    entries=getproperty(op.ledger_indices,population)
+    haskey(entries,mechanism) || throw(ArgumentError("unknown cumulative mechanism :$mechanism; available mechanisms: $(keys(entries))"))
+    properties=getproperty(entries,mechanism)
+    haskey(properties,property) || throw(ArgumentError("undeclared cumulative property :$property; available properties: $(keys(properties))"))
+    getproperty(properties,property)
+end
+function cumulative(op::CompiledSystem,u,population::Symbol,mechanism::Symbol,property::Symbol=:number)
+    i=_ledger_index(op,population,mechanism,property)
     u[i]
 end
-function cumulative(op::CompiledAxialSystem,u,population,mechanism,property=:number)
+function cumulative(op::CompiledAxialSystem,u,population::Symbol,mechanism::Symbol,property::Symbol=:number)
     s=first(op.local_operators)
-    i=getproperty(getproperty(getproperty(s.ledger_indices,population),mechanism),property)
+    i=_ledger_index(s,population,mechanism,property)
     view(u,i,:)
 end
 function _record_loss!(u,op,population,mechanism,x,amount)

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Independently verified audit corrections with number/size rescaling, Gaussian tail integrals, unequal collision events, discarded births, analytic mapped targets and upstream Hamiltonian/metric checks.
+- Added a 256-bit arithmetic retry for ill-conditioned Gamma EQMOM primary inversion, retaining the selected family and all-moment acceptance tolerance. Quadrature results report `inversion_precision`; explicit rejection remains when reconstruction fails.
+- Diagnosed the moment benchmark with independent characteristic moments, full allowed-width root checks, analytic high-order breakage rates and separately controlled integration. Retained failure times and unresolved limits rather than extending failed curves.
+- Retained explicit MCMC predictive draw identities across Julia versions; `parameter_draws` now includes flattened MCMC `indices`. No posterior curves or sampling targets changed.
+- Clarified accounting state lengths, named-accessor errors, private versus public moment hooks and representation-specific integration remedies. No inference target or protein observations/priors/noise were changed.
+
 - Audited the clean `9e2c6fa` checkout and recorded baseline, findings, supported combinations, dependency versions and executed verification in the manual's audit register.
 - Corrected unit-dependent lognormal reconstruction checks and high-order normal quadrature weights; regenerated the affected moment-family comparisons while retaining failed trajectories.
 - Unified selected overflow policies with cumulative accounting, included explicitly discarded point births, and corrected zero-feed axial accounting dimensions. Accounting states gain two nucleation-loss mechanisms; use named accessors rather than packed offsets.
