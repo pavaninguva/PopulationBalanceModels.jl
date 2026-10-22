@@ -22,9 +22,9 @@ struct InguvaBraatz2023 end
 
 _compile_evolution(model,grid,method,bc,p;kwargs...)=_compile_characteristic(model,grid,method,bc,p;kwargs...)
 
-function _positive_affine(g::AffineGrowth,lower,upper,p)
+function _positive_affine(g::AffineGrowth,lower,upper,p;description="the transformation")
     b=_affine_coefficient(g.offset,p);s=_affine_coefficient(g.slope,p)
-    min(b+s*lower,b+s*upper)>0 || throw(ArgumentError("the transformation requires strictly positive growth throughout the size domain"))
+    min(b+s*lower,b+s*upper)>0 || throw(ArgumentError("$description requires strictly positive growth throughout the size domain"))
     b,s
 end
 function _travel_time(g::AffineGrowth,a,origin,p)
@@ -103,7 +103,8 @@ function _compile_characteristic(model,grid,method,bc,p;fields,methods)
     term=only(model.terms)
     rates,axes,boundaries=if method isa Inguva2022 && grid isa Grid1D && term isa Growth && term.rate isa AffineGrowth
         ((term.rate,),(grid,),(bc,))
-    elseif method isa InguvaBraatz2023 && grid isa Grid2D && term isa Growth2D && term.rate isa SeparableGrowth2D
+    elseif method isa InguvaBraatz2023 && grid isa Grid2D && term isa Growth2D && term.rate isa SeparableGrowth2D &&
+           term.rate.x isa AffineGrowth && term.rate.y isa AffineGrowth
         ((term.rate.x,term.rate.y),(grid.x,grid.y),(bc.x,bc.y))
     else
         throw(ArgumentError("Inguva2022 requires 1D Growth(AffineGrowth(...)); InguvaBraatz2023 requires 2D Growth2D(SeparableGrowth2D(...)). Arbitrary callbacks do not certify the required functional form"))

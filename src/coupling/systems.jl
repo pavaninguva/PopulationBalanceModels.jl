@@ -32,6 +32,8 @@ end
 function PBMSystem(populations::NamedTuple;bulk_rhs=_zero_bulk,interactions=(),
                    exchanges=(),fields=_system_fields,nonnegative_bulk=(),accounting=())
     !isempty(populations) || throw(ArgumentError("at least one population is required"))
+    any(op->op isa CompiledHOC,values(populations)) &&
+        throw(ArgumentError("HOC direct transport does not support evolving bulk balances or population coupling; compile residual methods for PBMSystem"))
     all(_system_population,values(populations)) || throw(ArgumentError("compile each supported named population first"))
     for interaction in interactions
         interaction isa Union{PopulationTransfer,CrossAggregation,CustomCoupling} || throw(ArgumentError("unsupported interaction"))

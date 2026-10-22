@@ -143,6 +143,13 @@ The [trajectory methods](characteristics.md) explain the required growth-law
 declarations, physical meshes and CFL=1 time steps for Inguva2022 and
 InguvaBraatz2023.
 
+`compile(...; evolution=HOCFiniteVolume(),bc,p)` selects a complete conservative
+compact update instead of a residual reconstruction. Its positive-growth,
+separability, source and boundary contracts, together with fourth-order spatial
+and second-order temporal evidence, are specified in
+[Compact-method verification](compact_verification.md). It rejects evolving
+bulk feedback and signed dissolution; retain residual methods for those cases.
+
 ## Disappearance at physical zero
 
 Choose `SizeBC(AbsorbingZero(),NoFlux())` for a sectional zero-size outflow, or

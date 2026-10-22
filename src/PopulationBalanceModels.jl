@@ -24,7 +24,8 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        Grid2D, Growth2D, Nucleation2D, SizeBC2D, ForwardEuler, SSPRK22, SSPRK33, RK4, SSPRK54, HOCADI, ExactShift,
        Centered, LinearUpwind, VanLeer, WENO3, LaxWendroff, BeamWarming,
        AxialGrid, AxialDispersion, axial_problem, axial_stateview, axial_population, axial_fluxes,
-       AffineGrowth, SeparableGrowth2D, Inguva2022, InguvaBraatz2023,
+       AffineGrowth, ExponentialGrowth, SeparableGrowth2D, TimeScaledGrowth,
+       PrescribedRate, HOCGrowthLaw, HOCFiniteVolume, Inguva2022, InguvaBraatz2023,
        characteristic_grid, characteristic_density,
        MomentSet, ExactClosure, QuadratureClosure, PolynomialRate,
        ConstantKernel, SelfSimilarDaughters, UniformVolumeDaughters, daughter_moment, MomentSource, MomentExchange,
@@ -89,6 +90,8 @@ include("time_integration/compact_adi.jl")
 include("time_integration/exact_shift.jl")
 include("time_integration/characteristic_transport.jl")
 include("time_integration/constant_transport.jl")
+include("compilation/compact.jl")
+include("time_integration/compact_finite_volume.jl")
 include("compilation/axial.jl")
 include("compilation/axial_system.jl")
 include("coupling/accounting.jl")

@@ -53,8 +53,17 @@ not evidence that the long-time physical reconstruction is validated.
 
 ## Findings and disposition
 
+The compact-solver extension began at clean
+`1e644a184f39c36ca81a9759d9b42a456e69e456`. Instructions were checked again;
+none applied. An exported HEAD snapshot passed 1,243 core checks with Aqua on
+Julia 1.13.2 before relying on the new implementation. The direct root
+`test/runtests.jl` invocation initially lacked the test-only Aqua environment;
+`Pkg.test` and the isolated audit environment supply it correctly. No runtime
+dependency, publication, deployment or unrelated scientific model was changed.
+
 Locations are repository-relative under `src/` unless qualified. New core
-reproducers are in `test/audit_regressions.jl`.
+reproducers are in `test/audit_regressions.jl`; compact-policy checks are in
+`test/compact_finite_volume.jl`.
 
 | ID | Severity and affected behavior | Location and concrete evidence | Resolution / acceptance test | Disposition |
 |:--|:--|:--|:--|:--|
@@ -73,6 +82,8 @@ reproducers are in `test/audit_regressions.jl`.
 | A13 | Medium: primary-inversion conditioning and unresolved closure evolution | First failing original stages: EQMOM growth/source 0.4788 s, collisions 0.4459 s; lognormal collisions 0.0908 s. Last saved times were 0.475/0.445/0.09 s. | Added 256-bit arithmetic refinement of the same Gamma inversion, independent characteristic moments through M6, full width-root feasibility checks, analytic lognormal breakage rates and independently controlled integration. | **Arithmetic defect corrected; remaining limits diagnosed below.** No state repair or family replacement. |
 | A14 | Low: repeated inversion / mixed-term inference work | Moment residual reconstructed twice; JET lost correlated term/method/cache types. `_mechanism` was private and unused across source/tests/examples/docs. | Reuse validating reconstruction, retain third-party hooks; dispatch barrier; shared growth divergence; unused alias removed. Allocation probe and selected JET residuals pass. | **Corrected.** No public family removed. |
 | A15 | Low: softplus AD branch at zero | `inference/parameters.jl`: the private max/abs implementation gave derivative -0.5 instead of +0.5 at zero. The combined symmetric logit Jacobian already had the correct derivative/curvature. | Stable differentiable branch; independent derivative and logit Hessian checks. | **Corrected helper.** No prior/posterior target changed. |
+| H01 | Scope: compact support stopped at periodic constant growth | Existing HOCADI, Zhang2025 nodal Eqs. 15/30, Li2026 multilevel Eqs. 8/16 and SI S11 do not provide a directly interchangeable bin-integral solver. The literal main-stage interpretation has a nonvanishing temporal residual, retained separately. | Independently derived conservative compact faces, midpoint/positive symmetric composition, structured-law compilation checks and actual-flux accounting. Analytical cell integrals, dense matrix exponentials, source/flux/parameter/rejection tests and refinement benchmarks. | **Implemented and verified adaptation.** Fourth-order interior space, second-order complete time. Published full-method reproduction remains unclaimed. |
+| H02 | Low: initial-only compact runs could bypass changed-input checks | Final review of `time_integration/compact_finite_volume.jl`: mutate a declared rate parameter container or stored initial array, then request only `saveat=[t0]`. | Revalidate initial coefficient/source values and state at every simulation entry, including zero-step requests. Two independent rejection tests exercise both mutations. | **Corrected.** Valid benchmark numerical outputs remain unchanged. |
 
 ## Independent follow-up checks
 
@@ -238,6 +249,7 @@ imports to avoid its exported sample-moment name.
 | Sectional growth | Upwind, MUSCL, van Leer, WENO3; uniform WENO5, centered and linear upwind | Per-term/grid eligibility checked. WENO/unlimited methods do not imply positivity. Lax–Wendroff/Beam–Warming are restricted space–time policies. |
 | Tensor distributions | Two-coordinate growth, point/distributed births and removal | Upwind/uniform WENO5; transverse-width fluxes. No tensor aggregation/breakage. |
 | Trajectory methods | Eligible structured 1D/2D growth on travel-time meshes; exact constant shifts | CFL/output alignment and autonomous/separable laws checked. No arbitrary growth, bulk coupling or hidden interpolation. HOCADI is a periodic constant-growth variant, not Li2026 reproduction. |
+| Conservative compact | Positive declared 1D/2D separable growth on uniform axes; prescribed time dependence, point births, periodic or physical inflow/outflow | HOCFiniteVolume: fourth-order interior space / second-order complete time; compiled dependencies and combined terms checked. Actual number-flux history, no positivity guarantee, no bulk/axial/collision/AD support. See [specification](methods/compact_verification.md). |
 | Raw moments | Dependency-closed exact laws; QMOM, rank-adaptive QMOM, Gamma EQMOM, assumed lognormal weak forms | Realizability, closure representability, integration quadrature and evolution accuracy differ. Continuous daughter integrals use `daughter_moment` where supplied. |
 | DQMOM | Positive distinct weights/weighted abscissas; scaled source solves and moment chain-rule exchange | Not raw-moment layout; no empty startup, node collision or extinction treatment. |
 | MeasureEuler batch | Positive pushforward, age-integrated point births, bounded removal/collisions, shared-bulk Lie composition | First order. Upwind sectionals or supported raw QMOM/rank-adaptive states; ExactClosure needs explicit reconstruction. All-moment reduction, depletion/CFL and transactional retries. EQMOM/lognormal/DQMOM and custom interactions rejected. |
@@ -371,6 +383,19 @@ a hard-limit failure. Windows execution and the older 1.10.3 sensitivity stack
 were not rerun. Their earlier qualifications remain in force.
 
 ## Compatibility notes
+
+The compact extension adds `HOCFiniteVolume`, `ExponentialGrowth`,
+`TimeScaledGrowth`, `PrescribedRate` and `HOCGrowthLaw`; ordinary residual
+callbacks and existing HOCADI behavior remain supported. Direct compiled
+transport now rejects `odeproblem` immediately instead of failing when its
+nonexistent residual is evaluated. New diagnostics hold integrated number
+flux histories without changing the sectional state layout. The 80 retained
+single warmed runs and six expected rejections, independent source-time
+checks and full-paper interpretation are linked from the
+[compact specification](methods/compact_verification.md). The final checks
+pass 1,366 core tests (including Aqua) on minimum/current Julia and 52 affected
+optional integration checks. Collision EQMOM research and protein inference
+targets were not reopened.
 
 Model/representation constructors retain their names. Accounting adds
 `:nucleation_underflow` and `:nucleation_overflow`, changing packed lengths and

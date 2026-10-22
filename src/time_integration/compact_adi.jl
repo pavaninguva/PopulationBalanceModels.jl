@@ -48,6 +48,9 @@ function _compact_axis!(out,N,dimension,velocity,h,dt,factor,b)
     end
 end
 function _simulate(prob::PBMProblem,method::HOCADI;dt,saveat,check_nonnegative,negative_tolerance,maxsteps)
+    op=prob.operator
+    op isa Union{CompiledPBM2D,CompiledHOC} || throw(ArgumentError("HOCADI requires a 2D sectional population"))
+    _validate_hoc(op.model,op.grid,method,op.bc,prob.p)
     velocities=_constant_transport(prob); op=prob.operator; g=op.grid
     all(b->b.left isa Periodic,(op.bc.x,op.bc.y)) || throw(ArgumentError("HOCADI currently requires periodic axes; physical one-sided compact closures are not implemented"))
     min(size(g)...)>=5 || throw(ArgumentError("compact solver needs at least five bins per axis"))

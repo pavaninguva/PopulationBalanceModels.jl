@@ -3,6 +3,7 @@ using PopulationBalanceModels
 include("quality.jl")
 struct UnsupportedDomain <: AbstractPopulationDomain end
 include("audit_regressions.jl")
+include("compact_finite_volume.jl")
 
 @testset "PopulationBalanceModels.jl scientific foundation" begin
     @testset "Representation and model declarations" begin

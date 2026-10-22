@@ -133,7 +133,27 @@ function run(;output=joinpath(@__DIR__,"..","docs","src","assets","li_supplement
         "consistent_variant.csv changes two coefficients by an independently derived\n"*
         "modified-equation correction. It is not a literal paper transcription.\n")
 end
+"""
+Check the literal temporal-stage interpretation of main Eqs. 8 and 16 with
+an exact nonzero advection eigenvalue i*omega (no spatial error). This is a
+consistency diagnostic for that interpretation, not a full Li ADI solver.
+"""
+function main_stage_check(;output=joinpath(@__DIR__,"..","docs","src","assets","li_supplement","main_stage_check.csv"))
+    mkpath(dirname(output));omega=.7
+    open(output,"w") do io
+        println(io,"tau,omega,normalized_temporal_residual")
+        for tau in (.1,.05,.025,.0125,.00625)
+            # Eq.16 requires bar(f)^k=(f^{k+1}+f^{k-1})/2=cos(omega*tau)*f^k.
+            # Eq.8's literal bar(f)-f^k+tau*K*bar(f)=0 then has this residual.
+            c=cos(omega*tau)
+            residual=abs((c-1)+im*omega*tau*c)/(omega*tau)
+            println(io,join((tau,omega,residual),','))
+        end
+    end
+    output
+end
 if abspath(PROGRAM_FILE)==@__FILE__
     run()
+    main_stage_check()
 end
 end

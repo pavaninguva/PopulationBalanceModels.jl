@@ -134,6 +134,15 @@ as evidence of stability or positivity.
 
 ## Compact/ADI variant
 
+`HOCFiniteVolume()` adds a distinct conservative compact policy for 1D/2D
+bin integrals, positive separable growth, prescribed time dependence, point
+births and physical inflow/outflow. Its complete midpoint/symmetric update is
+**second order in time**, with fourth-order interior space. Select it during
+`compile(...; evolution=HOCFiniteVolume(),bc,p)`. The
+[compact specification](compact_verification.md) derives its cell-average face
+reconstruction, source treatment, number accounting and compatibility checks.
+The older periodic `HOCADI` construction described next remains unchanged.
+
 `HOCADI(time_order=2)` or `HOCADI(time_order=4)` advances homogeneous constant
 growth on uniform periodic 2D grids. It rejects sources, bulk coupling, and
 physical nonperiodic compact boundaries. Its spatial derivative is defined by

@@ -51,12 +51,13 @@ function _observe(obs::MomentObservable,N,op::CompiledPBM2D,p,t)
 end
 _observe(obs::HistogramObservable,N,op::CompiledMomentPBM,p,t)=throw(ArgumentError("histograms require an explicit distribution reconstruction/measurement model for moments"))
 _observe(obs::HistogramObservable,N,op::CompiledPBM2D,p,t)=throw(ArgumentError("use FunctionObservable for a 2D bin or marginal measurement"))
-function _observe(obs::MomentObservable,N,op::CompiledCharacteristic,p,t)
+function _observe(obs::MomentObservable,N,op::Union{CompiledCharacteristic,CompiledHOC},p,t)
+    obs.cell==1 || throw(ArgumentError("a batch direct-transport population has one physical cell"))
     op.grid isa Grid1D && return [moment(op.grid,view(N,:,obs.cell),obs.order)]
-    obs.cell==1 && obs.order isa Tuple{Integer,Integer} || throw(ArgumentError("use MomentObservable((kx,ky)) for a 2D characteristic state"))
+    obs.order isa Tuple{Integer,Integer} || throw(ArgumentError("use MomentObservable((kx,ky)) for a 2D direct-transport state"))
     [moment(op.grid,N,obs.order)]
 end
-function _observe(obs::HistogramObservable,N,op::CompiledCharacteristic,p,t)
+function _observe(obs::HistogramObservable,N,op::Union{CompiledCharacteristic,CompiledHOC},p,t)
     op.grid isa Grid1D || throw(ArgumentError("use FunctionObservable for a 2D bin or marginal measurement"))
     _observe(obs,N,(;grid=op.grid),p,t)
 end

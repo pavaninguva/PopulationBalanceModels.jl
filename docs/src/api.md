@@ -18,6 +18,7 @@ compile(model, grid; evolution=Inguva2022(),p,bc)
 PBMProblem(operator, initial, (t0,tf); p=NamedTuple())
 simulate(problem; dt, saveat=[t0,tf], method=SSPRK33())
 compile(model, grid; evolution=LaxWendroff(),bc)
+compile(model, grid; evolution=HOCFiniteVolume(),bc,p)
 compile(model, grid; domain=AxialDispersion(AxialGrid(z_edges);
     velocity=u,dispersion=D,inlet=(p,t)->feed_bins))
 ```
@@ -34,6 +35,12 @@ Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`,
 `Centered` and `LinearUpwind` add unlimited uniform-grid 1D reconstructions.
 `LaxWendroff` and `BeamWarming` are complete constant-growth space–time updates;
 they require an eligible model compiled with `evolution`.
+`HOCFiniteVolume()` selects the complete conservative compact update. Declare
+growth with `AffineGrowth`, `ExponentialGrowth`, `TimeScaledGrowth`, or an
+explicit `HOCGrowthLaw` contract. Two-dimensional directional laws use
+`SeparableGrowth2D`; prescribed source/inflow callbacks use `PrescribedRate`.
+See [Compact-method verification](methods/compact_verification.md) for exact
+signatures, boundary units, restrictions and cumulative number diagnostics.
 For axial states, `axial_population(operator,u,cell)` restores a local intrinsic
 view and `axial_fluxes(operator,u,p,t)` returns physical face fluxes. See
 [Axially dispersed reactors](axial_reactors.md) for units and boundary contracts.

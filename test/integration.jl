@@ -1,5 +1,13 @@
 using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
 
+@testset "Fully discrete HOC is not an external ODE residual" begin
+    g=Grid1D(range(0,1;length=17))
+    op=compile(PBMModel(Growth(AffineGrowth(.4,0))),g;evolution=HOCFiniteVolume(),bc=SizeBC(Periodic(),Periodic()))
+    prob=PBMProblem(op,g.widths,(0.,.1))
+    @test_throws ArgumentError odeproblem(prob)
+    @test diagnostics(simulate(prob;dt=.01)).policy===:HOCFiniteVolume
+end
+
 @testset "Axial SciML residual adapter" begin
     g=Grid1D(0:0.5:1);z=AxialGrid(range(0,1;length=11))
     reactor=AxialDispersion(z;velocity=0.2,dispersion=0.01,boundary=:periodic)

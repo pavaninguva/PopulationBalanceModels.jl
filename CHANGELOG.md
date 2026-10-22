@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added `HOCFiniteVolume`: conservative compact transport of 1D/2D bin integrals with positive declared growth, prescribed time dependence, physical inflow/outflow and point nucleation; fourth-order interior space and second-order complete time integration. Added cumulative number-flux diagnostics, structural compilation/remake checks, independent refinement tests and runnable comparisons.
+- Added `ExponentialGrowth`, `TimeScaledGrowth`, `PrescribedRate` and `HOCGrowthLaw` declarations. Kept ordinary callbacks for residual methods and the existing constant-periodic `HOCADI` behavior; published nodal formulas remain separate audit implementations. Direct transport operators now reject external ODE conversion immediately.
+
 - Replaced full embedded reproduction drivers with minimal case-study runs and downloadable sources; separated transport benchmark reporting from model assembly.
 - Added WENO3/SSPRK33 to constant-growth front, smooth convergence and single-run timing comparisons; exposed small moment errors and clarified references, normalization and incomplete trajectories.
 - Added independent size/axial precipitation refinements, uniform-size WENO5 with axial MUSCL, numerical-reference checks and nondominated runtime/error fronts.

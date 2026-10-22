@@ -7,10 +7,13 @@ Create a SciML ODEProblem with the identical compiled sectional, tensor, axial o
 moment residual. Supply a
 compatible promoted u0 yourself for AD. This adapter does not add a positivity
 limiter, CFL callback, snapshot tstops, or a sensitivity algorithm.
-Direct evolution choices HOCADI/ExactShift belong to simulate and are not
+Direct evolution choices, including HOCFiniteVolume/HOCADI/ExactShift, belong to simulate and are not
 converted into a SciML residual by this adapter.
 """
 function PopulationBalanceModels.odeproblem(prob::PopulationBalanceModels.PBMProblem;u0=copy(prob.u0),p=prob.p)
+    prob.operator isa Union{PopulationBalanceModels.CompiledHOC,
+        PopulationBalanceModels.CompiledCharacteristic,PopulationBalanceModels.CompiledConstantTransport} &&
+        throw(ArgumentError("compiled direct transport has no ODE residual; use native simulate with its compiled evolution policy"))
     PopulationBalanceModels._moment_boundary_events(prob.operator) &&
         throw(ArgumentError("moment boundary events require native MeasureEuler; no continuum trace or external-solver event adapter is implemented"))
     # SciML's symbolic parameter-remake path can recurse for an empty NamedTuple.

@@ -68,9 +68,10 @@ eligible residual reconstructions. Dispersion uses centered gradient fluxes.
 | `Inguva2022`, `InguvaBraatz2023` | Complete 1D/2D transformed update | Eligible positive autonomous affine/separable growth, matched travel-time meshes, CFL=1 steps and aligned outputs. |
 | `ExactShift` | Complete constant-growth 2D update | Integer shifts on compatible meshes, with eligible open/periodic boundaries. |
 | `HOCADI` | Complete compact 2D update | Periodic constant growth only. Specified variant with dispersive undershoots; not verified as the Li paper's method. |
+| `HOCFiniteVolume` | Conservative compact 1D/2D bin-integral update | Positive declared separable growth, including prescribed time dependence; uniform axes, periodic or physical inflow/outflow, prescribed point births. Fourth-order interior space, second-order time. No evolving bulk/axial coupling. |
 
 The Li supplementary-coefficient audit is a diagnostic implementation, not
-another public selectable variable-growth HOCADI method. The method pages
+the new conservative `HOCFiniteVolume` adaptation. See [Compact-method verification](methods/compact_verification.md) for its derivation, compilation contracts and measured orders. The method pages
 explain these restrictions beside their equations and boundary treatments.
 
 ## Select a representation first
