@@ -24,6 +24,10 @@ function prepare_term(term::Nucleation,m::FixedPivot,g::Grid1D;kwargs...)
     nothing
 end
 add_term!(dN,N,term::Union{Aggregation,Breakage},m::FixedPivot,prepared,op::CompiledPBM,p,t,ctx)=_local_rhs!(dN,N,prepared,op,p,t,ctx)
+# The cached collision term contains the selected overflow override. All
+# accounting and positivity-policy paths must use the same effective term.
+_effective_term(item::PreparedTerm)=item.term
+_effective_term(item::PreparedTerm{<:Union{Aggregation,Breakage},<:FixedPivot})=item.cache
 function add_term!(dN,N,term::Nucleation,m::FixedPivot,cache,op::CompiledPBM,p,t,ctx)
     rate=_nonnegative(term.rate(p,t,ctx),"nucleation rate")
     _deposit!(dN,op.grid.centers,term.size,rate,m.overflow===:inherit ? :error : m.overflow)
@@ -56,11 +60,7 @@ end
 
 function add_term!(dN,N,term::Growth,m::AbstractReconstruction,cache,op,p,t,ctx)
     fluxop=(;grid=op.grid,bc=op.bc,scheme=m)
-    F=_growth_fluxes(term,N,fluxop,p,t,ctx)
-    for i in eachindex(N)
-        dN[i]+=F[i]-F[i+1]
-    end
-    (zero(eltype(dN)),zero(eltype(dN)))
+    _local_rhs!(dN,N,term,fluxop,p,t,ctx)
 end
 function add_term!(dN,N,term,m::Union{MidpointRule,BinIntegral,FixedPivot,PointwiseLoss,NativeResidual},cache,op::CompiledPBM,p,t,ctx)
     _local_rhs!(dN,N,term,op,p,t,ctx)

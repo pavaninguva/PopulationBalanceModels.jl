@@ -137,7 +137,7 @@ using Pkg
 root = pwd() # package directory
 Pkg.activate(mktempdir())
 Pkg.develop(path=root)
-Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "AdvancedHMC", "MCMCDiagnosticTools"])
+Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff", "AdvancedHMC", "MCMCDiagnosticTools"])
 include(joinpath(root,"test","integration.jl"))
 include(joinpath(root,"test","bayesian_integration.jl"))
 ```
@@ -147,6 +147,26 @@ reports into it. Add focused explanations with equations, units, assumptions,
 restrictions, and a runnable implementation. Update the relevant case study
 when modifying an example. Keep benchmark inputs, raw CSV data, and environment
 metadata with any new figures. Label historical evidence and synthetic inputs.
+
+Core tests include [Aqua](https://juliatesting.github.io/Aqua.jl/stable/) checks
+for ambiguities, exports, dependency metadata, piracy and persistent tasks.
+Aqua is a test dependency. The separate JET job targets two concrete residuals
+on Julia 1.13 with JET 0.12; it does not certify every callback or extension.
+`test/profile_paths.jl` measures warmed residual allocations and work without
+adding a runtime profiling dependency.
+
+The sensitivity job uses normal compiled modules on maintained Julia 1.10 and
+current Julia. The audited older Julia 1.10.3 sensitivity stack failed upstream
+Enzyme/GPUCompiler precompilation. Its core package checks pass; optional
+continuous sensitivities were verified with normal loading on 1.10.12. Use a
+maintained Julia patch for that stack rather than relying on disabled compiled
+modules. See the [audit register](audit.md) for exact environments and outcomes.
+
+Both Distributions and this package export `moment`. Use selective imports
+(`using Distributions: Normal, logpdf`, for example), or explicitly qualify
+`PopulationBalanceModels.moment` when using both packages. The PBM operation
+integrates raw powers of particle size; StatsBase's array operation computes a
+sample central moment. Their statistical meanings remain distinct.
 
 Build with the commands in the README. The build executes the model tutorials and selected case-study code blocks,
 checks references, and treats warnings as failures. The [publishing guide](publishing.md) describes deployment.

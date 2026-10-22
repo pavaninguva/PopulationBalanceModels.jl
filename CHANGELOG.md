@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Audited the clean `9e2c6fa` checkout and recorded baseline, findings, supported combinations, dependency versions and executed verification in the manual's audit register.
+- Corrected unit-dependent lognormal reconstruction checks and high-order normal quadrature weights; regenerated the affected moment-family comparisons while retaining failed trajectories.
+- Unified selected overflow policies with cumulative accounting, included explicitly discarded point births, and corrected zero-feed axial accounting dimensions. Accounting states gain two nucleation-loss mechanisms; use named accessors rather than packed offsets.
+- Added accepted-state closure checks, finite-support initial-state checks, normalized-fraction validation and stricter statistical-model/refinement comparisons. Bayesian profile optimizations now verify stationarity; invalid ExactClosure evaluations propagate as numerical failures.
+- Added `check_sampling_map` and mapped-evaluation inverse/Jacobian checks, revalidated retained protein targets/predictions, and documented sampler coordinate/metric conventions. Removed duplicate moment inversion work and added a prepared-term dispatch boundary for compiler type inference.
+- Added test-only Aqua, targeted JET and minimum/current Julia CI checks; optional tests now declare ForwardDiff and sensitivity CI uses normal compiled modules.
+
 - Added protein crystallization posterior corner, physical prior/marginal, chain/rank and predictive figures, with reproducible NUTS draws, diagnostic screens, residuals and temporal-refinement exports.
 - Added optional sampler tuning matrices and checked coordinate maps for correlated parameters; retained the declared posterior, prior coordinates and returned inference-coordinate draws.
 - Compared QMOM, rank-adaptive QMOM, Gamma EQMOM, DQMOM and lognormal closures in the aggregation/nucleation case study, including actual failures, reconstruction/time-step checks, conditioning, material errors and single-run timings.

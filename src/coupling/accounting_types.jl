@@ -19,4 +19,5 @@ struct CumulativeAccounting{P}
     end
 end
 const _LOSS_MECHANISMS=(:extinction,:lower_escape,:upper_escape,
-    :aggregation_underflow,:aggregation_overflow,:breakage_underflow,:breakage_overflow)
+    :aggregation_underflow,:aggregation_overflow,:breakage_underflow,:breakage_overflow,
+    :nucleation_underflow,:nucleation_overflow)

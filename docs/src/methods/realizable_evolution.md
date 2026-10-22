@@ -187,8 +187,12 @@ removed_number = cumulative(problem, solution.u[end], :crystals, :extinction)
 ```
 
 The mechanism names are `:extinction`, `:lower_escape`, `:upper_escape`,
-`:aggregation_underflow`, `:aggregation_overflow`, `:breakage_underflow` and
-`:breakage_overflow`. They are separated for each named population. Ledger
+`:aggregation_underflow`, `:aggregation_overflow`, `:breakage_underflow`,
+`:breakage_overflow`, `:nucleation_underflow` and `:nucleation_overflow`.
+The last two record out-of-pivot-range point births only when explicitly
+discarded by `FixedPivot(overflow=:discard)`; the default remains an error.
+Their material is consumed from the coupled bulk once, then recorded as
+unresolved particles. Mechanisms are separated for each named population. Ledger
 properties must be tracked for a moment population. Sectional collision losses use the first/last **pivot** interval, as in the
 existing deposition rule, rather than the exterior grid edges. Their
 properties must match the additive deposition coordinate; fixed pivot does not
@@ -205,7 +209,8 @@ and no external material feed, the discrete balance is
 c(t)+\rho k_v\left[M_{3,\mathrm{resolved}}(t)
  +V_{\mathrm{lower\ escape}}(t)+V_{\mathrm{upper\ escape}}(t)
  +V_{\mathrm{aggregation\ overflow/underflow}}(t)
- +V_{\mathrm{breakage\ overflow/underflow}}(t)\right]=C_{\mathrm{initial}}.
+ +V_{\mathrm{breakage\ overflow/underflow}}(t)
+ +V_{\mathrm{nucleation\ overflow/underflow}}(t)\right]=C_{\mathrm{initial}}.
 ```
 
 Multiply concentrations by the process volume to obtain total inventory.
@@ -225,6 +230,11 @@ reservoir for this balance. Escaped particles do **not** continue growing,
 dissolving, aggregating or flowing. Continuing their kinetics requires another
 modeled population. Inter-population transfer/collision accounting is currently
 rejected rather than silently omitted. Automatic domain expansion is not provided.
+
+Use `population`, `bulk` and `cumulative` to access a packed state. Adding the
+two explicit nucleation-loss mechanisms enlarges accounting-enabled states;
+code that hard-coded ledger offsets or total packed lengths must use these
+accessors instead. Problems without accounting keep their existing layouts.
 
 Floating-point quadrature reconstruction has a residual. Moment bulk exchange
 uses the physical change of the reconstructed measure, and

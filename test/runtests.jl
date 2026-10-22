@@ -1,6 +1,8 @@
 using Test
 using PopulationBalanceModels
+include("quality.jl")
 struct UnsupportedDomain <: AbstractPopulationDomain end
+include("audit_regressions.jl")
 
 @testset "PopulationBalanceModels.jl scientific foundation" begin
     @testset "Representation and model declarations" begin

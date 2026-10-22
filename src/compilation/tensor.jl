@@ -43,7 +43,7 @@ function rhs!(dN::AbstractMatrix,N::AbstractMatrix,op::CompiledPBM2D,p,t)
     size(dN)==size(N)==size(op.grid) || throw(DimensionMismatch("tensor state size mismatch"))
     fill!(dN,zero(eltype(dN))); ctx=_tensor_context(op,N,t)
     for item in op.prepared
-        add_term!(dN,N,item.term,item.method,item.cache,op,p,t,ctx)
+        _add_prepared!(dN,N,item,op,p,t,ctx)
     end
     all(isfinite,dN) || throw(NumericalFailure("nonfinite 2D derivative"))
     nothing

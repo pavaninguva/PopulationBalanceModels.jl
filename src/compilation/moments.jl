@@ -59,6 +59,22 @@ moment(ctx::NamedTuple,k)=population_moment(ctx.operator,ctx.N,k)
 
 function _validate_population_state(op::CompiledMomentPBM,u)
     validate_moment_state(op.closure,op.grid,u)
+    b=op.boundary
+    # Necessary support inequalities, not a certificate for a singular
+    # truncated moment problem. MeasureEuler additionally reconstructs every
+    # moment by a positive measure inside these boundaries.
+    for k in op.grid.orders[1:end-1]
+        a=population_moment(op,u,k);next=population_moment(op,u,k+1)
+        lower=b.lower*a
+        next>=lower-1e-10*max(abs(next),abs(lower)) ||
+            throw(ArgumentError("initial moments violate the declared lower support"))
+        if isfinite(b.upper)
+            upper=b.upper*a
+            next<=upper+1e-10*max(abs(next),abs(upper)) ||
+                throw(ArgumentError("initial moments violate the declared upper support"))
+        end
+    end
+    nothing
 end
 function validate_moment_state(method::AbstractMomentClosure,g,u)
     realizability(g,_primal.(u)).valid || throw(ArgumentError("initial moments fail nonnegative-support Hankel checks"))
@@ -90,12 +106,14 @@ function _moment_terms!(dμ,μ,op,p,t,ctx;mechanisms=nothing)
     b=op.boundary
     (b.left===:error && b.right===:error && b.lower==0 && isinf(b.upper)) ||
         throw(ArgumentError("moment boundary events require native MeasureEuler; no residual boundary trace is inferred"))
-    validate_moment_state(op.closure,op.grid,μ)
-    q=prepare_moment_state(op.closure,op.grid,μ,p,t,ctx)
+    q=_prepare_checked_moment_state(op.closure,op.grid,μ,p,t,ctx)
     for item in op.prepared
         mechanisms!==nothing && !(mechanism(item.term) in mechanisms) && continue
         moment_term!(dμ,μ,item.term,item.method,item.cache,op.closure,q,op,p,t,ctx)
     end
+end
+function _check_admissible_state(op::CompiledMomentPBM,u)
+    _validate_population_state(op,u)
 end
 function rhs!(dμ::AbstractMatrix,μ::AbstractMatrix,op::CompiledMomentPBM,p,t;context=nothing)
     size(dμ)==size(μ)==(population_state_length(op),1) || throw(DimensionMismatch("moment state size mismatch"))

@@ -30,5 +30,5 @@ function _simulate(prob::PBMProblem,method::ExactShift;dt,saveat,check_nonnegati
         end
         push!(states,copy(N))
     end
-    PBMSolution(ts,states,prob,steps)
+    PBMSolution(ts,states,prob,steps,(policy=:ExactShift,accepted_steps=steps,rejected_steps=0))
 end

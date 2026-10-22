@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['1.10', '1']
+        version: ['1.10.0', '1.10', '1']
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -21,12 +21,16 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
   extensions:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['1.10', '1']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1.10'
+          version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
       - name: Optional integration tests
         shell: julia --color=yes {0}
@@ -35,10 +39,14 @@ jobs:
           root = pwd()
           Pkg.activate(mktempdir())
           Pkg.develop(path=root)
-          Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "AdvancedHMC", "MCMCDiagnosticTools"])
+          Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff", "AdvancedHMC", "MCMCDiagnosticTools"])
           include(joinpath(root,"test","integration.jl"))
           include(joinpath(root,"test","bayesian_integration.jl"))
   sensitivities:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['1.10', '1']
     runs-on: ubuntu-latest
     env:
       JULIA_PKG_PRECOMPILE_AUTO: '0'
@@ -46,12 +54,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1.10'
+          version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
       - name: Continuous forward and adjoint inference tests
-        # Avoid the Enzyme precompile failure observed with the optional stack
-        # on Julia 1.10.3; exercise the sensitivity implementation directly.
-        shell: julia --compiled-modules=no --color=yes {0}
+        shell: julia --color=yes {0}
         run: |
           import Pkg
           root = pwd()
@@ -60,3 +66,20 @@ jobs:
           Pkg.add(["Optim", "SciMLBase", "SciMLSensitivity", "ReverseDiff",
                    "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff"])
           include(joinpath(root,"test","sensitivity_integration.jl"))
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.13'
+      - uses: julia-actions/cache@v2
+      - name: Selected concrete residuals (JET 0.12)
+        shell: julia --color=yes {0}
+        run: |
+          import Pkg
+          root = pwd()
+          Pkg.activate(mktempdir())
+          Pkg.develop(path=root)
+          Pkg.add(Pkg.PackageSpec(name="JET", version="0.12"))
+          include(joinpath(root,"test","jet.jl"))

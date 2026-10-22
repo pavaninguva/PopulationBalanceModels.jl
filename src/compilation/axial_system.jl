@@ -52,7 +52,7 @@ axial_stateview(prob::PBMProblem,u,cell::Integer)=axial_stateview(prob.operator,
 axial_stateview(op::CompiledAxialSystem,u,cell::Integer)=stateview(op.local_operators[cell],view(u,:,cell))
 function _packed_inlet(op::CompiledAxialSystem,p,t)
     d=op.domain;s=first(op.local_operators)
-    feed=d.inlet===nothing ? zeros(s.length) : d.inlet(p,t)
+    feed=d.inlet===nothing ? zeros(s.physical_length) : d.inlet(p,t)
     if feed isa NamedTuple
         Set(keys(feed))==Set((:populations,:bulk)) || throw(ArgumentError("inlet needs populations and bulk NamedTuples"))
         Set(keys(feed.populations))==Set(keys(s.ranges)) && Set(keys(feed.bulk))==Set(keys(s.bulk_indices)) ||
@@ -115,6 +115,12 @@ function _check_problem_state(prob::PBMProblem{<:CompiledAxialSystem},u,toleranc
     for c in axes(u,2)
         localprob=PBMProblem(prob.operator.local_operators[c],view(u,:,c),prob.tspan,prob.p)
         _check_problem_state(localprob,view(u,:,c),tolerance)
+    end
+    nothing
+end
+function _check_admissible_state(op::CompiledAxialSystem,u)
+    for c in axes(u,2)
+        _check_admissible_state(op.local_operators[c],view(u,:,c))
     end
     nothing
 end

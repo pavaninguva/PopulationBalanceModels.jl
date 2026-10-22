@@ -37,3 +37,5 @@ jobs:
         env:
           POPULATIONBALANCEMODELS_DOCS_DEPLOY: ${{ github.event_name != 'pull_request' }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
+      - name: Check local documentation links and assets
+        run: python3 test/docs_links.py

@@ -78,6 +78,12 @@ function DistributionObservable(edges;coordinate,population=nothing,weight=_unit
     DistributionObservable(e,coordinate,population,weight,normalize,response)
 end
 _observation_size(o::DistributionObservable)=length(o.edges)-1
+_normalized_fractions(observable,likelihood)=likelihood isa GaussianLikelihood &&
+    hasproperty(observable,:normalize) && observable.normalize
+function _valid_fractions(values)
+    all(x->isfinite(x) && 0<=x<=1,values) &&
+        all(s->isapprox(s,1;rtol=0,atol=1e-10),sum(values;dims=1))
+end
 function _observe(o::DistributionObservable,u,op,p,t)
     if op isa CompiledSystem
         o.population===nothing && throw(ArgumentError("name the observed population"))
@@ -148,6 +154,7 @@ function Measurement(times,data,observable::AbstractObservable;likelihood::Abstr
         A=likelihood.contrasts
         A!==nothing && size(A,2)==size(Y,1) && norm(A*ones(size(Y,1)))<1e-10 ||
             throw(ArgumentError("normalized fractions need independent contrasts and their covariance"))
+        _valid_fractions(Y) || throw(ArgumentError("normalized fraction data must lie in [0,1] and sum to one at every time"))
     end
     Measurement(ts,Y,observable,likelihood,response,source)
 end
@@ -365,6 +372,8 @@ function _experiment_predictions(problem,z,ex,pb,ts,states)
         output=m.response(raw,theta,ex)
         size(output)==size(m.data) || throw(DimensionMismatch("measurement response changed output dimension"))
         all(x->x isa Real && isfinite(x),output) || throw(NumericalFailure("measurement predictions must be finite and real"))
+        _normalized_fractions(m.observable,m.likelihood) && !_valid_fractions(output) &&
+            throw(NumericalFailure("normalized fraction predictions must lie in [0,1] and sum to one after the measurement response"))
         output
     end
 end
@@ -450,7 +459,9 @@ posterior uncertainty estimate. It cannot be combined with `laplace` initializat
 An optional `sampling_map=(to_sampler,from_sampler,logabsdetjac,label)` changes
 only auxiliary sampler coordinates; logabsdetjac is the log absolute determinant
 of the Jacobian of from_sampler.
-Inverses, Jacobians and transformed gradients are checked at chain starts. Returned
+Inverses and Jacobians are checked at every mapped target evaluation; transformed
+gradients are independently checked at chain starts. Use check_sampling_map at
+additional representative inference-coordinate points, including tails. Returned
 z values and statistics.log_density stay in declared inference coordinates.
 """
 function sample_posterior end

@@ -71,7 +71,8 @@ Explicit fixed-step reference integrator (SSPRK33 by default). Select
 ForwardEuler(), SSPRK22(), SSPRK33(), SSPRK54(), or RK4(). dt is a maximum step; a step is
 shortened to land on each output time. No clipping, automatic grid change, or
 implicit stiffness treatment is performed. Choose dt using `suggest_dt` and
-check convergence. For production adaptive/stiff integration use `odeproblem`.
+check convergence. `odeproblem` connects compatible residuals to adaptive/stiff
+SciML solvers; the native admissibility policy does not transfer automatically.
 """
 function simulate(prob::PBMProblem;dt,saveat=collect(prob.tspan),check_nonnegative=true,
                   negative_tolerance=1e-12,maxsteps=10^7,method=_default_evolution(prob.operator))
@@ -88,11 +89,14 @@ function simulate(prob::PBMProblem;dt,saveat=collect(prob.tspan),check_nonnegati
             steps<=maxsteps || throw(NumericalFailure("maximum step count exceeded"))
             _rk_step!(N,cache,prob,t,h,method,check_nonnegative,negative_tolerance)
             _check_problem_state(prob,N,check_nonnegative ? negative_tolerance : Inf)
+            # Necessary Hankel/component checks alone do not establish that the
+            # selected closure can evaluate the final RK combination.
+            _check_admissible_state(prob.operator,N)
             t=h==target-t ? target : t+h
         end
         push!(states,copy(N))
     end
-    PBMSolution(ts,states,prob,steps)
+    PBMSolution(ts,states,prob,steps,(policy=Symbol(nameof(typeof(method))),accepted_steps=steps,rejected_steps=0))
 end
 
 function _rk_step!(N,cache,prob,t,h,method::AbstractExplicitRK,check,tol)

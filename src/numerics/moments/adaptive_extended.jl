@@ -151,6 +151,8 @@ function quadrature(g::MomentSet,u,m::EQMOM)
       width=primary.width,primary.rank,primary.moment_error)
 end
 prepare_moment_state(m::Union{RankAdaptiveQMOM,EQMOM},g,u,p,t,ctx)=quadrature(g,u,m)
+_prepare_checked_moment_state(m::Union{RankAdaptiveQMOM,EQMOM},g,u,p,t,ctx)=
+    prepare_moment_state(m,g,u,p,t,ctx)
 function validate_moment_state(m::Union{RankAdaptiveQMOM,EQMOM},g,u)
     quadrature(g,u,m)
     nothing

@@ -107,6 +107,19 @@ end
 prepare_moment_state(::ExactClosure,g,u,p,t,ctx)=nothing
 prepare_moment_state(::AbstractMomentMethod,g,u,p,t,ctx)=throw(ArgumentError("moment family must implement prepare_moment_state"))
 prepare_moment_state(m::Union{QuadratureClosure,LogNormalClosure},g,u,p,t,ctx)=quadrature(g,u,m)
+function _prepare_checked_moment_state(m,g,u,p,t,ctx)
+    validate_moment_state(m,g,u)
+    prepare_moment_state(m,g,u,p,t,ctx)
+end
+function _prepare_checked_moment_state(m::ExactClosure,g,u,p,t,ctx)
+    # Runtime invalid states are numerical failures, distinct from constructor
+    # argument errors. Inference/external solvers can then reject the evaluation.
+    check_moment_state(m,g,u,1e-10)
+    nothing
+end
+# These preparations already validate every input/reconstructed moment.
+_prepare_checked_moment_state(m::Union{QuadratureClosure,LogNormalClosure},g,u,p,t,ctx)=
+    prepare_moment_state(m,g,u,p,t,ctx)
 function moment_term!(du,u,term,::ExactMomentRule,cache,method,q,op,p,t,ctx)
     _exact_moment_term!(du,u,term,op,p,t,ctx)
 end

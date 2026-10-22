@@ -41,6 +41,11 @@ struct PreparedTerm{T,M,C}
     method::M
     cache::C
 end
+# Keep a term, its selected method and cache correlated across heterogeneous
+# tuple iteration. This is also the dispatch boundary for user term extensions.
+_add_prepared!(du,u,item::PreparedTerm,op,p,t,ctx)=
+    add_term!(du,u,item.term,item.method,item.cache,op,p,t,ctx)
+_check_admissible_state(op,u)=nothing
 function _term_method(plan::TermMethods,name,term,representation)
     haskey(plan.by_term,name) && return getproperty(plan.by_term,name)
     haskey(plan.defaults,mechanism(term)) && return getproperty(plan.defaults,mechanism(term))
@@ -65,6 +70,5 @@ end
 term_methods(op)=NamedTuple{Tuple(item.name for item in op.prepared)}(Tuple(item.method for item in op.prepared))
 population_state_length(op)=length(op.grid)
 population_moment(op,state,k)=moment(op.grid,state,k)
-_mechanism(term)=mechanism(term)
 
 _emptyfields(cell,t)=NamedTuple()

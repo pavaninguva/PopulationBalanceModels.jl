@@ -3,6 +3,8 @@ _measure(term,v)=term.coordinate_map===nothing ? v : term.coordinate_map.measure
 
 # Return the moments per birth that leave the resolved pivot range.
 function _deposit!(dN, centers, v, rate, overflow; on_escape=nothing)
+    isfinite(v) && v>=0 && isfinite(rate) && rate>=0 ||
+        throw(NumericalFailure("deposition requires a finite nonnegative coordinate and birth rate"))
     if v < first(centers) || v > last(centers)
         if overflow === :error && !iszero(rate)
             throw(NumericalFailure("birth size $v outside pivot range; enlarge grid or explicitly use overflow=:discard"))

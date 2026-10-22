@@ -310,6 +310,9 @@ material moment or size distribution.
 
 The 16-point default lognormal quadrature becomes unresolved during this pulse.
 Increasing it to 32 or 64 points lets the growth/source calculation finish.
+The current tables and comparison figures were regenerated after correcting
+unit scaling of reconstruction checks and high-order normal quadrature weights;
+the [audit register](../audit.md) records both defects and their analytical tests.
 This is a quadrature issue, not evidence that the three exact lower equations
 are incorrect. The committed comparison uses 64 points. With the size-sixth-
 power breakage hazard added, the explicit lognormal calculation still stops

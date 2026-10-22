@@ -59,6 +59,7 @@ makedocs(;
         ],
         "API reference" => "api.md",
         "Contributing and internals" => "development.md",
+        "Audit and verification" => "audit.md",
         "Publishing" => "publishing.md",
     ],
 )

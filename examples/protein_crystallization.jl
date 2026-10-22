@@ -135,6 +135,8 @@ function scheduled_solver(pb,times;scale=1.)
     isfinite(scale) && scale>0 || throw(ArgumentError("positive time scale required"))
     u=copy(pb.u0);t=first(pb.tspan);states=typeof(u)[];steps=0
     ts=collect(times)
+    all(isfinite,ts) && issorted(ts) && all(t->first(pb.tspan)<=t<=last(pb.tspan),ts) ||
+        throw(ArgumentError("output times must be finite, sorted and inside the problem time span"))
     for target in ts
         while t<target
             finish=t<50 ? min(target,50.) : t<150 ? min(target,150.) : target
@@ -271,9 +273,9 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
     if count>0
         selected=parameter_draws(problem,draws;n=count,seed=seed+2)
         predictive=posterior_predictive(problem,selected;max_solves=count,measurement_noise=true,seed=seed+3)
+        predictive.failed_draws==0 || throw(NumericalFailure("protein posterior prediction failed for $(predictive.failed_draws) draws; inspect the parameter draws instead of silently dropping them"))
         rows=Tuple[]
         for i in 1:count
-            predictive.results[i]===nothing && continue
             blocks=first(predictive.results[i].measurements)
             for (block,datum,label) in zip(blocks,(data.concentration,data.D50),("concentration","D50"))
                 for j in eachindex(datum.t)

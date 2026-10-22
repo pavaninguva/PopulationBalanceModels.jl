@@ -134,6 +134,12 @@ fractions = Measurement(times, fractions_data,
 The likelihood projects data, predictions and covariance before factorization.
 It does not invert the singular full covariance or add a diagonal ridge.
 Predictive outputs from this likelihood are also in contrast coordinates.
+The Gaussian contrast model is an unbounded approximation. Choose it where
+noise outside the physical simplex is negligible; bounded-simplex measurements
+need a different response/likelihood model.
+Declared normalized fractions and post-response predictions must lie in
+``[0,1]`` and sum to one at every time (absolute normalization tolerance
+``10^{-10}``). Invalid data are rejected; they are never renormalized or clipped.
 
 If moments were calculated from the measured histogram, they share its
 measurement errors. Use the histogram alone, or a joint vector observable with
@@ -398,10 +404,23 @@ with `to_sampler`, `from_sampler`, `logabsdetjac` and `label` fields. Here
 `logabsdetjac(y)` is the log absolute determinant of `from_sampler` at `y`.
 The adapter samples
 ``\log p_z(\mathrm{from\_sampler}(y))+\log|\det J_{\mathrm{from\_sampler}}(y)|``.
-It checks the inverse and Jacobian at each start and verifies the transformed
-gradient. Priors remain in their originally declared coordinates; returned `z`
+The inverse and determinant are checked at every mapped target evaluation.
+`check_sampling_map(problem,map,z)` also checks both inverse directions and the
+transformed gradient at a supplied point in the **original** posterior support.
+Use it at representative points and tails. The `step` argument controls the
+independent finite-difference verification stencil; check its halving where
+limiter switches or sharp likelihood curvature affect the comparison. Finite
+tests cannot prove that arbitrary callbacks are globally bijective or cover the
+whole posterior support; that remains a requirement of the supplied map.
+Priors remain in their originally declared coordinates; returned `z`
 draws and `statistics.log_density` remain in inference coordinates. A tuning
 matrix supplied with a map must be expressed in **sampler** coordinates.
+AdvancedHMC's `DenseEuclideanMetric` takes the inverse mass matrix: a supplied
+`initial_covariance` initializes that matrix, following its
+[metric convention](https://turinglang.org/AdvancedHMC.jl/stable/api/).
+Hamiltonian energies, BFMI and transition statistics remain those of the
+sampler coordinates, including the map Jacobian. They are not relabelled as
+inference-coordinate energies or covariance estimates.
 The [protein crystallization study](case_studies/protein_crystallization.md)
 uses a unit-determinant map based on rates at a reference supersaturation and
 shows corner plots, prior comparisons and chain diagnostics.
@@ -427,6 +446,13 @@ values and the runner stops if its screen fails.
 ![Four-chain traces for both growth coefficients and prior scenarios](assets/bayesian_growth/chains.png)
 
 ## Check prediction, identifiability and numerical error
+
+Numerical-refinement and prior-sensitivity comparisons retain data, times,
+likelihood settings, fixed parameters, constraints and measurement responses.
+Changing a noise scale is a statistical-model change, not numerical refinement.
+The checks cannot establish that arbitrary model/setup callbacks describe the
+same physical initial conditions or observable; keep those definitions fixed
+when changing the solver, grid or domain.
 
 Drawing approximate parameters does not solve the PBM. Predictive propagation
 has an explicit forward-solve budget:

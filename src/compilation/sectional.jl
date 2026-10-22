@@ -69,7 +69,7 @@ function rhs!(dN::AbstractMatrix,N::AbstractMatrix,op::CompiledPBM,p,t;context=n
     for c in axes(N,2)
         ctx=_context(op,N,c,t,context)
         for item in op.prepared
-            add_term!(view(dN,:,c),view(N,:,c),item.term,item.method,item.cache,op,p,t,ctx)
+            _add_prepared!(view(dN,:,c),view(N,:,c),item,op,p,t,ctx)
         end
     end
     all(isfinite,dN) || throw(NumericalFailure("nonfinite PopulationBalanceModels derivative"))
@@ -81,7 +81,7 @@ function diagnostics(op::CompiledPBM,N,p,t)
     scratch=similar(N); fill!(scratch,zero(eltype(N)))
     lost0=zeros(eltype(N),size(N,2)); lost1=similar(lost0); fill!(lost1,zero(eltype(N)))
     for c in axes(N,2), item in op.prepared
-        a,b=add_term!(view(scratch,:,c),view(N,:,c),item.term,item.method,item.cache,op,p,t,_context(op,N,c,t))
+        a,b=_add_prepared!(view(scratch,:,c),view(N,:,c),item,op,p,t,_context(op,N,c,t))
         lost0[c]+=a; lost1[c]+=b
     end
     (; minimum=minimum(N), M0=moment(op.grid,N,0), M1=moment(op.grid,N,1),

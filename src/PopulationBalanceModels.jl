@@ -45,7 +45,7 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        SciMLSensitivitySolver, DifferentiationFailure,
        LaplaceApproximation, LaplaceFailure, laplace_approximation, marginal_covariance,
        parameter_draws, posterior_predictive, identifiability_report, estimation_profile,
-       replace_priors, prior_sensitivity, refinement_study, sample_posterior, PosteriorSamples,
+       replace_priors, prior_sensitivity, refinement_study, sample_posterior, check_sampling_map, PosteriorSamples,
        PBMSystem, SystemContext, PopulationTransfer, CrossAggregation,
        ConservativeExchange, CustomCoupling, population, bulk, stateview,
        PopulationMoment, BulkObservable, PopulationHistogram, SystemObservable,
@@ -100,6 +100,7 @@ include("inference/uncertainty.jl")
 include("inference/parameters.jl")
 include("inference/statistical_model.jl")
 include("inference/bayesian_diagnostics.jl")
+include("inference/sampling_coordinates.jl")
 
 @doc "Load Optim to enable fit(calibration, initial_parameters; ...) or MAP fit(estimation_problem; ...)." fit
 

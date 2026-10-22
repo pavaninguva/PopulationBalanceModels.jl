@@ -13,8 +13,12 @@ function quadrature(g::MomentSet,u,m::LogNormalClosure)
     variance=max(variance,0.0)
     meanlog=log(μ[2])-log(μ[1])-variance/2
     nodes=exp.(meanlog.+sqrt(variance).*m.nodes); weights=μ[1].*m.weights
+    all(isfinite,nodes) && all(isfinite,weights) || throw(NumericalFailure("lognormal quadrature overflow"))
+    scale=μ[2]/μ[1]
     for k in 0:2
-        isapprox(sum(weights.*nodes.^k),μ[k+1];rtol=1e-8,atol=1e-13*μ[1]) || throw(NumericalFailure("lognormal quadrature is unresolved; increase quadrature_order"))
+        # Each moment has different size units. A number-only absolute
+        # tolerance would accept unresolved quadrature on nanometre grids.
+        isapprox(sum(weights.*nodes.^k),μ[k+1];rtol=1e-8,atol=1e-13*μ[1]*scale^k) || throw(NumericalFailure("lognormal quadrature is unresolved; increase quadrature_order"))
     end
     (;nodes,weights)
 end

@@ -1,4 +1,4 @@
-using Distributions
+using Distributions: Normal, cdf, pdf
 
 @testset "Inguva 2022: physical meshes, continuous densities and exact bin shifts" begin
     open=SizeBC(OpenBoundary(),OpenBoundary())

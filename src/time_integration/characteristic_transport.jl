@@ -158,7 +158,7 @@ function _simulate(prob::PBMProblem,method::Union{Inguva2022,InguvaBraatz2023};d
         _checkstate(N,check_nonnegative ? negative_tolerance : Inf)
         push!(states,copy(N))
     end
-    PBMSolution(ts,states,prob,steps)
+    PBMSolution(ts,states,prob,steps,(policy=Symbol(nameof(typeof(method))),accepted_steps=steps,rejected_steps=0))
 end
 
 """

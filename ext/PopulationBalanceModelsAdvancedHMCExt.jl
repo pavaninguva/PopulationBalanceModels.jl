@@ -20,8 +20,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
     n=length(problem.parameters);rng=MersenneTwister(seed)
     mapped=sampling_map!==nothing
     mapped && laplace!==nothing && throw(ArgumentError("Laplace metric initialization is in inference coordinates; supply an explicit sampler-coordinate tuning matrix with sampling_map"))
-    mapped && !all(k->hasproperty(sampling_map,k),(:to_sampler,:from_sampler,:logabsdetjac,:label)) &&
-        throw(ArgumentError("sampling_map needs to_sampler, from_sampler, logabsdetjac (of from_sampler), and label"))
+    mapped && PopulationBalanceModels._validate_sampling_map(sampling_map)
     to_sampler=z->mapped ? sampling_map.to_sampler(z) : z
     from_sampler=y->mapped ? sampling_map.from_sampler(y) : y
     logjac=y->mapped ? sampling_map.logabsdetjac(y) : 0.0
@@ -43,7 +42,17 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
     end
     length(seeds)==chains && all(s->length(s)==n && all(isfinite,s),seeds) || throw(ArgumentError("one initial inference-coordinate vector per chain required"))
     counts=PopulationBalanceModels._InferenceCounts();started=time_ns()
-    logdensity=y->logposterior(problem,from_sampler(y);on_failure=:reject,_counts=counts)+logjac(y)
+    function logdensity(y)
+        state=try
+            mapped ? PopulationBalanceModels._sampling_map_state(sampling_map,y) : nothing
+        catch e
+            e isa NumericalFailure || rethrow()
+            PopulationBalanceModels._record_failure!(counts,e)
+            return -Inf
+        end
+        logposterior(problem,mapped ? state.z : y;on_failure=:reject,_counts=counts)+
+            (mapped ? state.logjac : 0.0)
+    end
     function value_gradient(y)
         value=logdensity(y)
         isfinite(value) || return (value,zeros(n))
@@ -57,25 +66,20 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         end
         (value,gradient)
     end
-    Z=zeros(n,samples,chains);statistics=Any[];warmup_statistics=Any[];gradient_checks=Any[]
+    Z=zeros(n,samples,chains);statistics=Any[];warmup_statistics=Any[];gradient_checks=Any[];map_checks=Any[]
     warmup_divergences=0
     for c in 1:chains
         y0=Float64.(to_sampler(seeds[c]))
         length(y0)==n && all(isfinite,y0) && isapprox(from_sampler(y0),seeds[c];rtol=1e-10,atol=1e-12) ||
             throw(ArgumentError("sampling coordinate maps must be finite inverses"))
-        if mapped
-            actual=first(logabsdet(ForwardDiff.jacobian(from_sampler,y0)))
-            isfinite(actual) && isapprox(logjac(y0),actual;rtol=1e-9,atol=1e-10) ||
-                throw(ArgumentError("sampling map Jacobian is inconsistent with from_sampler"))
-        end
         isfinite(logdensity(y0)) || throw(ArgumentError("chain $c starts outside the posterior support"))
         check=check_gradient(problem,seeds[c];derivatives,_counts=counts)
         check.valid || throw(ArgumentError("gradient verification failed for chain $c"))
         push!(gradient_checks,check)
         if mapped
-            reference=PopulationBalanceModels._fd_gradient(logdensity,y0)
-            supplied=last(value_gradient(y0))
-            norm(reference-supplied)/max(1,norm(reference))<=1e-3 || throw(ArgumentError("transformed sampler gradient verification failed"))
+            map_check=check_sampling_map(problem,sampling_map,seeds[c];derivatives,_counts=counts)
+            map_check.valid || throw(ArgumentError("transformed sampler gradient verification failed"))
+            push!(map_checks,map_check)
         end
         covariance=tuning===nothing ? (laplace===nothing ? nothing : laplace.covariance) : tuning
         mass=dense ? (covariance===nothing ? HMC.DenseEuclideanMetric(n) : HMC.DenseEuclideanMetric(copy(covariance))) :
@@ -124,6 +128,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         seed,warmup,samples,chains,target_acceptance,max_depth,min_ess,rhat_limit,bfmi_limit,metric=dense ? :dense : :diagonal,
         initial_covariance=tuning,metric_initialization=tuning===nothing ? (laplace===nothing ? :identity : :laplace) : :user_tuning,
         sampling_coordinates=mapped ? sampling_map.label : :inference,z_coordinates=:inference,
+        map_checks,sampling_map_validation=mapped ? :every_evaluation : :none,
         forward_solves=counts.solves,posterior_evaluations=counts.evaluations,
         gradient_evaluations=counts.gradient_evaluations,adjoint_solves=counts.adjoint_solves,
         derivative_backend=PopulationBalanceModels._gradient_backend(problem,derivatives),

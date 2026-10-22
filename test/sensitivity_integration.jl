@@ -1,4 +1,5 @@
-using Test, LinearAlgebra, Distributions, ForwardDiff
+using Test, LinearAlgebra, ForwardDiff
+using Distributions: LogNormal, MvNormal, logpdf
 using PopulationBalanceModels, SciMLBase, SciMLSensitivity, OrdinaryDiffEqTsit5, Optim
 
 function sensitivity_fixture(mode)

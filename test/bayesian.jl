@@ -1,4 +1,5 @@
-using Distributions, Random
+using Distributions: Normal, LogNormal, Exponential, Uniform, MvNormal, logpdf
+using Random
 
 include("fixtures/bayesian_linear.jl")
 

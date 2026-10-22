@@ -1,4 +1,5 @@
 using ForwardDiff
+using Distributions: Normal, LogNormal, logpdf, truncated
 
 @testset "AD defaults and nonnegative density noise" begin
     f=bayesian_linear_fixture();p=f.problem;z=[0.7,0.4]

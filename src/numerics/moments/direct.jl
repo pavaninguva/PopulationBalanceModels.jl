@@ -68,6 +68,7 @@ function moment_rate(m::DQMOM,g,u,du,k)
     sum((1-k)*q.nodes[i]^k*du[i]+(k==0 ? zero(eltype(du)) : k*q.nodes[i]^(k-1)*du[n+i]) for i in 1:n)
 end
 prepare_moment_state(m::DQMOM,g,u,p,t,ctx)=_direct_matrix(m,g,u)
+_prepare_checked_moment_state(m::DQMOM,g,u,p,t,ctx)=prepare_moment_state(m,g,u,p,t,ctx)
 function _direct_term!(du,u,term,rule,cache,m::DQMOM,q,op,p,t,ctx)
     raw=[moment_value(m,op.grid,u,k) for k in op.grid.orders];source=zero(raw)
     rule isa ExactMomentRule ? _exact_moment_term!(source,raw,term,op,p,t,ctx) :

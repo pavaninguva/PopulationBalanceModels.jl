@@ -30,3 +30,28 @@ function _integrate_bin(f,lo,hi,q)
     mid=(lo+hi)/2; half=(hi-lo)/2
     half*sum(q.weights[j]*f(mid+half*q.nodes[j]) for j in eachindex(q.nodes))
 end
+
+# Gauss rule for the standard normal measure. At high orders, a generic
+# eigensolver can return tiny first eigenvector entries as exactly zero. The
+# Christoffel identity w(x)=1/sum(p_k(x)^2), k=0:n-1, recovers their relative
+# accuracy from orthonormal probabilists' Hermite polynomials. Rescaling the
+# recurrence is arithmetic scaling, not adding weights or modifying moments.
+function _normal_gauss_rule(n)
+    nodes=eigvals(SymTridiagonal(zeros(n),sqrt.(Float64.(1:n-1))))
+    weights=map(nodes) do x
+        previous=0.0;current=1.0;squares=1.0;logscale=0.0
+        for k in 1:n-1
+            next=(x*current-sqrt(k-1)*previous)/sqrt(k)
+            previous=current;current=next
+            if max(abs(previous),abs(current))>1e100
+                previous/=1e100;current/=1e100;squares/=1e200
+                logscale+=log(1e100)
+            end
+            squares+=current^2
+        end
+        exp(-2logscale-log(squares))
+    end
+    all(isfinite,weights) && all(>=(0),weights) && isapprox(sum(weights),1;rtol=1e-12) ||
+        throw(NumericalFailure("normal quadrature weights lost accuracy"))
+    (;nodes,weights)
+end

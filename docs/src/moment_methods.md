@@ -125,6 +125,24 @@ The reconstruction is shared within a residual evaluation; `term_methods(operato
 records the rules used. `examples/moment_closures.jl` exercises the original
 families; the comparison below adds the adaptive, extended and direct families.
 
+Native Runge–Kutta methods check the selected closure at accepted states as well
+as before rate evaluations. A realizable vector can still fail a chosen closure
+or its integration quadrature; reducing the timestep alone need not resolve
+that failure. Finite-support initial moments must satisfy the necessary
+inequalities ``a\mu_k\leq\mu_{k+1}\leq b\mu_k``. These inequalities and Hankel
+checks are not a complete certificate for singular truncated moment problems.
+The stronger positive-measure reconstruction belongs to the explicitly selected
+[MeasureEuler policy](methods/realizable_evolution.md).
+
+Lognormal integration checks each tracked moment in its own units, using
+``\mu_0(\mu_1/\mu_0)^k`` as its absolute scale. Changing from metres to
+micrometres therefore does not change reconstruction eligibility. The
+standard-normal Gauss rule obtains weights from orthonormal Hermite polynomials
+using the [Christoffel identity](https://dlmf.nist.gov/3.5), preserving tiny
+positive weights that a generic eigenvector calculation can lose. Increasing
+`quadrature_order` improves integration of an assumed shape; it does not make
+that shape more representative of the physical population.
+
 Moment populations can share a PBMSystem with 1D sectional populations.
 `MomentExchange(:particles,:c,k;factor=...)` derives bulk exchange from the actual
 moment rate. Its invariant ``c+\mathrm{factor}\,\mu_k`` assumes a fixed conversion

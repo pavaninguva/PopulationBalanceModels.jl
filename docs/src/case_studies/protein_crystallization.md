@@ -227,6 +227,19 @@ standard deviations. This checks time discretization; it does not establish
 size-grid convergence or eliminate the observation-model assumptions.
 The largest committed half-step change is about 0.0041 standard deviations.
 
+The [repository audit](../audit.md) rechecked the retained 3,000 draws and all
+100 saved latent predictive curves without changing observations, priors or
+noise assumptions. Selected saved log densities agree within ``10^{-12}`` and
+the predictive curves agree to roundoff. The coordinate map is consistent at
+every retained draw; independent transformed-gradient checks include the MAP
+and marginal tail points. At the MAP, a ``10^{-6}`` relative difference step
+and its half resolve a limiter switch crossed by the larger default stencil;
+the AD discrepancy is about ``3.1\times10^{-6}``. Reconstructing inference
+coordinates from physical CSV values changes a folded-rank R-hat by about
+``7.6\times10^{-6}``, within the measured two-ulp reranking sensitivity. The
+convergence-screen conclusion is unchanged. Reproduce these checks with
+`test/audit_protein.jl` in the optional integration environment.
+
 ## Read the corner and prior–posterior plots
 
 ![Joint kinetic posterior, including coefficient–exponent correlations](../assets/protein_crystallization/posterior_corner.png)

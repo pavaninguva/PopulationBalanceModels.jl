@@ -16,8 +16,8 @@ struct LogNormalClosure <: AbstractMomentClosure
     weights::Vector{Float64}
     function LogNormalClosure(;quadrature_order=16)
         quadrature_order isa Integer && quadrature_order>=2 || throw(ArgumentError("quadrature_order must be at least two"))
-        e=eigen(SymTridiagonal(zeros(quadrature_order),sqrt.(Float64.(1:quadrature_order-1))))
-        new(quadrature_order,e.values,e.vectors[1,:].^2)
+        q=_normal_gauss_rule(quadrature_order)
+        new(quadrature_order,q.nodes,q.weights)
     end
 end
 

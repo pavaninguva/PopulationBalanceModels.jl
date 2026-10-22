@@ -54,7 +54,7 @@ end
 function _sectional_losses(op,N,p,t,ctx,mechanisms=nothing)
     losses=Tuple[]
     for item in op.prepared
-        term=item.term
+        term=_effective_term(item)
         mechanisms!==nothing && !(mechanism(term) in mechanisms) && continue
         if term isa Growth
             F=_growth_fluxes(term,N,(;grid=op.grid,bc=op.bc,scheme=item.method),p,t,ctx)
@@ -71,6 +71,12 @@ function _sectional_losses(op,N,p,t,ctx,mechanisms=nothing)
                 push!(losses,(Symbol(mechanism(term),"_",side),x,r))
             end
             _local_rhs!(zero(N),N,term,op,p,t,ctx;on_escape=callback)
+        elseif term isa Nucleation && item.method isa FixedPivot &&
+               !(first(op.grid.centers)<=term.size<=last(op.grid.centers))
+            rate=_nonnegative(term.rate(p,t,ctx),"nucleation rate")
+            overflow=item.method.overflow===:inherit ? :error : item.method.overflow
+            callback=(x,r)->push!(losses,(x<first(op.grid.centers) ? :nucleation_underflow : :nucleation_overflow,x,r))
+            _deposit!(zero(N),op.grid.centers,term.size,rate,overflow;on_escape=callback)
         end
     end
     losses

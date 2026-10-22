@@ -1,4 +1,5 @@
-using Test, LinearAlgebra, Random, Statistics, Distributions, ForwardDiff
+using Test, LinearAlgebra, Random, Statistics, ForwardDiff
+using Distributions: Normal, Exponential
 using PopulationBalanceModels, Optim, AdvancedHMC, MCMCDiagnosticTools
 include("fixtures/bayesian_linear.jl")
 
@@ -166,4 +167,31 @@ end
     @test all(abs.(vec(mean(Z;dims=2))-f.mode).<.3sqrt.(diag(f.covariance)))
     @test norm(cov(permutedims(Z))-f.covariance)/norm(f.covariance)<.2
     @test nonlinear.diagnostics.statistics[1][1].log_density≈logposterior(p,nonlinear.z[:,1,1]) atol=1e-10
+    for chain in 1:2,draw in (1,97,350,700)
+        @test nonlinear.diagnostics.statistics[chain][draw].log_density≈logposterior(p,nonlinear.z[:,draw,chain]) atol=1e-9
+    end
+    @test nonlinear.diagnostics.sampling_map_validation===:every_evaluation
+    @test nonlinear.diagnostics.energy==hcat([[s.hamiltonian_energy for s in chain] for chain in nonlinear.diagnostics.statistics]...)
+    # This wrong Jacobian agrees at every chain start. It must fail when NUTS
+    # moves away, rather than silently sampling a different target.
+    center=r.minimizer
+    wrong_away=(to_sampler=identity,from_sampler=identity,
+        logabsdetjac=y->.1*(y[1]-center[1])^4,label=:wrong_away)
+    @test_throws ArgumentError sample_posterior(p;initial=center,starts=[copy(center),copy(center)],
+        sampling_map=wrong_away,warmup=50,samples=8,chains=2,seed=168)
+end
+
+@testset "Profile curvature and nuisance stationarity" begin
+    f=bayesian_linear_fixture();p=f.problem;r=fit(p)
+    likelihood_precision=f.A'*(f.C\f.A)
+    likelihood_mode=likelihood_precision\(f.A'*(f.C\f.y))
+    for (target,mode,H,C) in ((:posterior,f.mode,f.precision,f.covariance),
+            (:likelihood,likelihood_mode,likelihood_precision,inv(likelihood_precision)))
+        values=mode[1].+[-.15,0.,.15]
+        profile=estimation_profile(p,r,1,values;target)
+        @test all(profile.converged)
+        @test profile.delta≈.5 .* (values.-mode[1]).^2 ./C[1,1] atol=1e-7
+        expected=mode[2].-H[2,1]/H[2,2].*(values.-mode[1])
+        @test [v[2] for v in profile.minimizers]≈expected atol=1e-6
+    end
 end

@@ -276,6 +276,8 @@ function _check_comparable_problems(problems;priors_may_change=false)
     isempty(problems) && throw(ArgumentError("provide named estimation problems"))
     base=first(problems)
     for p in values(problems)
+        p.fixed==base.fixed && p.constraints===base.constraints ||
+            throw(ArgumentError("comparison changes fixed parameters or constraints; reuse the same constraint callback"))
         length(p.parameters)==length(base.parameters) && length(p.experiments)==length(base.experiments) || throw(ArgumentError("comparison changes parameter or experiment count"))
         for (a,b) in zip(base.parameters,p.parameters)
             a.name==b.name && a.experiment==b.experiment && a.transform==b.transform || throw(ArgumentError("comparison changes parameter coordinates"))
@@ -283,10 +285,17 @@ function _check_comparable_problems(problems;priors_may_change=false)
         end
         for (a,b) in zip(base.experiments,p.experiments)
             a.name==b.name && length(a.measurements)==length(b.measurements) || throw(ArgumentError("comparison changes experiment layout"))
-            all(x.times==y.times && x.data==y.data && typeof(x.likelihood)==typeof(y.likelihood) for (x,y) in zip(a.measurements,b.measurements)) || throw(ArgumentError("comparison changes measurements or likelihood family"))
+            a.fixed==b.fixed || throw(ArgumentError("comparison changes experiment-specific fixed parameters"))
+            for (x,y) in zip(a.measurements,b.measurements)
+                x.times==y.times && x.data==y.data && _same_likelihood(x.likelihood,y.likelihood) ||
+                    throw(ArgumentError("comparison changes measurements or likelihood settings, including noise/covariance"))
+                x.response===y.response || throw(ArgumentError("comparison changes the measurement response; reuse the same response callback"))
+            end
         end
     end
 end
+_same_likelihood(a,b)=typeof(a)===typeof(b) &&
+    all(isequal(getfield(a,k),getfield(b,k)) for k in fieldnames(typeof(a)))
 
 """Refit named numerical variants, comparing mode changes to reference Laplace SDs and predictions at a common parameter vector. Label spatial, domain, integration and closure variants separately; closure comparisons measure model approximation too."""
 function refinement_study(problems::NamedTuple;kwargs...)

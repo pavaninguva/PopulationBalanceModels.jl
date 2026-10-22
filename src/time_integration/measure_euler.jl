@@ -62,7 +62,7 @@ function _validate_measure_operator(op::CompiledSystem,m)
     for e in op.system.exchanges
         pop=getproperty(op.system.populations,e.population)
         if pop isa CompiledPBM && !haskey(op.ledger_indices,e.population) &&
-           any(item->item.term isa Union{Aggregation,Breakage} && item.term.overflow===:discard &&
+           any(item->item.term isa Union{Aggregation,Breakage} && _effective_term(item).overflow===:discard &&
                mechanism(item.term) in e.mechanisms,pop.prepared)
             throw(ArgumentError("MeasureEuler with collision discard and bulk exchange requires CumulativeAccounting"))
         end

@@ -256,7 +256,7 @@ function _exchange!(exchange,ctx,op,du,p,t)
     localctx=_context(popop,reshape(N,:,1),1,t,ctx)
     for item in popop.prepared
         if mechanism(item.term) in exchange.mechanisms
-            add_term!(scratch,N,item.term,item.method,item.cache,popop,p,t,localctx)
+            _add_prepared!(scratch,N,item,popop,p,t,localctx)
         end
     end
     change=sum(_nonnegative(exchange.weight(x,p,t,localctx),"per-particle exchanged amount")*scratch[i]
@@ -313,3 +313,9 @@ function _check_problem_state(prob::PBMProblem{O},u,tolerance) where {O<:Compile
     nothing
 end
 _check_population_state(op,N,tolerance)=nothing
+function _check_admissible_state(op::CompiledSystem,u)
+    for name in keys(op.ranges)
+        _check_admissible_state(getproperty(op.system.populations,name),population(op,u,name))
+    end
+    nothing
+end

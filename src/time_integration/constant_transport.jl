@@ -85,5 +85,5 @@ function _simulate(prob::PBMProblem,method::Union{LaxWendroff,BeamWarming};dt,sa
         end
         push!(states,copy(N))
     end
-    PBMSolution(ts,states,prob,steps)
+    PBMSolution(ts,states,prob,steps,(policy=Symbol(nameof(typeof(method))),accepted_steps=steps,rejected_steps=0))
 end

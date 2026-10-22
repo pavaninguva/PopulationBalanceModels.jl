@@ -1,5 +1,6 @@
 module EstimateSizeDependentGrowth
-using PopulationBalanceModels, Distributions, Random, LinearAlgebra
+using PopulationBalanceModels, Random, LinearAlgebra
+using Distributions: Normal, LogNormal, Uniform, pdf, cdf, ccdf, quantile, truncated
 
 export synthetic_measurements, estimation_problem, run_example, refit_numerics,
        exact_density, exact_counts, exact_moment, physical_problem

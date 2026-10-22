@@ -4,8 +4,9 @@ using LinearAlgebra, Random
 import Optim
 
 """
-Finite-difference optimization of the declared known-variance Gaussian
-likelihood. Choose parameter transforms in CalibrationProblem; no positivity
+Optimization of the declared known-variance Gaussian likelihood using the
+CalibrationProblem's selected derivative backend (forward AD by default).
+Choose parameter transforms in CalibrationProblem; no positivity
 constraints, multistart, uncertainty intervals or convergence guarantees are
 added implicitly. Rerun at multiple starts and refined dt/grid.
 """
@@ -177,9 +178,10 @@ PopulationBalanceModels.fit_multistart(p::EstimationProblem,starts;kwargs...)=le
 end
 
 function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,result::MAPResult,index::Integer,values;
-        target,maxiters=400,starts=(result.minimizer,),derivatives=problem.derivatives)
+        target,maxiters=400,starts=(result.minimizer,),derivatives=problem.derivatives,gradient_tolerance=1e-3)
     target in (:likelihood,:posterior) || throw(ArgumentError("target must explicitly be :likelihood or :posterior"))
     result.converged || throw(ArgumentError("reference MAP did not converge"))
+    isfinite(gradient_tolerance) && gradient_tolerance>0 || throw(ArgumentError("profile gradient tolerance must be positive"))
     n=length(result.minimizer)
     1<=index<=n || throw(ArgumentError("invalid profile coordinate"))
     grid=Float64.(collect(values))
@@ -199,9 +201,19 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
             nothing
         end
     end
+    function stationary(raw,gradient)
+        raw===nothing && return false
+        Optim.converged(raw) && isfinite(Optim.minimum(raw)) || return false
+        try
+            norm(gradient(Optim.minimizer(raw)),Inf)<=gradient_tolerance
+        catch e
+            e isa NumericalFailure || rethrow()
+            false
+        end
+    end
     reference=optimize_profile(f,result.minimizer,full_gradient)
     reference===nothing && throw(NumericalFailure("profile reference has an invalid solve/derivative"))
-    Optim.converged(reference) || throw(NumericalFailure("profile reference optimization failed"))
+    stationary(reference,full_gradient) || throw(NumericalFailure("profile reference optimization failed its stationarity check"))
     reference_z=Optim.minimizer(reference);minimum_value=Optim.minimum(reference)
     nuisance=[i for i in 1:n if i!=index]
     minimizers=Vector{Float64}[];losses=Float64[];flags=Bool[]
@@ -211,7 +223,8 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
             z=expand(Float64[]);loss=f(z);flag=isfinite(loss)
         else
             results=[optimize_profile(v->f(expand(v)),s[nuisance],v->full_gradient(expand(v))[nuisance]) for s in seeds]
-            valid=[r for r in results if r!==nothing && Optim.converged(r) && isfinite(Optim.minimum(r))]
+            conditional_gradient=v->full_gradient(expand(v))[nuisance]
+            valid=[r for r in results if stationary(r,conditional_gradient)]
             flag=!isempty(valid)
             chosen=flag ? valid[argmin([Optim.minimum(r) for r in valid])] : nothing
             z=flag ? expand(Optim.minimizer(chosen)) : fill(NaN,n)
@@ -219,8 +232,10 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
         end
         push!(minimizers,z);push!(losses,loss);push!(flags,flag)
     end
+    any(v->v<minimum_value-1e-6*max(1,abs(minimum_value)),losses) &&
+        throw(NumericalFailure("a conditional profile improved its reference optimum; refit from that solution"))
     (;target,values=grid,negative_log_density=losses,delta=losses.-minimum_value,
-      minimizers,converged=flags,reference=reference_z,
+      minimizers,converged=flags,reference=reference_z,gradient_tolerance,
       interpretation=target===:posterior ? :posterior_shape_no_likelihood_cutoff : :likelihood_profile)
 end
 end
