@@ -5,13 +5,18 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.ticker import NullLocator
 from plot_style import configure
 ROOT=Path(__file__).resolve().parents[2]
 ASSETS=ROOT/'docs/src/assets'
 
 def save(fig,path):
     fig.tight_layout()
-    for ext in ('png','svg'): fig.savefig(path.with_suffix('.'+ext),dpi=210,bbox_inches='tight')
+    for ext in ('png','svg'):
+        target = path.with_suffix('.'+ext)
+        fig.savefig(target,dpi=210,bbox_inches='tight',metadata={'Date':None} if ext=='svg' else None)
+        if ext=='svg':
+            target.write_text('\n'.join(line.rstrip() for line in target.read_text().splitlines())+'\n')
     plt.close(fig)
 
 def moments():
@@ -36,25 +41,67 @@ def precipitation():
         ax.set(xlabel=r'$z\ (\mathrm{m})$',title=rf'$t={t}\ \mathrm{{s}}$',yscale='log',ylim=(1,900))
     axes[0].set_ylabel(r'$x\ (\mu\mathrm{m})$')
     fig.colorbar(im,ax=axes.ravel().tolist(),label=r'$n\ (\mathrm{m}^{-4})$',pad=.03)
-    for ext in ('png','svg'):fig.savefig((folder/'fields').with_suffix('.'+ext),dpi=210,bbox_inches='tight')
+    for ext in ('png','svg'):
+        target = (folder/'fields').with_suffix('.'+ext)
+        fig.savefig(target,dpi=210,bbox_inches='tight',metadata={'Date':None} if ext=='svg' else None)
+        if ext=='svg':
+            target.write_text('\n'.join(line.rstrip() for line in target.read_text().splitlines())+'\n')
     plt.close(fig)
     d=np.genfromtxt(folder/'outlets.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
-    fig,axes=plt.subplots(1,2,figsize=(9,3.5))
-    for method in np.unique(d['method']):
-        for nx in np.unique(d['nx']):
-            q=d[(d['method']==method)&(d['nx']==nx)]
-            axes[0].plot(q['size_m']*1e6,q['number_density'],label=f'{method}, {nx} bins')
-            # Convert the normalized volume density from per metre to per micrometre.
-            axes[1].plot(q['size_m']*1e6,q['volume_density']*1e-6)
+    # Select fixed-size / varying-axial slices, rather than concatenating meshes.
+    fig,axes=plt.subplots(1,2,figsize=(10,3.7))
+    for nz in np.unique(d['nz']):
+        q=d[(d['mesh']=='log')&(d['size_method']=='muscl')&(d['axial_method']=='muscl')
+            &(d['nx']==max(d['nx']))&(d['nz']==nz)]
+        for ax,key,scale in zip(axes,['number_density','volume_density'],[1.,1e-6]):
+            ax.plot(q['size_m']*1e6,q[key]*scale,label=rf'$N_x={int(max(d["nx"]))},\ N_z={int(nz)}$')
+    reference=np.genfromtxt(folder/'field.csv',delimiter=',',names=True)
+    q=reference[(reference['time']==200)&(reference['z_m']==max(reference['z_m']))]
+    volume=np.sum(q['number_density']*(q['x_right']-q['x_left'])*q['size_m']**3)
+    axes[0].plot(q['size_m']*1e6,q['number_density'],'k--',label='Numerical reference')
+    axes[1].plot(q['size_m']*1e6,q['number_density']*q['size_m']**3/volume*1e-6,'k--')
     for ax in axes:ax.set(xlabel=r'$x\ (\mu\mathrm{m})$',xscale='log')
     axes[0].set_ylabel(r'$n(x,L,200)\ (\mathrm{m}^{-4})$');axes[0].legend(fontsize=7)
     axes[1].set_ylabel(r'Volume fraction density $(\mu\mathrm{m}^{-1})$');save(fig,folder/'outlets')
+
     d=np.genfromtxt(folder/'performance.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
-    fig,ax=plt.subplots(figsize=(5.4,3.5))
-    for method in np.unique(d['method']):
-        q=d[d['method']==method];ax.loglog(q['seconds'],q['normalized_L1'],'o-',label=method)
-        for v in q:ax.annotate(f"{v['nx']}×{v['nz']}",(v['seconds'],v['normalized_L1']),xytext=(4,4),textcoords='offset points',fontsize=7)
-    ax.set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='Normalized outlet $L^1$ error');ax.legend();save(fig,folder/'performance')
+    fig,axes=plt.subplots(1,2,figsize=(11,4))
+    for ax,mesh in zip(axes,('log','uniform')):
+        q=d[d['mesh']==mesh]
+        pairs=list(dict.fromkeys(zip(q['size_method'],q['axial_method'])))
+        for i,(size,axial) in enumerate(pairs):
+            r=q[(q['size_method']==size)&(q['axial_method']==axial)]
+            ax.loglog(r['seconds'],r['normalized_L1'],'o',ms=4,color=f'C{i}',label=f'{size.upper()} / {axial.upper()}')
+            front=pareto_mask(r['seconds'],r['normalized_L1'])
+            r=r[front];r=r[np.argsort(r['seconds'])]
+            ax.loglog(r['seconds'],r['normalized_L1'],'-',lw=1,color=f'C{i}')
+        ax.set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='Normalized outlet $L^1$ error',title=f'{mesh.capitalize()} size mesh')
+        ax.legend(fontsize=7,title='Size / axial reconstruction',title_fontsize=8)
+    save(fig,folder/'performance')
+
+    fig,axes=plt.subplots(1,2,figsize=(10,3.7))
+    for ax,mesh in zip(axes,('log','uniform')):
+        for nz in np.unique(d['nz']):
+            q=d[(d['mesh']==mesh)&(d['size_method']=='muscl')&(d['axial_method']=='muscl')&(d['nz']==nz)]
+            order=np.argsort(q['nx']);q=q[order]
+            ax.loglog(q['nx'],q['normalized_L1'],'o-',label=rf'$N_z={int(nz)}$')
+        ax.set(xlabel=r'Size bins $N_x$',ylabel='Normalized outlet $L^1$ error',title=f'{mesh.capitalize()} size mesh')
+        ticks = np.unique(d['nx'])
+        ax.set_xticks(ticks, [str(int(n)) for n in ticks])
+        ax.xaxis.set_minor_locator(NullLocator())
+        ax.legend(fontsize=8)
+    save(fig,folder/'coordinate_refinement')
+
+
+def pareto_mask(work,error):
+    """Keep points for which no measured point is cheaper AND at least as accurate.
+
+    Equal duplicates may both be retained; a strict improvement in either
+    objective is needed for domination. Fronts are computed within each pairing.
+    """
+    work,error=np.asarray(work),np.asarray(error)
+    return np.array([not np.any((work<=w)&(error<=e)&((work<w)|(error<e)))
+                     for w,e in zip(work,error)])
 
 def protein():
     folder=ASSETS/'protein_crystallization';d=np.genfromtxt(folder/'predictions.csv',delimiter=',',names=True,dtype=None,encoding='utf8')

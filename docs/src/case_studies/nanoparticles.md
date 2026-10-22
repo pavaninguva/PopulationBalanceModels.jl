@@ -470,6 +470,11 @@ individual widths before plotting a density.
 
 ## Formation profiles and long-time checks
 
+These figures retain historical exports. The current optional stiff driver
+rejects an internal negative collision rate during startup, so the long-time
+trajectory has not been revalidated with the audited checks. The minimal run
+below instead uses checked native integration over a short startup interval.
+
 ![Formation profiles for three flow-rate ratios with reconstructed inputs](../assets/shin_case/figure8_dynamics.png)
 
 The panels show free lipid, supersaturation, nucleation rate, number-weighted
@@ -531,45 +536,34 @@ visible; it does not alter a state. The raw histories, selected PSD snapshots, i
 [verification table](../assets/shin_case/verification.csv) accompany the plots.
 
 
-## Numerical illustration of the coupling
+An earlier [20-ms synthetic illustration](../assets/illustrations/lnp/demonstration.png)
+and its inputs remain in `docs/benchmarks/diagnostics/lnp_demo/`. It uses simplified
+material functions and no DLVO barrier; it is separate from the reconstructed
+long-time calculation above.
 
-The retained run below uses the explicit synthetic inputs in
-`examples/lipid_nanoparticle_demo.jl`: delayed mixing with ``\tau=0.01`` s,
-constant viscosity ``10^{-3}`` Pa s, a demonstration solubility correlation,
-``S^*=1``, and ``\alpha_{\mathrm{base}}=1``. It starts with zero particles.
-The source and coupling are evaluated by the same recipe, but these choices
-neither exercise a DLVO barrier nor reproduce the 4320-minute model curves.
+## Minimal run and full reproduction
 
-![Synthetic nanoparticle calculation: number, free lipid, intensity density, and material drift](../assets/illustrations/lnp/demonstration.png)
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
 
-The panels use real exported simulation data from
-`docs/benchmarks/diagnostics/lnp_demo/`; their provenance remains alongside the
-CSVs. They illustrate the numerical coupling over 20 ms. Re-render with
-`python docs/benchmarks/plot_case_studies.py illustrations --usetex`. The
-full-horizon Figure 4 exporter above is kept separate from this illustration.
-
-## Complete runnable script
-
-The code below is read from the example source during the documentation build.
-Run it from the repository root using the environment described above.
-
-### `examples/shin_lnp_long_time.jl`
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","shin_lnp_long_time.jl"),String))])
+```julia
+using PopulationBalanceModels
+# Also requires OrdinaryDiffEqRosenbrock, ADTypes and SciMLBase in this environment.
+include("examples/shin_lnp_long_time.jl")
+problem = remake(ShinLNPLongTime.make_problem(; bins=80, FRR=3.0);
+    tspan=(0.0, 1e-5))
+solution = simulate(problem; method=SSPRK33(), dt=1e-8, saveat=[0.0, 1e-5])
+free_lipid = [bulk(problem, u, :lipid) for u in solution.u]
 ```
 
-### `examples/shin_lnp_reproduction.jl`
+This 10-µs native run does not regenerate the historical long-time figures.
+Their reproduction limit is stated above; no clipping or relaxed deposition
+checks are applied.
 
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","shin_lnp_reproduction.jl"),String))])
-```
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.
 
-### `examples/papers/cej2025_lnp.jl`
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","papers/cej2025_lnp.jl"),String))])
-```
+- [shin_lnp_long_time.jl](../assets/source/examples/shin_lnp_long_time.jl)
+- [shin_lnp_reproduction.jl](../assets/source/examples/shin_lnp_reproduction.jl)
+- [papers/cej2025_lnp.jl](../assets/source/examples/papers/cej2025_lnp.jl)

@@ -1,7 +1,7 @@
 Inguva et al. (2022), Case 1 Eq.56: g=.1, f0=100exp(-a/.01), domain [0,1], tf=4.0.
 All errors compare analytical bin integrals. Zero inflow/open outflow; far-boundary exponential tail is negligible.
 Smooth check: f0=1+.2sin(2πa)+.1cos(4πa), periodic [0,1].
-Six representative pairings. Common C=.5; Inguva2022 requires C=1 and is labelled separately. Front profiles also compare C=1.
+Seven representative pairings. Common C=.5; Inguva2022 requires C=1 and is labelled separately. Front profiles also compare C=1.
 One measured solve per configuration, following tiny separate compilation warmups. No timing medians, repeated production runs or timing bands.
 Observed L1 and RMSE orders are measured from successive grids; no fitted or arbitrarily anchored order-guide lines.
-Signed density minima and number drift retained. Julia 1.10.3; CPU goldmont.
+Signed density minima and number drift retained. Julia 1.10.3; CPU goldmont; Julia threads 1; BLAS threads 1.

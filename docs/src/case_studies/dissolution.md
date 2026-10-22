@@ -128,9 +128,22 @@ The plotting command needs NumPy, Matplotlib and a LaTeX installation; omit
 lines. The other two scripts verify exact-zero startup, coupled growth with
 nucleation and aggregation, and nonuniform axial moment/bulk transport.
 
-## Complete dissolution script
+## Minimal run and full reproduction
 
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia", read(joinpath(pkgdir(PopulationBalanceModels), "examples", "realizable_dissolution.jl"), String))])
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
+
+```julia
+using PopulationBalanceModels
+include("examples/realizable_dissolution.jl")
+problem = dissolution_problem(:moments; resolution=4)
+solution = simulate(problem; method=MeasureEuler(), dt=0.01, saveat=0.0:0.02:2.2)
+solute = [bulk(problem, u, :solute) for u in solution.u]
+removed = cumulative(problem, last(solution.u), :crystals, :extinction)
 ```
+
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.
+
+- [realizable_dissolution.jl](../assets/source/examples/realizable_dissolution.jl)

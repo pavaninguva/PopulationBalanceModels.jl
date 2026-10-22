@@ -1,0 +1,2 @@
+mesh,size_method,axial_method,nx,nz,message
+uniform,weno5,weno5,24,32,negative bulk concentration in coupled solve

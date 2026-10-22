@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Replaced full embedded reproduction drivers with minimal case-study runs and downloadable sources; separated transport benchmark reporting from model assembly.
+- Added WENO3/SSPRK33 to constant-growth front, smooth convergence and single-run timing comparisons; exposed small moment errors and clarified references, normalization and incomplete trajectories.
+- Added independent size/axial precipitation refinements, uniform-size WENO5 with axial MUSCL, numerical-reference checks and nondominated runtime/error fronts.
+- Smoothed retained protein NUTS summaries with integrated-probability contours and added reference-rate correlations and kinetic-rate bands. Sampling targets and retained draws are unchanged.
+- Marked historical LNP long-time outputs as unverified with the current strict collision checks; supplied a checked native startup instead of relaxing those checks.
+
 - Independently verified audit corrections with number/size rescaling, Gaussian tail integrals, unequal collision events, discarded births, analytic mapped targets and upstream Hamiltonian/metric checks.
 - Added a 256-bit arithmetic retry for ill-conditioned Gamma EQMOM primary inversion, retaining the selected family and all-moment acceptance tolerance. Quadrature results report `inversion_precision`; explicit rejection remains when reconstruction fails.
 - Diagnosed the moment benchmark with independent characteristic moments, full allowed-width root checks, analytic high-order breakage rates and separately controlled integration. Retained failure times and unresolved limits rather than extending failed curves.
@@ -35,7 +41,7 @@
 - Added axial transport of named populations and shared scalar bulk states, structured feeds and selectable axial reconstructions while preserving conservative face fluxes.
 - Added a continuous-precipitation Case 7A workflow with transient fields, outlet distributions and measured numerical error/runtime; retained explicit reference and scheme differences from Zhang2024.
 - Added a protein crystallization fit to reproducibly digitized experimental concentration and diameter markers, explicit rate-unit conversions, observation assumptions and separately declared priors.
-- Embedded the complete source scripts at the end of every case-study page directly from the runnable files.
+- Initially embedded complete example drivers; the current manual replaces these with short runs and source downloads.
 
 - Made ForwardDiff the default for inference gradients, prediction sensitivities and posterior Hessians, with independent finite-difference checks and an explicit finite-difference option for incompatible calculations.
 - Added an optional SciMLSensitivity adapter for continuous forward and interpolating-adjoint gradients, including initial-state, observation, noise and shared/local parameter dependence. Added ForwardDiff as a dependency and SciMLSensitivity/ReverseDiff as optional dependencies.

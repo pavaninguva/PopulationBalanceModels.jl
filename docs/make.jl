@@ -2,6 +2,27 @@ using Documenter
 using PopulationBalanceModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
+# Downloadable sources preserve the reproduction drivers without embedding them
+# in the walkthroughs. The generated copies are ignored by Git.
+source_assets = joinpath(@__DIR__, "src", "assets", "source")
+mkpath(source_assets)
+for (directory, subdirectories, files) in walkdir(joinpath(ROOT, "examples"))
+    filter!(!=("__pycache__"), subdirectories)
+    target = joinpath(source_assets, "examples", relpath(directory, joinpath(ROOT, "examples")))
+    mkpath(target)
+    for file in files
+        splitext(file)[2] in (".jl", ".py", ".csv", ".txt", ".md") || continue
+        name = endswith(file, ".md") ? file[1:end-3] * ".txt" : file
+        cp(joinpath(directory, file), joinpath(target, name); force=true)
+    end
+end
+plot_sources = joinpath(source_assets, "plotting")
+mkpath(plot_sources)
+for file in readdir(joinpath(ROOT, "docs", "benchmarks"))
+    endswith(file, ".py") || file == "README.md" || continue
+    cp(joinpath(ROOT, "docs", "benchmarks", file), joinpath(plot_sources, file == "README.md" ? "README.txt" : file); force=true)
+end
+
 # GitHub provides the actual owner; local archives need no guessed remote.
 slug = get(ENV, "GITHUB_REPOSITORY", "")
 remote = if isempty(slug)

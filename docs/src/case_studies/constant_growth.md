@@ -50,7 +50,7 @@ nothing # hide
 
 ## A representative set of methods
 
-The comparison uses six pairings. This keeps the plots readable while showing
+The comparison uses seven pairings. This keeps the plots readable while showing
 first-order transport, limited reconstruction, high-order reconstruction,
 temporal error and a characteristic shift.
 
@@ -58,6 +58,7 @@ temporal error and a characteristic shift.
 |:--|:--|:--|
 | Upwind | Forward Euler | 0.5 |
 | MUSCL | SSPRK33 | 0.5 |
+| WENO3 | SSPRK33 | 0.5 |
 | WENO5 | SSPRK33 | 0.5 |
 | WENO5 | RK4 | 0.5 |
 | Lax–Wendroff complete update | Built into the scheme | 0.5 |
@@ -174,6 +175,14 @@ p_{\mathrm{obs}}=
 
 ![Measured orders in both error norms](../assets/constant_growth/observed_orders.png)
 
+WENO3 + SSPRK33 has measured RMSE orders 1.73, 2.28, 3.34, 4.27
+on the successive 40–640-bin refinements. Third-order face reconstruction does
+not ensure an immediate third-order curve: nonlinear weights near extrema and
+the third-order time update both contribute at these resolutions. The fixed
+WENO weight parameter also changes its importance as the mesh is refined.
+The final slope above three is finite-range behaviour, not evidence for a
+higher formal order.
+
 Upwind approaches first order and Lax–Wendroff second order. MUSCL approaches
 second order in ``L^1`` but about 1.8 in RMSE here, because limiting near smooth
 extrema affects the norms differently. WENO5 with SSPRK33 approaches third
@@ -191,7 +200,9 @@ Each configuration has **one measured integration**. Small, separate warmups
 compile the method before measuring; the benchmark-sized problem is not run
 three times. Timings include stepping, residual evaluation and allocations,
 and exclude compilation, file output and plotting. They have no averaging or
-repeatability bands and will vary between runs and machines.
+repeatability bands and will vary between runs and machines. All plotted timings
+were remeasured together for this revision; [inputs.txt](../assets/constant_growth/inputs.txt)
+records the Julia version, CPU and thread counts.
 
 Raw results are in [errors.csv](../assets/constant_growth/errors.csv) and
 [smooth_errors.csv](../assets/constant_growth/smooth_errors.csv). They also retain
@@ -204,20 +215,25 @@ python docs/benchmarks/plot_transport_comparisons.py constant --usetex
 julia --project=docs docs/make.jl
 ```
 
-## Complete runnable scripts
+## Minimal run and full reproduction
 
-The code below is read from the runnable sources during the documentation build.
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
 
-### Growth and timing comparison
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","constant_growth_methods.jl"),String))])
+```julia
+using PopulationBalanceModels
+include("examples/constant_growth_methods.jl")
+grid = Grid1D(range(0.0, 1.0; length=201))
+initial = ConstantGrowthMethods.exact_counts(grid, 0.0)
+bc = SizeBC(OpenBoundary(), OpenBoundary())
+problem = ConstantGrowthMethods.make_problem(grid, initial, WENO3(), SSPRK33(), 4.0, bc)
+solution = simulate(problem; method=SSPRK33(), dt=0.025, check_nonnegative=false)
 ```
 
-### Lax–Wendroff audit
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.
 
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","audit_lax_wendroff.jl"),String))])
-```
+
+
+- [Benchmark/export helpers](../assets/source/examples/support/constant_growth_benchmark.jl).

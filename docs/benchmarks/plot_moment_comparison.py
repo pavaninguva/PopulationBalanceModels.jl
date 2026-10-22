@@ -70,7 +70,7 @@ def main(folder=FOLDER,usetex=False):
                 status=summary[(summary['scenario']==scenario)&(summary['method']==method)][0]
                 if status['status']!='completed' and len(q)>1:
                     ax.plot(q['time'][-1],err[-1],'x',ms=7,mew=1.5,color=f'C{i}')
-            ax.set(xlabel=r'$t\ (\mathrm{s})$',ylabel=rf'Relative $\mu_{k}$ difference',ylim=(1e-12,1e3))
+            ax.set(xlabel=r'$t\ (\mathrm{s})$',ylabel=rf'Relative $\mu_{k}$ difference',ylim=(5e-17,1e3))
             if row==0:ax.set_title(rf'$\mu_{k}$')
     axes[0,0].text(.03,.95,'Growth and nucleation',transform=axes[0,0].transAxes,va='top',fontsize=9)
     axes[1,0].text(.03,.95,'With collisions',transform=axes[1,0].transAxes,va='top',fontsize=9)

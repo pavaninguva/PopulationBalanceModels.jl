@@ -265,20 +265,34 @@ That result does not apply to arbitrary size-dependent velocities.
 
 ![Signed density errors](../assets/inguva_case2/errors.png)
 
+Colours in each error panel show numerical minus analytical **bin-average**
+density on that panel's own mesh. Each panel has its own symmetric colour
+scale; read the colourbar before comparing magnitudes. The mapped result's
+roundoff-scale pattern is not a physical oscillation.
+
 ![Accuracy and negative population under refinement](../assets/inguva_case2/convergence.png)
 
 The last figure uses actual total bin counts for each mesh. It compares accuracy
 and undershoots, not elapsed runtime. The transformed mesh exploits the known
 characteristics; its near-roundoff error is specific to this compatible problem.
 
-## Complete runnable script
+## Minimal run and full reproduction
 
-The code below is read from the example source during the documentation build.
-Run it from the repository root using the environment described above.
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
 
-### `examples/inguva_braatz_case2.jl`
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","inguva_braatz_case2.jl"),String))])
+```julia
+using PopulationBalanceModels
+include("examples/inguva_braatz_case2.jl")
+problem = InguvaBraatzCase2.problem(50; scheme=WENO5(epsilon=1e-12))
+dt = suggest_dt(problem.operator, problem.u0, problem.p, 0.0; cfl=0.4)
+solution = simulate(problem; dt, saveat=[1.0], check_nonnegative=false)
+reference = InguvaBraatzCase2.reference(problem.operator.grid, 1.0, problem.p)
+L1_error = sum(abs, last(solution.u) - reference)
 ```
+
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.
+
+- [inguva_braatz_case2.jl](../assets/source/examples/inguva_braatz_case2.jl)

@@ -309,21 +309,22 @@ run settings are stored in `docs/src/assets/gunawan_example2/`. These figures
 replace the earlier separate demonstration panels with one runnable,
 consistently specified numerical benchmark.
 
-## Complete runnable script
+## Minimal run and full reproduction
 
-The code below is read from the example source during the documentation build.
-Run it from the repository root using the environment described above.
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
 
-### `examples/cooling_crystallization_benchmark.jl`
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","cooling_crystallization_benchmark.jl"),String))])
+```julia
+using PopulationBalanceModels
+include("examples/papers/gunawan2004_case2.jl")
+recipe = Gunawan2004Case2
+grid = Grid1D(sort!(unique(vcat(collect(0.0:2.0:1600.0), 180.5, 210.5))))
+problem = recipe.build(; grid, initial_density=recipe.benchmark_initial_density,
+    c0=recipe.solubility(recipe.temperature(0.0)), scheme=MUSCL())
+solution = simulate(problem; method=SSPRK33(), dt=0.1, saveat=0.0:100.0:1000.0)
+concentration = [bulk(problem, u, :c) for u in solution.u]
 ```
 
-### `examples/papers/gunawan2004_case2.jl`
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","papers/gunawan2004_case2.jl"),String))])
-```
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.

@@ -3,3 +3,4 @@ docs/Manifest.toml
 docs/build/
 local_papers/
 __pycache__/
+docs/src/assets/source/

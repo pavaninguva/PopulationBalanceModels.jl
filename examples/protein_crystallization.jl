@@ -3,7 +3,7 @@ using PopulationBalanceModels
 using Distributions: Uniform, Normal, rand, pdf, logpdf
 using Random, LinearAlgebra
 import ForwardDiff
-export parameters,build,volume_median,observations,estimation_problem,run_study,run_posterior,scheduled_solver,physical_prior_density
+export parameters,build,volume_median,observations,estimation_problem,run_study,run_posterior,scheduled_solver,physical_prior_density,run_identifiability
 
 # Time is minutes, length µm, c is g/L (=kg/m³); N is in 10^12 particles/m³.
 # Table 7 Case 2: AJ has units m^-3 s^-1; AG is printed in nm/min.
@@ -306,11 +306,20 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
     (;problem,draws,checks)
 end
 
-if abspath(PROGRAM_FILE)==@__FILE__
-    @eval using Optim
-    if "--posterior-only" in ARGS || "--posterior" in ARGS
+include("support/protein_identifiability.jl")
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    if "--identifiability-only" in ARGS
+        run_identifiability()
+    elseif "--posterior-only" in ARGS
         @eval using AdvancedHMC, MCMCDiagnosticTools
+        run_posterior()
+    else
+        @eval using Optim
+        if "--posterior" in ARGS
+            @eval using AdvancedHMC, MCMCDiagnosticTools
+        end
+        run_study(posterior="--posterior" in ARGS)
     end
-    "--posterior-only" in ARGS ? run_posterior() : run_study(posterior="--posterior" in ARGS)
 end
 end

@@ -22,6 +22,7 @@ def constant_growth():
     smooth = read(folder / "smooth_errors.csv")
     choices = [("upwind","euler","Upwind + Euler", "C0"),
                ("muscl","ssprk33","MUSCL + SSPRK3", "C1"),
+               ("weno3","ssprk33","WENO3 + SSPRK3", "C6"),
                ("weno5","ssprk33","WENO5 + SSPRK3", "C2"),
                ("weno5","rk4","WENO5 + RK4", "C3"),
                ("lax_wendroff","coupled","Lax--Wendroff", "C4"),
@@ -62,8 +63,8 @@ def constant_growth():
         data=smooth[(smooth['scheme']==name)&(smooth['time_method']==time)]
         axes[0].loglog(data['bins'],data['seconds'],'o-',ms=3,color=color,label=label)
         axes[1].loglog(data['seconds'],np.maximum(data['rmse'],1e-16),'o-',ms=3,color=color,label=label)
-    axes[0].set(xlabel='Number of bins',ylabel=r'Elapsed time $(\mathrm{s})$',title='One measured solve per configuration')
-    axes[1].set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='RMSE',title='Error versus elapsed work')
+    axes[0].set(xlabel='Number of bins',ylabel=r'Elapsed time $(\mathrm{s})$')
+    axes[1].set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='RMSE')
     axes[0].legend(fontsize=7);save_figure(fig,folder,'timings')
 
     # Measured refinement orders explain the curves without arbitrary h^p guides.
@@ -74,7 +75,9 @@ def constant_growth():
         for ax,key in zip(axes,['observed_l1_order','observed_rmse_order']):
             ax.semilogx(data['bins'],data[key],'o-',ms=3,color=color,label=label)
     axes[0].set(xlabel='Number of bins',ylabel='Measured refinement order',title=r'$L^1$')
-    axes[1].set(xlabel='Number of bins',title='RMSE');axes[0].legend(fontsize=7)
+    axes[1].set(xlabel='Number of bins',title='RMSE')
+    handles,labels=axes[0].get_legend_handles_labels()
+    fig.legend(handles,labels,loc='outside lower center',ncol=3,fontsize=7)
     save_figure(fig,folder,'observed_orders')
 
 def cooling():

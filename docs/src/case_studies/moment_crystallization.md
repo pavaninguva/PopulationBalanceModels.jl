@@ -135,7 +135,10 @@ checked by the number equation above and by ``\mu_3=V_0``.
 
 ![Analytical and three-node QMOM moments, with relative errors](../assets/qamar_moments/aggregation_breakage.png)
 
-Three nodes give a maximum relative moment error of about 0.38% over this run.
+In this figure the error panels show fractions ``|\mu_k/\mu_k^{\mathrm{exact}}-1|``.
+For QMOM with tracked third moment, the number equation is closed and material
+is conserved; their small errors mainly test the integrator. Higher unclosed moments test the quadrature
+closure as well. Three nodes give a maximum relative moment error of about 0.38% over this run.
 Four nodes reduce it to about 0.027%. Halving the integration step changes the
 results by much less than either error: these differences mainly assess
 quadrature closure, rather than time integration. The material moment remains
@@ -199,7 +202,10 @@ bulk phase to conceal that difference.
 
 ![Moment-family errors, material predictions and one measured runtime](../assets/qamar_moments/method_aggregation.png)
 
-On this smooth aggregation/fragmentation calculation, fixed and rank-adaptive
+The upper error panels of the family comparison use **percent** (100 times the
+fraction above). Its lower-left panel is ``\mu_3/V_0``, not an error: departures
+from one show the material prediction, including the lognormal reconstruction's
+initial mismatch. On this smooth aggregation/fragmentation calculation, fixed and rank-adaptive
 QMOM agree: the active rank stays three, so adaptation adds no accuracy here.
 Their maximum relative errors in the first and second moments are about
 `3.25e-4` and `3.27e-4`. Gamma EQMOM reduces these to about `3.0e-6` and `1.0e-5`,
@@ -213,7 +219,10 @@ the direct source system. The third moment is conserved algebraically in the
 raw formulations; DQMOM's derived third moment has a small integration drift.
 The lognormal reconstruction instead develops roughly 20% third-moment change
 relative to its own reconstructed initial value, although the physical problem
-conserves material. Its number and lower-moment errors also grow. Tracking fewer
+conserves material. The plotted ratio starts at 1.0332 and reaches 1.2445: the roughly 20% change
+is relative to its own reconstructed initial value, while the final discrepancy
+from physical ``V_0`` is about 24.5%. Its number equation uses that inferred
+third moment, so number and lower-moment errors also grow. Tracking fewer
 moments is useful only if the shape assumption suits the evolving population.
 Solve cost also depends on the quadrature: pairwise aggregation is evaluated
 over all positive quadrature-point pairs, so 64 lognormal integration points
@@ -223,7 +232,9 @@ All these curves use SSPRK33 with the same maximum timestep, `0.02 s`, and a
 separate `0.01 s` run. The lower-moment timestep differences in this calculation
 are about `6e-8`, much smaller than the visible closure errors. Runtime bars are
 one measured solve after a short compilation warmup, including state checks;
-they are not timing medians or a general performance ranking.
+they are not timing medians or a general performance ranking. These histories
+and timings are retained from the audited runs; this revision redraws their
+figures without reopening collision EQMOM evolution.
 
 ## Second calculation: a short burst of nuclei
 
@@ -301,58 +312,42 @@ Aggregation and fragmentation alter the full-process histories.
 
 ![Moment-family differences for the pulse, with incomplete trajectories marked](../assets/qamar_moments/method_pulse.png)
 
+Every panel shows the dimensionless fraction
+``|\mu_k/\mu_k^{\mathrm{ref}}-1|``, **not percent**; 0.0038 means 0.38%.
+The upper row uses analytical growth/source moments; the lower row uses the
+1200-bin numerical sectional reference. Values below ``10^{-16}`` are displayed
+at that floor, including exact zeros. The axis now includes these small values;
+the exported moments are unchanged.
+
 The upper row compares growth and nucleation with the analytical moments. All
-raw-moment methods have the same closed equations for this limit. The lognormal
+raw-moment methods have the same closed equations for this limit. This tests
+source and time integration, **not collision closure error**. Fixed and
+rank-adaptive QMOM overlap because their active rank stays three. The source's
+``e^{-10^4(t-0.215)^2}`` factor has a 0.01-s time scale; the maximum integration
+step is ``2\times10^{-4}`` s, independently of the 0.005-s output spacing. The lognormal
 first three moments also follow those equations once its reconstruction
 quadrature is sufficiently resolved. Its inferred third moment can still be
 wrong: agreement of evolved lower moments does not validate a reconstructed
 material moment or size distribution.
 
-The 16-point default lognormal quadrature becomes unresolved during this pulse.
-Increasing it to 32 or 64 points lets the growth/source calculation finish.
-The comparison uses 64 points. A reconstruction check tests the tracked moments;
-it does not certify higher moments in a kinetic rate. With a size-sixth-power
-breakage hazard, the three lower equations need inferred M6, M7 and M8:
+The lognormal comparison uses 64 integration points; its default 16-point rule
+is unresolved during this pulse. More integration points improve evaluation of
+the chosen shape, not its ability to describe a bimodal population. Its inferred
+third moment ``\mu_{3,\mathrm{LN}}=\mu_0\mu_2^3/\mu_1^3`` can therefore be
+inaccurate while all three tracked moments are accurate.
 
-```math
-\left.\frac{dM_k}{dt}\right|_{\rm breakage}
-=\left(\frac{6}{k+3}-1\right)M_{k+6},\qquad k=0,1,2.
-```
+Gamma EQMOM stops at the saved time 0.475 s in the growth/source limit: the
+reference moments cease to admit the selected three-kernel family near 0.48 s.
+That is distinct from physical nonrealizability. **Collision EQMOM evolution
+remains unresolved and is not time converged**; its partial curve cannot support
+a validated full-horizon accuracy ranking. The lognormal collision equations
+instead develop broad-tail runaway near 0.09047 s, before the pulse maximum.
+Its last saved point is 0.09 s. These results retain the selected closures and
+state checks. Detailed failing stages, conditioning, quadrature checks and
+independent diagnoses are in the [audit register](../audit.md).
 
-Independent analytic lognormal moments reproduce the 64/128-point rates. An
-adaptive calculation also finds rapidly increasing log-variance near
-`0.090468223635 s`. The corresponding analytic closure equations approach a
-finite-time runaway while number and mean stay finite. The native calculation's
-first overflow is later, at `0.0908 s` for `dt=2e-4`; its last saved point is
-`0.09 s`. These are three different quantities. Halving that step cannot turn
-this broad-tail closure trajectory into a resolved physical collision solution.
-Reconstructed M3 remains an inferred quantity, not conserved material. This runaway
-precedes the Gaussian source maximum at 0.215 s; the constant background births
-are already enough to broaden the inferred shape.
-
-For Gamma EQMOM, independent characteristic moments through M6 clarify the
-no-collision limit. A three-kernel representation exists at 0.4788 s but has a
-primary Hankel condition number around `1.65e11` and an extremely small tail
-weight. The package now retries failed primary inversions in 256-bit arithmetic,
-without changing the family or moments. At 0.48–0.50 s an independent search of
-the full allowed width interval finds no nonnegative three-kernel Gamma
-representation of those reference moments. This family restriction is distinct
-from physical moment realizability; the characteristic solution is nonnegative.
-
-With collisions, the first coarse SSPRK33 failure is a nonrealizable predictor
-at `0.4459 s`, after the saved `0.445 s` output. Smaller steps change the outcome
-non-monotonically, and independently controlled integration stalls earlier
-near ill-conditioned tail reconstruction. Tightening primary tolerance and
-increasing secondary quadrature do not establish a converged trajectory.
-**The collision EQMOM evolution remains unresolved**; its failed inversion alone
-is not evidence of intrinsic family nonrepresentability. The
-[audit register](../audit.md) gives the offending states, high-precision
-feasibility calculation and compact reproduction commands.
-
-Crosses mark the last completed output interval. The audit tables also record
-the first failed internal stage. Each timing measures one solve after warmup;
-state counts and completed horizons are reported with it. Compare those
-quantities together when interpreting solve costs.
+Crosses mark the last saved output of an incomplete run, not the first failing
+internal stage. Costs must be read alongside state count and completed horizon.
 
 DQMOM completes both pulse calculations, but its lower-moment timestep difference
 is about `1.5e-3`, compared with about `1e-6` for the raw three-node formulations.
@@ -373,9 +368,21 @@ extinction, empty-state or rank-collision guarantees to EQMOM, lognormal or
 DQMOM. Changing integration policy is a separate experiment from changing the
 moment representation.
 
+An absolute-error curve can dip when its signed difference crosses zero.
+In the saved growth/source data, QMOM's first-moment difference changes sign
+between 0.215 and 0.220 s, and lognormal's inferred third-moment difference
+between 0.220 and 0.225 s. Those local dips indicate cancellation, not a sudden
+improvement of the closure. Tiny pre-pulse differences near roundoff need no
+physical interpretation.
+
 ## Separate closure and reference errors
 
 ![Analytical growth/source errors and refinement of the sectional comparison](../assets/qamar_moments/pulse_verification.png)
+
+The left verification panel plots ``|\mu_k^{\mathrm{sectional}}/\mu_k^{\mathrm{QMOM}}-1|``
+for 600 and 1200 bins. Its denominator is QMOM, whereas the family-comparison
+figure uses the sectional reference. The right panel uses analytical growth/source
+moments and shows fractional ``\mu_4`` error. Neither panel uses percent.
 
 The runner compares three and four nodes, and halves the native integration
 step. A separate resolved reference uses 600 and 1200 uniform length bins on
@@ -415,11 +422,23 @@ To regenerate only the method comparison while reusing the supplied sectional
 reference, run `julia --project=. examples/qamar_moment_benchmarks.jl --methods-only`.
 This retains separate timestep and reconstruction-quadrature checks.
 
-## Complete runnable script
+## Minimal run and full reproduction
 
-The code below is read from the example source during the documentation build.
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
 
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","qamar_moment_benchmarks.jl"),String))])
+```julia
+using PopulationBalanceModels
+include("examples/qamar_moment_benchmarks.jl")
+benchmark = QamarMomentBenchmarks
+problem = benchmark.problem4(; method=QMOM(3))
+solution = simulate(problem; method=SSPRK33(), dt=0.02, saveat=0.0:1.0:50.0)
+M1 = [moment(problem.operator.grid, vec(u), 1) for u in solution.u]
+reference = [benchmark.exact4(t)[2] for t in solution.t]
 ```
+
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.
+
+- [qamar_moment_benchmarks.jl](../assets/source/examples/qamar_moment_benchmarks.jl)

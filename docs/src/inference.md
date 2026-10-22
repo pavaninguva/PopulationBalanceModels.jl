@@ -430,20 +430,10 @@ and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
 documentation for sampler and diagnostic definitions. NUTS uses the same
 selected AD or ODE-sensitivity gradient as MAP; diagnostics record its backend.
 
-For the growth study, the comparison below shows the inferred growth law,
-the correlation between its two coefficients, and their marginal distributions.
-Both Laplace and NUTS fit the same two growth coefficients under each prior
-scenario. Lines mark the values used to generate the synthetic data; the
-case study explains the two prior choices and the known noise level.
-
-![Growth-law uncertainty and joint and marginal parameter distributions from Laplace and NUTS](assets/bayesian_growth/posterior.png)
-
-The retained traces are shown for each prior scenario. Per-chain energy and
-adaptation diagnostics are exported with the draws; the
-[case study](case_studies/estimating_growth.md) reports the actual diagnostic
-values and the runner stops if its screen fails.
-
-![Four-chain traces for both growth coefficients and prior scenarios](assets/bayesian_growth/chains.png)
+The [growth-estimation case](case_studies/estimating_growth.md) compares priors,
+Laplace intervals and NUTS draws for synthetic density measurements. The
+[protein case](case_studies/protein_crystallization.md) illustrates coefficient–
+exponent tradeoffs and predictive mismatch despite a passed sampling screen.
 
 MCMC `parameter_draws` also returns `indices` into
 `reshape(samples.z, number_of_parameters, :)`, with draws varying before chains.

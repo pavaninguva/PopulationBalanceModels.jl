@@ -42,6 +42,15 @@ again; no applicable `AGENTS.md` was present. The comparison includes the
 committed corrections since `9e2c6fa` and the follow-up's uncommitted changes.
 The ignored local Manifest and unrelated assets were preserved.
 
+The documentation/figure follow-up started at clean `84b0860073447009bfe5c1021f92844017085703`.
+It leaves collision EQMOM research parked. A short LNP reproduction probe with
+the current strict deposition checks rejects a negative internal collision rate
+in the optional Rodas5P driver (80 bins, default tolerances, requested 0–0.01 s).
+The retained long-time LNP figures are therefore historical, not revalidated
+outputs. A native SSPRK33 startup to 10 µs at 80 bins and `dt=1e-8 s` passes
+without clipping. This is an external-stage admissibility limit to investigate,
+not evidence that the long-time physical reconstruction is validated.
+
 ## Findings and disposition
 
 Locations are repository-relative under `src/` unless qualified. New core

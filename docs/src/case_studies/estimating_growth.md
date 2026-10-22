@@ -334,14 +334,23 @@ settings and diagnostics under `docs/src/assets/bayesian_growth/`. The plotter
 reads those files. It uses LaTeX labels and no grid lines, and exports PNG and
 SVG figures. Rebuild Documenter after changing the figures.
 
-## Complete runnable script
+## Minimal run and full reproduction
 
-The code below is read from the example source during the documentation build.
-Run it from the repository root using the environment described above.
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
 
-### `examples/estimate_size_dependent_growth.jl`
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","estimate_size_dependent_growth.jl"),String))])
+```julia
+using PopulationBalanceModels, Optim
+include("examples/estimate_size_dependent_growth.jl")
+study = EstimateSizeDependentGrowth
+data = study.synthetic_measurements(; seed=2022)
+problem = study.estimation_problem(data; prior=:lognormal)
+fitted = fit(problem; maxiters=200)
+parameters = physical_parameters(problem, fitted.minimizer)
 ```
+
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.
+
+- [estimate_size_dependent_growth.jl](../assets/source/examples/estimate_size_dependent_growth.jl)

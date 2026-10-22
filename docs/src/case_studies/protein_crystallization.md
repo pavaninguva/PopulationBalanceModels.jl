@@ -159,7 +159,7 @@ parameters are identifiable. The sharp concentration decrease and the small
 number of size observations also leave room for model discrepancy.
 
 The committed 80-bin run converged with an infinity-norm gradient of about
-0.008. Its verified Laplace calculation was rejected because the Hessian did
+0.008. The attempted Laplace approximation was rejected because the Hessian did
 not stabilize under step halving. The PSD median and limiter introduce changes
 of derivative across bin and limiter branches; tighter numerics and profiles
 are needed before reporting uncertainty. The scripts report this failure openly.
@@ -227,28 +227,20 @@ standard deviations. This checks time discretization; it does not establish
 size-grid convergence or eliminate the observation-model assumptions.
 The largest committed half-step change is about 0.0041 standard deviations.
 
-The [repository audit](../audit.md) rechecked the retained 3,000 draws and all
-100 saved latent predictive curves without changing observations, priors or
-noise assumptions. Selected saved log densities agree within ``10^{-12}`` and
-the predictive curves agree to roundoff. The coordinate map is consistent at
-every retained draw; independent transformed-gradient checks include the MAP
-and marginal tail points. At the MAP, a ``10^{-6}`` relative difference step
-and its half resolve a limiter switch crossed by the larger default stencil;
-the AD discrepancy is about ``3.1\times10^{-6}``. Reconstructing inference
-coordinates from physical CSV values changes a folded-rank R-hat by about
-``7.6\times10^{-6}``, within the measured two-ulp reranking sensitivity. The
-convergence-screen conclusion is unchanged. Reproduce these checks with
-`test/audit_protein.jl` in the optional integration environment.
+The [audit register](../audit.md) records independent target, gradient and
+predictive checks supporting reuse of these retained draws. Sampling convergence
+and numerical convergence remain separate checks.
 
 ## Read the corner and prior–posterior plots
 
 ![Joint kinetic posterior, including coefficient–exponent correlations](../assets/protein_crystallization/posterior_corner.png)
 
-Off-diagonal panels show joint samples, rather than independently combined
-marginal intervals. Thin or curved bands indicate parameter combinations that
-the data constrain more strongly than individual parameters. The diagonal
-panels show one-parameter marginals. These are samples of the conditional
-posterior, not a repaired Laplace ellipse.
+The diagonal panels smooth the retained NUTS marginals. Off-diagonal contours
+enclose 68% and 95% of a smoothed joint density, calculated by integrating density
+mass, not by taking those percentages of its peak. A sheared grid resolves the
+thin coefficient–exponent ridge; estimates are restricted to parameter support.
+Smoothing is a display choice. The [raw draws](../assets/protein_crystallization/posterior_draws.csv)
+remain available, and no Laplace approximation is used here.
 
 Concentration constrains the amount of crystalline material, and ``D_{50}``
 constrains a volume median. Neither directly measures particle number. The
@@ -256,6 +248,37 @@ coefficient–exponent dependence therefore deserves attention even when the
 predicted concentration is tightly constrained.
 In the committed draws, the correlation between `logAJ` and ``j`` is about
 −0.9995; their long, thin band is a strong coefficient–exponent tradeoff.
+In reference-rate coordinates, ``\operatorname{corr}(\eta_J,j)`` is about
+−0.20. The rate near ``s=8`` is much better constrained than its coefficient
+and exponent separately. Changing coordinates exposes that information; it
+does not add an experiment or establish structural identifiability.
+
+![Rate-coordinate tradeoff and pointwise kinetic-rate bands from retained NUTS draws](../assets/protein_crystallization/rate_identifiability.png)
+
+The top panels compare the original coefficient–exponent ridge with the
+reference-rate coordinates. The bottom panels propagate the same draws through
+``J(s)=A_Js^j`` and ``G(s)=A_Gs^g``. Shading marks the supersaturation range at
+saved positive times of the MAP trajectory; predictions outside it are
+extrapolations. The dashed line marks ``s=8``. The 95% bands are pointwise
+conditional posterior intervals for rates, not additional observation noise or
+simultaneous confidence bands. [Numerical summaries](../assets/protein_crystallization/posterior_summaries.csv)
+include both correlations and marginal quantiles, recomputed from saved draws.
+
+A local call to `identifiability_report` at the saved MAP gives noise-scaled
+prediction singular values about 288, 30.4, 21.6 and 0.0595 in the declared
+inference coordinates. The weakest combination is about 4800 times less
+sensitive than the strongest. This is a local, coordinate-dependent statement,
+not a structural-identifiability test or a confidence interval. The
+[likelihood sensitivities](../assets/protein_crystallization/identifiability.csv)
+and [separate likelihood/prior curvature](../assets/protein_crystallization/local_curvature.csv)
+are exported without converting them into a rejected Laplace covariance.
+Singular values describe joint directions, not one error bar per parameter.
+Recompute them without fitting or sampling:
+
+```sh
+julia --project=/path/to/working_environment examples/protein_crystallization.jl --identifiability-only
+```
+
 The 95% marginal interval for ``j`` is approximately 1.03–4.78, while its
 declared prior support is 1–10. A single best-fit exponent hides that spread.
 
@@ -271,7 +294,8 @@ coefficient. Its normal prior on ``\log A_G`` is therefore converted to a
 lognormal physical density using ``p(A_G)=p(\log A_G)/A_G``. The named parameter
 `logAJ` remains a log coefficient with its stated uniform prior.
 
-Posterior narrowing shows what this model and its assumed errors learn from
+Narrow conditional intervals and successful chains do not establish physical
+adequacy or structural identifiability. Posterior narrowing shows what this model and its assumed errors learn from
 these markers. It does not make the ``A_G`` prior independent of the data: that
 prior is centred on a published fit to the same experiment. Prior sensitivity,
 additional experiments and the sizing convention still matter.
@@ -332,9 +356,11 @@ independent validation of its model.
 Run from an environment containing the package, Optim, AdvancedHMC and MCMCDiagnosticTools:
 
 ```sh
-julia --project=. examples/protein_crystallization.jl --posterior
+# Replot the retained fit and NUTS draws; no sampling required:
 python docs/benchmarks/plot_new_case_studies.py protein --usetex
 python docs/benchmarks/plot_protein_posterior.py --usetex
+# Optional, expensive refit and resampling in the working environment:
+julia --project=. examples/protein_crystallization.jl --posterior
 ```
 
 `--posterior-only` reuses a saved MAP and regenerates just the posterior exports.
@@ -351,14 +377,31 @@ record the original chain and draw for each curve. The original seed alone
 selects different draws on newer Julia releases. This provenance correction
 changes neither the posterior nor the residual/model-adequacy conclusions.
 
-## Complete runnable script
+## Minimal run and full reproduction
 
-The code below is read from the example source during the documentation build.
-Run it from the repository root using the environment described above.
+Run this block from the repository root. It constructs and solves one problem;
+including a driver does not run its CSV exports.
 
-### `examples/protein_crystallization.jl`
-
-```@eval
-using Markdown, PopulationBalanceModels
-Markdown.MD([Markdown.Code("julia",read(joinpath(pkgdir(PopulationBalanceModels),"examples","protein_crystallization.jl"),String))])
+```julia
+using PopulationBalanceModels, Distributions
+include("examples/protein_crystallization.jl")
+problem = ProteinCrystallization.build(; bins=80)
+solution = ProteinCrystallization.scheduled_solver(problem, [10.0, 100.0, 700.0])
+D50 = [ProteinCrystallization.volume_median(u, problem.operator, problem.p, t)
+    for (t, u) in zip(solution.t, solution.u)]
+# To fit the joint observations (requires Optim):
+# using Optim
+# estimation = ProteinCrystallization.estimation_problem(; bins=80,
+#     solver=ProteinCrystallization.scheduled_solver)
+# fitted = fit(estimation; maxiters=200)
 ```
+
+The figure-generation drivers and supporting sources are available below. Keep
+the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
+lists plotting commands and optional environments.
+
+- [protein_crystallization.jl](../assets/source/examples/protein_crystallization.jl)
+
+- [Digitized observations](../assets/source/examples/data/protein_crystallization/figure4_observations.csv) and [data provenance](../assets/source/examples/data/protein_crystallization/README.txt).
+
+- [Local identifiability export helper](../assets/source/examples/support/protein_identifiability.jl).

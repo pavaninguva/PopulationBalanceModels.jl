@@ -128,7 +128,7 @@ julia --project=. examples/axially_dispersed_growth.jl
 python docs/benchmarks/plot_transport_comparisons.py axial --usetex
 ```
 
-The constant-growth comparison uses six representative pairings for the 2022
+The constant-growth comparison uses seven representative pairings (including WENO3 + SSPRK33) for the 2022
 Case 1 front and a smooth periodic input. Each configuration has one measured
 solve following a small compilation warmup. L1/RMSE panels and measured
 refinement orders replace arbitrary h-power guides and repeated-run bands.
@@ -158,13 +158,19 @@ python docs/benchmarks/plot_new_case_studies.py protein --usetex
 ```
 
 The precipitation default uses a small documentation budget for Zhang2024 Case
-7A. `--full` requests expensive SI-scale mesh refinement. Its reference remains
+7A: 2 size resolutions × 3 axial resolutions per pairing on logarithmic and
+uniform size meshes. References are 48×64 MUSCL/MUSCL; temporal and separate
+coordinate checks are exported. Uniform-size WENO5 holds axial MUSCL fixed.
+`--full` requests the full SI Cartesian mesh product (25 pairs per pairing),
+with 250×750 references; this option was not executed for the documentation.
+Its reference remains
 numerical, and its methods/timings are not CADET's. Protein observations are
 experimental markers digitized from Mitchell2023 Figure 4; the committed CSV and
 extraction provenance are in `examples/data/protein_crystallization/`. The
 protein plotter consumes the actual fitted predictions and does not invent
-uncertainty intervals when the Laplace verification fails. Every case-study
-page embeds its full Julia source during the documentation build.
+uncertainty intervals when the Laplace verification fails. Each case-study page ends with a short complete run and downloadable full
+sources. The build copies sources into ignored download assets; it does not
+embed export drivers or rerun expensive studies.
 
 For the joint protein posterior, add AdvancedHMC 0.8 and MCMCDiagnosticTools 0.3
 to the working environment, alongside Optim and the package:
@@ -199,3 +205,40 @@ These compare analytical uniform-population dissolution, empty point-source
 startup and conservative nonuniform axial transport. Moment dissolution uses an
 explicit atomic boundary approximation; rank and sectional-grid errors remain
 separate from the discrete material balance error.
+
+For plot-only validation, run `python test/plotting_summaries.py` in the plotting
+environment. It checks enclosed-probability contours against a 2D Gaussian,
+resolves a synthetic thin ridge, enforces bounded support, and checks Pareto
+selection. A fifth test independently recomputes all 36 outlet errors through
+cumulative bin integrals and verifies the exported volume normalization. The protein KDEs and rate bands reuse retained NUTS draws; they do
+not rerun sampling or change the posterior target. `posterior_summaries.csv`
+records recalculated correlations, quantiles and the saved MAP supersaturation
+range. The LNP long-time outputs remain historical: the audited collision checks
+currently reject an internal state in the optional stiff startup driver. A short
+native startup is runnable without clipping, as documented on the case page.
+
+`examples/protein_crystallization.jl --identifiability-only` reuses the saved MAP
+to export the existing package's local prediction sensitivities, a noise-scaled
+SVD and separate likelihood/prior curvature. It performs no fit or sampling.
+These local Hessians are not verified posterior covariance estimates.
+
+The documentation revision starting at `84b0860` measured new constant-growth
+and continuous-precipitation runs with Julia 1.10.3 and one Julia/BLAS thread.
+The local protein identifiability export used Julia 1.13.2. Qamar histories,
+reconstruction/refinement checks and timings were reused from the audited runs;
+only their display changed. Protein draws, observations, priors and predictive
+exports were retained unchanged. Plotting used Python 3.12.3, NumPy 1.26.4 and
+Matplotlib 3.8.4 with LaTeX, without SciPy. Executed checks:
+
+```sh
+julia --project=. -e 'using Pkg; Pkg.test()'  # Julia 1.10.0: 1243 checks
+julia --project=. test/case_study_benchmarks.jl  # Julia 1.10.3: 14 checks
+python test/plotting_summaries.py  # 5 plotting/data checks
+CI=true POPULATIONBALANCEMODELS_DOCS_DEPLOY=false julia --project=docs docs/make.jl
+python test/docs_links.py
+git diff --check
+```
+
+All nine minimal case runs were exercised in environments containing their
+stated optional dependencies. The long-time LNP stiff run and the full SI
+precipitation mesh study are not included in that claim.
