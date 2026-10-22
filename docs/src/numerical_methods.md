@@ -130,3 +130,11 @@ separate time update to growth and nucleation.
 For an external algorithm, `prepare_term` validates the term/method combination
 and prepares its cache; `add_term!` adds its residual. The
 [extension guide](development.md) gives the signatures and conservation contract.
+
+## Joint moment admissibility
+
+Componentwise positivity does not guarantee realizability of raw moments. The
+opt-in [MeasureEuler policy](methods/realizable_evolution.md) evolves positive
+measures and checks closure admissibility before physical rates and at accepted
+states. Its compatibility matrix distinguishes raw moment families, sectional
+updates and the conservative low-order axial guarantee.

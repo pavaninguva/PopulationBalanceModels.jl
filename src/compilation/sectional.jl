@@ -27,7 +27,10 @@ function compile(model::PBMModel, grid::Grid1D; growth_scheme=Upwind(), bc=SizeB
                  domain=BatchDomain(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple())
     growth_scheme isa AbstractReconstruction || throw(ArgumentError("unsupported growth scheme"))
     bc isa SizeBC || throw(ArgumentError("bc must be SizeBC"))
+    bc.right isa AbsorbingZero && throw(ArgumentError("AbsorbingZero is a left boundary"))
+    bc.left isa AbsorbingZero && first(grid.edges)!=0 && throw(ArgumentError("AbsorbingZero requires a zero left edge"))
     domain isa BatchDomain || return _compile_axial(model,grid,domain;growth_scheme,bc,fields,methods,evolution,p)
+    evolution!==nothing && bc.left isa AbsorbingZero && throw(ArgumentError("AbsorbingZero requires residual sectional transport, not a direct evolution method"))
     evolution===nothing || return _compile_evolution(model,grid,evolution,bc,p;fields,methods)
     methods isa TermMethods || throw(ArgumentError("methods must be TermMethods"))
     !any(term->term isa Growth,model.terms) && _validate_reconstruction(growth_scheme,grid)
@@ -89,12 +92,12 @@ end
 Conservative heuristic step bound for explicit Upwind/source updates. WENO5 and
 CustomTerm have no positivity guarantee from this bound. Check every RK stage.
 """
-function suggest_dt(op::CompiledPBM,N,p,t;cfl=0.5)
+function suggest_dt(op::CompiledPBM,N,p,t;cfl=0.5,context=nothing)
     0 < cfl <= 1 || throw(ArgumentError("cfl must be in (0,1]"))
     r=zeros(promote_type(eltype(N),eltype(op.grid.widths)),size(N))
     x=op.grid.centers
     for c in axes(N,2)
-        ctx=_context(op,N,c,t)
+        ctx=_context(op,N,c,t,context)
         for term in op.model.terms
             if term isa Growth
                 for i in axes(N,1)

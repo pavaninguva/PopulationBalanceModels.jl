@@ -19,12 +19,16 @@ end
 _check_problem_state(prob,N,tolerance)=_checkstate(N,tolerance)
 remake(prob::PBMProblem;p=prob.p,u0=prob.u0,tspan=prob.tspan) = PBMProblem(prob.operator,u0,tspan;p)
 
-struct PBMSolution{T,U,P}
+struct PBMSolution{T,U,P,D}
     t::T
     u::U
     problem::P
     steps::Int
+    integration_diagnostics::D
 end
+PBMSolution(t,u,p,steps)=PBMSolution(t,u,p,steps,(policy=:unspecified,accepted_steps=steps,))
+"""Integration policy, accepted/rejected steps and admissibility diagnostics of a native solution."""
+diagnostics(sol::PBMSolution)=sol.integration_diagnostics
 abstract type AbstractExplicitRK end
 """One-stage, first-order forward Euler; positivity requires an appropriate step bound."""
 struct ForwardEuler <: AbstractExplicitRK end
@@ -94,7 +98,7 @@ end
 function _rk_step!(N,cache,prob,t,h,method::AbstractExplicitRK,check,tol)
     U1,U2,k1,k2,k3,k4=cache
     stage(U)=check && _check_problem_state(prob,U,tol)
-    rhs!(k1,N,prob.operator,prob.p,t)
+    stage(N); rhs!(k1,N,prob.operator,prob.p,t)
     if method isa ForwardEuler
         @. N=N+h*k1
     elseif method isa SSPRK22

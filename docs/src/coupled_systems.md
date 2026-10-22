@@ -130,3 +130,16 @@ its state-to-moment chain rule. Its invariant assumes a fixed factor.
 All of these rates use the same current stage state. Freezing solute while
 advancing the distribution would define a different integration algorithm.
 The standalone `Grid2D` backend is not currently a block in `PBMSystem`.
+
+## Account for removed solids separately from dissolved solute
+
+`CumulativeAccounting(:crystals;properties=(volume=3,))` appends historical
+number and volume losses to a `PBMSystem`. With a compatible exchange, growth
+returns shrinkage material to solute and sends computational-boundary material
+to its escape ledger. It never assigns that same escaped material to both.
+Use `cumulative(problem,u,:crystals,:upper_escape,:volume)` to read a ledger and
+`accounting_rates(problem,u,p,t)` for instantaneous sectional loss rates.
+[The accounting contract](methods/realizable_evolution.md) defines units,
+endpoint-pivot weighting, collision restrictions and the discrete invariant.
+The [dissolution example](case_studies/dissolution.md) couples both representations
+to a shared solute and reports numerical reconstruction defects separately.

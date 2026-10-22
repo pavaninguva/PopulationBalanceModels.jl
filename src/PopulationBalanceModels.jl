@@ -30,7 +30,7 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        ConstantKernel, SelfSimilarDaughters, UniformVolumeDaughters, daughter_moment, MomentSource, MomentExchange,
        quadrature, realizability,
        CustomTerm, PBMModel, Upwind, MUSCL, WENO5, NoFlux, OpenBoundary, Periodic,
-       InflowFlux, SizeBC, AbstractPopulationDomain, BatchDomain, compile, PBMProblem, remake,
+       InflowFlux, AbsorbingZero, MomentBoundary, CumulativeAccounting, cumulative, accounting_rates, MeasureEuler, SizeBC, AbstractPopulationDomain, BatchDomain, compile, PBMProblem, remake,
        rhs!, simulate, PBMSolution, density, moment, number_concentration,
        diagnostics, suggest_dt, NumericalFailure, MomentObservable,
        HistogramObservable, FunctionObservable, Observation, Experiment,
@@ -72,6 +72,7 @@ include("numerics/sectional/collisions.jl")
 include("numerics/sectional/integrated_sources.jl")
 include("numerics/sectional/term_dispatch.jl")
 include("time_integration/simulation.jl")
+include("coupling/accounting_types.jl")
 include("coupling/systems.jl")
 include("numerics/moments/methods.jl")
 include("compilation/moments.jl")
@@ -90,6 +91,8 @@ include("time_integration/characteristic_transport.jl")
 include("time_integration/constant_transport.jl")
 include("compilation/axial.jl")
 include("compilation/axial_system.jl")
+include("coupling/accounting.jl")
+include("time_integration/measure_euler.jl")
 include("inference/observations.jl")
 include("inference/differentiation.jl")
 include("inference/calibration.jl")

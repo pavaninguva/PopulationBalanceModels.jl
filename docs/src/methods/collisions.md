@@ -100,3 +100,15 @@ The implementation is in `src/numerics/sectional/collisions.jl` and
 `deposition.jl`. See [Coupled systems](../coupled_systems.md) for unlike-population
 collisions, which do not use the identical-pair half factor, and
 [Moment methods](../moment_methods.md) for weak-form collision integration.
+
+## Track unresolved products
+
+The default `overflow=:error` remains in force. If `overflow=:discard` is selected,
+`CumulativeAccounting` records aggregation/breakage underflow and overflow
+separately, using the same fixed-pivot product rules as the residual. Number
+counts product births; aggregation removes two parents per event and breakage
+adds expected daughters. Only the declared additive property is conserved by
+fixed pivot. See [cumulative accounting](realizable_evolution.md) for the
+material balance and its shared-bulk correction. Native `MeasureEuler` also
+supports bounded nonnegative symmetric kernels on its reconstructed moment
+measure, with a parent-depletion step bound.

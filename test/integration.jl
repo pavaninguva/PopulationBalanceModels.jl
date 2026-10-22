@@ -147,3 +147,23 @@ end
     @test_throws ArgumentError profile_likelihood(cal,fits.best,3,values)
     @test_throws ArgumentError profile_likelihood(cal,fits.best,1,reverse(values))
 end
+
+@testset "External solver accounting and moment-event limits" begin
+    basis=MomentSet(0:3;coordinate=:length)
+    op=compile(PBMModel(Growth((x,p,t,c)->-1.)),basis;
+        closure=RankAdaptiveQMOM(2),boundary=MomentBoundary(left=:absorb))
+    pb=PBMProblem(op,[2.,3.,5.,9.],(0.,2.))
+    @test_throws ArgumentError odeproblem(pb)
+    system=PBMSystem((p=op,);accounting=(CumulativeAccounting(:p),))
+    @test_throws ArgumentError odeproblem(PBMProblem(system,(p=[2.,3.,5.,9.],),(0.,2.)))
+    grid=Grid1D([0.,1.,2.,3.];coordinate=:length)
+    op=compile(PBMModel(Growth((x,p,t,c)->1.)),grid;bc=SizeBC(NoFlux(),OpenBoundary()))
+    sys=PBMSystem((p=op,);accounting=(CumulativeAccounting(:p),),
+        exchanges=(ConservativeExchange(:p,:c,(x,p,t,c)->x^3),))
+    pb=PBMProblem(sys,(p=[0.,0.,1.],),(0.,.3);bulk0=(c=1.,))
+    sol=SciMLBase.solve(odeproblem(pb),Tsit5();reltol=1e-10,abstol=1e-12)
+    @test SciMLBase.successful_retcode(sol)
+    @test bulk(pb,sol.u[end],:c)+sum(population(pb,sol.u[end],:p).*grid.centers.^3)+
+          cumulative(pb,sol.u[end],:p,:upper_escape,:material)≈1+2.5^3 atol=1e-9
+    @test bulk(pb,sol.u[end],:c)≈1. atol=1e-10
+end

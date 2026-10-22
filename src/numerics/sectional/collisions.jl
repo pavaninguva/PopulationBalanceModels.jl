@@ -1,4 +1,4 @@
-function _local_rhs!(dN,N,term::Aggregation,op,p,t,ctx)
+function _local_rhs!(dN,N,term::Aggregation,op,p,t,ctx;on_escape=nothing)
     x=op.grid.centers; axis=_measureaxis(term,op.grid); out0=zero(eltype(dN)); out1=out0
     for j in eachindex(N), i in 1:j
         (iszero(N[i]) || iszero(N[j])) && continue
@@ -8,12 +8,12 @@ function _local_rhs!(dN,N,term::Aggregation,op,p,t,ctx)
         isapprox(K,Kji;rtol=1e-10,atol=0) || throw(ArgumentError("aggregation kernel must be symmetric"))
         event=K*N[i]*N[j]*(i==j ? 0.5 : 1)
         dN[i]-=event; dN[j]-=event
-        a,b=_deposit!(dN,axis,axis[i]+axis[j],event,term.overflow)
+        a,b=_deposit!(dN,axis,axis[i]+axis[j],event,term.overflow;on_escape)
         out0+=a; out1+=b
     end
     (out0,out1)
 end
-function _local_rhs!(dN,N,term::Breakage,op,p,t,ctx)
+function _local_rhs!(dN,N,term::Breakage,op,p,t,ctx;on_escape=nothing)
     x=op.grid.centers; axis=_measureaxis(term,op.grid); out0=zero(eltype(dN)); out1=out0
     for j in eachindex(N)
         iszero(N[j]) && continue
@@ -30,7 +30,7 @@ function _local_rhs!(dN,N,term::Breakage,op,p,t,ctx)
         isapprox(mass,axis[j];rtol=1e-8,atol=0) || throw(ArgumentError("daughter counts must conserve the declared additive measure"))
         dN[j]-=event
         for (v,count) in daughters
-            a,b=_deposit!(dN,axis,_measure(term,v),event*count,term.overflow)
+            a,b=_deposit!(dN,axis,_measure(term,v),event*count,term.overflow;on_escape)
             out0+=a; out1+=b
         end
     end

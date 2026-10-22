@@ -11,6 +11,8 @@ function compile(model::PBMModel,g::Grid2D;growth_scheme=Upwind(),bc=SizeBC2D(),
     domain isa BatchDomain || return _compile_axial(model,g,domain;growth_scheme,bc,fields,methods,evolution,p)
     growth_scheme isa Union{Upwind,WENO5} || throw(ArgumentError("2D transport currently supports Upwind or WENO5"))
     bc isa SizeBC2D || throw(ArgumentError("use SizeBC2D for two coordinates"))
+    any(b->b.left isa AbsorbingZero || b.right isa AbsorbingZero,(bc.x,bc.y)) &&
+        throw(ArgumentError("AbsorbingZero material accounting is implemented for 1D populations only"))
     evolution===nothing || return _compile_evolution(model,g,evolution,bc,p;fields,methods)
     methods isa TermMethods || throw(ArgumentError("methods must be TermMethods"))
     plan=TermMethods(;by_term=methods.by_term,merge((growth=growth_scheme,),methods.defaults)...)

@@ -30,8 +30,8 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
         s=localop.system
         sys=PBMSystem(s.populations;bulk_rhs=s.bulk_rhs,interactions=s.interactions,
             exchanges=s.exchanges,fields=(p,t)->merge(s.fields(p,t),(z=z,)),
-            nonnegative_bulk=s.nonnegative_bulk)
-        CompiledSystem(sys,localop.ranges,localop.bulk_indices,localop.length)
+            nonnegative_bulk=s.nonnegative_bulk,accounting=s.accounting)
+        CompiledSystem(sys,localop.ranges,localop.bulk_indices,localop.length,localop.physical_length,localop.ledger_indices)
     end
     op=CompiledAxialSystem(domain,locals,axial_scheme)
     u=initial===nothing ? repeat(local_problem.u0,1,length(domain.grid)) : initial
@@ -62,7 +62,7 @@ function _packed_inlet(op::CompiledAxialSystem,p,t)
         feed=vcat((vec(getproperty(feed.populations,name)) for name in keys(s.ranges))...,
                   [getproperty(feed.bulk,name) for name in keys(s.bulk_indices)])
     end
-    feed isa AbstractVector && length(feed)==s.length || throw(DimensionMismatch("inlet must provide a complete packed local state"))
+    feed isa AbstractVector && length(feed)==s.physical_length || throw(DimensionMismatch("inlet must provide a complete packed local state"))
     all(x->x isa Real && isfinite(x),feed) || throw(NumericalFailure("inlet values must be finite real scalars"))
     # Enforce realizability for moment feeds, as for initial cell states.
     for name in keys(s.ranges)
@@ -77,8 +77,8 @@ end
 function axial_fluxes(op::CompiledAxialSystem,u,p,t)
     d=op.domain;g=d.grid;n=length(g);v=d.velocity;D=d.dispersion
     size(u)==(first(op.local_operators).length,n) || throw(DimensionMismatch("axial state size mismatch"))
-    F=similar(u,size(u,1),n+1);periodic=d.boundary===:periodic
-    for i in axes(u,1)
+    F=zero(similar(u,size(u,1),n+1));periodic=d.boundary===:periodic
+    for i in 1:first(op.local_operators).physical_length
         row=view(u,i,:)
         for c in 2:n
             F[i,c]=v*_face_density(row,c,op.scheme,v,periodic,g)-D*(row[c]-row[c-1])/(g.centers[c]-g.centers[c-1])
@@ -94,7 +94,7 @@ function axial_fluxes(op::CompiledAxialSystem,u,p,t)
     end
     if d.boundary===:danckwerts
         feed=_packed_inlet(op,p,t)
-        F[:,1].=v.*feed
+        F[1:first(op.local_operators).physical_length,1].=v.*feed
     end
     all(isfinite,F) || throw(NumericalFailure("nonfinite axial system flux"))
     F

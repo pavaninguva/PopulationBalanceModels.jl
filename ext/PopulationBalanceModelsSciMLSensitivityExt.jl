@@ -23,6 +23,8 @@ end
 # the ordinary likelihood evaluation. Grid topology must remain fixed.
 function PBM._experiment_gradient(adapter::PBM.SciMLSensitivitySolver,problem,z,ex,counts)
     pb=PBM._experiment_problem(problem,z,ex);ts=PBM._experiment_times(ex)
+    PBM._moment_boundary_events(pb.operator) &&
+        throw(ArgumentError("moment extinction/escape sensitivities require unimplemented event jump rules"))
     shape=size(pb.u0);nu=length(pb.u0);np=length(z)
     function f!(du,u,q,t)
         current=PBM._experiment_problem(problem,q,ex)

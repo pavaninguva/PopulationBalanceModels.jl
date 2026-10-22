@@ -156,3 +156,17 @@ extraction provenance are in `examples/data/protein_crystallization/`. The
 protein plotter consumes the actual fitted predictions and does not invent
 uncertainty intervals when the Laplace verification fails. Every case-study
 page embeds its full Julia source during the documentation build.
+
+The native dissolution verification and figure use:
+
+```sh
+julia --project=. examples/realizable_dissolution.jl
+python docs/benchmarks/plot_dissolution.py --usetex
+julia --project=. examples/realizable_startup.jl
+julia --project=. examples/realizable_axial_transport.jl
+```
+
+These compare analytical uniform-population dissolution, empty point-source
+startup and conservative nonuniform axial transport. Moment dissolution uses an
+explicit atomic boundary approximation; rank and sectional-grid errors remain
+separate from the discrete material balance error.

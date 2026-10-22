@@ -20,16 +20,17 @@ A NamedTuple of separately compiled populations, shared scalar bulk states,
 and simultaneous interactions. Each population may have a different Grid1D.
 Bulk initial values are supplied to PBMProblem through `bulk0`.
 """
-struct PBMSystem{P,B,I,E,F,N}
+struct PBMSystem{P,B,I,E,F,N,A}
     populations::P
     bulk_rhs::B
     interactions::I
     exchanges::E
     fields::F
     nonnegative_bulk::N
+    accounting::A
 end
 function PBMSystem(populations::NamedTuple;bulk_rhs=_zero_bulk,interactions=(),
-                   exchanges=(),fields=_system_fields,nonnegative_bulk=())
+                   exchanges=(),fields=_system_fields,nonnegative_bulk=(),accounting=())
     !isempty(populations) || throw(ArgumentError("at least one population is required"))
     all(_system_population,values(populations)) || throw(ArgumentError("compile each supported named population first"))
     for interaction in interactions
@@ -49,12 +50,22 @@ function PBMSystem(populations::NamedTuple;bulk_rhs=_zero_bulk,interactions=(),
         end
     end
     all(_system_exchange,exchanges) || throw(ArgumentError("invalid exchange"))
+    !isempty(accounting) && !isempty(interactions) && throw(ArgumentError("cumulative accounting of inter-population interactions is not implemented"))
+    all(a->a isa CumulativeAccounting && a.population in keys(populations),accounting) || throw(ArgumentError("invalid accounting population"))
+    length(unique(a.population for a in accounting))==length(accounting) || throw(ArgumentError("duplicate population accounting"))
+    for a in accounting
+        _validate_accounting(a,getproperty(populations,a.population))
+    end
     for exchange in exchanges
         exchange.population in keys(populations) || throw(ArgumentError("unknown exchange population"))
         op=getproperty(populations,exchange.population)
-        _validate_exchange(exchange,op)
+        if exchange isa ConservativeExchange && op isa CompiledPBM && (op.bc.left isa OpenBoundary || op.bc.right isa OpenBoundary)
+            any(a->a.population==exchange.population,accounting) || throw(ArgumentError("open-boundary exchange requires CumulativeAccounting"))
+        else
+            _validate_exchange(exchange,op)
+        end
     end
-    PBMSystem(populations,bulk_rhs,Tuple(interactions),Tuple(exchanges),fields,Tuple(nonnegative_bulk))
+    PBMSystem(populations,bulk_rhs,Tuple(interactions),Tuple(exchanges),fields,Tuple(nonnegative_bulk),Tuple(accounting))
 end
 _system_population(op)=op isa CompiledPBM
 _system_exchange(exchange)=exchange isa ConservativeExchange
@@ -124,11 +135,13 @@ struct CustomCoupling{F}
     f!::F
 end
 
-struct CompiledSystem{S,R,B}
+struct CompiledSystem{S,R,B,A}
     system::S
     ranges::R
     bulk_indices::B
     length::Int
+    physical_length::Int
+    ledger_indices::A
 end
 
 function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=NamedTuple())
@@ -148,8 +161,10 @@ function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=
     end
     namedranges=NamedTuple{keys(system.populations)}(ranges)
     indices=NamedTuple{keys(bulk0)}(Tuple(offset+j for j in eachindex(values(bulk0))))
-    op=CompiledSystem(system,namedranges,indices,offset+length(bulk0))
-    flat=float.(vcat((vec(N) for N in initial)...,collect(values(bulk0))))
+    physical=offset+length(bulk0)
+    ledgers,total=_ledger_indices(system.accounting,physical)
+    op=CompiledSystem(system,namedranges,indices,total,physical,ledgers)
+    flat=float.(vcat((vec(N) for N in initial)...,collect(values(bulk0)),zeros(total-physical)))
     PBMProblem(op,flat,tspan;p)
 end
 
@@ -163,6 +178,7 @@ function PBMProblem(op::CompiledSystem,u0::AbstractVector,tspan;p=NamedTuple())
     for name in keys(op.ranges)
         _validate_population_state(getproperty(op.system.populations,name),view(N,getproperty(op.ranges,name)))
     end
+    all(>=(0),view(N,op.physical_length+1:op.length)) || throw(ArgumentError("negative initial cumulative state"))
     for name in op.system.nonnegative_bulk
         N[getproperty(op.bulk_indices,name)]>=0 || throw(ArgumentError("initial bulk state is negative"))
     end
@@ -245,6 +261,13 @@ function _exchange!(exchange,ctx,op,du,p,t)
     end
     change=sum(_nonnegative(exchange.weight(x,p,t,localctx),"per-particle exchanged amount")*scratch[i]
         for (i,x) in enumerate(popop.grid.centers))
+    losses=_sectional_losses(popop,N,p,t,localctx,exchange.mechanisms)
+    # A discarded particle remains particulate; it is not dissolved material,
+    # whether or not the optional historical ledger is requested.
+    change+=sum((exchange.weight(x,p,t,localctx)*r for (_,x,r) in losses);init=zero(change))
+    if haskey(op.ledger_indices,exchange.population)
+        _validate_exchange_property(exchange,op,popop,p,t,localctx)
+    end
     du[getproperty(op.bulk_indices,exchange.bulk)]-=change
 end
 
@@ -262,6 +285,15 @@ function rhs!(du::AbstractVector,u::AbstractVector,op::CompiledSystem,p,t)
     _add_bulk!(du,op,op.system.bulk_rhs(ctx,p,t))
     for exchange in op.system.exchanges
         _exchange!(exchange,ctx,op,du,p,t)
+    end
+    for a in op.system.accounting
+        popop=getproperty(op.system.populations,a.population)
+        popop isa CompiledPBM || continue # moment ledgers are advanced by MeasureEuler
+        N=getproperty(ctx.populations,a.population)
+        localctx=_context(popop,reshape(N,:,1),1,t,ctx)
+        for (mechanism,x,rate) in _sectional_losses(popop,N,p,t,localctx)
+            _record_loss!(du,op,a.population,mechanism,x,rate)
+        end
     end
     all(isfinite,du) || throw(NumericalFailure("nonfinite coupled-system derivative"))
     nothing

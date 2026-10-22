@@ -40,8 +40,10 @@ and breakage
 
 For a nonadditive coordinate, the aggregate size is obtained through the declared
 AdditiveCoordinate map. Boundary losses at zero or infinity are not inferred.
-In particular, dissolution reaching zero needs an extinction treatment beyond
-the current raw-moment rules.
+The residual rules do not infer an extinction trace. Native
+[MeasureEuler with explicit absorption](methods/realizable_evolution.md) instead
+uses positive atomic characteristics and node removal, with rank refinement
+needed for a continuous population.
 
 ## Use an exact closure when the equations close
 
@@ -260,3 +262,14 @@ The [extension interface](development.md) supplies separate hooks for state
 length, raw-moment values, moment chain rules, reconstruction and stage checks.
 New families must implement those contracts rather than treating their solver
 states as raw moments.
+
+## Evolve an admissible state and handle disappearance
+
+`simulate(problem;dt,method=MeasureEuler())` constructs positive measures for
+supported raw-moment families instead of relying only on Hankel checks of an
+explicit predictor. It supports exactly empty nucleation/growth startup,
+rank-adaptive atomic extinction, and consistent shared-solute exchange.
+[The compatibility matrix and numerical contract](methods/realizable_evolution.md)
+state the supported terms, first-order composition, CFL restrictions and
+closure limitations. EQMOM, lognormal and direct DQMOM are explicitly excluded
+from this policy; their existing residual interfaces are retained.

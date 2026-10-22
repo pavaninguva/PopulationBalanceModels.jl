@@ -136,6 +136,7 @@ NoFlux at both ends.
 |:--|:--|
 | `NoFlux()` | Set transport flux to zero; particles cannot leave through this face |
 | `OpenBoundary()` | Allow outward transport; assume zero incoming density |
+| `AbsorbingZero()` | Left edge at physical zero; disappearing particles carry zero positive-power material |
 | `InflowFlux(J)` | Prescribe inward number flux `J(p,t,ctx)`, independently of velocity |
 | `Periodic()` | Wrap transport between paired endpoints; use at both ends |
 
@@ -157,3 +158,9 @@ per tangential coordinate, integrated over the corresponding face width.
 [AxialDispersion domain](axial_reactors.md) adds a physical axial mesh, inlet,
 and outlet to a one- or two-coordinate sectional population. Intrinsic size
 boundaries and reactor boundaries are specified independently.
+
+For raw moments, `MomentBoundary(left=:absorb)` declares atomic node removal
+with native `MeasureEuler`; `:escape` instead removes particles at a finite
+computational cutoff and retains their remaining material in a selected ledger.
+A finite moment vector does not determine a continuum boundary trace. See the
+[explicit boundary and support contract](methods/realizable_evolution.md).

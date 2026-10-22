@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added native first-order MeasureEuler evolution through positive quadrature measures, including exact-zero growth/nucleation startup, bounded collision/source updates, checked rank adaptation and consistent split bulk exchange.
+- Added explicit zero-size absorption and finite-cutoff moment boundary policies, with atomic hitting/removal and a sectional zero-boundary trace; retained existing default size-boundary and collision-overflow behavior.
+- Added optional population/mechanism cumulative number and tracked-property ledgers, integrated with the selected physical stages, and excluded escaped solids from dissolved-material exchange.
+- Added conservative joint-realizability axial upwind/dispersion evolution with nonuniform-mesh depletion bounds, separate reactor face-flux integrals and stationary historical ledgers.
+- Documented the compatibility matrix, order/CFL conditions, boundary reconstruction, numerical reconstruction defects and derivative/external-solver limits; added analytical startup, dissolution, escape, collision and axial checks plus three runnable examples and dissolution figures.
+
 - Replaced the active temperature-programmed moment illustration with Qamar problems 4 and 5: analytical aggregation/breakage, a narrow nucleation pulse, moment/time refinement and a resolved sectional comparison.
 - Added UniformVolumeDaughters and an analytical daughter_moment hook so moment breakage rules retain the paper's continuous daughter integrals.
 - Reduced the growth/time benchmark to six representative pairings, included Inguva2022 in timing/error figures, and replaced timing medians with one measured solve per configuration.
@@ -66,6 +72,10 @@
 - Updated navigation, links, versioned documentation deployment, and local contribution instructions. Simplified the README and repository root.
 
 ### Fixes
+
+- Bounded native moment flights approaching stagnant or inward growth boundaries to prevent artificial finite-time removal under asymptotic shrinkage such as G=-L.
+
+- Prevented generic sectional bulk exchange from treating discarded aggregation/breakage products as dissolved material, including when cumulative accounting is not requested.
 
 - Declared the Printf standard library in the test target, so Pkg.test can load the existing compact-scheme audit in its isolated environment.
 

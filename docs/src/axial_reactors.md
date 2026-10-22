@@ -205,3 +205,17 @@ Tests check inlet/outlet inventory balance on nonuniform meshes, constant-feed
 stationarity, positivity under a compatible explicit step, periodic Fourier
 advection–diffusion, second-order pure-dispersion refinement, and conservative
 intrinsic growth with both one and two particle coordinates.
+
+## Preserve joint realizability of transported moments
+
+For supported raw-moment systems, select `axial_scheme=Upwind()` with
+`simulate(...;method=MeasureEuler())`. The native policy checks a nonuniform-mesh
+advection/dispersion CFL bound and transports each entire moment vector with the
+same nonnegative coefficients. Independent high-order moment reconstructions
+are outside that guarantee and are rejected by this policy.
+`diagnostics(solution).reactor_flux_integrals` records the actual accepted
+inlet/outlet flux integrals. Cumulative internal-size histories have zero axial
+flux; they are not transported reservoirs. Extinction/size escape combined with
+axial MeasureEuler is explicitly unsupported. Read the
+[complete restrictions](methods/realizable_evolution.md) and run
+`examples/realizable_axial_transport.jl` for a nonuniform-grid inventory check.

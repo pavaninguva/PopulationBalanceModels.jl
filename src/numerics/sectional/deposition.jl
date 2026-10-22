@@ -2,11 +2,12 @@ _measureaxis(term,grid)=term.coordinate_map===nothing ? grid.centers : term.coor
 _measure(term,v)=term.coordinate_map===nothing ? v : term.coordinate_map.measure(v)
 
 # Return the moments per birth that leave the resolved pivot range.
-function _deposit!(dN, centers, v, rate, overflow)
+function _deposit!(dN, centers, v, rate, overflow; on_escape=nothing)
     if v < first(centers) || v > last(centers)
         if overflow === :error && !iszero(rate)
             throw(NumericalFailure("birth size $v outside pivot range; enlarge grid or explicitly use overflow=:discard"))
         end
+        on_escape===nothing || on_escape(v,rate)
         return (rate,rate*v)
     end
     j = searchsortedlast(centers,v)

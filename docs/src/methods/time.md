@@ -213,3 +213,14 @@ growth, select Inguva2022 or InguvaBraatz2023 during compilation. These
 [trajectory methods](characteristics.md) construct and check the corresponding
 physical mesh and time-step restrictions. They do not expose a semi-discrete
 residual for SSPRK33 or an external ODE solver.
+
+## A first-order admissible measure policy
+
+`MeasureEuler()` is a complete native positive-measure update for the supported
+raw-moment/sectional systems. It is not another Runge–Kutta tableau. It constructs
+admissible source/growth/collision substeps, includes optional cumulative losses
+in those substeps, and couples bulk exchange through their material changes.
+Its formal order is one, including splitting and bulk coupling. The
+[method contract](realizable_evolution.md) gives the compatibility matrix,
+depletion/CFL restrictions and diagnostics. External adaptive ODE solvers do
+not inherit this guarantee or its atomic boundary events.

@@ -11,6 +11,8 @@ Direct evolution choices HOCADI/ExactShift belong to simulate and are not
 converted into a SciML residual by this adapter.
 """
 function PopulationBalanceModels.odeproblem(prob::PopulationBalanceModels.PBMProblem;u0=copy(prob.u0),p=prob.p)
+    PopulationBalanceModels._moment_boundary_events(prob.operator) &&
+        throw(ArgumentError("moment boundary events require native MeasureEuler; no continuum trace or external-solver event adapter is implemented"))
     # SciML's symbolic parameter-remake path can recurse for an empty NamedTuple.
     # Use its parameterless sentinel, while preserving the PBM callback contract.
     solver_parameters=p isa NamedTuple && isempty(p) ? SciMLBase.NullParameters() : p

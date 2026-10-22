@@ -1,9 +1,10 @@
-struct CompiledMomentPBM{M,G,C,F,P}
+struct CompiledMomentPBM{M,G,C,F,P,B}
     model::M
     grid::G
     closure::C
     fields::F
     prepared::P
+    boundary::B
 end
 _system_population(::CompiledMomentPBM)=true
 
@@ -16,7 +17,8 @@ coordinates, self-similar polynomial-rate breakage, point creation, MomentSource
 QMOM additionally evaluates general growth, removal, aggregation and breakage
 through their weak forms. It does not infer source integrals or boundary losses.
 """
-function compile(model::PBMModel,g::MomentSet;closure=ExactClosure(),method=nothing,methods=TermMethods(),fields=_emptyfields)
+function compile(model::PBMModel,g::MomentSet;closure=ExactClosure(),method=nothing,methods=TermMethods(),fields=_emptyfields,boundary=MomentBoundary())
+    boundary isa MomentBoundary || throw(ArgumentError("boundary must be MomentBoundary"))
     selected=method===nothing ? closure : method
     selected isa AbstractMomentMethod || throw(ArgumentError("invalid moment method"))
     methods isa TermMethods || throw(ArgumentError("methods must be TermMethods"))
@@ -36,7 +38,7 @@ function compile(model::PBMModel,g::MomentSet;closure=ExactClosure(),method=noth
     plan=TermMethods(;by_term=methods.by_term,merge(defaults,methods.defaults)...)
     prepared=_prepare_terms(model,plan,g)
     selected isa ExactClosure && any(item->item.method isa QuadratureMomentRule,prepared) && throw(ArgumentError("ExactClosure does not provide quadrature; select a reconstruction method"))
-    CompiledMomentPBM(model,g,selected,fields,prepared)
+    CompiledMomentPBM(model,g,selected,fields,prepared,boundary)
 end
 
 
@@ -85,6 +87,10 @@ end
 
 
 function _moment_terms!(dμ,μ,op,p,t,ctx;mechanisms=nothing)
+    b=op.boundary
+    (b.left===:error && b.right===:error && b.lower==0 && isinf(b.upper)) ||
+        throw(ArgumentError("moment boundary events require native MeasureEuler; no residual boundary trace is inferred"))
+    validate_moment_state(op.closure,op.grid,μ)
     q=prepare_moment_state(op.closure,op.grid,μ,p,t,ctx)
     for item in op.prepared
         mechanisms!==nothing && !(mechanism(item.term) in mechanisms) && continue

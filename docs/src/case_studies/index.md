@@ -37,3 +37,7 @@ nanoparticle reconstruction includes full-horizon runs and mechanism profiles,
 with material assumptions and explicit failed domain/convergence checks. These assumptions
 are stated beside the relevant inputs. The [axial reactor tutorial](../axial_reactors.md)
 adds a physical position coordinate to an intrinsic growth model.
+
+[Dissolving a finite population](dissolution.md) compares sectional and
+rank-adaptive moment predictions with an analytical disappearance solution,
+including their solute and historical removal balances.

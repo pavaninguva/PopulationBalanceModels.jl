@@ -11,7 +11,8 @@ Grid1D(edges; coordinate=:volume)
 PBMModel(; named_terms...)
 TermMethods(; by_term=NamedTuple(), mechanism_methods...)
 compile(model, grid; methods=TermMethods(), bc=SizeBC(), growth_scheme=Upwind())
-compile(model, MomentSet(0:K); method=ExactClosure(), methods=TermMethods())
+compile(model, MomentSet(0:K); method=ExactClosure(), methods=TermMethods(),
+        boundary=MomentBoundary())
 characteristic_grid(AffineGrowth(:g0,:g1),(0.0,1.4);dt,p)
 compile(model, grid; evolution=Inguva2022(),p,bc)
 PBMProblem(operator, initial, (t0,tf); p=NamedTuple())
@@ -46,7 +47,7 @@ initialize it with `quadrature_state(method,nodes,weights)`. Read
 
 ## Couple and observe
 
-`PBMSystem(populations; bulk_rhs, interactions, exchanges, fields, nonnegative_bulk)`
+`PBMSystem(populations; bulk_rhs, interactions, exchanges, fields, nonnegative_bulk, accounting)`
 accepts a named tuple of compiled populations. Its problem adds named initial
 populations and `bulk0`; use `stateview(problem,u)` to obtain named views.
 See [Coupled systems](coupled_systems.md) for callback and exchange contracts.
