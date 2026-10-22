@@ -1,6 +1,13 @@
-Zhang et al. 2024 Case 7A; SI S8.
-Reference (36, 48), MUSCL; temporal step-halving L1 difference=1.0044683726039999e-11.
-Finite reference, not an exact solution; refine both size and axial meshes.
-Solute exchange conserves the resolved discrete x^3 measure; differs from independently discretized continuum sinks at finite resolution.
-Case 7B is not claimed: the printed lognormal centre lacks an unambiguous SI conversion.
-Julia 1.10.3; full Figure 10 CADET scheme/timing reproduction is not claimed.
+Zhang et al. (2024) Case 7A, SI S8. Observation at 200 s; fields at 80 and 200 s.
+Executed mode: documentation budget.
+References: size/axial MUSCL/MUSCL, (48, 64), separate logarithmic/uniform size meshes; uniform axial mesh.
+SSPRK33: fraction=.3 divided by axial advection+diffusion+maximum size advection rates; local solute depletion bound; maximum step .25 s.
+No clipping; all native stage checks retained at their existing tolerance.
+Error: common-partition piecewise-constant outlet L1 difference divided by reference number; not spline interpolation.
+See reference_checks.csv for temporal and separate size/axial differences; finite numerical references are not exact.
+One measured solve after separate compilation warmup; excludes assembly, file export and plotting; includes step control, state checks and saved states.
+Julia 1.10.3; CPU 13th Gen Intel(R) Core(TM) i9-13900H; Julia threads 1; BLAS threads 1.
+Run starting from 84b0860; solve timings newly measured for this documentation revision.
+Full SI option: Cartesian product Nx=(12,25,50,100,200), Ncol=(37,75,150,300,600), reference=(250,750); not executed in documentation-budget mode.
+Discrete solute exchange conserves centre-weighted x^3. Closed size boundary; inspect upper-bin occupancy.
+Case 6 SI analytical reaction solution does not apply to this coupled precipitation model. Case 7B not claimed.
