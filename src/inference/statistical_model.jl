@@ -442,7 +442,17 @@ struct MAPResult{P,C,L}
     uncertainty::L
 end
 
-"""Load AdvancedHMC and MCMCDiagnosticTools to enable explicit `sample_posterior(problem;...)`. Sampling is never automatic in fit."""
+"""Load AdvancedHMC and MCMCDiagnosticTools to enable explicit `sample_posterior(problem;...)`.
+Sampling is never automatic in fit. `initial_covariance=C` optionally initializes
+the HMC inverse mass matrix in sampling coordinates (inference coordinates by default); C must be finite,
+symmetric positive definite and is used only for tuning, not returned as a
+posterior uncertainty estimate. It cannot be combined with `laplace` initialization.
+An optional `sampling_map=(to_sampler,from_sampler,logabsdetjac,label)` changes
+only auxiliary sampler coordinates; logabsdetjac is the log absolute determinant
+of the Jacobian of from_sampler.
+Inverses, Jacobians and transformed gradients are checked at chain starts. Returned
+z values and statistics.log_density stay in declared inference coordinates.
+"""
 function sample_posterior end
 """Load Optim for nuisance-reoptimized `estimation_profile(...;target=:likelihood|:posterior)`; posterior profiles have no ordinary likelihood confidence cutoff."""
 function estimation_profile end

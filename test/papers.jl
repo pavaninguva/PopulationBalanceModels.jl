@@ -1,3 +1,4 @@
+using ForwardDiff, LinearAlgebra
 include("../examples/papers/gunawan2004_case2.jl")
 include("../examples/papers/cej2025_lnp.jl")
 
@@ -85,4 +86,34 @@ include("../examples/protein_crystallization.jl")
     g=Grid1D([0.,1.,2.]);op=compile(PBMModel(),g)
     base=PBMProblem(PBMSystem((crystals=op,)),(crystals=[1.,1.],),(0.,1.))
     @test ProteinCrystallization.volume_median(base.u0,base.operator,(;),0.)≈2/2^(1/4)
+end
+
+@testset "Protein prior coordinates and scheduled forward accuracy" begin
+    recipe=ProteinCrystallization
+    problem=recipe.estimation_problem(bins=40)
+    spec=only(filter(s->s.name===:AG,problem.parameters))
+    for x in (.05,.367,2.)
+        # A normal density on log(AG) transforms to physical density / AG.
+        expected=exp(-.5*((log(x)-log(.367))/1.5)^2)/(1.5sqrt(2pi)*x)
+        @test recipe.physical_prior_density(spec,x)≈expected
+    end
+    spec=only(filter(s->s.name===:j,problem.parameters))
+    @test recipe.physical_prior_density(spec,2.)≈1/9
+    @test recipe.physical_prior_density(spec,.5)==0
+    pb=recipe.build(bins=40,tf=80.)
+    scheduled=recipe.scheduled_solver(pb,[0.,20.,50.,80.])
+    reference=simulate(pb;dt=.1,saveat=scheduled.t)
+    @test scheduled.t==[0.,20.,50.,80.]
+    @test maximum(abs(bulk(pb,a,:c)-bulk(pb,b,:c)) for (a,b) in zip(scheduled.u,reference.u))<.01
+    @test all(minimum(u)>=0 for u in scheduled.u)
+end
+
+@testset "Protein reference-rate sampling coordinates" begin
+    p=ProteinCrystallization.estimation_problem(bins=40)
+    map=ProteinCrystallization.reference_sampling_map(p)
+    z=initial_coordinates(p);y=map.to_sampler(z)
+    @test map.from_sampler(y)≈z atol=1e-12
+    @test det(ForwardDiff.jacobian(map.from_sampler,y))≈1. atol=1e-12
+    @test map.logabsdetjac(y)==0
+    @test logposterior(p,z)≈logposterior(p,map.from_sampler(y)) atol=1e-10
 end

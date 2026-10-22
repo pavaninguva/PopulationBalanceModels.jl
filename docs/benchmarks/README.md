@@ -65,6 +65,7 @@ python docs/benchmarks/plot_case_studies.py transport --usetex
 python docs/benchmarks/plot_case_studies.py illustrations --usetex
 julia --project=. examples/qamar_moment_benchmarks.jl
 python docs/benchmarks/plot_case_studies.py moments --usetex
+python docs/benchmarks/plot_moment_comparison.py --usetex
 julia --project=/path/to/working_environment examples/kinetic_parameter_uncertainty.jl
 python docs/benchmarks/plot_case_studies.py estimation --usetex
 ```
@@ -76,6 +77,14 @@ published-figure reproductions. The active moment case uses Qamar problems 4 and
 references, quadrature/time refinement and a sectional reference in
 `qamar_moments/`. The previous temperature-programmed recipe remains runnable
 for compatibility; it is no longer the active manual case study.
+
+The moment comparison includes QMOM, rank-adaptive QMOM, Gamma EQMOM, DQMOM
+and an assumed-lognormal closure. The CSVs record state counts, single-run
+times, time-step checks, conditioning and the last completed time when a
+method fails its state checks. Higher moments inferred from the lognormal
+shape are marked separately from evolved moments. Reuse the committed
+sectional reference and regenerate just this comparison with
+`julia --project=. examples/qamar_moment_benchmarks.jl --methods-only`.
 
 The older estimation example uses seeded synthetic Gaussian data. Its raw exports
 include whitened residuals, mapped joint-region points, a nuisance-reoptimized
@@ -156,6 +165,26 @@ extraction provenance are in `examples/data/protein_crystallization/`. The
 protein plotter consumes the actual fitted predictions and does not invent
 uncertainty intervals when the Laplace verification fails. Every case-study
 page embeds its full Julia source during the documentation build.
+
+For the joint protein posterior, add AdvancedHMC 0.8 and MCMCDiagnosticTools 0.3
+to the working environment, alongside Optim and the package:
+
+```sh
+julia --project=/path/to/working_environment examples/protein_crystallization.jl --posterior-only
+python docs/benchmarks/plot_protein_posterior.py --usetex
+```
+
+`--posterior-only` reuses the saved MAP. `--posterior` runs the MAP calculation
+first. The posterior runner uses four chains, 500 warmup and 750 retained draws
+per chain, seed 2027, and 100 additional predictive solves. This repeatedly
+solves the coupled PBM and can take tens of minutes on a CPU.
+Rate-based sampling coordinates improve mixing without changing the
+physical model, priors or posterior. Retained draws, prior densities, chain
+statistics, standardized residuals and temporal-refinement checks are exported
+to `protein_crystallization/`. The plotting script renders the corner, prior
+comparison, chain/rank and predictive figures, and visibly marks samples as
+provisional if the diagnostic screen fails. No posterior covariance is
+manufactured from the rejected Laplace calculation.
 
 The native dissolution verification and figure use:
 

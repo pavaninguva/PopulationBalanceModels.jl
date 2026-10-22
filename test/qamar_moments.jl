@@ -73,3 +73,25 @@ end
     end
     @test errors[1]/errors[2]>3.5
 end
+
+@testset "Case-study family state layouts and reconstructed material" begin
+    q=QamarMomentBenchmarks
+    for (method,length_expected) in ((QMOM(3),6),(RankAdaptiveQMOM(3),6),(EQMOM(3),7),
+                                    (DQMOM(3),6),(LogNormalClosure(quadrature_order=64),3))
+        pb=q.problem4(;method,tf=.02)
+        @test length(pb.u0)==length_expected
+        @test [q.comparison_moment(pb.operator,pb.u0,k) for k in 0:2]≈q.exact4(0.)[1:3] rtol=1e-8
+        sol=simulate(pb;dt=.005)
+        @test all(isfinite,sol.u[end])
+    end
+    pb=q.problem4(method=LogNormalClosure(quadrature_order=64),tf=.02)
+    @test !(3 in pb.operator.grid.orders)
+    @test abs(q.comparison_moment(pb.operator,pb.u0,3)/q.exact4(0.)[4]-1)>.01
+    # In a closed raw hierarchy, changing quadrature family cannot change the
+    # analytical growth/source moments when its reconstruction remains resolved.
+    pb=q.problem5(method=LogNormalClosure(quadrature_order=64),collisions=false,tf=.25)
+    sol=simulate(pb;dt=.0002)
+    @test vec(sol.u[end])≈q.exact5(.25)[1:3] rtol=2e-6
+    run=q.comparison_run((;method)->q.problem4(;method,tf=.02),QMOM(3),[0.,.01,.02],.005)
+    @test run.status=="completed" && last(run.t)==.02
+end

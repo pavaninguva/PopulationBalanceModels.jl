@@ -378,7 +378,10 @@ report.diagnostics_passed
 
 The adapter uses NUTS and explicit posterior gradients. With a supplied Laplace
 approximation it adapts a dense metric initialized from its covariance;
-otherwise it uses a diagonal metric. Laplace can inform dispersed chain starts
+otherwise the default metric is diagonal. An explicit positive-definite
+`initial_covariance` also selects dense adaptation by default. This matrix is
+sampler tuning; supplying it does not establish a Laplace approximation.
+Laplace can inform dispersed chain starts
 and initial scale; explicit
 starts are also accepted. Warmup draws are excluded from the retained sample.
 Diagnostics include rank-normalized split R-hat, bulk and tail effective sample
@@ -389,6 +392,19 @@ warmup and post-warmup statistics. diagnostics_passed requires the reported
 R-hat/ESS thresholds, BFMI at least 0.3, no retained divergences or depth hits,
 and at least two chains. It is a screen, not proof of convergence. Inspect the
 traces and posterior shape before interpreting intervals.
+
+Strongly correlated parameters can benefit from a bijective `sampling_map`
+with `to_sampler`, `from_sampler`, `logabsdetjac` and `label` fields. Here
+`logabsdetjac(y)` is the log absolute determinant of `from_sampler` at `y`.
+The adapter samples
+``\log p_z(\mathrm{from\_sampler}(y))+\log|\det J_{\mathrm{from\_sampler}}(y)|``.
+It checks the inverse and Jacobian at each start and verifies the transformed
+gradient. Priors remain in their originally declared coordinates; returned `z`
+draws and `statistics.log_density` remain in inference coordinates. A tuning
+matrix supplied with a map must be expressed in **sampler** coordinates.
+The [protein crystallization study](case_studies/protein_crystallization.md)
+uses a unit-determinant map based on rates at a reference supersaturation and
+shows corner plots, prior comparisons and chain diagnostics.
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)

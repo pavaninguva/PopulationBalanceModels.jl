@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added protein crystallization posterior corner, physical prior/marginal, chain/rank and predictive figures, with reproducible NUTS draws, diagnostic screens, residuals and temporal-refinement exports.
+- Added optional sampler tuning matrices and checked coordinate maps for correlated parameters; retained the declared posterior, prior coordinates and returned inference-coordinate draws.
+- Compared QMOM, rank-adaptive QMOM, Gamma EQMOM, DQMOM and lognormal closures in the aggregation/nucleation case study, including actual failures, reconstruction/time-step checks, conditioning, material errors and single-run timings.
+
 - Added native first-order MeasureEuler evolution through positive quadrature measures, including exact-zero growth/nucleation startup, bounded collision/source updates, checked rank adaptation and consistent split bulk exchange.
 - Added explicit zero-size absorption and finite-cutoff moment boundary policies, with atomic hitting/removal and a sectional zero-boundary trace; retained existing default size-boundary and collision-overflow behavior.
 - Added optional population/mechanism cumulative number and tracked-property ledgers, integrated with the selected physical stages, and excluded escaped solids from dissolved-material exchange.

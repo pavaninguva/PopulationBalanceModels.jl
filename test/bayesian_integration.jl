@@ -1,4 +1,4 @@
-using Test, LinearAlgebra, Random, Statistics, Distributions
+using Test, LinearAlgebra, Random, Statistics, Distributions, ForwardDiff
 using PopulationBalanceModels, Optim, AdvancedHMC, MCMCDiagnosticTools
 include("fixtures/bayesian_linear.jl")
 
@@ -113,4 +113,57 @@ include("../examples/estimate_size_dependent_growth.jl")
     moment_estimation=EstimationProblem(p.parameters[1:2],(InferenceExperiment(:batch,moment_problem,measurement;dt=0.01),))
     @test check_gradient(moment_estimation,log.([recipe.TRUTH.g0,recipe.TRUTH.g1])).valid
     @test isfinite(loglikelihood(moment_estimation,log.([recipe.TRUTH.g0,recipe.TRUTH.g1])))
+end
+
+@testset "Sampler tuning preserves the shared posterior" begin
+    f=bayesian_linear_fixture();p=f.problem
+    center=fit(p)
+    tuning=Matrix(Symmetric(f.covariance));saved_tuning=copy(tuning)
+    samples=sample_posterior(p;initial=center,initial_covariance=tuning,
+        warmup=200,samples=600,chains=2,seed=153,min_ess=100)
+    Z=reshape(samples.z,2,:)
+    @test tuning==saved_tuning
+    @test samples.diagnostics.metric_initialization===:user_tuning
+    @test samples.diagnostics.metric===:dense
+    @test maximum(samples.diagnostics.rhat)<1.05
+    @test all(abs.(vec(mean(Z;dims=2))-f.mode).<.3sqrt.(diag(f.covariance)))
+    @test norm(cov(permutedims(Z))-f.covariance)/norm(f.covariance)<.2
+    @test_throws ArgumentError sample_posterior(p;initial_covariance=[1. 2.;2. 1.],warmup=50,samples=8,chains=2)
+    @test_throws ArgumentError sample_posterior(p;initial_covariance=ones(3,3),warmup=50,samples=8,chains=2)
+end
+
+@testset "Auxiliary sampling map keeps inference density and Jacobian" begin
+    f=bayesian_linear_fixture();p=f.problem;r=fit(p)
+    # A nonlinear triangular map with determinant one straightens a curved ridge.
+    to_sampler=z->[z[1]+.7z[2]^2,z[2]]
+    from_sampler=y->[y[1]-.7y[2]^2,y[2]]
+    map=(;to_sampler,from_sampler,logabsdetjac=y->zero(first(y)),label=:nonlinear_test)
+    B=ForwardDiff.jacobian(to_sampler,r.minimizer)
+    C=Matrix(Symmetric(B*f.covariance*B'))
+    s=sample_posterior(p;initial=r,sampling_map=map,initial_covariance=C,
+        warmup=200,samples=600,chains=2,seed=166,min_ess=100)
+    Z=reshape(s.z,2,:)
+    @test s.diagnostics.sampling_coordinates===:nonlinear_test
+    @test s.diagnostics.z_coordinates===:inference
+    @test maximum(s.diagnostics.rhat)<1.05
+    @test all(abs.(vec(mean(Z;dims=2))-f.mode).<.3sqrt.(diag(f.covariance)))
+    @test norm(cov(permutedims(Z))-f.covariance)/norm(f.covariance)<.2
+    @test s.diagnostics.statistics[1][1].log_density≈logposterior(p,s.z[:,1,1]) atol=1e-10
+    wrong=(;to_sampler,from_sampler,logabsdetjac=y->one(first(y)),label=:wrong)
+    @test_throws ArgumentError sample_posterior(p;initial=r,sampling_map=wrong,warmup=50,samples=8,chains=2)
+
+    # A global nonlinear bijection with NONconstant determinant tests the
+    # transformed density, not just a rotation of Gaussian coordinates.
+    sinh_map=(to_sampler=z->[asinh(z[1]),z[2]],
+        from_sampler=y->[sinh(y[1]),y[2]],
+        logabsdetjac=y->log(cosh(y[1])),label=:sinh_test)
+    B=ForwardDiff.jacobian(sinh_map.to_sampler,r.minimizer)
+    C=Matrix(Symmetric(B*f.covariance*B'))
+    nonlinear=sample_posterior(p;initial=r,sampling_map=sinh_map,initial_covariance=C,
+        warmup=250,samples=700,chains=2,seed=167,min_ess=100)
+    Z=reshape(nonlinear.z,2,:)
+    @test maximum(nonlinear.diagnostics.rhat)<1.05
+    @test all(abs.(vec(mean(Z;dims=2))-f.mode).<.3sqrt.(diag(f.covariance)))
+    @test norm(cov(permutedims(Z))-f.covariance)/norm(f.covariance)<.2
+    @test nonlinear.diagnostics.statistics[1][1].log_density≈logposterior(p,nonlinear.z[:,1,1]) atol=1e-10
 end

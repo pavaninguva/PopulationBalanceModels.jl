@@ -99,8 +99,11 @@ accuracy and convergence assessment; selecting QMOM does not establish agreement
 with a full size distribution for nonlinear nanoparticle kinetics.
 
 The [aggregation and nucleation case study](case_studies/moment_crystallization.md)
-uses three-node QMOM for Qamar's problems 4 and 5, separates analytical and
-sectional references, and checks closure error independently of time error.
+compares fixed and rank-adaptive QMOM, Gamma EQMOM, DQMOM and the lognormal
+closure. It separates analytical and sectional references, checks time and
+reconstruction quadrature separately, and retains failed trajectories in the
+comparison. Tracked material moments and material inferred from an assumed
+shape are identified separately.
 Continuous daughter laws may supply `daughter_moment(law,parent,k,p,t,ctx)`;
 `UniformVolumeDaughters` gives its exact inner integral. Outer population
 integrals still use the chosen moment reconstruction.
@@ -242,7 +245,7 @@ See [Marchisio and Fox](https://doi.org/10.1016/j.jaerosci.2004.07.009) for the
 direct quadrature formulation. `MomentExchange` uses the full chain rule above,
 so bulk exchange remains consistent with these solver states.
 
-## Check the new families against a known evolution
+## Check a known evolution
 
 For ``G(x)=0.2x``, every tracked moment satisfies
 ``d\mu_k/dt=0.2k\mu_k``. The initial Gamma density stays Gamma as sizes grow.

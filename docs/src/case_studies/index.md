@@ -12,7 +12,8 @@ boundaries, and numerical choices used in its implementation.
   undershoots; the analytical solution also tests the CFL=1 cell shift.
 - [Aggregation and nucleation with moments](moment_crystallization.md): an
   analytical aggregation–fragmentation balance and a short nucleation pulse test
-  quadrature closure, collision conservation and temporal resolution.
+  QMOM, rank-adaptive QMOM, Gamma EQMOM, DQMOM and lognormal closure, separating
+  shape, reconstruction and time-integration errors.
 - [Lipid nanoparticle formation](nanoparticles.md): an initially particle-free
   solution nucleates, grows, and coalesces after solvent mixing. Scattering
   observations weight the resulting distribution strongly toward larger particles.
@@ -28,7 +29,8 @@ boundaries, and numerical choices used in its implementation.
   are compared under refinement.
 - [Inferring protein crystallization kinetics](protein_crystallization.md):
   graph-read concentration and diameter measurements constrain nucleation and
-  growth in an unseeded batch, with explicit unit and prior assumptions.
+  growth in an unseeded batch. Joint posterior, prior, chain and predictive plots
+  assess the fit under explicit unit, observation and prior assumptions.
 
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition

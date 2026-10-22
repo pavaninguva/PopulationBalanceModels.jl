@@ -11,8 +11,7 @@ calculations answer different parts of that question. They use problems 4 and 5
 of [Qamar et al., *A Gaussian quadrature method for solving batch crystallization models*](https://doi.org/10.1002/aic.12264),
 published online in 2010 and in AIChE Journal in 2011. The first has an analytical
 solution; the second has an analytical growth/source limit and a numerical
-reference when collisions are included. They replace the earlier temperature-program
-illustration on this page.
+reference when collisions are included. The two references separate source integration from collision closure.
 
 ## Particle length and conserved volume
 
@@ -143,6 +142,89 @@ quadrature closure, rather than time integration. The material moment remains
 constant. The results correspond to the moment comparison in Figure 9; QMOM
 nodes are not plotted as a reconstructed PSD.
 
+## Compare the moment representations
+
+The same laws can be compiled with different moment families. The builders choose
+that family's required state layout and initialize it from the same distribution:
+
+```julia
+qmom = benchmark.problem4(method=QMOM(3))
+adaptive = benchmark.problem4(method=RankAdaptiveQMOM(3))
+extended = benchmark.problem4(method=EQMOM(3))
+direct = benchmark.problem4(method=DQMOM(3))
+lognormal = benchmark.problem4(method=LogNormalClosure(quadrature_order=64))
+```
+
+| Method | Evolved state | Reconstruction used for rates |
+|:--|:--|:--|
+| QMOM, three nodes | Six raw moments, orders 0–5 | Three positive atoms |
+| Rank-adaptive QMOM, at most three nodes | The same six moments | Smallest rank reconstructing all six moments |
+| Gamma EQMOM, three kernels | Seven raw moments, orders 0–6 | Three Gamma kernels, with 12 secondary quadrature points per kernel |
+| DQMOM, three nodes | Three weights and three weighted abscissas | Directly evolved positive weights and distinct nodes |
+| Assumed lognormal | Three raw moments, orders 0–2 | One lognormal shape, with 64 integration points |
+
+This is a comparison at stated representation sizes, **not equal information or
+equal computational work**. EQMOM uses an extra moment; lognormal uses fewer.
+Increasing the lognormal integration order does not add shape parameters.
+Its integration-point count is not a reconstruction rank; the CSV rank fields
+are left undefined for this closure. For EQMOM those fields count primary
+kernels, and for DQMOM they count distinct active atoms; neither is a count of
+secondary integration points.
+`ExactClosure` is not an alternative finite length-moment closure here: the
+breakage equations require higher moments and the aggregation law contains
+fractional powers of volume. The analytical solution remains the independent
+reference for the first calculation.
+
+DQMOM's six numbers are not six raw moments. Its initialization first obtains
+quadrature from the initial moments, then packs weights and weighted sizes:
+
+```julia
+basis = MomentSet(0:5;coordinate=:length)
+initial = benchmark.exact4(0.)
+q = quadrature(basis,initial,QMOM(3))
+state = quadrature_state(DQMOM(3),q.nodes,q.weights)
+```
+
+The runner reads its predictions through `moment_value`, rather than treating
+`state[4]` as material. The lognormal third moment is explicitly reconstructed
+from the first three moments:
+
+```math
+\mu_{3,\mathrm{LN}}=\frac{\mu_0\mu_2^3}{\mu_1^3}.
+```
+
+It is **not an evolved conserved state**. Even initially it differs from the
+known third moment of this distribution. No missing material is assigned to a
+bulk phase to conceal that difference.
+
+![Moment-family errors, material predictions and one measured runtime](../assets/qamar_moments/method_aggregation.png)
+
+On this smooth aggregation/fragmentation calculation, fixed and rank-adaptive
+QMOM agree: the active rank stays three, so adaptation adds no accuracy here.
+Their maximum relative errors in the first and second moments are about
+`3.25e-4` and `3.27e-4`. Gamma EQMOM reduces these to about `3.0e-6` and `1.0e-5`,
+while using seven evolved moments and substantially more quadrature and
+inversion work.
+That result does not establish that it is better for every population shape.
+
+DQMOM approaches the same three-node weak equations as QMOM. Their small finite
+step differences come from evolving different state coordinates and solving
+the direct source system. The third moment is conserved algebraically in the
+raw formulations; DQMOM's derived third moment has a small integration drift.
+The lognormal reconstruction instead develops roughly 20% third-moment change
+relative to its own reconstructed initial value, although the physical problem
+conserves material. Its number and lower-moment errors also grow. Tracking fewer
+moments is useful only if the shape assumption suits the evolving population.
+Solve cost also depends on the quadrature: pairwise aggregation is evaluated
+over all positive quadrature-point pairs, so 64 lognormal integration points
+can cost more than three QMOM atoms despite the smaller state vector.
+
+All these curves use SSPRK33 with the same maximum timestep, `0.02 s`, and a
+separate `0.01 s` run. The lower-moment timestep differences in this calculation
+are about `6e-8`, much smaller than the visible closure errors. Runtime bars are
+one measured solve after a short compilation warmup, including state checks;
+they are not timing medians or a general performance ranking.
+
 ## Second calculation: a short burst of nuclei
 
 Problem 5 adds constant growth ``G=1`` m/s and a prescribed boundary density:
@@ -215,6 +297,55 @@ QMOM. These are the two comparisons made in Figure 10. The narrow population
 appears abruptly in number, then contributes to higher moments as it grows.
 Aggregation and fragmentation alter the full-process histories.
 
+## What happens when the narrow population arrives?
+
+![Moment-family differences for the pulse, with incomplete trajectories marked](../assets/qamar_moments/method_pulse.png)
+
+The upper row compares growth and nucleation with the analytical moments. All
+raw-moment methods have the same closed equations for this limit. The lognormal
+first three moments also follow those equations once its reconstruction
+quadrature is sufficiently resolved. Its inferred third moment can still be
+wrong: agreement of evolved lower moments does not validate a reconstructed
+material moment or size distribution.
+
+The 16-point default lognormal quadrature becomes unresolved during this pulse.
+Increasing it to 32 or 64 points lets the growth/source calculation finish.
+This is a quadrature issue, not evidence that the three exact lower equations
+are incorrect. The committed comparison uses 64 points. With the size-sixth-
+power breakage hazard added, the explicit lognormal calculation still stops
+near `t=0.09 s`, including after halving the timestep. A single lognormal shape
+replaces an old population and a narrow newborn population by a broad tail;
+large particles in that inferred tail strongly affect the high-order breakage
+integrals. These results do not distinguish every possible stiff-solver remedy,
+but they rule out interpreting this run as an accurate full-process solution.
+
+The current Gamma EQMOM/RK calculation cannot certify a reconstruction beyond
+about `0.475 s` without collisions, or `0.445 s` with them. Increasing secondary
+quadrature from 12 to 48 points per kernel does not resolve these failures.
+That finding concerns this inversion and integration path; it does not prove
+that no Gamma representation exists. Crosses show the last completed output
+interval. Curves are never extended beyond a failed solve or replaced with
+another method.
+
+DQMOM completes both pulse calculations, but its lower-moment timestep difference
+is about `1.5e-3`, compared with about `1e-6` for the raw three-node formulations.
+The exported scaled source-matrix condition number helps assess this alongside
+its time refinement. Matching continuous weak equations does not make two
+finite-step state evolutions equally accurate. A completed run and positive
+weights are insufficient accuracy checks.
+
+The lower row uses the refined sectional solution as a **numerical comparison**,
+not an exact collision solution. Its truncation, splitting and spatial errors
+remain part of those differences. The reconstructed lognormal third moment is
+labelled separately from tracked third moments throughout the export.
+
+The [native positive-measure policy](../methods/realizable_evolution.md) provides
+an admissible first-order option for supported raw QMOM/rank-adaptive populations.
+It is not automatically applied to these SSPRK33 runs and does not supply
+extinction, empty-state or rank-collision guarantees to EQMOM, lognormal or
+DQMOM. Changing integration policy is a separate experiment from changing the
+moment representation.
+
 ## Separate closure and reference errors
 
 ![Analytical growth/source errors and refinement of the sectional comparison](../assets/qamar_moments/pulse_verification.png)
@@ -239,6 +370,9 @@ Results are in [aggregation_breakage.csv](../assets/qamar_moments/aggregation_br
 [pulse.csv](../assets/qamar_moments/pulse.csv),
 [sectional_reference.csv](../assets/qamar_moments/sectional_reference.csv) and
 [refinement.csv](../assets/qamar_moments/refinement.csv).
+The family comparison exports [histories](../assets/qamar_moments/method_comparison.csv),
+[state counts, timing, conditioning and completion](../assets/qamar_moments/method_summary.csv),
+and [reconstruction-quadrature checks](../assets/qamar_moments/reconstruction_checks.csv).
 Final unresolved collision rates and the resolved-plus-unresolved volume balance
 are recorded in [reference_checks.csv](../assets/qamar_moments/reference_checks.csv).
 These endpoint rates are not cumulative escaped-volume reservoirs.
@@ -246,8 +380,13 @@ These endpoint rates are not cumulative escaped-volume reservoirs.
 ```sh
 julia --project=. examples/qamar_moment_benchmarks.jl
 python docs/benchmarks/plot_case_studies.py moments --usetex
+python docs/benchmarks/plot_moment_comparison.py --usetex
 julia --project=docs docs/make.jl
 ```
+
+To regenerate only the method comparison while reusing the supplied sectional
+reference, run `julia --project=. examples/qamar_moment_benchmarks.jl --methods-only`.
+This retains separate timestep and reconstruction-quadrature checks.
 
 ## Complete runnable script
 
