@@ -9,6 +9,9 @@ import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'docs/benchmarks'))
 from plot_new_case_studies import pareto_mask
 from plot_protein_posterior import probability_levels,joint_density,marginal_density
+from unittest.mock import patch
+import matplotlib.pyplot as plt
+import plot_transport_comparisons
 
 class Summaries(unittest.TestCase):
     def test_dominated_points(self):
@@ -75,6 +78,47 @@ class Summaries(unittest.TestCase):
         self.assertEqual(len(hoc),5)
         measured=np.log(hoc['rmse'][:-1]/hoc['rmse'][1:])/np.log(2)
         np.testing.assert_allclose(measured,2.,atol=.03)  # complete midpoint update at fixed CFL
+
+    def test_tubular_size_resolution_exports(self):
+        folder=Path(__file__).resolve().parents[1]/'docs/src/assets/continuous_precipitation'
+        summary=np.genfromtxt(folder/'size_resolution.csv',delimiter=',',names=True)
+        outlets=np.genfromtxt(folder/'size_resolution_outlets.csv',delimiter=',',names=True)
+        np.testing.assert_array_equal(summary['nx'],[144,288,576,1152])
+        reference=outlets[outlets['nx']==1152]
+        refedges=np.r_[reference['x_left'],reference['x_right'][-1]]
+        refnumber=np.sum(reference['number_density']*np.diff(refedges))
+        self.assertAlmostEqual(np.diff(refedges).max()*1e6,899/1152,places=10)
+        for row in summary:
+            q=outlets[outlets['nx']==row['nx']]
+            edges=np.r_[q['x_left'],q['x_right'][-1]]
+            counts=q['number_density']*np.diff(edges)
+            centers=(edges[:-1]+edges[1:])/2
+            self.assertAlmostEqual(counts.sum()/row['number_per_m3'],1.,places=12)
+            self.assertAlmostEqual((counts*centers**3).sum()/row['M3'],1.,places=12)
+            partition=np.unique(np.r_[edges,refedges])
+            cdf=np.interp(partition,edges,np.r_[0,np.cumsum(counts)])
+            refcdf=np.interp(partition,refedges,np.r_[0,np.cumsum(reference['number_density']*np.diff(refedges))])
+            self.assertAlmostEqual(np.abs(np.diff(cdf-refcdf)).sum()/refnumber,
+                                   row['normalized_L1_to_finest'],places=11)
+        self.assertEqual(summary['normalized_L1_to_finest'][-1],0.)
+
+    def test_compact_visible_in_all_growth_figures(self):
+        # Inspect the figures produced by the real plotter, including legends.
+        # A CSV alone cannot catch a method accidentally omitted from plotting.
+        figures = {}
+        def capture(fig, folder, name):
+            figures[name] = fig
+        with patch.object(plot_transport_comparisons, 'save_figure', capture):
+            plot_transport_comparisons.constant_growth()
+        self.assertEqual(len(figures), 5)
+        for fig in figures.values():
+            lines = [line for ax in fig.axes for line in ax.lines]
+            compact = [line for line in lines if line.get_label() == 'HOC FV + midpoint']
+            self.assertTrue(compact)
+            self.assertTrue(all(len(line.get_xdata()) > 1 for line in compact))
+            self.assertTrue(all(line.get_linestyle() == '--' for line in compact))
+            self.assertFalse(any('Lax' in line.get_label() for line in lines))
+            plt.close(fig)
 
     def test_bounded_marginal(self):
         values=np.linspace(1.001,1.2,1000)

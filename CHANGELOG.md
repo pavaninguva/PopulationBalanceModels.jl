@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Made HOC explicit in every constant-growth comparison figure and removed Lax–Wendroff from that case study. Added a dedicated tubular size-resolution workflow, finer field/outlet plots and reference-dependent error updates that preserve measured solve timings and the baseline of historical checks.
+
 - Added an optional isolated-process runner for the protein example, joint chain diagnostics and tests. Retained the initial failed sampling budget and regenerated results with 6,000 draws. IPC imports remain outside the physical example loading path.
 
 - Added HOC finite-volume/midpoint to the constant-growth case study. Corrected time-method selection during compilation warmup and exported allocation/GC statistics. Reworked tubular precipitation into independent size/axial refinements, a common WENO5-size/MUSCL-axial/RK4 reference and four startup fields; retained axial-WENO5 startup failures.

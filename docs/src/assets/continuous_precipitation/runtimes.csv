@@ -1,5 +1,5 @@
 role,mesh,size_method,axial_method,nx,nz,seconds,steps
-reference,uniform,weno5,muscl,144,128,149.068971145,12475
+historical_reference,uniform,weno5,muscl,144,128,149.068971145,12475
 comparison,uniform,upwind,muscl,12,96,20.188728756,8936
 comparison,uniform,upwind,muscl,24,96,24.016087106,8915
 comparison,uniform,upwind,muscl,48,96,23.379585636,6705
@@ -25,3 +25,7 @@ comparison,log,muscl,muscl,12,64,45.390332011,21978
 comparison,log,muscl,muscl,24,64,145.926433581,51618
 comparison,log,muscl,muscl,36,64,289.573034261,80567
 comparison,log,muscl,muscl,48,64,469.922691231,107250
+size_resolution,uniform,weno5,muscl,144,128,149.068971145,12475
+size_resolution,uniform,weno5,muscl,288,128,360.028065892,16232
+size_resolution,uniform,weno5,muscl,576,128,1023.586217695,23451
+reference,uniform,weno5,muscl,1152,128,3463.081247035,37755

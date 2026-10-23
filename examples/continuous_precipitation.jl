@@ -1,6 +1,6 @@
 module ContinuousPrecipitation
 using PopulationBalanceModels
-export parameters,build,run_benchmark
+export parameters,build,run_benchmark,run_size_resolution
 
 """Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³."""
 parameters() = (cfeed=9.,ceq=.4,rho=1200.,kv=.524,kp=5.,u=10.,kb=4e8,b=2.,
@@ -38,7 +38,7 @@ end
 
 # Native explicit RK with a state-dependent explicit step bound. This controller is
 # a benchmark driver, not an adaptive-error solver or a differentiable schedule.
-function advance(problem,times;fraction=.3,method=RK4())
+function advance(problem,times;fraction=.3,method=RK4(),progress=false)
     times = collect(times)
     isfinite(fraction) && 0 < fraction <= 1 || throw(ArgumentError("fraction must be in (0,1]"))
     method isa PopulationBalanceModels.AbstractExplicitRK || throw(ArgumentError("advance requires a native explicit Runge–Kutta method"))
@@ -72,6 +72,10 @@ function advance(problem,times;fraction=.3,method=RK4())
             steps += 1
         end
         push!(states,copy(u))
+        if progress
+            println("  t = ",target," s; ",steps," steps")
+            flush(stdout)
+        end
     end
     PBMSolution(times,states,problem,steps)
 end
@@ -98,6 +102,15 @@ end
 include("support/precipitation_benchmark.jl")
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    run_benchmark(full="--full" in ARGS)
+    "--size-resolution" in ARGS && "--full" in ARGS &&
+        throw(ArgumentError("choose either --size-resolution or --full"))
+    if "--size-resolution" in ARGS
+        run_size_resolution()
+    elseif "--full" in ARGS
+        run_benchmark(full=true)
+    else
+        run_benchmark()
+        run_size_resolution()
+    end
 end
 end

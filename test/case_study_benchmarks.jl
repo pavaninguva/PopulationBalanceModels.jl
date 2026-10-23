@@ -58,4 +58,26 @@ include("../examples/continuous_precipitation.jl")
     @test abs(coarse.number_drift) < 1e-12
     @test 3.8 < coarse.rmse/fine.rmse < 4.2 # independent integrated sine/cosine reference
     @test all(c.axial_method=="muscl" for c in vcat(quick,full))
+    @test !any(c[1]=="lax_wendroff" for c in ConstantGrowthMethods.combinations())
+    @test_throws ArgumentError ContinuousPrecipitation.run_size_resolution(sizes=(6,6))
+    @test_throws ArgumentError ContinuousPrecipitation.run_size_resolution(sizes=(-2,8))
+
+    # Replacing a numerical reference changes distribution errors, not the
+    # measured cost of an unchanged solve. Independently prescribed constant
+    # densities make this check insensitive to either grid's reconstruction.
+    mktempdir() do folder
+        write(joinpath(folder,"performance.csv"),
+            "mesh,size_method,axial_method,nx,nz,seconds,normalized_L1,steps,minimum_state,upper_bin_number_fraction,refinement\n"*
+            "log,upwind,upwind,6,6,12.5,999,4,0,0,size\n")
+        open(joinpath(folder,"outlets.csv"),"w") do io
+            println(io,"mesh,size_method,axial_method,nx,nz,size_m,number_density,volume_density")
+            for x in ga.centers
+                println(io,"log,upwind,upwind,6,6,$x,2e12,0")
+            end
+        end
+        ContinuousPrecipitation.rebase_comparison_errors(folder,b,v)
+        row = split(readlines(joinpath(folder,"performance.csv"))[2],',')
+        @test parse(Float64,row[7]) ≈ 1/3 rtol=1e-14
+        @test row[6] == "12.5" && row[8] == "4"
+    end
 end

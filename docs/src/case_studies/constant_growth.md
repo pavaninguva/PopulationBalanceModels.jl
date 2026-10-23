@@ -50,7 +50,7 @@ nothing # hide
 
 ## A representative set of methods
 
-The comparison uses eight pairings. This keeps the plots readable while showing
+The comparison uses seven pairings. This keeps the plots readable while showing
 first-order transport, limited reconstruction, high-order reconstruction,
 temporal error and a characteristic shift.
 
@@ -62,7 +62,6 @@ temporal error and a characteristic shift.
 | WENO5 | SSPRK33 | 0.5 |
 | WENO5 | RK4 | 0.5 |
 | HOC finite-volume compact reconstruction | Native midpoint | 0.5 |
-| Lax–Wendroff complete update | Built into the scheme | 0.5 |
 | Inguva2022 characteristic update | Matched shift | 1 |
 
 The Courant number is ``C=G\Delta t/\Delta a``. Inguva2022 requires a grid
@@ -98,64 +97,16 @@ The [compact verification](../methods/compact_verification.md) separates spatial
 and temporal refinements. The sharp-front run retains its dispersive negative
 lobes; this scheme has no positivity guarantee.
 
-## What happens with Lax–Wendroff?
-
-The constant-growth update is
-
-```math
-\bar f_i^{m+1}=\bar f_i^m
--\frac{C}{2}(\bar f_{i+1}^m-\bar f_{i-1}^m)
-+\frac{C^2}{2}(\bar f_{i+1}^m-2\bar f_i^m+\bar f_{i-1}^m).
-```
-
-It is selected as a complete space–time method:
-
-```julia
-operator = compile(model,grid;evolution=LaxWendroff(),bc)
-solution = simulate(PBMProblem(operator,initial,(0.,4.));
-    dt=0.5*first(grid.widths)/0.1,check_nonnegative=false)
-```
-
-The audit compares its interior coefficients with
-[`model_1.m` in PBM_Schemes](https://github.com/pavaninguva/PBM_Schemes/blob/02d8016c4aa69e58c0c8e06777bbe579adef6970/Matlab/model_1.m).
-The updates agree to roundoff when supplied the same numerical values. Repeating
-the reference stencil on 201 nodes at ``C=0.5`` gives a minimum density near
-``-16.09``; it also produces negative lobes. The paper's Figure 1 uses ``C=1``,
-where the update reduces to a one-cell shift and this
-particular error disappears.
+## Resolve the moving front
 
 ![The moving front at CFL 0.5 and CFL 1](../assets/constant_growth/solutions.png)
 
-At ``C=0.5`` these are bounded dispersive oscillations. For periodic advection,
-the Fourier amplification satisfies
-
-```math
-|A(\theta)|^2=1-4C^2(1-C^2)\sin^4(\theta/2)\le1,
-\qquad |C|\le1.
-```
-
-Stability does not imply a nonnegative density. The runner retains negative
-values so their size is visible; a checked physical solve should use a suitable
-positivity-preserving method when these undershoots are unacceptable.
-HOC remains dispersive at ``C=1``: the exact-shift cancellation of
-Lax–Wendroff at that Courant number is not a general property of compact methods.
-
-There are also two differences to account for when comparing entire runs:
-
-- The MATLAB solver evolves nodal values, uses a zero left ghost and a reflected
-  right ghost. The package evolves bin integrals with a prescribed zero total
-  inlet flux and an advective outlet. Those boundary updates are distinct.
-- The MATLAB loop keeps its nominal step and can finish beyond the requested
-  final time. For 200 nodes at nominal ``C=1`` it ends near 4.0201. The package
-  lands on 4 by shortening the last step, which then has ``C<1`` and loses the
-  exact-shift cancellation. Using aligned meshes and output times avoids that
-  mismatch. The grids in this comparison are aligned.
-
-These findings do not support changing the interior Lax–Wendroff coefficients.
-They explain why a ``C=0.5`` or unaligned-output result should not be compared
-with the paper's whole-cell ``C=1`` result as if they were the same calculation.
-The [audit CSV](../assets/constant_growth/lax_wendroff_audit.csv) records both
-boundary treatments, requested/actual times, minima and coefficient differences.
+The purple dashed curve is HOC + midpoint. The methods resolve the front
+with different amounts of spreading and signed error; the analytical bin
+averages distinguish discretization error from plotting a continuous density
+through bin centres. Negative values remain in this diagnostic calculation.
+For a physical solve that requires nonnegative populations, select an
+appropriate positivity-preserving method and retain the state checks.
 
 ## Compare both error norms
 
@@ -194,7 +145,7 @@ p_{\mathrm{obs}}=
 
 ![Measured orders in both error norms](../assets/constant_growth/observed_orders.png)
 
-HOC + midpoint has measured RMSE orders 2.019, 2.005, 2.001 and 2.000
+The purple dashed HOC + midpoint curves have measured RMSE orders 2.019, 2.005, 2.001 and 2.000
 on the 40–640-bin grids. At the shared ``C=0.5``, temporal error limits this
 complete method to second order; this plot does not isolate its fourth-order
 spatial reconstruction.
@@ -207,7 +158,7 @@ WENO weight parameter also changes its importance as the mesh is refined.
 The final slope above three is finite-range behaviour, not evidence for a
 higher formal order.
 
-Upwind approaches first order and Lax–Wendroff second order. MUSCL approaches
+Upwind approaches first order. MUSCL approaches
 second order in ``L^1`` but about 1.8 in RMSE here, because limiting near smooth
 extrema affects the norms differently. WENO5 with SSPRK33 approaches third
 order as time error dominates. RK4 gives much smaller errors on this mesh range;
@@ -226,8 +177,8 @@ three times. Timings include stepping, residual evaluation and allocations,
 and exclude compilation, file output and plotting. A full garbage collection
 before each timer prevents earlier configurations' garbage being charged to the
 next method; allocation bytes and in-solve GC time are exported too. They have no averaging or
-repeatability bands and will vary between runs and machines. All plotted timings
-were remeasured together for this revision; [inputs.txt](../assets/constant_growth/inputs.txt)
+repeatability bands and will vary between runs and machines. The retained timings
+were measured together before this presentation update; [inputs.txt](../assets/constant_growth/inputs.txt)
 records the Julia version, CPU and thread counts.
 
 Raw results are in [errors.csv](../assets/constant_growth/errors.csv) and
@@ -236,7 +187,6 @@ negative number, total-number drift and actual step counts.
 
 ```sh
 julia --project=. examples/constant_growth_methods.jl
-julia --project=. examples/audit_lax_wendroff.jl
 python docs/benchmarks/plot_transport_comparisons.py constant --usetex
 julia --project=docs docs/make.jl
 ```
@@ -262,4 +212,5 @@ lists plotting commands and optional environments.
 
 
 
+- [Complete comparison driver](../assets/source/examples/constant_growth_methods.jl).
 - [Benchmark/export helpers](../assets/source/examples/support/constant_growth_benchmark.jl).

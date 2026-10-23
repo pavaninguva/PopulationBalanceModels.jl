@@ -487,3 +487,33 @@ short isolated-chain/export check verifies this lazy path, retaining its expecte
 failed convergence screen for an intentionally insufficient 16-draw budget.
 These IPC-only corrections change neither the target nor the retained results;
 the independent target/prediction audit supports reuse of the longer run.
+
+
+## Figure visibility and size-resolution follow-up
+
+This follow-up started at clean `a3c31d9a2b23fe283b410c35ebc5713d80227627`,
+with no applicable repository instructions. HOC data were already present in
+all five constant-growth figures. Purple dashed curves and diamond markers now
+make them distinct; figure-level regression checks prevent accidental omission.
+Lax–Wendroff was removed from this comparison and its extended discussion;
+the solver and independent regression coverage remain.
+
+The tubular 144-bin uniform grid had only three bin centres below 20 µm.
+Zhang2024 Figure 9 instead uses logarithmic size meshes. New uniform-size
+WENO5/axial-MUSCL/RK4 runs at 288, 576 and 1,152 bins, with 128 axial cells,
+complete to 200 s using the unchanged controller and stage checks. Outlet L¹
+differences from 1,152 bins are 9.11%, 4.41% and 1.96% for 144, 288 and 576.
+The last doubling changes number by 0.066%, illustrating why integral agreement
+does not establish distribution resolution. The 144-bin baseline was reused;
+all 25 earlier comparison states and timings remain unchanged, with only their
+errors rebased against the finer reference. Explicit baseline dimensions keep
+the old 144-bin time/axial checks distinct from the new size study.
+
+The main field uses a linear 1–100 µm view, with an additional 1–300 µm log
+view of the same cell averages. No interpolation or clipping is applied;
+the solve and outlet inventories retain 1–900 µm. PNG/SVG figures and reference
+exports are regenerated. Finer axial, temporal and domain verification of the
+new reference remains open; this is not a fully converged CADET reproduction.
+The 23 focused Julia checks, four public-driver smoke checks and eight Python
+plot/export checks pass. Exact commands and documentation checks are recorded
+in the existing verification CSV. No core numerical algorithm was changed.
