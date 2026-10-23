@@ -28,6 +28,7 @@ combinations() = [
     ("weno3", "ssprk33", WENO3(), SSPRK33()),
     ("weno5", "ssprk33", WENO5(), SSPRK33()),
     ("weno5", "rk4", WENO5(), RK4()),
+    ("hoc", "midpoint", nothing, HOCFiniteVolume()),
     ("lax_wendroff", "coupled", nothing, LaxWendroff()),
     ("inguva2022", "coupled", nothing, Inguva2022()),
 ]
@@ -46,6 +47,7 @@ function measure(grid,initial,truth,scheme,time_method,tf,dt,bc)
     problem = make_problem(grid,initial,scheme,time_method,tf,bc)
     # ONE integration, after the separate small warmups in the driver.
     # Keep signed undershoots: these are diagnostic transport comparisons.
+    GC.gc() # outside timing: do not charge earlier configurations' garbage to this solve
     timed = @timed simulate(problem; method=time_method,dt,check_nonnegative=false)
     solution = timed.value
     N = vec(last(solution.u))
@@ -54,7 +56,7 @@ function measure(grid,initial,truth,scheme,time_method,tf,dt,bc)
     (; N,f,rmse=sqrt(sum(error.^2 .* grid.widths)/sum(grid.widths)),
         l1=sum(abs.(error) .* grid.widths),maximum_error=maximum(abs.(error)),
         minimum_density=minimum(f),negative_number=-sum(min.(N,0)),
-        number_drift=sum(N)-sum(initial),seconds=timed.time,steps=solution.steps)
+        number_drift=sum(N)-sum(initial),seconds=timed.time,bytes=timed.bytes,gc_seconds=timed.gctime,steps=solution.steps)
 end
 
 include("support/constant_growth_benchmark.jl")

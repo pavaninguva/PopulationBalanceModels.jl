@@ -3,7 +3,7 @@ using PopulationBalanceModels
 using Distributions: Uniform, Normal, rand, pdf, logpdf
 using Random, LinearAlgebra
 import ForwardDiff
-export parameters,build,volume_median,observations,estimation_problem,run_study,run_posterior,scheduled_solver,physical_prior_density,run_identifiability
+export parameters,build,volume_median,observations,estimation_problem,run_study,run_posterior,scheduled_solver,physical_prior_density,prior_configuration,run_identifiability
 
 # Time is minutes, length µm, c is g/L (=kg/m³); N is in 10^12 particles/m³.
 # Table 7 Case 2: AJ has units m^-3 s^-1; AG is printed in nm/min.
@@ -55,40 +55,52 @@ function observations()
     (;concentration=selected("concentration"),D50=selected("D50"))
 end
 
-"""One posterior for graph-read concentration and volume-median observations.
-Table 3 supplies starts/bounds, not priors. Here logAJ∈[0,100], j∈[1,10], g∈[1,3]
-are explicit uniform-prior assumptions; log(AG) has a weak normal prior centred
-on Table 7's Case 2 estimate. Change growth_prior_sd to examine that assumption.
-The two measurements have independent Gaussian errors, interpreting the paper's
-0.1 g/L and 0.5 µm as standard deviations. Raw instrument covariance is absent.
+"""Prior scenarios for the same likelihood. Exponents remain nonnegative.
+`:broad` expands the weak coefficient/exponent directions; `:previous` retains
+exactly the former supports and log-growth scale for sensitivity comparisons.
+These are declared modelling choices, not ranges measured by the experiment.
 """
-function estimation_problem(;bins=100,solver=nothing,dt=.5,growth_prior_sd=1.5)
+function prior_configuration(scenario=:broad)
+    scenario === :broad && return (logAJ=(-25.,100.),j=(0.,20.),g=(0.,6.),growth_sd=3.)
+    scenario === :previous && return (logAJ=(0.,100.),j=(1.,10.),g=(1.,3.),growth_sd=1.5)
+    throw(ArgumentError("prior scenario must be :broad or :previous"))
+end
+
+"""Joint posterior for graph-read concentration and volume-median observations.
+The broad defaults relax the previous exponent bounds and coefficient priors.
+The log(AG) prior remains centred on the same-data published fit; broadening
+its scale does not remove that provenance. Gaussian noise is unchanged.
+"""
+function estimation_problem(;bins=100,solver=nothing,dt=.5,priors=:broad,
+        growth_prior_sd=prior_configuration(priors).growth_sd)
+    bounds=prior_configuration(priors)
     p=parameters();problem=build(;bins,p);data=observations()
     concentration=Measurement(data.concentration.t,data.concentration.y,BulkObservable(:c);
         likelihood=GaussianLikelihood(sigma=data.concentration.sigma),source=:figure4_concentration)
     sizes=Measurement(data.D50.t,data.D50.y,FunctionObservable(volume_median);
         likelihood=GaussianLikelihood(sigma=data.D50.sigma),source=:figure4_D50)
     specs=(
-        ParameterSpec(:logAJ;initial=p.logAJ,prior=Prior(Uniform(0,100);coordinates=:physical)),
-        ParameterSpec(:j;initial=p.j,transform=LogitTransform(1,10),prior=Prior(Uniform(1,10);coordinates=:physical)),
+        ParameterSpec(:logAJ;initial=p.logAJ,prior=Prior(Uniform(bounds.logAJ...);coordinates=:physical)),
+        ParameterSpec(:j;initial=p.j,transform=LogitTransform(bounds.j...),prior=Prior(Uniform(bounds.j...);coordinates=:physical)),
         ParameterSpec(:AG;initial=p.AG,transform=LogTransform(),prior=Prior(Normal(log(p.AG),growth_prior_sd);coordinates=:inference)),
-        ParameterSpec(:g;initial=p.g,transform=LogitTransform(1,3),prior=Prior(Uniform(1,3);coordinates=:physical)))
+        ParameterSpec(:g;initial=p.g,transform=LogitTransform(bounds.g...),prior=Prior(Uniform(bounds.g...);coordinates=:physical)))
     ex=InferenceExperiment(:batch,problem,concentration,sizes;dt=solver===nothing ? dt : nothing,solver)
     EstimationProblem(specs,(ex,))
 end
 
 function run_study(;output=joinpath(@__DIR__,"..","docs","src","assets","protein_crystallization"),bins=80,
-        solver=nothing,dt=.5,maxiters=200,posterior=false,posterior_options=NamedTuple())
+        solver=scheduled_solver,dt=.5,maxiters=300,priors=:broad,posterior=false,posterior_options=NamedTuple())
     # Optional dependency loaded by the caller, preserving the package extension.
     Base.get_extension(PopulationBalanceModels,:PopulationBalanceModelsOptimExt)!==nothing ||
         error("Load Optim before run_study (see the complete-script invocation).")
-    mkpath(output);problem=estimation_problem(;bins,solver,dt)
+    mkpath(output);problem=estimation_problem(;bins,solver,dt,priors)
     fitresult=fit(problem;maxiters,gradient_tolerance=.02)
     theta=physical_parameters(problem,fitresult.minimizer,:batch)
     open(joinpath(output,"fit.txt"),"w") do io
         println(io,"Digitized experimental markers: Mitchell et al. (2023), Figure 4; no raw laboratory data.")
         println(io,"MAP converged: ",fitresult.converged,"; gradient norm: ",fitresult.diagnostics.gradient_norm)
         println(io,"Coordinates: identity(logAJ), logit(j), log(AG), logit(g); theta=",theta)
+        println(io,"Prior scenario: ",priors,"; ",prior_configuration(priors))
         println(io,"Posterior: ",posterior_components(problem,fitresult.minimizer))
         println(io,"Volume-weighted D50 is an explicit observation assumption; verify against the original instrument convention.")
     end
@@ -120,7 +132,7 @@ function run_study(;output=joinpath(@__DIR__,"..","docs","src","assets","protein
         e isa LaplaceFailure || rethrow()
         open(joinpath(output,"fit.txt"),"a") do io;println(io,"Laplace unavailable: ",sprint(showerror,e));end
     end
-    posterior && run_posterior(;output,bins,initial=fitresult.minimizer,posterior_options...)
+    posterior && run_posterior(;output,bins,priors,initial=fitresult.minimizer,posterior_options...)
     fitresult
 end
 
@@ -187,7 +199,12 @@ end
 function saved_map(output,problem)
     file=joinpath(output,"map_parameters.csv")
     if isfile(file)
-        return [parse(Float64,split(row,',')[2]) for row in readlines(file)[2:end]]
+        rows=split.(readlines(file)[2:end],',')
+        Symbol.(first.(rows)) == [s.name for s in problem.parameters] ||
+            throw(ArgumentError("saved MAP parameter names do not match the estimation problem"))
+        # Starts are physical values; logits change when prior bounds change.
+        return [PopulationBalanceModels._coordinate(spec.transform,parse(Float64,row[3]))
+            for (spec,row) in zip(problem.parameters,rows)]
     end
     # Compatibility with earlier study exports. Read named numbers; never eval.
     content=read(joinpath(output,"fit.txt"),String)
@@ -208,13 +225,13 @@ Chains, draws, proper physical-coordinate priors and diagnostic failures are
 exported even when the convergence screen fails. Such draws are provisional.
 """
 function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","protein_crystallization"),
-        bins=80,initial=nothing,samples=750,warmup=500,chains=4,seed=2027,
-        time_scale=1.,predictive_draws=100,min_ess=400,target_acceptance=.9,max_depth=9)
+        bins=80,initial=nothing,samples=1500,warmup=750,chains=4,seed=2027,
+        time_scale=1.,predictive_draws=100,min_ess=400,target_acceptance=.9,max_depth=9,priors=:broad,parallel=false)
     Base.get_extension(PopulationBalanceModels,:PopulationBalanceModelsAdvancedHMCExt)!==nothing ||
         error("Load AdvancedHMC and MCMCDiagnosticTools before run_posterior")
     mkpath(output)
     solver=(pb,ts)->scheduled_solver(pb,ts;scale=time_scale)
-    problem=estimation_problem(;bins,solver)
+    problem=estimation_problem(;bins,solver,priors)
     center=initial===nothing ? saved_map(output,problem) : collect(initial)
     data=observations();scales=vcat(fill(data.concentration.sigma,length(data.concentration.t)),fill(data.D50.sigma,length(data.D50.t)))
     flattened=z->vcat((vec(v) for v in first(predictions(problem,z)))...)
@@ -230,9 +247,30 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
     rng=MersenneTwister(seed)
     starts=[sampling_map.from_sampler(sampling_map.to_sampler(center) .+ 0.4 .* (metric_factor*randn(rng,length(center)))) for _ in 1:chains]
     println("Protein posterior: ",chains," chains, ",warmup," warmup, ",samples," retained per chain");flush(stdout)
-    draws=sample_posterior(problem;initial=center,starts,initial_covariance=tuning,
-        samples,warmup,chains,seed,target_acceptance,max_depth,min_ess,metric=:dense,sampling_map,verbose=true)
+    draws = if parallel
+        # Loading the physical recipe needs no IPC dependency. Enter the latest
+        # world after this optional import (also covers Julia 1.13 bindings).
+        @eval import Serialization
+        settings=(;bins,priors,time_scale,center,starts,tuning,samples,warmup,chains,seed,
+            target_acceptance,max_depth,min_ess)
+        Base.invokelatest(_parallel_protein_chains,problem,settings,output)
+    else
+        sample_posterior(problem;initial=center,starts,initial_covariance=tuning,
+            samples,warmup,chains,seed,target_acceptance,max_depth,min_ess,
+            metric=:dense,sampling_map,verbose=true)
+    end
+    _export_posterior(problem,draws,center;output,bins,priors,seed,time_scale,predictive_draws)
+end
+
+# Reporting and prediction use the same path for sequential and isolated chains.
+function _export_posterior(problem,draws,center;output,bins,priors,seed,time_scale,predictive_draws)
     report=diagnostics(draws)
+    samples,chains=report.samples,report.chains
+    rng=MersenneTwister(seed)
+    data=observations()
+    scales=vcat(fill(data.concentration.sigma,length(data.concentration.t)),
+        fill(data.D50.sigma,length(data.D50.t)))
+    flattened=z->vcat((vec(v) for v in first(predictions(problem,z)))...)
     names=Tuple(spec.name for spec in problem.parameters)
     _table(joinpath(output,"posterior_draws.csv"),"chain,draw,"*join(names,','),
         [(c,i,(getproperty(draws.physical[i,c].shared,name) for name in names)...) for c in 1:chains,i in 1:samples])
@@ -244,10 +282,15 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
         [(c,i,d.log_density,d.hamiltonian_energy,d.acceptance_rate,d.n_steps,d.tree_depth,d.numerical_error) for c in 1:chains,i in 1:samples for d in (report.statistics[c][i],)])
     prior_values=[[prior_draw(rng,spec) for spec in problem.parameters] for _ in 1:10000]
     _table(joinpath(output,"prior_draws.csv"),join(names,','),prior_values)
-    prior_grids=(logAJ=range(0.,100.;length=1001),j=range(1.,10.;length=1001),
-        AG=exp.(range(log(.0005),log(200.);length=2001)),g=range(1.,3.;length=1001))
+    bounds=prior_configuration(priors)
+    prior_grids=(logAJ=range(bounds.logAJ...;length=1001),j=range(bounds.j...;length=1001),
+        AG=exp.(range(log(parameters().AG)-4 * bounds.growth_sd,log(parameters().AG)+4 * bounds.growth_sd;length=2001)),
+        g=range(bounds.g...;length=1001))
     _table(joinpath(output,"prior_density.csv"),"parameter,value,density",
         [(spec.name,x,physical_prior_density(spec,x)) for spec in problem.parameters for x in getproperty(prior_grids,spec.name)])
+    _table(joinpath(output,"prior_configuration.csv"),"scenario,parameter,lower,upper,log_sd",
+        [(priors,:logAJ,bounds.logAJ...,NaN),(priors,:j,bounds.j...,NaN),
+         (priors,:AG,0.,Inf,bounds.growth_sd),(priors,:g,bounds.g...,NaN)])
     center_prediction=flattened(center)
     observed=vcat(data.concentration.y,data.D50.y)
     _table(joinpath(output,"fit_residuals.csv"),"observable,time_min,data,prediction,standardized_residual",
@@ -256,8 +299,8 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
                                               [("D50",t,y) for (t,y) in zip(data.D50.t,data.D50.y)]))])
     residual_rms=sqrt(sum(abs2,(center_prediction-observed)./scales)/length(observed))
     # Numerical differences in units of each measurement standard deviation.
-    fine=estimation_problem(;bins,solver=(pb,ts)->scheduled_solver(pb,ts;scale=time_scale/2))
-    reference=estimation_problem(;bins,dt=.5)
+    fine=estimation_problem(;bins,priors,solver=(pb,ts)->scheduled_solver(pb,ts;scale=time_scale/2))
+    reference=estimation_problem(;bins,dt=.5,priors)
     selected=parameter_draws(problem,draws;n=min(12,samples*chains),seed=seed+1)
     checks=NamedTuple[]
     for (i,z) in enumerate(eachcol(hcat(center,selected.z)))
@@ -290,12 +333,18 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
     end
     open(joinpath(output,"posterior.txt"),"w") do io
         println(io,"Same 80-bin (or configured bins=$bins) sectional physical model and priors as the MAP example; digitized data, not raw laboratory records.")
+        println(io,"Prior scenario: ",priors,"; ",prior_configuration(priors))
+        println(io,"Julia $(VERSION); CPU $(first(Sys.cpu_info()).model); Julia threads $(Threads.nthreads()); BLAS threads $(BLAS.get_num_threads()).")
         println(io,"Native SSPRK33 scheduled steps=(1,3,10) min, breaks=(50,150) min, time scale=$time_scale. No gradient through a hidden adaptive controller.")
         println(io,"Sampler coordinates use logAJ+j*log(8), logit(j), logAG+g*log(8), logit(g). Unit determinant verified; stored z and prior definitions remain in declared inference coordinates.")
         println(io,"Initial inverse mass matrix from positive likelihood-sensitivity/prior curvature in sampler coordinates: tuning ONLY, not a Laplace covariance.")
         for key in (:diagnostics_passed,:rhat,:ess_bulk,:ess_tail,:mcse_mean,:ebfmi,:divergences,:warmup_divergences,:max_depth_hits,
                     :warmup,:samples,:chains,:seed,:min_ess,:target_acceptance,:max_depth,:elapsed_seconds,:forward_solves,:failed_evaluations)
             println(io,key," = ",getproperty(report,key))
+        end
+        if hasproperty(report,:chain_seeds)
+            println(io,"Independent process chain seeds = ",report.chain_seeds)
+            println(io,"Parallel elapsed time includes process startup; summed chain sampler time = ",report.sum_chain_elapsed_seconds)
         end
         println(io,"RMS standardized residual at initialization/MAP = ",residual_rms)
         println(io,"Largest half-step prediction change / sigma = ",maximum(c.half_step_error_sigma for c in checks))
@@ -307,10 +356,14 @@ function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","pro
 end
 
 include("support/protein_identifiability.jl")
+include("support/protein_parallel_posterior.jl")
 
 if abspath(PROGRAM_FILE) == @__FILE__
     if "--identifiability-only" in ARGS
         run_identifiability()
+    elseif "--posterior-parallel" in ARGS
+        @eval using AdvancedHMC, MCMCDiagnosticTools
+        run_posterior(parallel=true)
     elseif "--posterior-only" in ARGS
         @eval using AdvancedHMC, MCMCDiagnosticTools
         run_posterior()

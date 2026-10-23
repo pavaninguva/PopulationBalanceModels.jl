@@ -1,2 +1,5 @@
 mesh,size_method,axial_method,nx,nz,message
-uniform,weno5,weno5,24,32,negative bulk concentration in coupled solve
+uniform,weno5,weno5,48,32,fraction=0.3: negative bulk concentration in coupled solve
+uniform,weno5,weno5,48,32,fraction=0.03: negative bulk concentration in coupled solve
+uniform,weno5,weno5,48,64,fraction=0.3: negative bulk concentration in coupled solve
+uniform,weno5,weno5,48,64,fraction=0.03: negative bulk concentration in coupled solve

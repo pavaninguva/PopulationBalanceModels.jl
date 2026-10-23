@@ -1,6 +1,7 @@
 Digitized experimental markers: Mitchell et al. (2023), Figure 4; no raw laboratory data.
-MAP converged: true; gradient norm: 0.00797352870673751
-Coordinates: identity(logAJ), logit(j), log(AG), logit(g); theta=(logAJ = 17.09482577572458, j = 2.160781155620045, AG = 0.5224989840263745, g = 2.5388913415545717)
-Posterior: (loglikelihood = -706.9258798419526, logprior = -9.872876157518146, logposterior = -716.7987559994707)
+MAP converged: true; gradient norm: 9.21757140148749e-6
+Coordinates: identity(logAJ), logit(j), log(AG), logit(g); theta=(logAJ = 18.461430096210936, j = 1.509747806172668, AG = 0.5138102471129345, g = 2.5478189673491523)
+Prior scenario: broad; (logAJ = (-25.0, 100.0), j = (0.0, 20.0), g = (0.0, 6.0), growth_sd = 3.0)
+Posterior: (loglikelihood = -706.5122979499262, logprior = -10.923708226107198, logposterior = -717.4360061760334)
 Volume-weighted D50 is an explicit observation assumption; verify against the original instrument convention.
 Laplace unavailable: Laplace approximation rejected: Hessian has not converged under step halving

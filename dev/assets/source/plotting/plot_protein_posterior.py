@@ -23,7 +23,14 @@ def save(fig,folder,name):
             path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines())+'\n')
     plt.close(fig)
 
-SUPPORT = ((0.,100.), (1.,10.), (0.,np.inf), (1.,3.))
+def parameter_support(folder):
+    # Legacy retained exports predate explicit scenario metadata.
+    if not (folder / 'prior_configuration.csv').exists():
+        return ((0.,100.), (1.,10.), (0.,np.inf), (1.,3.))
+    configuration = read(folder, 'prior_configuration.csv')
+    return tuple((float(configuration[configuration['parameter']==name]['lower'][0]),
+                  float(configuration[configuration['parameter']==name]['upper'][0]))
+                 for name in NAMES)
 
 def marginal_density(values, support, points=400):
     """Gaussian KDE with reflection at finite support endpoints (display only)."""
@@ -75,7 +82,7 @@ def joint_density(x,y,xsupport,ysupport,points=181):
     density[~inside] = 0.
     return X,Y,density
 
-def kinetic_tradeoffs(folder,draws):
+def kinetic_tradeoffs(folder,draws,support):
     logref = np.log(8.)
     etaJ = draws['logAJ']+draws['j']*logref
     etaG = np.log(draws['AG'])+draws['g']*logref
@@ -87,10 +94,11 @@ def kinetic_tradeoffs(folder,draws):
     for ax,x,y,xlabel,ylabel in (
         (axes[0,0],draws['logAJ'],draws['j'],LABELS[0],LABELS[1]),
         (axes[0,1],etaJ,draws['j'],r'$\eta_J=\log J(8)$',LABELS[1])):
-        X,Y,density = joint_density(x,y,(-np.inf,np.inf),(1.,10.))
+        X,Y,density = joint_density(x,y,(-np.inf,np.inf),support[1])
         ax.contourf(X,Y,density,levels=[*probability_levels(density),density.max()*1.001],
                     colors=['#a6cbe3','#377eb8'],alpha=.85)
         ax.set(xlabel=xlabel,ylabel=ylabel)
+        ax.set_ylim(bottom=support[1][0])
     ss = np.geomspace(max(.01,smin/2),max(16,2*smax),350)
     for ax,logcoef,exponent,label in (
         (axes[1,0],draws['logAJ'],draws['j'],r'$J(s)\ (\mathrm{m}^{-3}\,\mathrm{s}^{-1})$'),
@@ -107,15 +115,27 @@ def kinetic_tradeoffs(folder,draws):
             ('corr_etaJ_j',np.corrcoef(etaJ,draws['j'])[0,1]),
             ('corr_logAG_g',np.corrcoef(np.log(draws['AG']),draws['g'])[0,1]),
             ('corr_etaG_g',np.corrcoef(etaG,draws['g'])[0,1]),
+            ('probability_j_below_1',np.mean(draws['j']<1.)),
             ('MAP_saved_supersaturation_min',smin),('MAP_saved_supersaturation_max',smax)]
     for name in NAMES:
         rows += [(name+'_q'+str(p),value) for p,value in zip((.025,.5,.975),np.quantile(draws[name],[.025,.5,.975]))]
     with (folder/'posterior_summaries.csv').open('w') as io:
         io.write('quantity,value\n')
         for name,value in rows:io.write(f'{name},{value:.17g}\n')
+    history=folder/'prior_sensitivity.csv'
+    if history.exists():
+        previous=[line for line in history.read_text().splitlines()[1:] if line.startswith('previous,')]
+        scenario=str(read(folder,'prior_configuration.csv')['scenario'][0])
+        with history.open('w') as io:
+            io.write('scenario,revision,quantity,value\n')
+            for line in previous:io.write(line+'\n')
+            for name,value in rows:
+                if '_q' in name or name.startswith('corr_'):
+                    io.write(f'{scenario},working-tree-from-afda48e,{name},{value:.17g}\n')
 
 def main(folder=DEFAULT,usetex=False):
     configure(usetex)
+    support = parameter_support(folder)
     draws=read(folder,'posterior_draws.csv');priors=read(folder,'prior_density.csv')
     diag=read(folder,'sampler_diagnostics.csv');ok=passed(diag)
     status='Sampler diagnostic screen passed' if ok else 'Provisional: sampler diagnostics failed'
@@ -125,15 +145,20 @@ def main(folder=DEFAULT,usetex=False):
             ax=axes[i,j]
             if j>i:ax.axis('off');continue
             if i==j:
-                x,density = marginal_density(draws[name],SUPPORT[i])
+                x,density = marginal_density(draws[name],support[i])
                 ax.fill_between(x,density,color='C0',alpha=.3)
                 ax.plot(x,density,color='C0')
                 ax.set_yticks([])
             else:
-                X,Y,density = joint_density(draws[other],draws[name],SUPPORT[j],SUPPORT[i])
+                X,Y,density = joint_density(draws[other],draws[name],support[j],support[i])
                 levels = probability_levels(density)
                 ax.contourf(X,Y,density,levels=[*levels,density.max()*1.001],colors=['#a6cbe3','#377eb8'],alpha=.85)
                 ax.contour(X,Y,density,levels=levels,colors='C0',linewidths=.7)
+            xlo,xhi=ax.get_xlim()
+            ax.set_xlim(max(xlo,support[j][0]),min(xhi,support[j][1]))
+            if i!=j:
+                ylo,yhi=ax.get_ylim()
+                ax.set_ylim(max(ylo,support[i][0]),min(yhi,support[i][1]))
             if i==3:ax.set_xlabel(LABELS[j])
             else:ax.tick_params(labelbottom=False)
             if j==0 and i>0:ax.set_ylabel(LABELS[i])
@@ -150,12 +175,14 @@ def main(folder=DEFAULT,usetex=False):
         if name=='AG':axes[0,i].set_xscale('log')
         axes[0,i].set(xlabel=label,ylabel='Prior density',ylim=(0,1.18*max(q['density'])))
         ax=axes[1,i]
-        xxpost,density = marginal_density(x,SUPPORT[i])
+        xxpost,density = marginal_density(x,support[i])
         ax.fill_between(xxpost,density,alpha=.3,color='C0')
         ax.plot(xxpost,density,color='C0',label='Smoothed NUTS draws')
         xx=np.linspace(max(q['value'][0],lo-.12*width),min(q['value'][-1],hi+.12*width),500)
         ax.plot(xx,np.interp(xx,q['value'],q['density']),color='C1',label='Unscaled prior density')
         ax.set(xlabel=label,ylabel='Density (posterior range)')
+        xlo,xhi=ax.get_xlim()
+        ax.set_xlim(max(xlo,support[i][0]),min(xhi,support[i][1]))
     axes[0,0].legend(fontsize=7);axes[1,0].legend(fontsize=7)
     fig.suptitle('Prior scale above; posterior detail below. '+status,fontsize=10)
     save(fig,folder,'prior_posterior')
@@ -175,7 +202,7 @@ def main(folder=DEFAULT,usetex=False):
     axes[0,0].legend(fontsize=7,ncol=2);fig.suptitle(status,fontsize=11)
     save(fig,folder,'posterior_chains')
 
-    kinetic_tradeoffs(folder,draws)
+    kinetic_tradeoffs(folder,draws,support)
 
     path=folder/'posterior_predictive.csv'
     if path.exists():
