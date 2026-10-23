@@ -1,0 +1,46 @@
+SELECTED DATA EXTRACTION AND TRANSFORMATION
+
+The frozen selected source rows came from the earlier complete Tang/Mitchell
+paper extraction. This handover changes scope and data roles; it does not
+redigitize the source graphs. source_selection.json records the original CSV
+names and hashes, selected experiment and resulting row counts.
+
+NUMBER PSDS
+Tang Fig 11d native raster,2066x1640 pixels. Calibration: L0 atx1170, L50 atx2051;
+ordinate0 aty1514, ordinate1 aty868. Colors: black74 min, red180, blue420,
+teal660. Color-threshold tracing returns the median vertical position in each
+raster column. A five-pixel median filter reduces marker-outline oscillation.
+Panel labels and legends are excluded from the trace. Selected raw pixel
+coordinates, raw medians and filtered medians are retained in
+selected_psd_traces_source.csv; inspect them against Tang_Figure11.jpeg.
+
+The raw plotted ordinate is retained. Linear-axis interpolation gives the
+0.5 um reconstruction grid, with conditional unit-area normalization on either
+2.5-25 or2.5-47.5 um. The cumulative trapezoidal integral gives the CDF. The
+two windows are alternatives, not extra observations. Unresolved ends in
+the nominal reconstruction are flagged and filled0 only when explicitly
+missing; internal trace gaps are interpolated and their nearest-trace distance
+is retained. Flat near-axis tails are not independently established physical
+populations. +0.005-ordinate sensitivity summaries are graph-reconstruction
+sensitivities, not experimental error bars.
+
+CONCENTRATION
+Tang Fig 12a native raster,2066x784 pixels; isothermal inverted-triangle series.
+Manual marker centers are retained. Calibration: t0 atx153.5, t700 atx971;
+c0-axis aty658.5, c20-axis aty73. The nominal marker-reading sensitivity is
+plus/minus2 pixels, corresponding to about1.7 min and 0.068 g/L per axis.
+This excludes laboratory error and model discrepancy.
+
+The first visible concentration marker is known to represent the initial
+condition. Its source graph time 0.428 min is retained, while model time is
+explicitly set 0. All other model times equal their unrounded graph readings.
+Shared/occluded early markers retain that flag. No artificial concentration
+points are interpolated into the active fit dataset.
+
+PREPARATION
+prepare_data.py copies these fixed source values to the active CSVs and adds
+explicit split/observation-block labels. validate_handover.py verifies expected
+counts, source hashes, roles, normalization and quantiles. Neither script
+implements or fits a PBM. The source PDFs and figure rasters remain available
+for independent inspection. Numeric CSV precision exceeds graph-reading and
+experimental accuracy.
