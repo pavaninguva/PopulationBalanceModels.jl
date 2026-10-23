@@ -25,9 +25,16 @@ def constant_growth():
                ("weno3","ssprk33","WENO3 + SSPRK3", "C6"),
                ("weno5","ssprk33","WENO5 + SSPRK3", "C2"),
                ("weno5","rk4","WENO5 + RK4", "C3"),
-               ("hoc","midpoint","HOC FV + midpoint", "C7"),
-               ("lax_wendroff","coupled","Lax--Wendroff", "C4"),
+               ("hoc","midpoint","HOC FV + midpoint", "C4"),
                ("inguva2022","coupled","Inguva2022 ($C=1$)", "C5")]
+    # Compact curves should remain distinguishable in print and where errors
+    # overlap another method; method selection itself comes from the exports.
+    def line_style(name, *, markers=True):
+        if name == 'hoc':
+            return dict(linestyle='--', linewidth=1.8, zorder=5,
+                        **({'marker':'D', 'markersize':4} if markers else {}))
+        return dict(linestyle='-', linewidth=1.2,
+                    **({'marker':'o', 'markersize':3} if markers else {}))
     fig, axes = plt.subplots(1,2,figsize=(10,3.8),layout="constrained",sharey=True)
     a=np.linspace(0,1,4001)
     truth=np.where(a>=.4,100*np.exp(-(a-.4)/.01),0.)
@@ -38,7 +45,8 @@ def constant_growth():
         for name,time,label,color in choices:
             if name=="inguva2022" and C!=1:continue
             d=read(folder/f"{name}_{time}_{C}_200.csv")
-            ax.plot(d['size'],d['density'],color=color,lw=1.2,label=label)
+            ax.plot(d['size'],d['density'],color=color,label=label,
+                    **line_style(name,markers=False))
         ax.set(xlim=(.32,.62),xlabel="$a$",title=fr"$C={C:g}$, 200 bins")
     axes[0].set_ylabel("$f(a,4)$");axes[1].legend(fontsize=7)
     save_figure(fig,folder,"solutions")
@@ -53,7 +61,8 @@ def constant_growth():
             if source is front:data=data[data['courant']==(1. if name=='inguva2022' else .5)]
             for ax,key in zip(axes,['l1','rmse']):
                 # Display roundoff as roundoff, without a fitted convergence line.
-                ax.loglog(data['bins'],np.maximum(data[key],1e-16),'o-',ms=3,color=color,label=label)
+                ax.loglog(data['bins'],np.maximum(data[key],1e-16),color=color,
+                          label=label,**line_style(name))
         axes[0].set(xlabel='Number of bins',ylabel=r'$L^1$ density error')
         axes[1].set(xlabel='Number of bins',ylabel='RMSE')
         axes[0].legend(fontsize=7);fig.suptitle(title)
@@ -62,8 +71,9 @@ def constant_growth():
     fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained")
     for name,time,label,color in choices:
         data=smooth[(smooth['scheme']==name)&(smooth['time_method']==time)]
-        axes[0].loglog(data['bins'],data['seconds'],'o-',ms=3,color=color,label=label)
-        axes[1].loglog(data['seconds'],np.maximum(data['rmse'],1e-16),'o-',ms=3,color=color,label=label)
+        axes[0].loglog(data['bins'],data['seconds'],color=color,label=label,**line_style(name))
+        axes[1].loglog(data['seconds'],np.maximum(data['rmse'],1e-16),color=color,
+                       label=label,**line_style(name))
     axes[0].set(xlabel='Number of bins',ylabel=r'Elapsed time $(\mathrm{s})$')
     axes[1].set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='RMSE')
     axes[0].legend(fontsize=7);save_figure(fig,folder,'timings')
@@ -74,7 +84,7 @@ def constant_growth():
         if name=='inguva2022':continue # order is undefined at roundoff
         data=smooth[(smooth['scheme']==name)&(smooth['time_method']==time)]
         for ax,key in zip(axes,['observed_l1_order','observed_rmse_order']):
-            ax.semilogx(data['bins'],data[key],'o-',ms=3,color=color,label=label)
+            ax.semilogx(data['bins'],data[key],color=color,label=label,**line_style(name))
     axes[0].set(xlabel='Number of bins',ylabel='Measured refinement order',title=r'$L^1$')
     axes[1].set(xlabel='Number of bins',title='RMSE')
     handles,labels=axes[0].get_legend_handles_labels()

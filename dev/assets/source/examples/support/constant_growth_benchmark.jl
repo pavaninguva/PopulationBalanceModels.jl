@@ -45,7 +45,7 @@ function run(;grids=(50,100,200,400,800,1600),smooth_grids=(40,80,160,320,640),
         "Inguva et al. (2022), Case 1 Eq.56: g=.1, f0=100exp(-a/.01), domain [0,1], tf=$tf.\n"*
         "All errors compare analytical bin integrals. Zero inflow/open outflow; far-boundary exponential tail is negligible.\n"*
         "Smooth check: f0=1+.2sin(2πa)+.1cos(4πa), periodic [0,1].\n"*
-        "Eight representative pairings. HOC uses its native midpoint update (fourth-order space, second-order time). Common C=.5; Inguva2022 requires C=1 and is labelled separately. Front profiles also compare C=1.\n"*
+        "Seven representative pairings. HOC uses its native midpoint update (fourth-order space, second-order time). Common C=.5; Inguva2022 requires C=1 and is labelled separately. Front profiles also compare C=1.\n"*
         "One measured solve per configuration, following tiny separate compilation warmups with the same explicit time-method keyword. Full GC before each measurement is excluded; in-solve allocation and GC seconds are exported. No timing medians, repeated production runs or timing bands.\n"*
         "Observed L1 and RMSE orders are measured from successive grids; no fitted or arbitrarily anchored order-guide lines.\n"*
         "Signed density minima and number drift retained. Julia $(VERSION); CPU $(first(Sys.cpu_info()).model); Julia CPU target $(Sys.CPU_NAME); Julia threads $(Threads.nthreads()); BLAS threads $(PopulationBalanceModels.LinearAlgebra.BLAS.get_num_threads()).\n")

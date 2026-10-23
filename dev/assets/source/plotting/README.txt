@@ -128,15 +128,14 @@ julia --project=. examples/axially_dispersed_growth.jl
 python docs/benchmarks/plot_transport_comparisons.py axial --usetex
 ```
 
-The constant-growth comparison uses eight representative pairings (including WENO3 + SSPRK33 and HOCFiniteVolume + midpoint) for the 2022
+The constant-growth comparison uses seven representative pairings (including WENO3 + SSPRK33 and HOCFiniteVolume + midpoint) for the 2022
 Case 1 front and a smooth periodic input. Each configuration has one measured
 solve following a small compilation warmup. L1/RMSE panels and measured
 refinement orders replace arbitrary h-power guides and repeated-run bands.
 Inguva2022 appears in the timing and error plots at its required C=1, labelled
-separately from the other methods at C=.5. Run `examples/audit_lax_wendroff.jl`
-to regenerate the coefficient, boundary and final-time comparison with the
-PBM_Schemes reference. The reference also oscillates at C=.5; whole-cell C=1
-shifts remove that error. The axial example retains analytical periodic
+separately from the other methods at C=.5. HOC uses purple dashed curves and
+diamond markers throughout. Lax–Wendroff is omitted from this comparison;
+its implementation and independent audit remain available. The axial example retains analytical periodic
 advection–diffusion and nonuniform inlet/outlet tests in `test/axial.jl`.
 
 All supplied growth and time methods remain available in the package;
@@ -159,15 +158,28 @@ python docs/benchmarks/plot_new_case_studies.py protein --usetex
 
 The precipitation default separates size and axial refinement with four points
 per path. It compares Upwind, MUSCL and WENO5 in size with axial MUSCL/RK4 fixed,
-against one uniform-size WENO5/axial-MUSCL/RK4 reference on 144×128 cells.
-Fields save 0, 40, 80 and 200 s. Same-mesh startup field/outlet/bulk temporal
-checks accompany independent time/size/axial reference checks
-and logarithmic-size sensitivity runs are exported. WENO5 in both directions
+against one uniform-size WENO5/axial-MUSCL/RK4 reference on 1,152×128 cells.
+`--size-resolution` separately solves 144, 288, 576 and 1,152 size bins at
+128 axial cells, updates the fields/outlet reference and recomputes errors from
+the retained comparison outlets without changing their timings. This command
+alone is sufficient for the resolution follow-up when using the committed
+comparison exports. The outlet figure now shows size refinement, rather than
+coarse 72-bin curves. Fields save 0, 40, 80 and 200 s. The main view uses a linear 1–100 µm
+axis; a companion log view covers 1–300 µm. The solve and outlet inventories
+retain the full 900-µm domain.
+Older startup field/outlet/bulk temporal and axial checks explicitly identify
+their 144×128 baseline; they do not certify the finer reference. Logarithmic-size
+sensitivity runs remain exported. WENO5 in both directions
 still fails the empty-start bulk check; those failures are retained without clipping.
 `--full` requests the SI Cartesian mesh arrangement with axial MUSCL fixed
 (25 pairs per eligible size scheme/grid family), and a 250×750 reference.
 It was not executed for the documentation. This is a numerical reference and
 package comparison, not CADET's WENO23/WENO35 or timing reproduction.
+The no-argument driver runs both stages: coarse comparisons/checks on the
+144×128 baseline, then the fine size study. `--size-resolution` reuses retained
+comparison outlets and runs only the second stage; it does not repeat expensive
+fine-grid half-step or axial checks. Expect the finest uniform-size solve to
+dominate runtime; documentation builds consume the saved results.
 Protein observations are
 experimental markers digitized from Mitchell2023 Figure 4; the committed CSV and
 extraction provenance are in `examples/data/protein_crystallization/`. The

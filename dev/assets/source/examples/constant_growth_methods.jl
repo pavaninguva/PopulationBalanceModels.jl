@@ -29,7 +29,6 @@ combinations() = [
     ("weno5", "ssprk33", WENO5(), SSPRK33()),
     ("weno5", "rk4", WENO5(), RK4()),
     ("hoc", "midpoint", nothing, HOCFiniteVolume()),
-    ("lax_wendroff", "coupled", nothing, LaxWendroff()),
     ("inguva2022", "coupled", nothing, Inguva2022()),
 ]
 
