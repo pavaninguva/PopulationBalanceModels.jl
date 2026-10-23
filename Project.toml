@@ -25,6 +25,7 @@ PopulationBalanceModelsSciMLBaseExt = "SciMLBase"
 PopulationBalanceModelsSciMLSensitivityExt = ["SciMLBase", "SciMLSensitivity", "ReverseDiff"]
 
 [compat]
+DelimitedFiles = "1"
 Aqua = "0.8"
 AdvancedHMC = "0.8"
 MCMCDiagnosticTools = "0.3"
@@ -42,9 +43,10 @@ SpecialFunctions = "2"
 Test = "1"
 
 [extras]
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "Printf", "Aqua"]
+test = ["Test", "Printf", "Aqua", "DelimitedFiles"]

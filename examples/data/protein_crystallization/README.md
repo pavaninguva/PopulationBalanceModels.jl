@@ -1,3 +1,10 @@
+# Active and historical observations
+
+The active Tang 100 mL isothermal study uses
+[`tang2018_isothermal/`](tang2018_isothermal/README.md), with original concentration
+and conditional number-CDF readings. The files described below preserve the
+older Mitchell-based Bayesian example; the two datasets are not pooled.
+
 # Experimental readings from Figure 4
 
 Source: H. M. Mitchell, D. Jovannus, I. Rosbottom, F. J. Link, N. A. Mitchell,

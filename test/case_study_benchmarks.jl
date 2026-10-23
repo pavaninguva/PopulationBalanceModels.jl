@@ -37,7 +37,10 @@ include("../examples/continuous_precipitation.jl")
     inventory_rate = sum(property .* derivative .* b.operator.domain.grid.widths')
     boundary_rate = sum(property .* (faces[:,1] .- faces[:,end]))
     @test inventory_rate ≈ boundary_rate rtol=1e-12 atol=1e-14
-    @test_throws ArgumentError ContinuousPrecipitation.build(nx=8,nz=6,mesh=:log,scheme=WENO5())
+    logarithmic_weno = ContinuousPrecipitation.build(nx=8,nz=6,mesh=:log,scheme=WENO5())
+    local_population = first(logarithmic_weno.operator.local_operators).system.populations.crystals
+    growth = only(filter(item->item.term isa Growth,local_population.prepared))
+    @test growth.cache isa PopulationBalanceModels._NonuniformWENO5
     sol = ContinuousPrecipitation.advance(b,[.01])
     @test minimum(last(sol.u)) >= -1e-8
 

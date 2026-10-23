@@ -1,0 +1,13 @@
+{
+    "u": [
+        -0.045057785740458066,
+        1.1361556153693675,
+        0.19876739099838409,
+        -0.07217346176992424
+    ],
+    "loss": 51.70820260567989,
+    "converged": true,
+    "seconds": 33.36915848,
+    "reference_folder": "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/results/04_protein_crystallization/production/fits/baseline_refined_adf804f541f4",
+    "raw_ordinate_offset": 0.005
+}

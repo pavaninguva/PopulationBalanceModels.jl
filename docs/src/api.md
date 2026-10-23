@@ -1,5 +1,23 @@
 # API reference
 
+Conditional sectional-number measurements use
+`conditional_cdf(grid,N,points;window)` and
+`conditional_quantiles(grid,N,probabilities;window)`. They integrate actual
+partial cells of bin-integrated populations and reject an empty window.
+`PopulationCDF(:name,points;window)` and
+`PopulationQuantiles(:name,probabilities;window)` provide coupled-system
+observables. No moment-family density reconstruction is implied.
+
+`ResidualObservation(times,data,observable;scale,weight,name)` and
+`WassersteinObservation(time,x,F,:population;window,points=256,scale,weight)`
+are deterministic group-mean comparison blocks. `x,F` must describe a
+nondecreasing conditional number CDF with endpoints exactly zero and one at
+the declared window boundaries. `cdf_quantiles(x,F,u)` inverts that tabulation
+without smoothing. `loss_contributions(cal,z)` reports each block separately.
+`objective` remains a normalized Gaussian negative log likelihood when the
+calibration uses the original `Observation` type. The two interpretations
+cannot be mixed in one calibration.
+
 The constructors and lifecycle below connect the manual to the public interface.
 Arguments in callback signatures are physical parameters `p`, time `t`, and
 current stage context `ctx`. Read each method's restrictions in the linked manual.
@@ -32,6 +50,10 @@ what was stored and how it was computed.
 
 Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`, and `RK4`.
 `VanLeer` and geometry-aware `WENO3` support nonuniform 1D grids.
+`WENO5` supports fixed nonuniform 1D meshes, rectangular `Grid2D` axes and
+the coupled adapter's axial mesh; at least six bins are required per WENO5 axis.
+Geometry is prepared at compilation. See [Growth](methods/growth.md) for the
+boundary fallback, mesh-conditioning checks and accuracy restrictions.
 `Centered` and `LinearUpwind` add unlimited uniform-grid 1D reconstructions.
 `LaxWendroff` and `BeamWarming` are complete constant-growth space–time updates;
 they require an eligible model compiled with `evolution`.

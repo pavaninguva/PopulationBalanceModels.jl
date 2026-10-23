@@ -1,0 +1,111 @@
+{
+    "metrics": {
+        "evaluated_at": "2026-10-23T18:49:30.684",
+        "W2_reporting_quadrature_points": 1024,
+        "calibration_concentration_RMSE_g_L": 0.6696349129028616,
+        "validation_concentration_RMSE_g_L": 0.292567900909846,
+        "validation_concentration_MAE_g_L": 0.28350016063121086,
+        "calibration_W2_um": [
+            1.599820261976004,
+            0.9177791531040284,
+            0.9534902967795067
+        ],
+        "validation_W2_um": 0.89141191327727,
+        "validation_quantile_errors_um": [
+            -0.6560131428596332,
+            0.729395074870208,
+            0.8318044862879113
+        ],
+        "max_material_error_g_L": 2.4371615836571436e-12,
+        "max_escaped_g_L": 4.056675532340164e-104,
+        "minimum_scaled_count": 0,
+        "max_last_bin_material_g_L": 1.233708228169357e-103,
+        "first_bin_birth_material_g_L": 1.1720078388484171e-5,
+        "steps": 1983,
+        "setup_seconds": 0.000130924,
+        "solve_seconds": 0.692080141,
+        "solve_allocated_bytes": 150476736
+    },
+    "moment_check": {
+        "moment_steps": [
+            6606,
+            13208
+        ],
+        "moment_timestep_halving_max_c_change_g_L": 0.0022995293862777544,
+        "sectional_vs_moment_max_c_change_g_L": 0.015039004060131589,
+        "moment_material_error_g_L": 4.334310688136611e-13,
+        "interpretation": "Exactly closed growth/source moments, positive-measure integration; first-order coupled time update. No PSD reconstruction is claimed."
+    },
+    "spatial": {
+        "bins": 400,
+        "dt": 0.25,
+        "cfl": 0.35,
+        "Lmax": 50,
+        "points": 256,
+        "concentration_scaled_change": 0.10278230927848853,
+        "quantile_scaled_change": 0.6177601636293595,
+        "quantile_RMS_scaled_change": 0.07146396710399659,
+        "loss": 50.734653685889214,
+        "material": false
+    },
+    "spatial_final": {
+        "bins": 400,
+        "dt": 0.25,
+        "cfl": 0.35,
+        "Lmax": 50,
+        "points": 256,
+        "concentration_scaled_change": 0.10278230927848853,
+        "quantile_scaled_change": 0.6177601636293595,
+        "quantile_RMS_scaled_change": 0.07146396710399659,
+        "loss": 50.734653685889214,
+        "material": false
+    },
+    "temporal": {
+        "bins": 200,
+        "dt": 0.25,
+        "cfl": 0.175,
+        "Lmax": 50,
+        "points": 256,
+        "concentration_scaled_change": 4.767270759487019e-5,
+        "quantile_scaled_change": 0.0004170180120794953,
+        "quantile_RMS_scaled_change": 5.169406338752262e-5,
+        "loss": 50.575770558037796,
+        "material": false
+    },
+    "domain": {
+        "bins": 300,
+        "dt": 0.5,
+        "cfl": 0.35,
+        "Lmax": 75,
+        "points": 256,
+        "concentration_scaled_change": 0,
+        "quantile_scaled_change": 0,
+        "quantile_RMS_scaled_change": 0,
+        "loss": 50.575673266102314,
+        "material": false
+    },
+    "quadrature": [
+        {
+            "points": 256,
+            "loss": 50.575673266102314
+        },
+        {
+            "points": 512,
+            "loss": 50.588503163305425
+        },
+        {
+            "points": 1024,
+            "loss": 50.58893879519144
+        }
+    ],
+    "fixed_schedule_check": {
+        "dt": 0.04375,
+        "loss": 50.57578329392286,
+        "concentration_max_difference_g_L": 5.369424997070382e-6,
+        "quantile_RMS_difference_um": 2.9180375911978498e-5
+    },
+    "refitted": true,
+    "remaining_refinement_warning": false,
+    "invariant": "c + 1e-6*rho*kv*(M3_scaled + escaped_M3_scaled) = c0",
+    "first_bin_note": "Boundary births acquire the first pivot's discrete mass via the same conservative exchange; vanishes on refinement"
+}

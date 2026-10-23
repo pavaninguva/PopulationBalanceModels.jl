@@ -70,7 +70,7 @@ function _sectional_losses(op,N,p,t,ctx,mechanisms=nothing)
         term=_effective_term(item)
         mechanisms!==nothing && !(mechanism(term) in mechanisms) && continue
         if term isa Growth
-            F=_growth_fluxes(term,N,(;grid=op.grid,bc=op.bc,scheme=item.method),p,t,ctx)
+            F=_growth_fluxes(term,N,(;grid=op.grid,bc=op.bc,scheme=_prepared_reconstruction(item.method,item.cache)),p,t,ctx)
             if F[1]<0
                 absorb=op.bc.left isa AbsorbingZero
                 push!(losses,(absorb ? :extinction : :lower_escape,absorb ? 0.0 : first(op.grid.centers),-F[1]))

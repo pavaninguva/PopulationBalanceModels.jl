@@ -1,0 +1,214 @@
+{
+    "records": [
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "66df4f9131878d2a34183447dfadaf52f8c67b57487bce70810db3fec04bdba6",
+            "verified_at": "2026-10-23T18:22:51.424",
+            "to": "baseline_c0b97e05cab3",
+            "from": "baseline_66df4f913187",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "c0b97e05cab3bf4e50e7a2d40ae01b946b1047ee7eefc46dbbc9a0811963e165"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "adf804f541f4093030eeef2ca8034618eb03e1f21727fccf13879e242d1831b5",
+            "verified_at": "2026-10-23T18:22:53.337",
+            "to": "baseline_refined_bb491c867bc7",
+            "from": "baseline_refined_adf804f541f4",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "bb491c867bc78b081fab7780ebca8b364fb9c087ee30fc88d47bc9aa5fa92415"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "15fafe61a231d4474a0893d26bef26a1c6c154af836f0bd626592e022c76c291",
+            "verified_at": "2026-10-23T18:22:54.170",
+            "to": "concentration_scale_0p3_866605096b9f",
+            "from": "concentration_scale_0p3_15fafe61a231",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "866605096b9fa844b90962d6225fb0a7d16f871645d7c51725ee81e0711d9294"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "b4c76c987705ef2039aa28409fe3c73216eb5d3050edbb523e434a07c8f9fd65",
+            "verified_at": "2026-10-23T18:22:55.030",
+            "to": "cstar_1p0_20cce60e074e",
+            "from": "cstar_1p0_b4c76c987705",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "20cce60e074ed85d5c3f08aa2f669b46c9c1f8561e55a9fb520570595d307769"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "e8b06943f3de8735d49c143c4d434703852f770e7ba137e174add9790567d826",
+            "verified_at": "2026-10-23T18:22:55.843",
+            "to": "cstar_3p5_24da2df6be2c",
+            "from": "cstar_3p5_e8b06943f3de",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "24da2df6be2cdf3d26f88da59d9008e1b8d7f24ad38d573705be177fa6a18294"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "f8e49b0ff9c1f3e888052f2f1ac16b6d091ac50e7f5e2d42de720224426475b6",
+            "verified_at": "2026-10-23T18:22:56.688",
+            "to": "cstar_4p5_3e99fa73f132",
+            "from": "cstar_4p5_f8e49b0ff9c1",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "3e99fa73f1325aeccd64395c0055302fae41ec9495a237f419e9dde540e65f59"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "0992b47dbd5af29dacd06302a68e1068f95d955232b32573c6c61d85f4b419d5",
+            "verified_at": "2026-10-23T18:22:57.989",
+            "to": "onset_candidate_518531c9e925",
+            "from": "onset_candidate_0992b47dbd5a",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "518531c9e9256a1cf7bfe617e2751b1cadadebbbacee8ab05ab17768d17ef4ef"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "5fe541e3064d552f3fb217d829eb8df276d4167487528a26e304a536667dad88",
+            "verified_at": "2026-10-23T18:22:58.840",
+            "to": "psd_weight_0p25_443045ec8770",
+            "from": "psd_weight_0p25_5fe541e3064d",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "443045ec87708dc6c26a7f0564383b44a4412198eebca412fce6c6b5c234e304"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "854bf99f0fa79563e0cbafff929ca1fcd60413b127d3d75a8f4bfe3c7d8c0c7e",
+            "verified_at": "2026-10-23T18:22:59.676",
+            "to": "psd_weight_4p0_549af03d36f0",
+            "from": "psd_weight_4p0_854bf99f0fa7",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "549af03d36f0bb5d9a9530bc12fab2ab0a9f40fd68a31d5b127cd029fbd5f602"
+        },
+        {
+            "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+            "old_key": "8c06c55212bd5ee1939e950670179a5bc1ac853bc3920c12061988d5ca9e6f75",
+            "verified_at": "2026-10-23T18:23:00.667",
+            "to": "wider_window_2cea1ee96315",
+            "from": "wider_window_8c06c55212bd",
+            "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+            "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+            "new_key": "2cea1ee963159423e4ab66adfe3efae16afa5357fdd329dea074daa201a92a67"
+        }
+    ],
+    "dependency_entries_identical": true,
+    "test_dependency_metadata_change": {
+        "records": [
+            {
+                "from": "baseline_c0b97e05cab3",
+                "to": "baseline_df180d4dbcb4",
+                "old_key": "c0b97e05cab3bf4e50e7a2d40ae01b946b1047ee7eefc46dbbc9a0811963e165",
+                "new_key": "df180d4dbcb495e91141c7a07c2c235bed69b8ecd812059607ee47efbe3b232b",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:38:59.686"
+            },
+            {
+                "from": "baseline_refined_bb491c867bc7",
+                "to": "baseline_refined_b71b5a865cb4",
+                "old_key": "bb491c867bc78b081fab7780ebca8b364fb9c087ee30fc88d47bc9aa5fa92415",
+                "new_key": "b71b5a865cb4074831fe61325187bc6d0f85744b284e61afdeb06c4e191a6220",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:02.396"
+            },
+            {
+                "from": "concentration_scale_0p3_866605096b9f",
+                "to": "concentration_scale_0p3_cf1c4f179a10",
+                "old_key": "866605096b9fa844b90962d6225fb0a7d16f871645d7c51725ee81e0711d9294",
+                "new_key": "cf1c4f179a1003a2cc8a52231c209d96ea8d672bb09363bd5ef4b6018adbb7fc",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:03.719"
+            },
+            {
+                "from": "cstar_1p0_20cce60e074e",
+                "to": "cstar_1p0_cd77ca41a066",
+                "old_key": "20cce60e074ed85d5c3f08aa2f669b46c9c1f8561e55a9fb520570595d307769",
+                "new_key": "cd77ca41a0664b935ed128682f39a383779b070616d0aeb997c1852128803054",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:04.942"
+            },
+            {
+                "from": "cstar_3p5_24da2df6be2c",
+                "to": "cstar_3p5_1347c6a2ba10",
+                "old_key": "24da2df6be2cdf3d26f88da59d9008e1b8d7f24ad38d573705be177fa6a18294",
+                "new_key": "1347c6a2ba10e9f86b5cfbe3fbedbfa81acf048ffa331485676bf2b0c13043a9",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:06.200"
+            },
+            {
+                "from": "cstar_4p5_3e99fa73f132",
+                "to": "cstar_4p5_33b97751e9c3",
+                "old_key": "3e99fa73f1325aeccd64395c0055302fae41ec9495a237f419e9dde540e65f59",
+                "new_key": "33b97751e9c36344bbd79b2090d825a261d3c7674ceb27bf46b87e8a6375eee5",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:07.670"
+            },
+            {
+                "from": "onset_candidate_518531c9e925",
+                "to": "onset_candidate_f3531c6078d3",
+                "old_key": "518531c9e9256a1cf7bfe617e2751b1cadadebbbacee8ab05ab17768d17ef4ef",
+                "new_key": "f3531c6078d3f759828241c99991f765eb1112c0a78c3bf4f17627f8fc59aa61",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:10.359"
+            },
+            {
+                "from": "psd_weight_0p25_443045ec8770",
+                "to": "psd_weight_0p25_d5a034449cda",
+                "old_key": "443045ec87708dc6c26a7f0564383b44a4412198eebca412fce6c6b5c234e304",
+                "new_key": "d5a034449cda8f77a1fd6ca93e6b01d9d403a4f23092ed7bc264b137cfbab88f",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:12.151"
+            },
+            {
+                "from": "psd_weight_4p0_549af03d36f0",
+                "to": "psd_weight_4p0_814c7b02732e",
+                "old_key": "549af03d36f0bb5d9a9530bc12fab2ab0a9f40fd68a31d5b127cd029fbd5f602",
+                "new_key": "814c7b02732e7e69e83fd357e134d80e5adbd87cc4217a75e3af180087cf724f",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:13.805"
+            },
+            {
+                "from": "wider_window_2cea1ee96315",
+                "to": "wider_window_9179daf094ef",
+                "old_key": "2cea1ee963159423e4ab66adfe3efae16afa5357fdd329dea074daa201a92a67",
+                "new_key": "9179daf094efcf9b7e5dde2308dbcafa6235c48a50e8ae7196bd216319bdb966",
+                "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+                "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+                "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+                "verified_at": "2026-10-23T18:39:15.663"
+            }
+        ],
+        "old_report_signature": "2897202abdbf",
+        "new_report_signature": "8541269343a3",
+        "reused_diagnostic_fits": 13
+    },
+    "new_project_hash": "da6c6cde57c9e89031b710b94be7ac0d331c48b3",
+    "old_project_hash": "ffd179b1a073ddabbeeda997ea3c88ef06fcf3a7"
+}

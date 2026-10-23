@@ -6,7 +6,7 @@ default_method(::Union{Nucleation,Aggregation,Breakage},::Grid1D)=FixedPivot()
 default_method(::CustomTerm,::Grid1D)=NativeResidual()
 default_method(term,representation)=throw(ArgumentError("no default numerical method; select a method explicitly for $(typeof(term))"))
 
-prepare_term(::Growth,m::AbstractReconstruction,g::Grid1D;kwargs...)=_validate_reconstruction(m,g)
+prepare_term(::Growth,m::AbstractReconstruction,g::Grid1D;bc=SizeBC(),kwargs...)=_prepare_reconstruction(m,g,bc)
 prepare_term(::Union{Birth,DistributedNucleation},::MidpointRule,::Grid1D;kwargs...)=nothing
 prepare_term(::Union{Birth,DistributedNucleation},m::GaussLegendre,::Grid1D;kwargs...)=_gauss_legendre(m)
 prepare_term(::Union{IntegratedBirth,IntegratedNucleation},::BinIntegral,::Grid1D;kwargs...)=nothing
@@ -52,14 +52,13 @@ function _validate_reconstruction(m,g)
             throw(ArgumentError("Centered and LinearUpwind require a uniform grid with at least three bins"))
     end
     if m isa WENO5
-        length(g)>=6 && maximum(abs.(g.widths.-first(g.widths)))<=1e-10*first(g.widths) ||
-            throw(ArgumentError("WENO5 requires a uniform grid with at least six bins"))
+        length(g)>=6 || throw(ArgumentError("WENO5 requires at least six bins"))
     end
     nothing
 end
 
 function add_term!(dN,N,term::Growth,m::AbstractReconstruction,cache,op,p,t,ctx)
-    fluxop=(;grid=op.grid,bc=op.bc,scheme=m)
+    fluxop=(;grid=op.grid,bc=op.bc,scheme=_prepared_reconstruction(m,cache))
     _local_rhs!(dN,N,term,fluxop,p,t,ctx)
 end
 function add_term!(dN,N,term,m::Union{MidpointRule,BinIntegral,FixedPivot,PointwiseLoss,NativeResidual},cache,op::CompiledPBM,p,t,ctx)

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added a Tang 100 mL isothermal protein tutorial using original concentration and conditional number-CDF readings, conservative population–solute coupling, deterministic joint calibration and held-out prediction. The previous Mitchell-based Bayesian example and its audit assets remain separate.
+- Added partial-cell conditional number CDF/quantile observables and `ResidualObservation`/`WassersteinObservation` comparison blocks. These use the existing calibration/Optim interfaces without interpreting comparison scales as noise variances or reporting confidence intervals.
+- Declared the example loader's `DelimitedFiles` dependency in the isolated test target; runtime package dependencies are unchanged.
+
+- Extended `WENO5()` to fixed nonuniform and logarithmic size meshes, rectangular tensor axes and coupled axial meshes. Geometry-dependent cell-average polynomials, optimal weights and smoothness indicators are prepared at compilation; uniform-grid formulas, conservative accounting, boundary fallback and nonnegativity checks are retained. Added analytical reconstruction, refinement, balance and derivative tests plus a runnable characteristic example. Existing case-study runs and assets are unchanged.
+
 - Made HOC explicit in every constant-growth comparison figure and removed Lax–Wendroff from that case study. Added a dedicated tubular size-resolution workflow, finer field/outlet plots and reference-dependent error updates that preserve measured solve timings and the baseline of historical checks.
 
 - Added an optional isolated-process runner for the protein example, joint chain diagnostics and tests. Retained the initial failed sampling budget and regenerated results with 6,000 draws. IPC imports remain outside the physical example loading path.

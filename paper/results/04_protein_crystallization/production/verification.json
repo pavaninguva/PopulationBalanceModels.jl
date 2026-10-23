@@ -1,0 +1,77 @@
+{
+  "verified_at_UTC": "2026-10-23T18:56:13.802976+00:00",
+  "julia": "1.10.3",
+  "core_checks": 1500,
+  "optional_integration_checks": 61,
+  "focused_case_checks": 40,
+  "focused_optim_checks": 6,
+  "commands": [
+    "julia --project=paper paper/setup.jl",
+    "julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --smoke",
+    "julia --project=paper paper/case_studies/04_protein_crystallization/run.jl",
+    "python paper/plot_all.py --case 4",
+    "python paper/check_protein.py",
+    "julia --project=. -e 'using Pkg; Pkg.test()'",
+    "julia --project=/tmp/pbm-optional-env test/integration.jl",
+    "julia --project=paper test/isothermal_protein_optim.jl",
+    "julia --project=docs docs/make.jl",
+    "python test/docs_links.py",
+    "git diff --check"
+  ],
+  "execution_environment": {
+    "julia_executable": "/home/pavan/julia-1.10.3/bin/julia",
+    "julia_depot": "/tmp/pbm-julia-depot:/home/pavan/.julia",
+    "julia_threads": 1,
+    "blas_threads": 1,
+    "package_resolution": "offline cached dependencies",
+    "python": "/home/pavan/miniconda3/envs/pbm/bin/python",
+    "pythonpath_for_pdf_QA": "/tmp/pbm-pdf-tools",
+    "matplotlib_cache": "/tmp/paper-matplotlib"
+  },
+  "optional_integration_versions": {
+    "Optim": "2.3.1",
+    "SciMLBase": "3.50.2",
+    "OrdinaryDiffEqTsit5": "2.1.4"
+  },
+  "documentation": {
+    "build": "passed",
+    "HTML_pages": 30,
+    "local_links_and_assets": 2361,
+    "broken": 0,
+    "warning": "API page 124.27 KiB exceeds 100 KiB advisory threshold; below 200 KiB failure limit"
+  },
+  "figure": {
+    "width_inches": 7,
+    "height_inches": 5.4,
+    "PNG_pixels": [
+      2100,
+      1620
+    ],
+    "PNG_dpi": [
+      299.9994,
+      299.9994
+    ],
+    "embedded_PDF_fonts": 7,
+    "renderer": "actual external LaTeX",
+    "visual_review": "PNG and PDF raster inspected at manuscript size"
+  },
+  "input_audit": "All 16 supplied handover checks passed; three active CSV byte hashes preserved.",
+  "failure_corrected": "Clean Pkg.test sandbox required a test-only DelimitedFiles dependency, now declared in Project.toml extras/target.",
+  "cache_reuse": "Numerical fits initially executed fresh. Metadata-only resolver/test-dependency changes were independently verified; see cache_metadata_reuse.json. The final solve/predictions and numerical checks were executed again.",
+  "uncertainty": "Deterministic loss; no posterior sampling, calibrated noise SDs or confidence intervals.",
+  "manifest_sha256": "86c7c8f342cf6ffb625f76ae75ac9bbd000df8c1c30c79907ab71c7833cf8ba1",
+  "artifacts": {
+    "caption.tex": "8bdb2db04102bf312c5073624b64bcf78de02adfcaf380e5fd80f86cbb93aa5b",
+    "protein_crystallization.pdf": "fdf303a4d8a2586c2aaa1aa0181af7175cd8253a4174e8c642c7f41543fede25",
+    "protein_crystallization.png": "b5116955375c9ed84f0df0488224868a385cfbe972521cf1a06e76bfc61f0787",
+    "protein_crystallization.svg": "a1ec793e13fa24bcb95cf226c20afa54910d3eceb1be4bfb51c25f802b233e5e"
+  },
+  "logs": {
+    "protein-core-complete.log": "eedd36e6deb6ac7bf6953aac687cac65f656a198648ac37c1b333ecbd7406793",
+    "protein-final-optional.log": "aba5e55787723f7e4ddd1d9ff0fa26499cdf58767f6564f01194a0b3d0e6f09b",
+    "protein-data-verified.log": "3749ba2ea8b4bf254511f53318709011c2d660c8eae83a5c41d25ef1b5b3ccad",
+    "protein-figure-verified.log": "e8427e75f6a26497e5e01db1997dd0c518a03ad431e3411eafbee35b065c079d",
+    "protein-docs-complete.log": "aee77de1932f48ce5ee078229c96a5e7ddb7d6e44eb4b7b8b6c5aaf0dd3b30cb",
+    "protein-repro-verified.log": "519ae721b600c47633b29fbc0fe1bd084ba3fabbf35ce1938dd6e6ff010dd99e"
+  }
+}

@@ -33,6 +33,7 @@ These diagnostics do not establish model validity or global identifiability.
 function fit_diagnostics(cal::CalibrationProblem,estimate;variance=:known,
         relative_step=cbrt(eps(Float64)),rank_tolerance=sqrt(eps(Float64)),
         gradient_tolerance=1e-4,refined=nothing,derivatives=cal.derivatives)
+    _discrepancy(cal) && throw(ArgumentError("discrepancy weights are not observation variances; use loss_contributions and sensitivity_report without confidence intervals"))
     variance in (:known,:estimated) || throw(ArgumentError("variance must be :known or :estimated"))
     isfinite(gradient_tolerance) && gradient_tolerance>0 || throw(ArgumentError("invalid gradient tolerance"))
     z=_estimate(estimate); r=residuals(cal,z)

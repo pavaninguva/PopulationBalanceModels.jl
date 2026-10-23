@@ -1,0 +1,13 @@
+[production]
+final_time = 50.0
+dt = 0.02
+save_interval = 0.5
+eqmom_secondary_nodes = 12
+lognormal_quadrature = 64
+
+[smoke]
+final_time = 0.1
+dt = 0.01
+save_interval = 0.05
+eqmom_secondary_nodes = 12
+lognormal_quadrature = 64

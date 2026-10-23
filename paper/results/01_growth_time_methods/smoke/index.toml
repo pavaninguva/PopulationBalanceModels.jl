@@ -1,0 +1,36 @@
+case = "01_growth_time_methods"
+mode = "smoke"
+schema = 1
+source_digest = "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0"
+workflow_digest = "cf4fd462b7eb5ab4f16e149729287e85bc5c668e9a3e0ed097643281d9c343ac"
+
+[configuration]
+courant = 0.5
+final_time = 4.0
+profile_bins = 100
+roundoff_factor = 1000.0
+smooth_bins = [20, 40]
+
+[[derived_files]]
+path = "observed_orders.csv"
+sha256 = "f3b25f969f9ea0c36153ab6d5409aee25f82d343a3a9a384026422726e4bb937"
+
+[runs]
+front_hoc_N100 = "front_hoc_N100_f8228d212658"
+front_inguva2022_N100 = "front_inguva2022_N100_de3e85535bd1"
+front_muscl_N100 = "front_muscl_N100_6f764b1d06d6"
+front_upwind_N100 = "front_upwind_N100_cba3eefb1e9d"
+front_weno3_N100 = "front_weno3_N100_81fb34a34071"
+front_weno5_N100 = "front_weno5_N100_11b3ee4c43d2"
+smooth_hoc_N20 = "smooth_hoc_N20_4c410f7c10ab"
+smooth_hoc_N40 = "smooth_hoc_N40_b60880eac017"
+smooth_inguva2022_N20 = "smooth_inguva2022_N20_fffe58b61db0"
+smooth_inguva2022_N40 = "smooth_inguva2022_N40_d9e7190f438b"
+smooth_muscl_N20 = "smooth_muscl_N20_7370908ec594"
+smooth_muscl_N40 = "smooth_muscl_N40_07038c7ecedf"
+smooth_upwind_N20 = "smooth_upwind_N20_884fdd934737"
+smooth_upwind_N40 = "smooth_upwind_N40_0dc3e4a4c7c9"
+smooth_weno3_N20 = "smooth_weno3_N20_badf99fa0621"
+smooth_weno3_N40 = "smooth_weno3_N40_70ad12e6b988"
+smooth_weno5_N20 = "smooth_weno5_N20_d6aceb5ef6ae"
+smooth_weno5_N40 = "smooth_weno5_N40_57531effc797"

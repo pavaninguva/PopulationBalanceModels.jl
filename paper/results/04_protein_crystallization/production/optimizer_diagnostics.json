@@ -1,0 +1,20 @@
+{
+    "converged": true,
+    "gradient": [
+        8.920706175530313e-6,
+        1.2811439726756468e-5,
+        -2.2989003150859083e-7,
+        -5.256342362758293e-8
+    ],
+    "gradient_norm": 1.561305860113735e-5,
+    "rank": 4,
+    "singular_values": [
+        113.45633222268738,
+        28.03045720991007,
+        17.27525318290202,
+        1.0504358450760432
+    ],
+    "condition_number": 108.008816297081,
+    "AD_central_difference_relative_error": 7.294002268218618e-5,
+    "interpretation": "local geometry of the chosen comparison loss, not Fisher information or confidence intervals"
+}

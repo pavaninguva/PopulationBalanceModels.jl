@@ -1,0 +1,41 @@
+[production]
+maximum_bdf_order = 3
+late_maximum_bdf_order = 2
+bdf_restart_time = 5.0
+stability_limit_detection = true
+final_time = 200.0
+times = [5.0,40.0,80.0,200.0]
+reference_nx = 400
+reference_nz = 400
+size_check_nx = 200
+axial_check_nz = 200
+paper_field_nx = 100
+paper_field_nz = 100
+outlet_nx = 200
+outlet_nz = [2,3,13,50,200]
+relative_tolerance = 1e-7
+population_absolute_tolerance = 1e-14
+bulk_absolute_tolerance = 1e-11
+maximum_step = 0.5
+temporal_refinement_factor = 10.0
+
+[smoke]
+maximum_bdf_order = 3
+late_maximum_bdf_order = 2
+bdf_restart_time = 5.0
+stability_limit_detection = true
+final_time = 200.0
+times = [5.0,40.0,80.0,200.0]
+reference_nx = 12
+reference_nz = 8
+size_check_nx = 6
+axial_check_nz = 4
+paper_field_nx = 8
+paper_field_nz = 6
+outlet_nx = 8
+outlet_nz = [2,3,8]
+relative_tolerance = 1e-7
+population_absolute_tolerance = 1e-14
+bulk_absolute_tolerance = 1e-11
+maximum_step = 0.1
+temporal_refinement_factor = 10.0

@@ -22,7 +22,7 @@ struct MUSCL{T<:Real} <: AbstractReconstruction
         new{typeof(theta)}(theta)
     end
 end
-"""Jiang-Shu finite-volume WENO5 on a uniform internal grid; no positivity limiter."""
+"""Jiang–Shu finite-volume WENO5 on uniform or nonuniform fixed grids (at least six bins). Geometry is prepared during compilation; no positivity limiter."""
 struct WENO5{T<:Real} <: AbstractReconstruction
     epsilon::T
     function WENO5(; epsilon=1e-6)

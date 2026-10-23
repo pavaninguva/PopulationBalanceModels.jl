@@ -2,7 +2,7 @@ struct Experiment{P,O}
     problem::P
     observations::O
 end
-function Experiment(problem::PBMProblem,observations::Observation...)
+function Experiment(problem::PBMProblem,observations::AbstractObservation...)
     isempty(observations) && throw(ArgumentError("an experiment needs observations"))
     for obs in observations
         problem.tspan[1]<=first(obs.times)<=last(obs.times)<=problem.tspan[2] || throw(ArgumentError("observation time outside experiment"))
@@ -39,6 +39,8 @@ end
 function CalibrationProblem(experiments;parameters=(z,experiment)->z,dt=nothing,solver=nothing,derivatives=:auto)
     ex=Tuple(experiments)
     !isempty(ex) && all(e->e isa Experiment,ex) || throw(ArgumentError("provide at least one Experiment"))
+    kinds=[o isa ResidualObservation for e in ex for o in e.observations]
+    all(kinds) || !any(kinds) || throw(ArgumentError("do not mix discrepancy blocks and probabilistic observations in one calibration"))
     (dt===nothing ? solver!==nothing : isfinite(dt) && dt>0) ||
         throw(ArgumentError("supply a positive dt or solver=(problem,times)->solution"))
     CalibrationProblem(ex,parameters,dt,solver,_derivative_choice(derivatives))
@@ -76,7 +78,10 @@ function residuals(cal::CalibrationProblem,z)
     result
 end
 """
-Known-covariance Gaussian negative log likelihood, including normalization. NumericalFailure
+Known-covariance Gaussian negative log likelihood, including normalization, for
+`Observation` blocks. For `ResidualObservation` blocks, returns the sum of their
+weighted group-mean squared discrepancies, without likelihood normalization.
+The two interpretations cannot be mixed. NumericalFailure
 alone can optionally be mapped to Inf. Programming/model-definition errors are
 never silently turned into optimizer penalties.
 """
@@ -90,6 +95,7 @@ function objective(cal::CalibrationProblem,z;on_failure=:throw)
         end
         rethrow()
     end
+    _discrepancy(cal) && return sum(abs2,r)
     0.5*sum(abs2,r)+sum(_noise_logdet(obs)/2+length(obs.data)*log(2π)/2
         for ex in cal.experiments for obs in ex.observations)
 end
@@ -111,7 +117,7 @@ function sensitivity_report(cal::CalibrationProblem,z;relative_step=cbrt(eps(Flo
     decomposition=svd(J); s=decomposition.S; maxs=isempty(s) ? 0.0 : maximum(s)
     rank=count(x->x>rank_tolerance*maxs,s)
     # Avoid forming normal equations, which square the Jacobian condition number.
-    covariance=rank==length(z) ? Matrix(Symmetric(decomposition.V*Diagonal(inv.(s.^2))*decomposition.V')) : nothing
+    covariance=!_discrepancy(cal) && rank==length(z) ? Matrix(Symmetric(decomposition.V*Diagonal(inv.(s.^2))*decomposition.V')) : nothing
     (;jacobian=J,singular_values=s,rank,covariance,derivatives=derivatives===:auto ? :forwarddiff : derivatives,
       condition_number=rank==length(z) ? first(s)/last(s) : Inf)
 end

@@ -35,6 +35,8 @@ export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
        rhs!, simulate, PBMSolution, density, moment, number_concentration,
        diagnostics, suggest_dt, NumericalFailure, MomentObservable,
        HistogramObservable, FunctionObservable, Observation, Experiment,
+       ResidualObservation, PopulationCDF, PopulationQuantiles, WassersteinObservation,
+       conditional_cdf, conditional_quantiles, cdf_quantiles, loss_contributions,
        CalibrationProblem, predictions, residuals, objective, sensitivity_report,
        fit_diagnostics, confidence_ellipsoid, ConfidenceEllipsoid, ellipse_points,
        fit_multistart, profile_likelihood,
@@ -67,6 +69,7 @@ include("numerics/quadrature.jl")
 include("core/contexts.jl")
 include("compilation/sectional.jl")
 include("numerics/sectional/transport.jl")
+include("numerics/sectional/nonuniform_weno.jl")
 include("numerics/sectional/deposition.jl")
 include("numerics/sectional/local_sources.jl")
 include("numerics/sectional/collisions.jl")
@@ -97,6 +100,7 @@ include("compilation/axial_system.jl")
 include("coupling/accounting.jl")
 include("time_integration/measure_euler.jl")
 include("inference/observations.jl")
+include("inference/distribution_discrepancies.jl")
 include("inference/differentiation.jl")
 include("inference/calibration.jl")
 include("inference/uncertainty.jl")

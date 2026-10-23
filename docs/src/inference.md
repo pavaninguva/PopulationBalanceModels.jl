@@ -1,7 +1,18 @@
 # Parameter estimation
 
-Parameter estimation connects a PBM to noisy measurements. We need a prediction
-at each measurement time, a model for the measurement errors, and priors for
+For graph-read curves without a defensible measurement-error model, the
+[isothermal protein example](case_studies/protein_crystallization.md) instead
+uses a deterministic comparison loss. `ResidualObservation` contributes
+`weight * mean(((prediction-data)/scale).^2)`; `WassersteinObservation`
+integrates squared differences between conditional number quantiles. The
+comparison scales are not sensor standard deviations. These blocks use
+`CalibrationProblem` and the optional Optim extension, but cannot be mixed
+with Gaussian observations or used to manufacture confidence intervals.
+`loss_contributions` separates their contributions; `sensitivity_report`
+reports local sensitivity rank without a covariance estimate.
+
+When a probabilistic measurement model is available, Bayesian estimation needs
+a prediction at each measurement time, a measurement-error model and priors for
 the unknown parameters. The package uses those same definitions for MAP fitting,
 optional Laplace uncertainty and optional MCMC sampling.
 
@@ -421,9 +432,11 @@ AdvancedHMC's `DenseEuclideanMetric` takes the inverse mass matrix: a supplied
 Hamiltonian energies, BFMI and transition statistics remain those of the
 sampler coordinates, including the map Jacobian. They are not relabelled as
 inference-coordinate energies or covariance estimates.
-The [protein crystallization study](case_studies/protein_crystallization.md)
-uses a unit-determinant map based on rates at a reference supersaturation and
-shows corner plots, prior comparisons and chain diagnostics.
+The historical `examples/protein_crystallization.jl` Bayesian recipe uses a
+unit-determinant reference-rate map; its retained sampling checks are described
+in the [audit](audit.md). The current
+[isothermal protein tutorial](case_studies/protein_crystallization.md) uses
+original number distributions and a deterministic calibration loss instead.
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
@@ -516,8 +529,10 @@ measurements adds a separate observation-reconstruction error.
 ## Existing Gaussian calibration interface
 
 CalibrationProblem, Observation, Experiment and fit(calibration,z0) remain
-available for existing code. They implement the previous Gaussian maximum
-likelihood workflow. confidence_ellipsoid is its local frequentist calculation;
-it is not the Bayesian Laplace API. The older small kinetic examples remain
+available for existing code. With `Observation` blocks they implement the
+Gaussian maximum likelihood workflow. `ResidualObservation` instead selects
+the explicit deterministic discrepancy described above. `confidence_ellipsoid`
+is the Gaussian workflow's local frequentist calculation and rejects discrepancy
+weights. It is separate from the Bayesian Laplace API. The older small kinetic examples remain
 regression examples. New Bayesian work should use EstimationProblem so all
 inference methods share priors, transforms and likelihood definitions.

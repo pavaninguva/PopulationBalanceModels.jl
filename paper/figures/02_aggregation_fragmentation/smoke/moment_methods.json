@@ -1,0 +1,89 @@
+{
+  "mode": "smoke",
+  "renderer": "Matplotlib + external LaTeX",
+  "source_digest": "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0",
+  "workflow_digest": "824765afab1994d66ab194d6f801d850cfdde6d6889693cd27a44d8f61269c4e",
+  "inputs": {
+    "results/02_aggregation_fragmentation/smoke/index.toml": "9d294c2b2b7a7d6eb803b3b8b5350e9dc704e67ebc50bb2a2b30f84014f7593c",
+    "results/02_aggregation_fragmentation/smoke/adaptive3_dt1_6807ce89269d/provenance.toml": "4f055623730ade06e00fd18aff6a7f68ea4cd2973036c27c3e75470420725b89",
+    "results/02_aggregation_fragmentation/smoke/adaptive3_dt2_d9c0ca854d75/provenance.toml": "3a7cdc074c6030426f730b96c78df6c5dacc02124c0e0f10b11219cc6c88a531",
+    "results/02_aggregation_fragmentation/smoke/dqmom3_dt1_28b27f233005/provenance.toml": "10e4de46e6d9f1b4a9dc72ee611f233a91081dfcc5086d0fb5c00fd7ca183a78",
+    "results/02_aggregation_fragmentation/smoke/dqmom3_dt2_417fedbcf07a/provenance.toml": "08595c807443b619de05f3fb2f7cc6bfe1db6f3a91c2c049f5e2a373f7c55ae0",
+    "results/02_aggregation_fragmentation/smoke/eqmom3_dt1_331fe4018ecc/provenance.toml": "d33987cd49157655389999b136cbe73a4be1af2813c4288585001734f5c2bbef",
+    "results/02_aggregation_fragmentation/smoke/eqmom3_dt2_d251a7d38306/provenance.toml": "6502c6d7312969f2b3101360c1decbde93e294bbbb76151a2cc4caab35b16b5d",
+    "results/02_aggregation_fragmentation/smoke/lognormal_dt1_9e1ce6789bf2/provenance.toml": "316a5d51ce0947122805bcfa069a37542720cd5b93eeedd793b321942839f0d0",
+    "results/02_aggregation_fragmentation/smoke/lognormal_dt2_e5e09cea5588/provenance.toml": "bbc64b768b1dc1166c4a49221834ae7a09dd6747772a3974036086bdd5423408",
+    "results/02_aggregation_fragmentation/smoke/qmom3_dt1_0ba758284b72/provenance.toml": "ead7b7c1e7e65457c02243efbf0ab8f709093a61bb24a0af73ea2874cfe66281",
+    "results/02_aggregation_fragmentation/smoke/qmom3_dt2_80f8756163b0/provenance.toml": "f191341f0cf0ba58363c7a7acedb24cd76ec78b3f416486c43c7318389d36956",
+    "results/02_aggregation_fragmentation/smoke/qmom4_dt1_85620e412cd1/provenance.toml": "7cd23efeba7fdbfac071344ac06f32c2c840d8df8e84bd516ec0f9d99f5dd67c",
+    "results/02_aggregation_fragmentation/smoke/analysis/moment_summary.csv": "81ba4e402f45b318af9ac42009c0c290b1d55f8906c66ecc6762cfabf6ae99ff",
+    "results/02_aggregation_fragmentation/smoke/analysis/node_refinement.csv": "323838d344b9abd4c405454b95f3d852de3479ac948100b0522a811be6a94fee"
+  },
+  "plotter_sha256": "bab1778c5258d837bea96436662200193dc6ffe301f39f3c9ef801b21d5f472c",
+  "style_sha256": "b5847122478a1d3fa8a4c414222390ffe72f6a2d561eb358d86d9ff5d23b7cdf",
+  "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
+  "python": "3.12.3 | packaged by conda-forge | (main, Apr 15 2024, 18:38:13) [GCC 12.3.0]",
+  "matplotlib": "3.8.4",
+  "numpy": "1.26.4",
+  "pillow": "10.3.0",
+  "pymupdf": "1.28.2",
+  "latex_version": "pdfTeX 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian)",
+  "display_conventions": {
+    "omitted_relative_error_at_or_below": 2.220446049250313e-13,
+    "error_unit": "percent",
+    "raw_values": "unchanged in numerical tables; no display floor"
+  },
+  "inches": [
+    7.0,
+    5.3
+  ],
+  "png_pixels": [
+    2100,
+    1590
+  ],
+  "png_dpi": [
+    299.9994,
+    299.9994
+  ],
+  "fonts": [
+    {
+      "name": "CMMI8",
+      "type": "Type1",
+      "embedded_bytes": 34904
+    },
+    {
+      "name": "CMMI9",
+      "type": "Type1",
+      "embedded_bytes": 35529
+    },
+    {
+      "name": "CMR10",
+      "type": "Type1",
+      "embedded_bytes": 35187
+    },
+    {
+      "name": "CMR6",
+      "type": "Type1",
+      "embedded_bytes": 32169
+    },
+    {
+      "name": "CMR8",
+      "type": "Type1",
+      "embedded_bytes": 32161
+    },
+    {
+      "name": "CMR9",
+      "type": "Type1",
+      "embedded_bytes": 33428
+    },
+    {
+      "name": "CMSY6",
+      "type": "Type1",
+      "embedded_bytes": 32022
+    }
+  ],
+  "files": {
+    ".pdf": "5f244c8a08801d49593df6e5a1a8bf5e6a4bd3c4c09d4f26d7bd84f4bd74b946",
+    ".png": "99306e6e393ce5f3dbd6519d021c326dd6591707751b244a31ec7395512ed218"
+  }
+}

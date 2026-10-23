@@ -1,6 +1,7 @@
 using Test
 using PopulationBalanceModels
 include("quality.jl")
+include("isothermal_protein.jl")
 struct UnsupportedDomain <: AbstractPopulationDomain end
 include("audit_regressions.jl")
 include("compact_finite_volume.jl")
@@ -48,7 +49,7 @@ include("compact_finite_volume.jl")
         rhs!(dN,N,opened,NamedTuple(),0.0)
         @test sum(dN)≈-2
         @test suggest_dt(opened,N,NamedTuple(),0.0)≈0.0125
-        @test_throws ArgumentError compile(PBMModel(),Grid1D([0,1,2,3,4,5,7]);growth_scheme=WENO5())
+        @test compile(PBMModel(),Grid1D([0,1,2,3,4,5,7]);growth_scheme=WENO5()).grid.edges[end]==7
     end
 
     @testset "Distributed birth, death and point nucleation" begin
@@ -173,6 +174,7 @@ include("bayesian.jl")
 include("differentiation.jl")
 include("characteristic.jl")
 include("transport_integrators.jl")
+include("nonuniform_weno.jl")
 include("axial.jl")
 
 include("li_supplement.jl")

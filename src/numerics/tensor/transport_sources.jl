@@ -4,7 +4,7 @@ function _tensor_flux(term,n,axis,other,dimension,bc,scheme,p,t,ctx)
     vl=velocity(first(axis.edges)); vr=velocity(last(axis.edges))
     if periodic
         isapprox(vl,vr;rtol=1e-10,atol=1e-14) || throw(ArgumentError("periodic velocity must match at endpoints"))
-        F[1]=vl*_face_density(n,1,scheme,vl,true); F[end]=F[1]
+        F[1]=vl*_face_density(n,1,scheme,vl,true,axis); F[end]=F[1]
     else
         localctx=merge(ctx,(;tangential_coordinate=other,axis=dimension))
         F[1]=bc.left isa InflowFlux ? _nonnegative(bc.left.rate(p,t,localctx),"inward flux density") :
@@ -13,20 +13,21 @@ function _tensor_flux(term,n,axis,other,dimension,bc,scheme,p,t,ctx)
             (bc.right isa NoFlux || vr<=0 ? zero(vr) : vr*n[end])
     end
     for i in 2:m
-        v=velocity(axis.edges[i]); F[i]=v*_face_density(n,i,scheme,v,periodic)
+        v=velocity(axis.edges[i]); F[i]=v*_face_density(n,i,scheme,v,periodic,axis)
     end
     F
 end
 function _tensor_term!(dN,N,term::Growth2D,op,p,t,ctx)
     g=op.grid; f=density(g,N)
+    schemes=op.scheme isa NamedTuple ? op.scheme : (x=op.scheme,y=op.scheme)
     for j in axes(N,2)
-        F=_tensor_flux(term,view(f,:,j),g.x,g.y.centers[j],1,op.bc.x,op.scheme,p,t,ctx)
+        F=_tensor_flux(term,view(f,:,j),g.x,g.y.centers[j],1,op.bc.x,schemes.x,p,t,ctx)
         for i in axes(N,1)
             dN[i,j]+=(F[i]-F[i+1])*g.y.widths[j]
         end
     end
     for i in axes(N,1)
-        F=_tensor_flux(term,view(f,i,:),g.y,g.x.centers[i],2,op.bc.y,op.scheme,p,t,ctx)
+        F=_tensor_flux(term,view(f,i,:),g.y,g.x.centers[i],2,op.bc.y,schemes.y,p,t,ctx)
         for j in axes(N,2)
             dN[i,j]+=(F[j]-F[j+1])*g.x.widths[i]
         end

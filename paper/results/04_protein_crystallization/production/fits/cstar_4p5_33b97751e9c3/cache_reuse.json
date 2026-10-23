@@ -1,0 +1,10 @@
+{
+    "from": "cstar_4p5_3e99fa73f132",
+    "to": "cstar_4p5_33b97751e9c3",
+    "old_key": "3e99fa73f1325aeccd64395c0055302fae41ec9495a237f419e9dde540e65f59",
+    "new_key": "33b97751e9c36344bbd79b2090d825a261d3c7674ceb27bf46b87e8a6375eee5",
+    "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+    "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+    "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+    "verified_at": "2026-10-23T18:39:07.670"
+}

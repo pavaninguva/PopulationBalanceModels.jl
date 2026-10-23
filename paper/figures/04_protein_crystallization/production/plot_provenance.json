@@ -1,0 +1,8 @@
+{
+  "renderer": "actual LaTeX",
+  "numerical_manifest_sha256": "86c7c8f342cf6ffb625f76ae75ac9bbd000df8c1c30c79907ab71c7833cf8ba1",
+  "plot_driver_sha256": "32abf7a1752616c6ca43991ef9d1f77dcc0384430aa7a1495e3b5fe44546121d",
+  "width_inches": 7,
+  "height_inches": 5.4,
+  "png_dpi": 300
+}

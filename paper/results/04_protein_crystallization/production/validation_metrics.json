@@ -1,0 +1,27 @@
+{
+    "evaluated_at": "2026-10-23T18:49:30.684",
+    "W2_reporting_quadrature_points": 1024,
+    "calibration_concentration_RMSE_g_L": 0.6696349129028616,
+    "validation_concentration_RMSE_g_L": 0.292567900909846,
+    "validation_concentration_MAE_g_L": 0.28350016063121086,
+    "calibration_W2_um": [
+        1.599820261976004,
+        0.9177791531040284,
+        0.9534902967795067
+    ],
+    "validation_W2_um": 0.89141191327727,
+    "validation_quantile_errors_um": [
+        -0.6560131428596332,
+        0.729395074870208,
+        0.8318044862879113
+    ],
+    "max_material_error_g_L": 2.4371615836571436e-12,
+    "max_escaped_g_L": 4.056675532340164e-104,
+    "minimum_scaled_count": 0,
+    "max_last_bin_material_g_L": 1.233708228169357e-103,
+    "first_bin_birth_material_g_L": 1.1720078388484171e-5,
+    "steps": 1983,
+    "setup_seconds": 0.000130924,
+    "solve_seconds": 0.692080141,
+    "solve_allocated_bytes": 150476736
+}

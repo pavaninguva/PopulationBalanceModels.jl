@@ -1,0 +1,24 @@
+\newcommand{\ProteinCrystallizationCaption}{%
+Calibration and held-out prediction of an initially unseeded 100 mL lysozyme batch
+at $20\,^\circ\mathrm{C}$, using original Tang et al. (2018), Figures 11(d) and
+12(a), doi:10.1016/j.jcrysgro.2018.06.023. The selected model uses power-law nucleation,
+size-independent growth and conservative dissolved-material exchange, with fixed
+$c_*=2.16\,\mathrm{g\,L}^{-1}$, $\rho=1240\,\mathrm{kg\,m}^{-3}$ and $k_v=0.81$.
+MUSCL/SSPRK3 advances 200 bins on $0$--$50\,\mu\mathrm{m}$
+with growth CFL at most 0.35. (a) Concentration; the diamond fixes the initial
+condition, filled circles calibrate and open
+squares validate. The vertical line marks the 420-min cutoff. (b) Conditional
+number distributions used for calibration, at 74, 180 and 420 min. (c) The
+entirely held-out distribution at 660 min. Solid stairs are computed bin
+densities; dashed curves and sparse markers are the supplied reconstructed
+observations. All size curves are conditioned on $2.5$--$25\,\mu\mathrm{m}$.
+(d) Corresponding number quantiles; these are diagnostics, not additional fit
+residuals. Empty-window quantiles remain undefined; before 74 min, small
+numerical transport tails can control the unobserved conditional trajectories.
+Calibration jointly minimizes
+the mean squared concentration discrepancy (scale $0.1\,\mathrm{g\,L}^{-1}$)
+and mean squared Wasserstein distance (scale $0.5\,\mu\mathrm{m}$), without
+claiming a calibrated noise likelihood. Frozen held-out concentration RMSE is
+0.293$\,\mathrm{g\,L}^{-1}$ and
+660-min $W_2$ is 0.891$\,\mu\mathrm{m}$.
+These are conditional model predictions, not universal kinetic estimates.}

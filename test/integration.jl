@@ -1,4 +1,19 @@
 using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
+include("isothermal_protein_optim.jl")
+
+@testset "Nonuniform WENO5 SciML residual adapter" begin
+    s = range(0,2pi;length=65)
+    grid = Grid1D(s .+ 0.2sin.(s))
+    op = compile(PBMModel(Growth((x,p,t,c)->p.G)),grid;growth_scheme=WENO5(),
+        bc=SizeBC(Periodic(),Periodic()))
+    initial = 2grid.widths .+ cos.(grid.edges[1:end-1]) .- cos.(grid.edges[2:end])
+    pb = PBMProblem(op,initial,(0.,.1);p=(G=.7,))
+    adaptive = SciMLBase.solve(odeproblem(pb),Tsit5();reltol=1e-10,abstol=1e-12)
+    native = simulate(pb;method=RK4(),dt=.001)
+    @test SciMLBase.successful_retcode(adaptive)
+    @test adaptive.u[end] ≈ native.u[end] rtol=1e-8
+    @test sum(adaptive.u[end]) ≈ sum(initial) atol=2e-12
+end
 
 @testset "Fully discrete HOC is not an external ODE residual" begin
     g=Grid1D(range(0,1;length=17))

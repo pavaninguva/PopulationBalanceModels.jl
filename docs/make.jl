@@ -73,7 +73,7 @@ makedocs(;
             "Dissolving a finite population" => "case_studies/dissolution.md",
             "Aggregation and nucleation with moments" => "case_studies/moment_crystallization.md",
             "Continuous tubular precipitation" => "case_studies/continuous_precipitation.md",
-            "Inferring protein crystallization" => "case_studies/protein_crystallization.md",
+            "Isothermal protein crystallization" => "case_studies/protein_crystallization.md",
             "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
             "Growth in two particle dimensions" => "case_studies/transport.md",
             "Estimating size-dependent growth" => "case_studies/estimating_growth.md",

@@ -1,0 +1,42 @@
+{
+  "note": "Use current repository directory conventions; names below describe required content, not a second private framework.",
+  "required_julia_implementation": [
+    "data_loader_with_split",
+    "coupled_model_definition",
+    "conditional_number_observer",
+    "distribution_discrepancy_in_package_estimation_API",
+    "calibration_driver",
+    "frozen_validation_driver",
+    "paper_figure_driver",
+    "focused_tests",
+    "case_study_documentation"
+  ],
+  "minimal_run": "A small forward solve and observer smoke check using package APIs; explicitly not final calibrated results.",
+  "full_run": "Calibration, one frozen held-out prediction, predeclared sensitivity runs, refinement checks and final figures.",
+  "result_files": {
+    "run_settings.json": "model_name_fixed_inputs_parameter_units_solver_grid_fit_weights_seed_and_runtime_versions",
+    "fitted_parameters.csv": "reference_rates_exponents_optional_gate_parameters_units_bound_hits_and_fit_status",
+    "multistart_summary.csv": "start_id_initial_final_loss_group_losses_convergence_and_runtime",
+    "concentration_predictions.csv": "observation_id_model_time_min_split_observed_predicted_residual",
+    "psd_predictions.csv": "time_min_split_window_size_um_observed_and_predicted_conditional_CDF_and_density",
+    "quantile_predictions.csv": "time_min_split_window_D10_D50_D90_observed_predicted_errors",
+    "validation_metrics.json": "heldout_concentration_RMSE_MAE_and_660_PSD_W2_and_quantile_errors",
+    "sensitivities.csv": "scenario_parameters_fit_losses_physical_calibration_metrics_validation_metrics_kept_separate",
+    "conservation_refinement.json": "mass_positive_state_outflow_and_grid_time_checks_with_refit_status",
+    "rate_tradeoffs.csv": "modest_j_g_profile_loss_or_equivalent_tradeoff_and_reference_rate_interpretation",
+    "protein_crystallization.png": "four_panel_main_scientific_figure_300dpi_no_overall_title",
+    "protein_crystallization.pdf": "same_figure_as_vector_when_supported",
+    "implementation_result.txt": "changed_paths_scientific_results_limitations_checks_and_exact_commands"
+  },
+  "calibration_or_validation_tables_are_not_synthetic_measurements": true,
+  "required_test_behaviors": [
+    "correct_units_and_flux",
+    "conservative_bulk_exchange",
+    "partial_cell_number_CDF",
+    "quantile_and_W2",
+    "loss_invariant_to_validation_data_changes",
+    "main_split_11_concentration_residuals_3_PSD_blocks",
+    "grid_time_stability"
+  ],
+  "public_facing_claim": "conditional_real_system_model_deployment_with_assessed_heldout_prediction"
+}

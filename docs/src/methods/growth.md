@@ -70,11 +70,78 @@ This two-stencil option follows the WENO23 construction discussed by
 it is distinct from the five-cell fifth-order option below.
 
 `WENO5(epsilon=...)` reconstructs a face state from five cell averages using
-nonlinear smoothness weights. It requires uniform grids with at least six bins.
+nonlinear smoothness weights. It supports uniform and fixed nonuniform grids,
+including logarithmic meshes, with at least six bins.
 The fifth-order statement applies to the smooth interior reconstruction. Near
 nonperiodic boundaries the implementation falls back to upwind; temporal error
 and boundaries can reduce the order of a full solve. There is no positivity
 limiter for WENO here.
+
+### WENO on a nonuniform mesh
+
+Use the same growth callback and `WENO5()` choice; only the bin edges change:
+
+```julia
+grid = Grid1D(exp.(range(log(1e-6),log(1e-3);length=161));coordinate=:length)
+model = PBMModel(growth=Growth((L,p,t,ctx)->p.k*L))
+operator = compile(model,grid;methods=TermMethods(growth=WENO5()),
+    bc=SizeBC(OpenBoundary(),OpenBoundary()))
+# Supply N0 as integrals over these bins, not samples at their centres.
+problem = PBMProblem(operator,N0,(0.0,1.0);p=(k=0.1,))
+solution = simulate(problem;method=RK4(),dt=0.001)
+```
+
+The reconstruction fits three quadratic polynomials to the **cell averages**
+``N_i/\Delta x_i`` on overlapping three-bin stencils. The optimal linear
+combination agrees with the five-bin quartic reconstruction at the face.
+Both those weights and the polynomial coefficients use the actual edges.
+The Jiang–Shu smoothness indicator is
+
+```math
+\beta_r=\sum_{\ell=1}^{2}(\Delta x_i)^{2\ell-1}
+\int_{x_{i-1/2}}^{x_{i+1/2}}
+\left[\frac{d^\ell p_r(x)}{dx^\ell}\right]^2\,dx,
+\qquad
+\omega_r=\frac{d_r/(\epsilon+\beta_r)^2}
+{\sum_s d_s/(\epsilon+\beta_s)^2}.
+```
+
+Here `i` is the donor bin, selected by the sign of growth. Compilation prepares
+the geometry for both signs and, for periodic boundaries, the wrapped cell
+widths. Coefficients are calculated in a local scaled coordinate to avoid
+conditioning problems caused solely by choosing metres rather than micrometres.
+An unresolved polynomial solve or nonpositive optimal weight raises an error;
+no other reconstruction is substituted. These are fixed-mesh coefficients:
+recompile after changing edges. Changing kinetic parameters does not change
+the geometry. Uniform grids retain the existing explicit formulas.
+This follows the finite-volume construction of
+[Wang, Feng and Spiteri (2008)](https://www.cs.usask.ca/~spiteri/nuweno.pdf).
+
+Tests verify quadratic reconstruction, quartic optimal weights, the uniform
+limit, length-unit rescaling, signed fluxes and fifth-order interior residuals
+on smoothly graded meshes. A log-mesh characteristic example is available as
+[a complete script](../assets/source/examples/nonuniform_weno.jl):
+
+```sh
+julia --project=. examples/nonuniform_weno.jl
+```
+
+For that smooth ``G(x)=x`` calculation, the measured integrated L1 errors at
+64, 128 and 256 bins are ``1.11\times10^{-3}``, ``4.49\times10^{-5}`` and
+``1.21\times10^{-6}`` (successive slopes 4.63 and 5.21). RK4 uses a local
+Courant bound of 0.15. Number changes stay below ``1.5\times10^{-13}``;
+the script reports small signed undershoots rather than hiding them. These
+are full-solve measurements, separate from the residual-order tests.
+
+Mesh support does not imply fifth-order convergence for every full calculation.
+Strong grading, critical points, epsilon and lower-order boundary closures can
+limit it. Small bins also restrict explicit time steps: use the actual local
+widths and growth rates, rather than a mean spacing. `suggest_dt` remains a
+heuristic, not a stability or positivity certificate. The conservative flux
+difference and cumulative escape accounting are unchanged. There is no clipping
+or added positivity limiter. In particular, sharp or almost-empty distributions
+may fail the native stage checks; the diagnostic example explicitly reports
+signed undershoots with those checks disabled.
 
 Choose these with `TermMethods(growth=MUSCL())`. The implementation is in
 `src/numerics/sectional/transport.jl`; `prepare_term` checks eligibility and
@@ -134,8 +201,12 @@ dissolve away; a moment closure does not infer that boundary process.
 `Growth2D(rate=(Gx,Gy))` declares constant velocities;
 `Growth2D(rate=(x,y,p,t,ctx)->(Gx,Gy))` uses a callback returning two finite real
 velocities. `Grid2D` stores bin numbers over areas. Flux differences in each
-direction are multiplied by the tangential bin width. Upwind and uniform-grid
-WENO5 are supported; 2D MUSCL is not implemented.
+direction are multiplied by the tangential bin width. Upwind and WENO5 on fixed
+uniform or nonuniform rectangular axes are supported; 2D MUSCL is not implemented.
+Directional fifth-order residual convergence is tested for constant
+velocities. General cross-coordinate velocities are evaluated at transverse
+cell centres: this face integration can limit overall accuracy to second order.
+Nonuniform WENO does not add higher-order transverse quadrature.
 
 The [two-dimensional growth calculation](../case_studies/transport.md) compares
 variable-growth residuals with an analytical solution and InguvaBraatz2023.

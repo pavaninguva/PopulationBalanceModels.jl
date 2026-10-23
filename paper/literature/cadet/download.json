@@ -1,0 +1,24 @@
+{
+  "repository": "cadet/CADET-Verification",
+  "revision": "090606762fc657510a9e31c547890bf9a17ffb59",
+  "files": [
+    {
+      "file": "reference.h5",
+      "url": "https://raw.githubusercontent.com/cadet/CADET-Verification/090606762fc657510a9e31c547890bf9a17ffb59/data/CADET-Core_reference/crystallization/ref_DPFR_PBM_primarySecondaryNucleationAndGrowth.h5",
+      "sha256": "33c438eb1301003b5b941e6d6c7d5ea63baa470ddbb23c86b6ff94777a8995f9",
+      "bytes": 377155
+    },
+    {
+      "file": "settings_crystallization.py",
+      "url": "https://raw.githubusercontent.com/cadet/CADET-Verification/090606762fc657510a9e31c547890bf9a17ffb59/src/benchmark_models/settings_crystallization.py",
+      "sha256": "c4c7cc5c13e5b7a7f4f4a07879084132e6934e0cc9c3219dbd2e3a9c50f5989e",
+      "bytes": 56108
+    },
+    {
+      "file": "LICENSE",
+      "url": "https://raw.githubusercontent.com/cadet/CADET-Verification/090606762fc657510a9e31c547890bf9a17ffb59/LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "bytes": 35149
+    }
+  ]
+}

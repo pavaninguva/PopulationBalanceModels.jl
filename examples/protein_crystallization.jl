@@ -1,4 +1,6 @@
 module ProteinCrystallization
+# Historical Mitchell-based Bayesian recipe. The active Tang isothermal
+# calibration/prediction tutorial is examples/isothermal_protein_crystallization.jl.
 using PopulationBalanceModels
 using Distributions: Uniform, Normal, rand, pdf, logpdf
 using Random, LinearAlgebra

@@ -1,0 +1,2 @@
+method,states,dt,seconds,steps,completed_time,status,minimum_rank,maximum_rank,tracked_M3,initial_material_ratio,final_material_ratio,material_relative_change,max_number_rate_residual,max_mu1_error_percent,max_mu2_error_percent,quadrature_points
+lognormal,3,0.005,0.005696687,21,0.1,completed,0,0,false,1.033168636759694,1.034669703680453,0.0014528769722113033,5.551115123125783e-16,0.037886362021166686,0.01038789358893677,64

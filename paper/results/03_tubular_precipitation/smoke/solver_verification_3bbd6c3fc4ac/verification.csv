@@ -1,0 +1,3 @@
+time_s,relative_population_difference,maximum_bulk_difference,implicit_steps,native_steps
+1.0,0.0003208906751845073,2.8398640786186924e-8,512,2884
+5.0,5.6571000136985084e-8,1.967307117212158e-8,512,2884

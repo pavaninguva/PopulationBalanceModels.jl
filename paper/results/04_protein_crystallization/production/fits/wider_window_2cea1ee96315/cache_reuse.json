@@ -1,0 +1,10 @@
+{
+    "from": "wider_window_8c06c55212bd",
+    "to": "wider_window_2cea1ee96315",
+    "old_key": "8c06c55212bd5ee1939e950670179a5bc1ac853bc3920c12061988d5ca9e6f75",
+    "new_key": "2cea1ee963159423e4ab66adfe3efae16afa5357fdd329dea074daa201a92a67",
+    "old_manifest_sha256": "4cfe0689151649a429f2a4eb93f324d4a7e0f52b19bff317cbd91a3bb9b0f40b",
+    "new_manifest_sha256": "980214cd8a4702f60a57d14c5bd3694f91e6f7d69fe4da441fece39f79e1a994",
+    "reason": "Only project_hash changed after Pkg.develop resolved newly declared compat entries. Every dependency entry and all numerical source/data hashes are identical. Retained measurements keep their original optimizer timings.",
+    "verified_at": "2026-10-23T18:23:00.667"
+}

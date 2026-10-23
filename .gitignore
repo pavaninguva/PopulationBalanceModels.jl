@@ -3,4 +3,6 @@ docs/Manifest.toml
 docs/build/
 local_papers/
 __pycache__/
+/protein_crystallization_handover.zip
+/protein_crystallization_handover/
 docs/src/assets/source/

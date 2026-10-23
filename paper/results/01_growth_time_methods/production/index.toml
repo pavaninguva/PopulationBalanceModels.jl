@@ -1,0 +1,66 @@
+case = "01_growth_time_methods"
+mode = "production"
+schema = 1
+source_digest = "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0"
+workflow_digest = "cf4fd462b7eb5ab4f16e149729287e85bc5c668e9a3e0ed097643281d9c343ac"
+
+[configuration]
+courant = 0.5
+final_time = 4.0
+profile_bins = 100
+roundoff_factor = 1000.0
+smooth_bins = [40, 80, 160, 320, 640, 1280, 2560]
+
+[[derived_files]]
+path = "observed_orders.csv"
+sha256 = "2d8c5a5139ab407905263de72dca214f2e7fb3aff3b8904b8c12c4d2c766cf2b"
+
+[runs]
+front_hoc_N100 = "front_hoc_N100_fd38ed15485d"
+front_inguva2022_N100 = "front_inguva2022_N100_4de216ef1af1"
+front_muscl_N100 = "front_muscl_N100_d1b3659ce15b"
+front_upwind_N100 = "front_upwind_N100_b81ec535f6d0"
+front_weno3_N100 = "front_weno3_N100_f6530cd3d262"
+front_weno5_N100 = "front_weno5_N100_a7734d8b52ef"
+smooth_hoc_N1280 = "smooth_hoc_N1280_1639ee25585a"
+smooth_hoc_N160 = "smooth_hoc_N160_3c968eb999ea"
+smooth_hoc_N2560 = "smooth_hoc_N2560_a1ccc77b1ced"
+smooth_hoc_N320 = "smooth_hoc_N320_184666d3eb84"
+smooth_hoc_N40 = "smooth_hoc_N40_8f101d1173a5"
+smooth_hoc_N640 = "smooth_hoc_N640_6b0ee24d957b"
+smooth_hoc_N80 = "smooth_hoc_N80_ebd2f48f2109"
+smooth_inguva2022_N1280 = "smooth_inguva2022_N1280_c5b8be9ac7a4"
+smooth_inguva2022_N160 = "smooth_inguva2022_N160_dd62391bf498"
+smooth_inguva2022_N2560 = "smooth_inguva2022_N2560_bf7bd521d28c"
+smooth_inguva2022_N320 = "smooth_inguva2022_N320_f36a3ae84536"
+smooth_inguva2022_N40 = "smooth_inguva2022_N40_3542d3cb8986"
+smooth_inguva2022_N640 = "smooth_inguva2022_N640_3d17a5c1850f"
+smooth_inguva2022_N80 = "smooth_inguva2022_N80_32f7c9f67c5a"
+smooth_muscl_N1280 = "smooth_muscl_N1280_48fe113e36b8"
+smooth_muscl_N160 = "smooth_muscl_N160_4b5c5ba379d8"
+smooth_muscl_N2560 = "smooth_muscl_N2560_dd8b9449dcdd"
+smooth_muscl_N320 = "smooth_muscl_N320_55b8c99bcd47"
+smooth_muscl_N40 = "smooth_muscl_N40_b34fd1843c4b"
+smooth_muscl_N640 = "smooth_muscl_N640_8301c6418db4"
+smooth_muscl_N80 = "smooth_muscl_N80_e7fca38df57e"
+smooth_upwind_N1280 = "smooth_upwind_N1280_236bff6f2b1a"
+smooth_upwind_N160 = "smooth_upwind_N160_d824414d2c90"
+smooth_upwind_N2560 = "smooth_upwind_N2560_b85f04c4a6df"
+smooth_upwind_N320 = "smooth_upwind_N320_eb01cba60f2c"
+smooth_upwind_N40 = "smooth_upwind_N40_f942332eb281"
+smooth_upwind_N640 = "smooth_upwind_N640_c636354c7381"
+smooth_upwind_N80 = "smooth_upwind_N80_a17cad04f884"
+smooth_weno3_N1280 = "smooth_weno3_N1280_a816790dfec6"
+smooth_weno3_N160 = "smooth_weno3_N160_86bca964d5cc"
+smooth_weno3_N2560 = "smooth_weno3_N2560_15e3b203a66c"
+smooth_weno3_N320 = "smooth_weno3_N320_2ec262393b73"
+smooth_weno3_N40 = "smooth_weno3_N40_a12cbaa090a4"
+smooth_weno3_N640 = "smooth_weno3_N640_78984ddb8b30"
+smooth_weno3_N80 = "smooth_weno3_N80_ffb70ee902a5"
+smooth_weno5_N1280 = "smooth_weno5_N1280_4c741e9b81f2"
+smooth_weno5_N160 = "smooth_weno5_N160_a768ea9f3584"
+smooth_weno5_N2560 = "smooth_weno5_N2560_78214d9835a7"
+smooth_weno5_N320 = "smooth_weno5_N320_01189a485931"
+smooth_weno5_N40 = "smooth_weno5_N40_bd0cc9839653"
+smooth_weno5_N640 = "smooth_weno5_N640_4fc6d11c454b"
+smooth_weno5_N80 = "smooth_weno5_N80_ed05b8af8284"

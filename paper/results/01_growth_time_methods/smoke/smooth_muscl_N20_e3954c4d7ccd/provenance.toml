@@ -1,0 +1,93 @@
+case = "01_growth_time_methods"
+complete = true
+created_utc = "2026-10-23T10:25:51.972"
+dirty = true
+key = "e3954c4d7ccd2d49292a765dd33f1ca1566a3e761aec3625665a374356572580"
+mode = "smoke"
+revision = "d4c839296571aa604cc55f5dd0526898a99ce649"
+schema = 1
+source_digest = "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0"
+timing_protocol = "one measured solve after separate compilation warmup; setup, explicit GC, export and plotting excluded"
+workflow_digest = "b7994b61da1b0fec5c927efb067f5366a941d881e0c3c1b0b750769fd1274c7c"
+working_tree = " M CHANGELOG.md\n M docs/src/api.md\n M docs/src/audit.md\n M docs/src/axial_reactors.md\n M docs/src/methods/growth.md\n M docs/src/numerical_methods.md\n M src/PopulationBalanceModels.jl\n M src/compilation/axial_system.jl\n M src/coupling/accounting.jl\n M src/numerics/sectional/reconstructions.jl\n M src/numerics/sectional/term_dispatch.jl\n M src/numerics/tensor/term_dispatch.jl\n M src/numerics/tensor/transport_sources.jl\n M test/integration.jl\n M test/runtests.jl\n?? examples/nonuniform_weno.jl\n?? paper/Project.toml\n?? paper/case_studies/01_growth_time_methods/config.toml\n?? paper/case_studies/01_growth_time_methods/run.jl\n?? paper/case_studies/02_aggregation_fragmentation/config.toml\n?? paper/case_studies/02_aggregation_fragmentation/run.jl\n?? paper/case_studies/04_reserved/README.md\n?? paper/common.jl\n?? paper/fetch_literature.py\n?? paper/literature/cadet/LICENSE\n?? paper/literature/cadet/download.json\n?? paper/literature/cadet/reference.h5\n?? paper/literature/cadet/settings_crystallization.py\n?? paper/requirements.txt\n?? paper/results/01_growth_time_methods/smoke/front_hoc_N100_860a461293b0/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/front_hoc_N100_860a461293b0/profile.csv\n?? paper/results/01_growth_time_methods/smoke/front_hoc_N100_860a461293b0/provenance.toml\n?? paper/results/01_growth_time_methods/smoke/front_inguva2022_N100_de3a89215694/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/front_inguva2022_N100_de3a89215694/profile.csv\n?? paper/results/01_growth_time_methods/smoke/front_inguva2022_N100_de3a89215694/provenance.toml\n?? paper/results/01_growth_time_methods/smoke/front_muscl_N100_5eeeb602d62d/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/front_muscl_N100_5eeeb602d62d/profile.csv\n?? paper/results/01_growth_time_methods/smoke/front_muscl_N100_5eeeb602d62d/provenance.toml\n?? paper/results/01_growth_time_methods/smoke/front_upwind_N100_e89d7cbbf5fb/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/front_upwind_N100_e89d7cbbf5fb/profile.csv\n?? paper/results/01_growth_time_methods/smoke/front_upwind_N100_e89d7cbbf5fb/provenance.toml\n?? paper/results/01_growth_time_methods/smoke/front_weno3_N100_e8401cdf2d9f/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/front_weno3_N100_e8401cdf2d9f/profile.csv\n?? paper/results/01_growth_time_methods/smoke/front_weno3_N100_e8401cdf2d9f/provenance.toml\n?? paper/results/01_growth_time_methods/smoke/front_weno5_N100_514aaf466320/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/front_weno5_N100_514aaf466320/profile.csv\n?? paper/results/01_growth_time_methods/smoke/front_weno5_N100_514aaf466320/provenance.toml\n?? paper/results/01_growth_time_methods/smoke/smooth_upwind_N20_2756348f7fb3/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/smooth_upwind_N20_2756348f7fb3/profile.csv\n?? paper/results/01_growth_time_methods/smoke/smooth_upwind_N20_2756348f7fb3/provenance.toml\n?? paper/results/01_growth_time_methods/smoke/smooth_upwind_N40_e2313ada51a1/metrics.csv\n?? paper/results/01_growth_time_methods/smoke/smooth_upwind_N40_e2313ada51a1/profile.csv\n?? paper/results/01_growth_time_methods/smoke/smooth_upwind_N40_e2313ada51a1/provenance.toml\n?? paper/run_all.jl\n?? paper/setup.jl\n?? src/numerics/sectional/nonuniform_weno.jl\n?? test/nonuniform_weno.jl\n"
+
+[environment]
+blas_threads = 1
+cpu = "13th Gen Intel(R) Core(TM) i9-13900H"
+cpu_target = "goldmont"
+julia = "1.10.3"
+julia_threads = 1
+
+    [environment.packages]
+    Accessors = "0.1.45"
+    AliasTables = "1.1.3"
+    CommonSolve = "0.2.14"
+    CommonSubexpressions = "0.3.1"
+    CompilerSupportLibraries_jll = "1.1.1+0"
+    CompositionsBase = "0.1.2"
+    ConstructionBase = "1.6.0"
+    DataAPI = "1.16.0"
+    DataStructures = "0.19.6"
+    DiffResults = "1.1.0"
+    DiffRules = "1.16.0"
+    Distributions = "0.25.131"
+    DocStringExtensions = "0.9.5"
+    FillArrays = "1.17.0"
+    ForwardDiff = "1.4.5"
+    Gamma = "1.2.0"
+    HypergeometricFunctions = "0.3.30"
+    InverseFunctions = "0.1.17"
+    IrrationalConstants = "0.2.6"
+    JLLWrappers = "1.8.0"
+    LogExpFunctions = "1.0.1"
+    MacroTools = "0.5.16"
+    Missings = "1.2.0"
+    NaNMath = "1.1.5"
+    OpenBLAS_jll = "0.3.23+4"
+    OpenLibm_jll = "0.8.1+2"
+    OpenSpecFun_jll = "0.5.6+0"
+    OrderedCollections = "2.0.1"
+    PDMats = "0.11.41"
+    PrecompileTools = "1.2.1"
+    Preferences = "1.6.1"
+    PtrArrays = "1.4.0"
+    QuadGK = "2.11.3"
+    Reexport = "1.2.2"
+    Rmath = "0.9.0"
+    Rmath_jll = "0.5.2+0"
+    Roots = "3.0.8"
+    SHA = "0.7.0"
+    SortingAlgorithms = "1.2.3"
+    SparseArrays = "1.10.0"
+    SpecialFunctions = "2.9.0"
+    StaticArraysCore = "1.4.4"
+    Statistics = "1.10.0"
+    StatsAPI = "1.8.0"
+    StatsBase = "0.34.13"
+    StatsFuns = "2.2.1"
+    SuiteSparse_jll = "7.2.1+1"
+    TOML = "1.0.3"
+    libblastrampoline_jll = "5.8.0+1"
+
+[[files]]
+path = "profile.csv"
+sha256 = "c9c38fec1b008054566eaa233d06e923fa5e0bed4e29442a86bd08c412b75962"
+[[files]]
+path = "metrics.csv"
+sha256 = "0b98cc3477ff9b891a761f597b8815eea3bc52b741aad05a9195fc032c735857"
+
+[settings]
+api_time_method = "PopulationBalanceModels.SSPRK33"
+bins = 20
+courant = 0.5
+growth = 0.1
+initialization = "exact bin integrals"
+method = "muscl"
+profile = "smooth"
+state_checks = "signed diagnostic; no clipping"
+tf = 4.0
+
+[summary]
+seconds = 0.000177481
+status = "completed"
+steps = 16

@@ -1,7 +1,8 @@
-struct CompiledAxialSystem{D,O,S}
+struct CompiledAxialSystem{D,O,S,R}
     domain::D
     local_operators::O
     scheme::S
+    reconstruction::R
 end
 
 """
@@ -22,6 +23,9 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
                        initial=nothing,axial_scheme=Upwind())
     axial_scheme isa AbstractReconstruction || throw(ArgumentError("axial_scheme must be a residual reconstruction"))
     _validate_reconstruction(axial_scheme,domain.grid)
+    periodic=domain.boundary===:periodic
+    bc=periodic ? SizeBC(Periodic(),Periodic()) : SizeBC()
+    reconstruction=_prepare_reconstruction(axial_scheme,domain.grid,bc)
     localop=local_problem.operator
     all(values(localop.system.populations)) do op
         op isa CompiledPBM || (op isa CompiledMomentPBM && op.closure isa AbstractMomentClosure)
@@ -33,7 +37,7 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
             nonnegative_bulk=s.nonnegative_bulk,accounting=s.accounting)
         CompiledSystem(sys,localop.ranges,localop.bulk_indices,localop.length,localop.physical_length,localop.ledger_indices)
     end
-    op=CompiledAxialSystem(domain,locals,axial_scheme)
+    op=CompiledAxialSystem(domain,locals,axial_scheme,reconstruction)
     u=initial===nothing ? repeat(local_problem.u0,1,length(domain.grid)) : initial
     PBMProblem(op,u,local_problem.tspan;p=local_problem.p)
 end
@@ -81,10 +85,10 @@ function axial_fluxes(op::CompiledAxialSystem,u,p,t)
     for i in 1:first(op.local_operators).physical_length
         row=view(u,i,:)
         for c in 2:n
-            F[i,c]=v*_face_density(row,c,op.scheme,v,periodic,g)-D*(row[c]-row[c-1])/(g.centers[c]-g.centers[c-1])
+            F[i,c]=v*_face_density(row,c,op.reconstruction,v,periodic,g)-D*(row[c]-row[c-1])/(g.centers[c]-g.centers[c-1])
         end
         if periodic
-            F[i,1]=v*_face_density(row,1,op.scheme,v,true,g)-D*(row[1]-row[end])/((first(g.widths)+last(g.widths))/2)
+            F[i,1]=v*_face_density(row,1,op.reconstruction,v,true,g)-D*(row[1]-row[end])/((first(g.widths)+last(g.widths))/2)
             F[i,end]=F[i,1]
         elseif d.boundary===:closed
             F[i,1]=0;F[i,end]=0

@@ -1,0 +1,2 @@
+method,profile,bins,courant,dt,tf,rmse,l1,maximum_error,minimum_density,negative_number,number_drift,seconds,steps,bytes,gc_seconds
+muscl,smooth,640,0.5,0.0078125,4.0,4.691240446269302e-5,2.2466776126450934e-5,0.0003822749246083792,0.7002912878199004,-0.0,-3.141931159689193e-14,0.106963062,512,16267920,0.0

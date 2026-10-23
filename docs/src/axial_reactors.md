@@ -184,10 +184,16 @@ J_{i,c+1/2}=uN_{i,c}
 
 The single-population adapter uses first-order upwind advection. The coupled
 adapter selects its reconstruction with `axial_scheme`: Upwind, MUSCL, VanLeer,
-WENO3, and eligible uniform-grid WENO5/Centered/LinearUpwind are available.
+WENO3 and WENO5 support fixed nonuniform axial meshes; Centered and LinearUpwind
+require uniform spacing. WENO5 prepares the same cell-average reconstruction as
+[intrinsic growth](methods/growth.md), with at least six axial cells.
 Dispersion uses a two-point centered flux,
 including nonuniform axial meshes. On a uniform mesh the dispersive term is
 second order. Interior fluxes cancel after multiplication by ``\Delta z_c``.
+Higher-order advection does not increase the order of this dispersive flux or
+the Danckwerts/zero-gradient boundary closure. Independent WENO reconstruction
+of raw moments still has no joint-realizability guarantee; the native
+`MeasureEuler` axial guarantee continues to require Upwind.
 Consequently, the reactor inventory changes by local creation/removal and
 inlet minus outlet flux, even on a nonuniform axial mesh. `axial_fluxes`
 returns those face fluxes for balance diagnostics.

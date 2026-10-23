@@ -1,0 +1,26 @@
+case = "02_aggregation_fragmentation"
+derived_files = []
+mode = "smoke"
+schema = 1
+source_digest = "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0"
+workflow_digest = "824765afab1994d66ab194d6f801d850cfdde6d6889693cd27a44d8f61269c4e"
+
+[configuration]
+dt = 0.01
+eqmom_secondary_nodes = 12
+final_time = 0.1
+lognormal_quadrature = 64
+save_interval = 0.05
+
+[runs]
+adaptive3_dt1 = "adaptive3_dt1_6807ce89269d"
+adaptive3_dt2 = "adaptive3_dt2_d9c0ca854d75"
+dqmom3_dt1 = "dqmom3_dt1_28b27f233005"
+dqmom3_dt2 = "dqmom3_dt2_417fedbcf07a"
+eqmom3_dt1 = "eqmom3_dt1_331fe4018ecc"
+eqmom3_dt2 = "eqmom3_dt2_d251a7d38306"
+lognormal_dt1 = "lognormal_dt1_9e1ce6789bf2"
+lognormal_dt2 = "lognormal_dt2_e5e09cea5588"
+qmom3_dt1 = "qmom3_dt1_0ba758284b72"
+qmom3_dt2 = "qmom3_dt2_80f8756163b0"
+qmom4_dt1 = "qmom4_dt1_85620e412cd1"

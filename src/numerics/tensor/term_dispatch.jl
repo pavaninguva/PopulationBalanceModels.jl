@@ -4,8 +4,8 @@ default_method(::Growth2D,::Grid2D)=Upwind()
 default_method(::Union{Birth,DistributedNucleation},::Grid2D)=MidpointRule()
 default_method(::Union{Death,Dilution},::Grid2D)=PointwiseLoss()
 default_method(::Nucleation2D,::Grid2D)=FixedPivot()
-function prepare_term(::Growth2D,m::Union{Upwind,WENO5},g::Grid2D;kwargs...)
-    _validate_reconstruction(m,g.x); _validate_reconstruction(m,g.y)
+function prepare_term(::Growth2D,m::Union{Upwind,WENO5},g::Grid2D;bc=SizeBC2D(),kwargs...)
+    (x=_prepare_reconstruction(m,g.x,bc.x),y=_prepare_reconstruction(m,g.y,bc.y))
 end
 prepare_term(::Union{Birth,DistributedNucleation},::MidpointRule,::Grid2D;kwargs...)=nothing
 prepare_term(::Union{Birth,DistributedNucleation},m::GaussLegendre,::Grid2D;kwargs...)=_gauss_legendre(m)
@@ -18,7 +18,7 @@ function prepare_term(term::Nucleation2D,m::FixedPivot,g::Grid2D;kwargs...)
 end
 prepare_term(::Nucleation2D,::GaussianInjection,::Grid2D;kwargs...)=nothing
 function add_term!(dN,N,term::Growth2D,m::Union{Upwind,WENO5},cache,op,p,t,ctx)
-    _tensor_term!(dN,N,term,(;grid=op.grid,bc=op.bc,scheme=m),p,t,ctx)
+    _tensor_term!(dN,N,term,(;grid=op.grid,bc=op.bc,scheme=cache),p,t,ctx)
 end
 add_term!(dN,N,term,m::Union{MidpointRule,FixedPivot,PointwiseLoss},cache,op::CompiledPBM2D,p,t,ctx)=_tensor_term!(dN,N,term,op,p,t,ctx)
 function _tensor_integral(f,g,i,j,q)

@@ -1,0 +1,86 @@
+{
+  "mode": "smoke",
+  "renderer": "Matplotlib + external LaTeX",
+  "source_digest": "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0",
+  "workflow_digest": "cf4fd462b7eb5ab4f16e149729287e85bc5c668e9a3e0ed097643281d9c343ac",
+  "inputs": {
+    "results/01_growth_time_methods/smoke/index.toml": "72b0396ee7b3c0b32970091f485abb9e8f4c4600bb0edc8f77767c7c7ebd3bf8",
+    "results/01_growth_time_methods/smoke/front_hoc_N100_f8228d212658/provenance.toml": "33ad3c92e4e4b9cb8459bd12c1bd2aea5000175bcc05ee7c6b1f5f31dbefd45d",
+    "results/01_growth_time_methods/smoke/front_inguva2022_N100_de3e85535bd1/provenance.toml": "e148ae00ccb3a804b570fdd8c563d2f61df369b0ace142afa95560f30d19167e",
+    "results/01_growth_time_methods/smoke/front_muscl_N100_6f764b1d06d6/provenance.toml": "0eb68b47f350cbd8f4e32be645492bd8c8a24e4b389d87d915a3916057a0f579",
+    "results/01_growth_time_methods/smoke/front_upwind_N100_cba3eefb1e9d/provenance.toml": "753e5ff118be3927de872952081bdc6a1af51a0577f29fc416e27f1e9c2d3221",
+    "results/01_growth_time_methods/smoke/front_weno3_N100_81fb34a34071/provenance.toml": "8cf2380342f297b3582f752a0e904761d5f04683c5be2672abf1fbc3067395d4",
+    "results/01_growth_time_methods/smoke/front_weno5_N100_11b3ee4c43d2/provenance.toml": "426d28c10675a065bd31c2c660e5a9326ec3a17702b92ae3413db153616faf3d",
+    "results/01_growth_time_methods/smoke/smooth_hoc_N20_4c410f7c10ab/provenance.toml": "1ab25202629c2d08da0d1c06bc8a7d34c76a7f58eb7c6300218c7303a3a57074",
+    "results/01_growth_time_methods/smoke/smooth_hoc_N40_b60880eac017/provenance.toml": "f94d3e53180d64018e3fdc60ca6fcb159f0ce58a05704a20994797754fa2dd8b",
+    "results/01_growth_time_methods/smoke/smooth_inguva2022_N20_fffe58b61db0/provenance.toml": "619ff440ef24c77fb5e707ea09bcbe917356700e482dc0fb1aeafdc37b012820",
+    "results/01_growth_time_methods/smoke/smooth_inguva2022_N40_d9e7190f438b/provenance.toml": "02b172c63c26780e1b38d922d60e4e1e1acf83eb7075d46fa5ed747ee52aedd3",
+    "results/01_growth_time_methods/smoke/smooth_muscl_N20_7370908ec594/provenance.toml": "c9d0f4cde0316b301708e618808596b3953e9593bfd19ce637f0628aaa3b2686",
+    "results/01_growth_time_methods/smoke/smooth_muscl_N40_07038c7ecedf/provenance.toml": "ea375d28679bb5f50c9a8e06c3e39bacef067e2ce77ec6086894e4f1c8969d3f",
+    "results/01_growth_time_methods/smoke/smooth_upwind_N20_884fdd934737/provenance.toml": "6c55fa7f5306b580353aede2ca05094640630cf7f268cbb8c78e3b0a82ced68e",
+    "results/01_growth_time_methods/smoke/smooth_upwind_N40_0dc3e4a4c7c9/provenance.toml": "64a3e45d2e274928d4b60453c1558c2a13472a9eedab7a35eb33a2d356c2e16d",
+    "results/01_growth_time_methods/smoke/smooth_weno3_N20_badf99fa0621/provenance.toml": "81cfe34f6e94261399ea65c37d5aa9f98f13642bd52679296bf27402af613bef",
+    "results/01_growth_time_methods/smoke/smooth_weno3_N40_70ad12e6b988/provenance.toml": "c9273053c13f5fdea6a7c58d3fbe8317f7fc367da1e34c2c97ee9437f3b8965f",
+    "results/01_growth_time_methods/smoke/smooth_weno5_N20_d6aceb5ef6ae/provenance.toml": "540632bf7982a35536e87a2b153e006e058e9a7efe6f7f510931de23ee625363",
+    "results/01_growth_time_methods/smoke/smooth_weno5_N40_57531effc797/provenance.toml": "8ea34f918dc126aff293ea3b445482cc18147a8c7104a03d14ca0d22c4e78c27",
+    "results/01_growth_time_methods/smoke/analysis/growth_comparison.csv": "40e45e3a90fe043cf5b8c85fc0bba30d5caecb1afdcee9a1c41824f289c6baeb"
+  },
+  "plotter_sha256": "bab1778c5258d837bea96436662200193dc6ffe301f39f3c9ef801b21d5f472c",
+  "style_sha256": "b5847122478a1d3fa8a4c414222390ffe72f6a2d561eb358d86d9ff5d23b7cdf",
+  "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
+  "python": "3.12.3 | packaged by conda-forge | (main, Apr 15 2024, 18:38:13) [GCC 12.3.0]",
+  "matplotlib": "3.8.4",
+  "numpy": "1.26.4",
+  "pillow": "10.3.0",
+  "pymupdf": "1.28.2",
+  "latex_version": "pdfTeX 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian)",
+  "display_conventions": {},
+  "inches": [
+    7.0,
+    3.35
+  ],
+  "png_pixels": [
+    2100,
+    1005
+  ],
+  "png_dpi": [
+    299.9994,
+    299.9994
+  ],
+  "fonts": [
+    {
+      "name": "CMMI8",
+      "type": "Type1",
+      "embedded_bytes": 34904
+    },
+    {
+      "name": "CMMI9",
+      "type": "Type1",
+      "embedded_bytes": 35529
+    },
+    {
+      "name": "CMR10",
+      "type": "Type1",
+      "embedded_bytes": 35187
+    },
+    {
+      "name": "CMR8",
+      "type": "Type1",
+      "embedded_bytes": 32161
+    },
+    {
+      "name": "CMR9",
+      "type": "Type1",
+      "embedded_bytes": 33428
+    },
+    {
+      "name": "CMSY8",
+      "type": "Type1",
+      "embedded_bytes": 32061
+    }
+  ],
+  "files": {
+    ".pdf": "f1905891483eacdbcf465d070a89ab65fa24196910315271eefafac64f54eb1e",
+    ".png": "0b357fe4ea18ab119eff42407eb48525fe6a332d4aea00ca0ae84789c1ef2e75"
+  }
+}

@@ -1,0 +1,10 @@
+{
+    "from": "baseline_refined_bb491c867bc7",
+    "to": "baseline_refined_b71b5a865cb4",
+    "old_key": "bb491c867bc78b081fab7780ebca8b364fb9c087ee30fc88d47bc9aa5fa92415",
+    "new_key": "b71b5a865cb4074831fe61325187bc6d0f85744b284e61afdeb06c4e191a6220",
+    "old_project_sha256": "8978afb7f0efc29cb84b4796e83436670993bdb3c6bb640443bdf8819a5259d8",
+    "new_project_sha256": "41c0d5f0729a0db341275aa6f203be0fe5ea22c1b7c8c6a55455597f8c9b3ee7",
+    "reason": "Only test-only DelimitedFiles extras/compat/target declarations changed. Runtime dependencies, all numerical code, data and package versions are unchanged; retain original fitted values and timings.",
+    "verified_at": "2026-10-23T18:39:02.396"
+}

@@ -246,8 +246,8 @@ imports to avoid its exported sample-moment name.
 | Configuration | Supported behavior | Limits checked or retained |
 |:--|:--|:--|
 | 1D sectional | Integrated bin number/process volume; signed growth, point/boundary/distributed births, removal, fixed-pivot collisions | Density=N/ΔL. Center-weighted moments define the discrete invariant. Products use additive-property deposition; no other aggregation algorithms implemented. |
-| Sectional growth | Upwind, MUSCL, van Leer, WENO3; uniform WENO5, centered and linear upwind | Per-term/grid eligibility checked. WENO/unlimited methods do not imply positivity. Lax–Wendroff/Beam–Warming are restricted space–time policies. |
-| Tensor distributions | Two-coordinate growth, point/distributed births and removal | Upwind/uniform WENO5; transverse-width fluxes. No tensor aggregation/breakage. |
+| Sectional growth | Upwind, MUSCL, van Leer, WENO3, WENO5 on fixed nonuniform meshes; uniform centered and linear upwind | Per-term/grid eligibility checked. WENO/unlimited methods do not imply positivity. Lax–Wendroff/Beam–Warming are restricted space–time policies. |
+| Tensor distributions | Two-coordinate growth, point/distributed births and removal | Upwind/WENO5 on fixed rectangular axes; transverse-width fluxes. No tensor aggregation/breakage. |
 | Trajectory methods | Eligible structured 1D/2D growth on travel-time meshes; exact constant shifts | CFL/output alignment and autonomous/separable laws checked. No arbitrary growth, bulk coupling or hidden interpolation. HOCADI is a periodic constant-growth variant, not Li2026 reproduction. |
 | Conservative compact | Positive declared 1D/2D separable growth on uniform axes; prescribed time dependence, point births, periodic or physical inflow/outflow | HOCFiniteVolume: fourth-order interior space / second-order complete time; compiled dependencies and combined terms checked. Actual number-flux history, no positivity guarantee, no bulk/axial/collision/AD support. See [specification](methods/compact_verification.md). |
 | Raw moments | Dependency-closed exact laws; QMOM, rank-adaptive QMOM, Gamma EQMOM, assumed lognormal weak forms | Realizability, closure representability, integration quadrature and evolution accuracy differ. Continuous daughter integrals use `daughter_moment` where supplied. |
@@ -438,8 +438,12 @@ and log-growth scale. `priors=:previous` reproduces the former statistical model
 Observations, Gaussian noise, observation operators and kinetic equations are
 unchanged. Old and new draws are never pooled. Physical saved MAP values are
 retransformed when bounds change; old logit coordinates are not reused.
-The [parameter table](case_studies/protein_crystallization.md) declares all priors
-and fixed quantities. Prior breadth does not settle A12's model discrepancy.
+The historical `prior_configuration` and `estimation_problem` builders in
+`examples/protein_crystallization.jl` declare those priors and fixed quantities.
+Prior breadth does not settle A12's model discrepancy. The current
+[protein tutorial](case_studies/protein_crystallization.md) is a separate Tang
+isothermal calibration/held-out-prediction study, with original number-CDF data
+and a deterministic discrepancy; it does not replace or revalidate these draws.
 
 The revised case-study configurations pass 62 focused checks and all 1,384
 core checks on Julia 1.10.0/1.13.2; the optional Bayesian integration passes
@@ -517,3 +521,16 @@ new reference remains open; this is not a fully converged CADET reproduction.
 The 23 focused Julia checks, four public-driver smoke checks and eight Python
 plot/export checks pass. Exact commands and documentation checks are recorded
 in the existing verification CSV. No core numerical algorithm was changed.
+
+## Nonuniform WENO5 follow-up
+
+Started from clean `d4c839296571aa604cc55f5dd0526898a99ce649`. `WENO5()` now
+prepares geometry-dependent finite-volume polynomials, optimal weights and
+Jiang–Shu indicators on fixed nonuniform meshes; the uniform path is unchanged.
+The same prepared geometry feeds sectional residuals, escape accounting,
+rectangular tensor axes and coupled axial advection. No case-study data or
+figures were changed. The 76 focused checks cover independent polynomial and
+characteristic references, refinement, unit rescaling, signed transport,
+coupled material balance, derivatives, conditioning rejection and visible
+undershoots. The [growth guide](methods/growth.md) describes the boundary
+fallback and distinguishes interior spatial order from complete-solve accuracy.

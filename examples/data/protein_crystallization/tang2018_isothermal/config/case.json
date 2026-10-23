@@ -1,0 +1,308 @@
+{
+  "schema_version": "1.0",
+  "prepared_date": "2026-10-23",
+  "status": "implementation_inputs_no_new_PBM_fit",
+  "purpose": "Deploy_calibrate_and_validate_one_isothermal_real_system",
+  "experiment": {
+    "id": "Tang_100mL_0Cmin",
+    "volume_mL": 100,
+    "temperature_C": 20,
+    "pH": 4.5,
+    "buffer": "sodium_acetate",
+    "buffer_concentration_M": 0.1,
+    "protein_stock_g_L": 40,
+    "NaCl_stock_percent_w_w": 10,
+    "post_mixing_NaCl_basis": "unresolved_stock_w_w_vs_Mitchell_reactor_w_v",
+    "stirring_rpm_Tang_body": 100,
+    "stirring_rpm_Tang_captions": 210,
+    "stirring_conflict_resolved": false,
+    "active_sources": [
+      "Tang2018_Figure11d",
+      "Tang2018_Figure12a_isothermal_inverted_triangles"
+    ]
+  },
+  "initial_condition": {
+    "observation_id": "c00",
+    "model_time_min": 0.0,
+    "c0_g_L": 19.965841161400512,
+    "initial_population": "empty_no_intentional_seeds",
+    "initial_reading_is_loss_residual": false,
+    "other_graph_times": "retain_unrounded"
+  },
+  "split": {
+    "primary_cutoff_min": 420,
+    "initial_ids": [
+      "c00"
+    ],
+    "calibration_concentration_ids": [
+      "c01",
+      "c02",
+      "c03",
+      "c04",
+      "c05",
+      "c06",
+      "c07",
+      "c08",
+      "c09",
+      "c10",
+      "c11"
+    ],
+    "validation_concentration_ids": [
+      "c12",
+      "c13",
+      "c14",
+      "c15"
+    ],
+    "calibration_PSD_times_min": [
+      74,
+      180,
+      420
+    ],
+    "validation_PSD_times_min": [
+      660
+    ],
+    "Nc": 11,
+    "Np": 3,
+    "no_validation_tuning": true,
+    "optional_early_cutoff": {
+      "enabled_by_default": false,
+      "calibration_concentration_ids": [
+        "c01",
+        "c02",
+        "c03",
+        "c04",
+        "c05",
+        "c06",
+        "c07"
+      ],
+      "validation_concentration_ids": [
+        "c08",
+        "c09",
+        "c10",
+        "c11",
+        "c12",
+        "c13",
+        "c14",
+        "c15"
+      ],
+      "calibration_PSD_times_min": [
+        74,
+        180
+      ],
+      "validation_PSD_times_min": [
+        420,
+        660
+      ]
+    }
+  },
+  "model": {
+    "type": "unseeded_primary_nucleation_size_independent_growth_coupled_batch",
+    "L_unit": "um",
+    "t_unit": "min",
+    "c_unit": "g_L_equal_kg_m3",
+    "n_unit": "number_m^-3_um^-1",
+    "number_reference_m3": 1000000000000.0,
+    "rho_crystal_kg_m3": 1240,
+    "kv": 0.81,
+    "cstar_g_L": 2.16,
+    "cstar_status": "explicit_conditional_assumption_reported_by_Mitchell_not_experimentally_verified_here",
+    "r_definition": "max(c-cstar,0)/(c0-cstar)",
+    "J_definition": "J_ref*r^j_for_c>cstar_else0",
+    "G_definition": "G_ref*r^g_for_c>cstar_else0",
+    "J_ref_unit": "number_m^-3_min^-1",
+    "G_ref_unit": "um_min^-1",
+    "fit_coordinates": [
+      "log_J_ref",
+      "log_G_ref",
+      "j",
+      "g"
+    ],
+    "log_base": "natural",
+    "activation_energies_fixed_zero": true,
+    "aggregation": false,
+    "breakage": false,
+    "dissolution": false,
+    "count_scaling_is_separate_from_rate_units": true
+  },
+  "optimization": {
+    "initial_guess": {
+      "J_ref": 100000000000.0,
+      "G_ref": 0.2,
+      "j": 2.0,
+      "g": 2.0
+    },
+    "numerical_search_bounds": {
+      "log_J_ref": [
+        13.815510557964274,
+        36.841361487904734
+      ],
+      "log_G_ref": [
+        -9.210340371976182,
+        0.6931471805599453
+      ],
+      "j": [
+        0,
+        10
+      ],
+      "g": [
+        0,
+        6
+      ]
+    },
+    "bounds_are_physical_measurements_or_priors": false,
+    "expand_and_report_active_bounds": true,
+    "seed": 2027,
+    "nominal_multistarts": 8,
+    "max_iterations_per_start": 400,
+    "sensitivity_multistarts": 3,
+    "use_existing_package_estimation_API": true,
+    "posterior_sampling_required": false
+  },
+  "observations": {
+    "PSD_weighting": "number",
+    "primary_window_name": "isothermal_core",
+    "primary_window_um": [
+      2.5,
+      25
+    ],
+    "alternative_window_name": "visible_window",
+    "alternative_window_um": [
+      2.5,
+      47.5
+    ],
+    "grid_spacing_um": 0.5,
+    "grid_is_published_bin_width": false,
+    "PSD_blocks_are_correlated_curves": true,
+    "raw_particle_counts_available": false,
+    "nominal_graph_marker_reading_sensitivity_px": 2,
+    "reading_sensitivity_is_laboratory_error_SD": false,
+    "empty_predicted_window_population": "invalid_trial_not_fake_distribution"
+  },
+  "objective": {
+    "type": "group_mean_concentration_squared_residual_plus_group_mean_squared_Wasserstein",
+    "formula": "mean_cal_c[((cmodel-cobs)/sc)^2] + lambda_psd*mean_cal_PSD[W2_squared/sL^2]",
+    "concentration_scale_g_L": 0.1,
+    "size_scale_um": 0.5,
+    "lambda_psd": 1.0,
+    "is_calibrated_probability_likelihood": false,
+    "quantile_midpoint_points": 256,
+    "quadrature_check_points": [
+      512,
+      1024
+    ]
+  },
+  "optional_extension": {
+    "maximum_extra_source_families": 1,
+    "trigger": "systematic_calibration_mismatch_after_units_optimization_numerical_checks",
+    "default_candidate": "logistic_nucleation_activation",
+    "formula": "J=J_ref*r^j*logistic((t-t_on)/w)",
+    "fixed_width_min": 10,
+    "extra_fitted_parameter": "t_on",
+    "t_on_bounds_min": [
+      0,
+      150
+    ],
+    "amplitude_interpretation": "ungated_reference_amplitude_not_actual_J_at0",
+    "imaging_onset_is_not_t_on_constraint": true,
+    "selection_uses_calibration_only": true,
+    "selection_rule": {
+      "must_address_identified_systematic_residual": true,
+      "minimum_fractional_total_loss_improvement": 0.2,
+      "maximum_group_loss_ratio_to_baseline": 1.1,
+      "criterion_is_not_likelihood_significance_test": true
+    },
+    "preserve_baseline_outputs": true
+  },
+  "sensitivities": [
+    {
+      "id": "cstar_1p0",
+      "change": {
+        "cstar_g_L": 1.0
+      }
+    },
+    {
+      "id": "cstar_3p5",
+      "change": {
+        "cstar_g_L": 3.5
+      }
+    },
+    {
+      "id": "cstar_4p5",
+      "change": {
+        "cstar_g_L": 4.5
+      }
+    },
+    {
+      "id": "psd_weight_0p25",
+      "change": {
+        "lambda_psd": 0.25
+      }
+    },
+    {
+      "id": "psd_weight_4p0",
+      "change": {
+        "lambda_psd": 4.0
+      }
+    },
+    {
+      "id": "concentration_scale_0p3",
+      "change": {
+        "concentration_scale_g_L": 0.3
+      }
+    },
+    {
+      "id": "wider_window",
+      "change": {
+        "window_name": "visible_window",
+        "window_um": [
+          2.5,
+          47.5
+        ]
+      }
+    }
+  ],
+  "sensitivity_interpretation": "predeclared_exploratory_assumptions_not_measured_confidence_range_no_validation_selection",
+  "numerics": {
+    "initial_domain_um": [
+      0,
+      50
+    ],
+    "initial_bins": 100,
+    "refinement_bins": [
+      200
+    ],
+    "candidate_method": "existing_conservative_MUSCL_SSP_or_repository_equivalent",
+    "honor_stability_during_all_parameter_trials": true,
+    "quantify_first_bin_nucleation_mass": true,
+    "detect_material_domain_outflow": true,
+    "refit_when_refinement_material": true,
+    "scaled_observable_difference_target": 0.25,
+    "numerical_target_is_not_statistical_CI": true
+  },
+  "figures": {
+    "main_panels": [
+      "concentration",
+      "calibration_PSDs",
+      "held_out_660_PSD",
+      "D10_D50_D90_trajectories"
+    ],
+    "PNG_dpi": 300,
+    "vector_PDF_when_supported": true,
+    "LaTeX_style": true,
+    "overall_plot_title": false,
+    "panel_labels": [
+      "(a)",
+      "(b)",
+      "(c)",
+      "(d)"
+    ]
+  },
+  "out_of_scope": [
+    "Mitchell_parameter_reproduction",
+    "cooling",
+    "5mL_or_1L_scale_transfer",
+    "broad_mechanism_search",
+    "mandatory_NUTS",
+    "universal_kinetics_claims"
+  ]
+}

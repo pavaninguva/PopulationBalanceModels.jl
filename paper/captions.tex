@@ -1,0 +1,117 @@
+% Use, for example: \caption{\GrowthProfilesCaption}
+% The fourth case caption is generated from its frozen numerical results:
+% \input{figures/04_protein_crystallization/production/caption.tex}
+% \caption{\ProteinCrystallizationCaption}
+\newcommand{\GrowthProfilesCaption}{%
+Translation of an initially exponential population, $f(a,0)=100\exp(-a/0.01)$,
+at $t=4\,\mathrm{s}$ with $G=0.1$ on $a\in[0,1]$, zero inflow and open outflow.
+Both panels use exactly 100 uniform bins; (b) enlarges the translating front.
+The reference is the analytical bin average, and the numerical curves are
+piecewise-constant densities obtained from bin-integrated populations.
+All residual methods and the conservative HOC/midpoint update use $C=0.5$;
+Inguva2022 uses its required native $C=1$ update. Sparse markers identify
+computed bin values. Signed undershoots are retained, without clipping.
+The sharp front is a resolution diagnostic, not a smooth-order experiment.}
+
+\newcommand{\GrowthConvergenceCaption}{%
+Smooth periodic constant-growth test on $[0,1]$, with
+$f(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a)$, $G=0.1$ and $t=4\,\mathrm{s}$.
+Initial and exact final bin populations are integrated analytically.
+Meshes have 40, 80, 160, 320, 640, 1280 and 2560 bins.
+(a,b) Integrated $L^1$ error and width-weighted RMSE;
+(c,d) corresponding successive-grid orders
+$p_{\mathrm{obs}}=\log(E_c/E_f)/\log(N_f/N_c)$.
+RMSE is $[\sum_i\Delta a_i(\bar f_i-\bar f_i^{\mathrm{exact}})^2/
+\sum_i\Delta a_i]^{1/2}$. Courant numbers are 0.5, except the characteristic
+update's required value of one. Orders below the declared roundoff-resolution
+threshold are undefined, particularly for nearly exact characteristic shifts.
+Finite-range WENO slopes depend on nonlinear weights, temporal error and
+roundoff and are not new formal-order estimates. The complete HOC/midpoint method
+is second order in time despite its fourth-order interior spatial construction.}
+
+\newcommand{\GrowthWorkPrecisionCaption}{%
+Single-run integration cost for the same smooth periodic problem, meshes and
+error definition as the convergence figure. (a) Wall time versus bin count;
+(b) RMSE versus the same measured wall time. Each marker corresponds to an
+exported mesh configuration. A separate small warmup precedes one measured
+solve per method/boundary configuration. Model/grid assembly, explicit garbage
+collection, plotting and file I/O are excluded; integrator initialization,
+stepping, checks, in-solve allocation and
+saved states are included. These are single measurements without timing
+repeatability error bars. The characteristic method uses $C=1$; all others
+use $C=0.5$.}
+
+\newcommand{\MomentMethodsCaption}{%
+Aggregation--fragmentation of an initially exponential volume distribution
+(Qamar problem 4), with additive particle property $x^3$, constant aggregation
+kernel $\beta_0=1$, fragmentation hazard $a_0x^3$ with $a_0=1$, and uniform
+volume daughters, $b(x\mid y)=6x^2/y^3$. The exact initial number and material
+are $N_0=1$ and $V_0=10^{-3}$.
+The length density is $n(x,0)=3N_0^2x^2V_0^{-1}
+\exp(-N_0x^3/V_0)$.
+(a) Number normalized by its initial value; (b,c) percent absolute relative
+errors in $\mu_1$ and $\mu_2$ against the analytical solution; (d) material
+ratio $\mu_3/V_0$. The number obeys
+$d\mu_0/dt=-\beta_0\mu_0^2/2+a_0\mu_3$ and exact material is constant.
+QMOM and rank-adaptive QMOM use three nodes; the active adaptive rank remains
+three at the saved times, so overlap is expected and does not demonstrate a rank change.
+Gamma EQMOM uses three primary kernels with 12 secondary nodes per kernel;
+DQMOM uses three weights and three weighted abscissas. Material is evolved for
+the raw-moment methods and evaluated directly from DQMOM nodes and weights.
+The assumed-lognormal
+comparator evolves only three moments and uses 64-point quadrature. Its third
+moment is reconstructed: its initial mismatch and subsequent drift are retained.
+All use SSPRK33 with maximum step 0.02 s and saves every 0.5 s;
+halved steps and four-node QMOM are
+reported separately. Sparse markers lie at actual saved times. Errors at or
+below $1000\epsilon_{\mathrm{Float64}}$ relative
+($2.22\times10^{-11}\,\%$) are omitted from the logarithmic error panels,
+not floored; all signed values remain in the tables. This removes initial
+roundoff artifacts. Sharp absolute-error dips can accompany signed zero crossings.
+Closure error, integration error and unequal representation work are distinct.}
+
+\newcommand{\PrecipitationFieldsCaption}{%
+Transient number density in an axially dispersed continuous precipitator,
+using Zhang et al. (2024), Case 7A, SI Table S8.
+(a--d) $t=5,40,80,200\,\mathrm{s}$ in chronological order.
+Actual logarithmic size edges span $1$--$900\,\mu\mathrm{m}$ and the axial
+mesh is uniform over $0$--$0.47\,\mathrm{m}$. The displayed numerical reference
+has 400 size bins and 400 axial cells. The cell averages are
+computed with geometry-aware size WENO5, axial MUSCL, and checked CVODE-BDF;
+they are not CADET WENO35 results. CVODE uses maximum BDF order three through
+5 s, then restarts at maximum order two from the unchanged physical state,
+relative tolerance $10^{-7}$, absolute tolerances $10^{-14}$ for the
+$10^{12}$-scaled bin populations and $10^{-11}\,\mathrm{kg\,m^{-3}}$ for solute,
+and a 0.5 s step cap. All panels share one logarithmic color scale.
+Nonpositive cells are masked; values below the displayed range use its lower
+color, and signed minima and negative populations are exported. No positive
+startup background, image smoothing or spatial interpolation is introduced.
+This external integrator has no positivity guarantee; accepted states are checked.
+The initial population and solute are zero. Primary and secondary nucleation,
+solute depletion, Danckwerts inflow and zero-gradient outflow are retained.
+Independent $200\times400$ and $400\times200$ checks separate size and axial
+effects. A same-mesh run tightens all tolerances tenfold and halves the step cap;
+differences are recorded at all four times. No
+analytical coupled PSD solution exists for this case.}
+
+\newcommand{\PrecipitationOutletCaption}{%
+Outlet distributions at $t=200\,\mathrm{s}$ for the same Case 7A model.
+(a) Absolute number density; (b) normalized volume-weighted size density,
+$q_3(x_i)=x_i^3N_i/[\Delta x_i\sum_jx_j^3N_j]$, expressed per micrometre.
+Here $x_i$ is the arithmetic bin centre.
+The particle-size axis is logarithmic; densities remain per linear size,
+not per log-size. Curves at axial counts 2, 3, 13, 50 and 200 use 200
+logarithmic size bins, with a separately identified refined package reference.
+The reference has $400\times400$ cells. The unsupported one-cell axial case
+is omitted explicitly.
+Low axial resolution changes peak number and the distribution of solid material.
+Open circles in (a) are digitized from the published Figure 9(c),
+$N_x=N_z=200$, WENO35 in both coordinates; bars show conservative two-pixel
+extraction uncertainty over the unambiguous 1.5--40 micrometre interval.
+Open squares are a separate, pinned public CADET verification calculation
+(200 by 200 cells, size Upwind/axial WENO23), not that published WENO35 curve.
+The package uses size WENO5/axial MUSCL and the rounded SI flow rate
+$1.67\times10^{-7}\,\mathrm{m^3\,s^{-1}}$; the public CADET input uses
+$10\,\mathrm{mL\,min^{-1}}$. Volume densities integrate to one with actual
+bin widths; they differ from the paper's material percentages per logarithmic
+bin. Literature data and a finite numerical reference are not exact solutions.}

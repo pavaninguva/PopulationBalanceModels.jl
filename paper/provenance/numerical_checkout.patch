@@ -1,0 +1,351 @@
+diff --git a/src/PopulationBalanceModels.jl b/src/PopulationBalanceModels.jl
+index f1426da..55f2445 100644
+--- a/src/PopulationBalanceModels.jl
++++ b/src/PopulationBalanceModels.jl
+@@ -67,6 +67,7 @@ include("numerics/quadrature.jl")
+ include("core/contexts.jl")
+ include("compilation/sectional.jl")
+ include("numerics/sectional/transport.jl")
++include("numerics/sectional/nonuniform_weno.jl")
+ include("numerics/sectional/deposition.jl")
+ include("numerics/sectional/local_sources.jl")
+ include("numerics/sectional/collisions.jl")
+diff --git a/src/compilation/axial_system.jl b/src/compilation/axial_system.jl
+index b184e5b..59cb18c 100644
+--- a/src/compilation/axial_system.jl
++++ b/src/compilation/axial_system.jl
+@@ -1,7 +1,8 @@
+-struct CompiledAxialSystem{D,O,S}
++struct CompiledAxialSystem{D,O,S,R}
+     domain::D
+     local_operators::O
+     scheme::S
++    reconstruction::R
+ end
+ 
+ """
+@@ -22,6 +23,9 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
+                        initial=nothing,axial_scheme=Upwind())
+     axial_scheme isa AbstractReconstruction || throw(ArgumentError("axial_scheme must be a residual reconstruction"))
+     _validate_reconstruction(axial_scheme,domain.grid)
++    periodic=domain.boundary===:periodic
++    bc=periodic ? SizeBC(Periodic(),Periodic()) : SizeBC()
++    reconstruction=_prepare_reconstruction(axial_scheme,domain.grid,bc)
+     localop=local_problem.operator
+     all(values(localop.system.populations)) do op
+         op isa CompiledPBM || (op isa CompiledMomentPBM && op.closure isa AbstractMomentClosure)
+@@ -33,7 +37,7 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
+             nonnegative_bulk=s.nonnegative_bulk,accounting=s.accounting)
+         CompiledSystem(sys,localop.ranges,localop.bulk_indices,localop.length,localop.physical_length,localop.ledger_indices)
+     end
+-    op=CompiledAxialSystem(domain,locals,axial_scheme)
++    op=CompiledAxialSystem(domain,locals,axial_scheme,reconstruction)
+     u=initial===nothing ? repeat(local_problem.u0,1,length(domain.grid)) : initial
+     PBMProblem(op,u,local_problem.tspan;p=local_problem.p)
+ end
+@@ -81,10 +85,10 @@ function axial_fluxes(op::CompiledAxialSystem,u,p,t)
+     for i in 1:first(op.local_operators).physical_length
+         row=view(u,i,:)
+         for c in 2:n
+-            F[i,c]=v*_face_density(row,c,op.scheme,v,periodic,g)-D*(row[c]-row[c-1])/(g.centers[c]-g.centers[c-1])
++            F[i,c]=v*_face_density(row,c,op.reconstruction,v,periodic,g)-D*(row[c]-row[c-1])/(g.centers[c]-g.centers[c-1])
+         end
+         if periodic
+-            F[i,1]=v*_face_density(row,1,op.scheme,v,true,g)-D*(row[1]-row[end])/((first(g.widths)+last(g.widths))/2)
++            F[i,1]=v*_face_density(row,1,op.reconstruction,v,true,g)-D*(row[1]-row[end])/((first(g.widths)+last(g.widths))/2)
+             F[i,end]=F[i,1]
+         elseif d.boundary===:closed
+             F[i,1]=0;F[i,end]=0
+diff --git a/src/coupling/accounting.jl b/src/coupling/accounting.jl
+index d5d56c4..569cfa0 100644
+--- a/src/coupling/accounting.jl
++++ b/src/coupling/accounting.jl
+@@ -70,7 +70,7 @@ function _sectional_losses(op,N,p,t,ctx,mechanisms=nothing)
+         term=_effective_term(item)
+         mechanisms!==nothing && !(mechanism(term) in mechanisms) && continue
+         if term isa Growth
+-            F=_growth_fluxes(term,N,(;grid=op.grid,bc=op.bc,scheme=item.method),p,t,ctx)
++            F=_growth_fluxes(term,N,(;grid=op.grid,bc=op.bc,scheme=_prepared_reconstruction(item.method,item.cache)),p,t,ctx)
+             if F[1]<0
+                 absorb=op.bc.left isa AbsorbingZero
+                 push!(losses,(absorb ? :extinction : :lower_escape,absorb ? 0.0 : first(op.grid.centers),-F[1]))
+diff --git a/src/numerics/sectional/reconstructions.jl b/src/numerics/sectional/reconstructions.jl
+index 63b24cd..89c1ff8 100644
+--- a/src/numerics/sectional/reconstructions.jl
++++ b/src/numerics/sectional/reconstructions.jl
+@@ -22,7 +22,7 @@ struct MUSCL{T<:Real} <: AbstractReconstruction
+         new{typeof(theta)}(theta)
+     end
+ end
+-"""Jiang-Shu finite-volume WENO5 on a uniform internal grid; no positivity limiter."""
++"""Jiang–Shu finite-volume WENO5 on uniform or nonuniform fixed grids (at least six bins). Geometry is prepared during compilation; no positivity limiter."""
+ struct WENO5{T<:Real} <: AbstractReconstruction
+     epsilon::T
+     function WENO5(; epsilon=1e-6)
+diff --git a/src/numerics/sectional/term_dispatch.jl b/src/numerics/sectional/term_dispatch.jl
+index 817947e..5818971 100644
+--- a/src/numerics/sectional/term_dispatch.jl
++++ b/src/numerics/sectional/term_dispatch.jl
+@@ -6,7 +6,7 @@ default_method(::Union{Nucleation,Aggregation,Breakage},::Grid1D)=FixedPivot()
+ default_method(::CustomTerm,::Grid1D)=NativeResidual()
+ default_method(term,representation)=throw(ArgumentError("no default numerical method; select a method explicitly for $(typeof(term))"))
+ 
+-prepare_term(::Growth,m::AbstractReconstruction,g::Grid1D;kwargs...)=_validate_reconstruction(m,g)
++prepare_term(::Growth,m::AbstractReconstruction,g::Grid1D;bc=SizeBC(),kwargs...)=_prepare_reconstruction(m,g,bc)
+ prepare_term(::Union{Birth,DistributedNucleation},::MidpointRule,::Grid1D;kwargs...)=nothing
+ prepare_term(::Union{Birth,DistributedNucleation},m::GaussLegendre,::Grid1D;kwargs...)=_gauss_legendre(m)
+ prepare_term(::Union{IntegratedBirth,IntegratedNucleation},::BinIntegral,::Grid1D;kwargs...)=nothing
+@@ -52,14 +52,13 @@ function _validate_reconstruction(m,g)
+             throw(ArgumentError("Centered and LinearUpwind require a uniform grid with at least three bins"))
+     end
+     if m isa WENO5
+-        length(g)>=6 && maximum(abs.(g.widths.-first(g.widths)))<=1e-10*first(g.widths) ||
+-            throw(ArgumentError("WENO5 requires a uniform grid with at least six bins"))
++        length(g)>=6 || throw(ArgumentError("WENO5 requires at least six bins"))
+     end
+     nothing
+ end
+ 
+ function add_term!(dN,N,term::Growth,m::AbstractReconstruction,cache,op,p,t,ctx)
+-    fluxop=(;grid=op.grid,bc=op.bc,scheme=m)
++    fluxop=(;grid=op.grid,bc=op.bc,scheme=_prepared_reconstruction(m,cache))
+     _local_rhs!(dN,N,term,fluxop,p,t,ctx)
+ end
+ function add_term!(dN,N,term,m::Union{MidpointRule,BinIntegral,FixedPivot,PointwiseLoss,NativeResidual},cache,op::CompiledPBM,p,t,ctx)
+diff --git a/src/numerics/tensor/term_dispatch.jl b/src/numerics/tensor/term_dispatch.jl
+index 44d71fc..c5af153 100644
+--- a/src/numerics/tensor/term_dispatch.jl
++++ b/src/numerics/tensor/term_dispatch.jl
+@@ -4,8 +4,8 @@ default_method(::Growth2D,::Grid2D)=Upwind()
+ default_method(::Union{Birth,DistributedNucleation},::Grid2D)=MidpointRule()
+ default_method(::Union{Death,Dilution},::Grid2D)=PointwiseLoss()
+ default_method(::Nucleation2D,::Grid2D)=FixedPivot()
+-function prepare_term(::Growth2D,m::Union{Upwind,WENO5},g::Grid2D;kwargs...)
+-    _validate_reconstruction(m,g.x); _validate_reconstruction(m,g.y)
++function prepare_term(::Growth2D,m::Union{Upwind,WENO5},g::Grid2D;bc=SizeBC2D(),kwargs...)
++    (x=_prepare_reconstruction(m,g.x,bc.x),y=_prepare_reconstruction(m,g.y,bc.y))
+ end
+ prepare_term(::Union{Birth,DistributedNucleation},::MidpointRule,::Grid2D;kwargs...)=nothing
+ prepare_term(::Union{Birth,DistributedNucleation},m::GaussLegendre,::Grid2D;kwargs...)=_gauss_legendre(m)
+@@ -18,7 +18,7 @@ function prepare_term(term::Nucleation2D,m::FixedPivot,g::Grid2D;kwargs...)
+ end
+ prepare_term(::Nucleation2D,::GaussianInjection,::Grid2D;kwargs...)=nothing
+ function add_term!(dN,N,term::Growth2D,m::Union{Upwind,WENO5},cache,op,p,t,ctx)
+-    _tensor_term!(dN,N,term,(;grid=op.grid,bc=op.bc,scheme=m),p,t,ctx)
++    _tensor_term!(dN,N,term,(;grid=op.grid,bc=op.bc,scheme=cache),p,t,ctx)
+ end
+ add_term!(dN,N,term,m::Union{MidpointRule,FixedPivot,PointwiseLoss},cache,op::CompiledPBM2D,p,t,ctx)=_tensor_term!(dN,N,term,op,p,t,ctx)
+ function _tensor_integral(f,g,i,j,q)
+diff --git a/src/numerics/tensor/transport_sources.jl b/src/numerics/tensor/transport_sources.jl
+index 993fd1b..ce8c285 100644
+--- a/src/numerics/tensor/transport_sources.jl
++++ b/src/numerics/tensor/transport_sources.jl
+@@ -4,7 +4,7 @@ function _tensor_flux(term,n,axis,other,dimension,bc,scheme,p,t,ctx)
+     vl=velocity(first(axis.edges)); vr=velocity(last(axis.edges))
+     if periodic
+         isapprox(vl,vr;rtol=1e-10,atol=1e-14) || throw(ArgumentError("periodic velocity must match at endpoints"))
+-        F[1]=vl*_face_density(n,1,scheme,vl,true); F[end]=F[1]
++        F[1]=vl*_face_density(n,1,scheme,vl,true,axis); F[end]=F[1]
+     else
+         localctx=merge(ctx,(;tangential_coordinate=other,axis=dimension))
+         F[1]=bc.left isa InflowFlux ? _nonnegative(bc.left.rate(p,t,localctx),"inward flux density") :
+@@ -13,20 +13,21 @@ function _tensor_flux(term,n,axis,other,dimension,bc,scheme,p,t,ctx)
+             (bc.right isa NoFlux || vr<=0 ? zero(vr) : vr*n[end])
+     end
+     for i in 2:m
+-        v=velocity(axis.edges[i]); F[i]=v*_face_density(n,i,scheme,v,periodic)
++        v=velocity(axis.edges[i]); F[i]=v*_face_density(n,i,scheme,v,periodic,axis)
+     end
+     F
+ end
+ function _tensor_term!(dN,N,term::Growth2D,op,p,t,ctx)
+     g=op.grid; f=density(g,N)
++    schemes=op.scheme isa NamedTuple ? op.scheme : (x=op.scheme,y=op.scheme)
+     for j in axes(N,2)
+-        F=_tensor_flux(term,view(f,:,j),g.x,g.y.centers[j],1,op.bc.x,op.scheme,p,t,ctx)
++        F=_tensor_flux(term,view(f,:,j),g.x,g.y.centers[j],1,op.bc.x,schemes.x,p,t,ctx)
+         for i in axes(N,1)
+             dN[i,j]+=(F[i]-F[i+1])*g.y.widths[j]
+         end
+     end
+     for i in axes(N,1)
+-        F=_tensor_flux(term,view(f,i,:),g.y,g.x.centers[i],2,op.bc.y,op.scheme,p,t,ctx)
++        F=_tensor_flux(term,view(f,i,:),g.y,g.x.centers[i],2,op.bc.y,schemes.y,p,t,ctx)
+         for j in axes(N,2)
+             dN[i,j]+=(F[j]-F[j+1])*g.x.widths[i]
+         end
+diff --git a/examples/nonuniform_weno.jl b/examples/nonuniform_weno.jl
+new file mode 100755
+index 0000000..06be89f
+--- /dev/null
++++ b/examples/nonuniform_weno.jl
+@@ -0,0 +1,59 @@
++module NonuniformWENOExample
++
++using PopulationBalanceModels
++using SpecialFunctions: erf
++using Printf
++
++"""Exact bin integrals for G(x)=x and an initially Gaussian log-size density."""
++function reference(grid, t; center=2.0, width=0.3)
++    primitive = width*sqrt(pi)/2 .* erf.((log.(grid.edges) .- center .- t)./width)
++    diff(primitive)
++end
++
++function problem(bins; tspan=(0.0,0.2))
++    grid = Grid1D(exp.(range(0.0,4.0;length=bins+1));coordinate=:length)
++    model = PBMModel(growth=Growth((x,p,t,ctx)->p.k*x))
++    operator = compile(model,grid;
++        methods=TermMethods(growth=WENO5()),
++        bc=SizeBC(OpenBoundary(),OpenBoundary()))
++    PBMProblem(operator,reference(grid,first(tspan)),tspan;p=(k=1.0,))
++end
++
++"""
++    run(; sizes=(64,128,256))
++
++Compare bin-integrated predictions with characteristic solutions on log meshes.
++The initial number density is exp(-((log(x)-2)/0.3)^2)/x. Its characteristic
++solution replaces log(x) by log(x)-t in the exponential, leaving 1/x unchanged.
++Boundary tails are negligible for this domain and horizon. The conservative
++scheme is not positivity preserving: signed undershoots are reported, not clipped.
++"""
++function run(; sizes=(64,128,256))
++    rows = NamedTuple[]
++    println("bins    integrated L1 error    observed order    number change    minimum density")
++    for bins in sizes
++        prob = problem(bins)
++        grid = prob.operator.grid
++        dt = 0.15minimum(grid.widths./grid.edges[2:end])
++        # Separate compilation warmup; this is an accuracy example, not a
++        # comparative timing benchmark.
++        simulate(remake(prob;tspan=(0.0,dt));method=RK4(),dt,check_nonnegative=false)
++        solution = simulate(prob;method=RK4(),dt,check_nonnegative=false)
++        final = vec(solution.u[end])
++        exact = reference(grid,last(prob.tspan))
++        error = sum(abs.(final.-exact))
++        order = isempty(rows) ? NaN : log(rows[end].error/error)/log(bins/rows[end].bins)
++        row = (;bins,error,order,number_change=sum(final)-sum(prob.u0),
++            minimum_density=minimum(final./grid.widths),negative_number=-sum(min.(final,0.0)))
++        push!(rows,row)
++        @printf("%4d    %.6e           %6.3f          % .3e       % .3e\n",
++            bins,error,order,row.number_change,row.minimum_density)
++    end
++    rows
++end
++
++end
++
++if abspath(PROGRAM_FILE)==@__FILE__
++    NonuniformWENOExample.run()
++end
+diff --git a/src/numerics/sectional/nonuniform_weno.jl b/src/numerics/sectional/nonuniform_weno.jl
+new file mode 100755
+index 0000000..d6ccbd8
+--- /dev/null
++++ b/src/numerics/sectional/nonuniform_weno.jl
+@@ -0,0 +1,104 @@
++# Finite-volume WENO5 on fixed nonuniform meshes. All geometry is prepared at
++# compilation, in a coordinate with the donor cell [-1,0] and the face at zero.
++# See Wang, Feng & Spiteri (2008), Applied Mathematics and Computation 196,
++# 433–447: quadratic cell-average reconstruction and Jiang–Shu indicators.
++struct _WENO5Stencil{T}
++    indices::NTuple{5,Int}
++    polynomials::NTuple{3,NTuple{3,NTuple{3,T}}}
++    weights::NTuple{3,T}
++end
++
++struct _NonuniformWENO5{E,V} <: AbstractReconstruction
++    epsilon::E
++    positive::V
++    negative::V
++end
++
++_weno_uniform(g) = maximum(abs.(g.widths .- first(g.widths))) <= 1e-10first(g.widths)
++_prepared_reconstruction(method, cache) = method
++_prepared_reconstruction(::WENO5, cache::_NonuniformWENO5) = cache
++
++function _prepare_reconstruction(method, grid, bc)
++    _validate_reconstruction(method, grid)
++    method
++end
++
++function _weno_average_inverse(edges, firstcell, count)
++    T = eltype(edges)
++    averages = Matrix{T}(undef, count, count)
++    for row in 1:count, power in 0:count-1
++        a, b = edges[firstcell+row-1], edges[firstcell+row]
++        # A sum avoids cancellation in (b^(power+1)-a^(power+1))/(b-a).
++        averages[row,power+1] = sum(b^(power-k)*a^k for k in 0:power)/(power+1)
++    end
++    all(isfinite, averages) || throw(ArgumentError(
++        "WENO5 reconstruction has unresolved cell-width ratios; use a less stretched mesh"))
++    inverse = try
++        averages \ Matrix{T}(I, count, count)
++    catch error
++        error isa SingularException || rethrow()
++        throw(ArgumentError("WENO5 reconstruction is singular on this mesh; reduce neighbouring cell-width ratios"))
++    end
++    condition = opnorm(averages, Inf)*opnorm(inverse, Inf)
++    isfinite(condition) && condition*eps(T) < 1e-6 || throw(ArgumentError(
++        "WENO5 reconstruction is ill-conditioned on this mesh (scaled condition $condition); reduce neighbouring cell-width ratios"))
++    inverse
++end
++
++function _weno_stencil(grid, face, direction, periodic, ::Type{T}) where T
++    m = length(grid)
++    # Keep the existing physical-boundary upwind fallback. No invented ghost
++    # averages or smooth continuation of an inflow condition are introduced.
++    !periodic && !(4 <= face <= m-2) && return nothing
++    donor = direction == 1 ? face-1 : face
++    indices = ntuple(k -> periodic ? mod1(donor+direction*(k-3),m) : donor+direction*(k-3), 5)
++    widths = ntuple(k -> T(grid.widths[indices[k]]/grid.widths[indices[3]]), 5)
++    edges = T[-1-widths[2]-widths[1], -1-widths[2], -1, 0, widths[4], widths[4]+widths[5]]
++    matrices = ntuple(k -> _weno_average_inverse(edges,k,3), 3)
++    polynomials = ntuple(k -> ntuple(row -> ntuple(col -> matrices[k][row,col],3),3),3)
++    optimal = _weno_average_inverse(edges,1,5)[1,:]
++    d0 = optimal[1]/matrices[1][1,1]
++    d2 = optimal[5]/matrices[3][1,3]
++    weights = (d0, one(T)-d0-d2, d2)
++    combined = zeros(T,5)
++    for k in 1:3, col in 1:3
++        combined[k+col-1] += weights[k]*matrices[k][1,col]
++    end
++    all(w -> isfinite(w) && w>0, weights) &&
++        norm(combined-optimal,Inf) <= 1e-8max(one(T),norm(optimal,Inf)) || throw(ArgumentError(
++        "WENO5 has unresolved or nonpositive optimal weights at face $face; reduce neighbouring cell-width ratios"))
++    _WENO5Stencil(indices,polynomials,weights)
++end
++
++function _prepare_reconstruction(method::WENO5, grid, bc)
++    _validate_reconstruction(method, grid)
++    _weno_uniform(grid) && return method # Preserve the uniform-grid fast path.
++    T = promote_type(eltype(grid.widths), typeof(float(method.epsilon)))
++    periodic = bc.left isa Periodic
++    build(direction) = Union{Nothing,_WENO5Stencil{T}}[
++        _weno_stencil(grid,face,direction,periodic,T) for face in 1:length(grid)+1]
++    _NonuniformWENO5(method.epsilon,build(1),build(-1))
++end
++
++function _face_density(n, face, method::_NonuniformWENO5, velocity, periodic, grid)
++    stencil = (velocity>=0 ? method.positive : method.negative)[face]
++    stencil === nothing && return _face_density(n,face,Upwind(),velocity,periodic)
++    _weno_value(n,stencil,method.epsilon)
++end
++
++function _weno_value(n, stencil::_WENO5Stencil, epsilon)
++    reference = n[stencil.indices[3]]
++    values = ntuple(k -> n[stencil.indices[k]]-reference,5)
++    candidates = ntuple(3) do k
++        polynomial = stencil.polynomials[k]
++        a = ntuple(row -> sum(polynomial[row][col]*values[k+col-1] for col in 1:3),3)
++        # Integral of p'² + p''² over [-1,0]. This sum-of-squares form
++        # avoids an indefinite quadratic form caused by roundoff.
++        beta = (a[2]-a[3])^2 + (13//3)*a[3]^2
++        (value=reference+a[1], beta=beta)
++    end
++    # Equivalent to d/(epsilon+beta)^2, but avoids tiny-denominator overflow.
++    scale = minimum(c -> epsilon+c.beta,candidates)
++    alpha = ntuple(k -> stencil.weights[k]*(scale/(epsilon+candidates[k].beta))^2,3)
++    sum(alpha[k]*candidates[k].value for k in 1:3)/sum(alpha)
++end

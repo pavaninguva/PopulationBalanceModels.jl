@@ -4,7 +4,7 @@ using LinearAlgebra, Random
 import Optim
 
 """
-Optimization of the declared known-variance Gaussian likelihood using the
+Optimization of the declared Gaussian likelihood or deterministic discrepancy using the
 CalibrationProblem's selected derivative backend (forward AD by default).
 Choose parameter transforms in CalibrationProblem; no positivity
 constraints, multistart, uncertainty intervals or convergence guarantees are
@@ -38,6 +38,7 @@ end
 function PopulationBalanceModels.profile_likelihood(cal::PopulationBalanceModels.CalibrationProblem,
         fitted::PopulationBalanceModels.FitResult,index::Integer,values;
         starts=(fitted.minimizer,),kwargs...)
+    PopulationBalanceModels._discrepancy(cal) && throw(ArgumentError("a discrepancy has no likelihood profile or likelihood confidence threshold; reoptimize conditional losses explicitly"))
     fitted.converged || throw(ArgumentError("profile reference fit did not converge"))
     center=copy(fitted.minimizer); count=length(center)
     1<=index<=count || throw(ArgumentError("invalid profiled coordinate"))

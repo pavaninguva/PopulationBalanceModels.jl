@@ -1,0 +1,16 @@
+[deps]
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+PopulationBalanceModels = "d67dbf4a-e476-4a75-b295-11f266f08ec0"
+SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
+
+[compat]
+Optim = "1, 2"
+JSON3 = "1"
+PopulationBalanceModels = "0.4"
+SciMLBase = "2, 3"
+SpecialFunctions = "2"
+Sundials = "4, 5, 6"
+julia = "1.10"

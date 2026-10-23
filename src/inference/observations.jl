@@ -93,6 +93,8 @@ function _observe(obs::HistogramObservable,N,op,p,t)
     y
 end
 
+abstract type AbstractObservation end
+
 """
     Observation(times, data, observable; sigma=1.0, covariance=nothing)
 
@@ -106,7 +108,7 @@ supply sigma as well. Different Observation objects are independent blocks.
 Normalized histograms have a singular covariance and need independent contrasts
 or a likelihood for compositional data.
 """
-struct Observation{T,Y,O,S,F}
+struct Observation{T,Y,O,S,F} <: AbstractObservation
     times::T
     data::Y
     observable::O

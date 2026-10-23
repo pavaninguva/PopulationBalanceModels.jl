@@ -27,10 +27,9 @@ boundaries, and numerical choices used in its implementation.
 - [Continuous tubular precipitation](continuous_precipitation.md): axial transport
   and dispersion carry both solute and crystals; startup and outlet distributions
   are compared under refinement.
-- [Inferring protein crystallization kinetics](protein_crystallization.md):
-  graph-read concentration and diameter measurements constrain nucleation and
-  growth in an unseeded batch. Joint posterior, prior, chain and predictive plots
-  assess the fit under explicit unit, observation and prior assumptions.
+- [Calibrating an isothermal protein batch](protein_crystallization.md): original
+  concentration and number distributions calibrate a coupled population–solute
+  model, followed by a frozen prediction of later observations.
 
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition
