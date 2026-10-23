@@ -128,7 +128,7 @@ julia --project=. examples/axially_dispersed_growth.jl
 python docs/benchmarks/plot_transport_comparisons.py axial --usetex
 ```
 
-The constant-growth comparison uses seven representative pairings (including WENO3 + SSPRK33) for the 2022
+The constant-growth comparison uses eight representative pairings (including WENO3 + SSPRK33 and HOCFiniteVolume + midpoint) for the 2022
 Case 1 front and a smooth periodic input. Each configuration has one measured
 solve following a small compilation warmup. L1/RMSE panels and measured
 refinement orders replace arbitrary h-power guides and repeated-run bands.
@@ -157,14 +157,18 @@ julia --project=/path/to/working_environment examples/protein_crystallization.jl
 python docs/benchmarks/plot_new_case_studies.py protein --usetex
 ```
 
-The precipitation default uses a small documentation budget for Zhang2024 Case
-7A: 2 size resolutions × 3 axial resolutions per pairing on logarithmic and
-uniform size meshes. References are 48×64 MUSCL/MUSCL; temporal and separate
-coordinate checks are exported. Uniform-size WENO5 holds axial MUSCL fixed.
-`--full` requests the full SI Cartesian mesh product (25 pairs per pairing),
-with 250×750 references; this option was not executed for the documentation.
-Its reference remains
-numerical, and its methods/timings are not CADET's. Protein observations are
+The precipitation default separates size and axial refinement with four points
+per path. It compares Upwind, MUSCL and WENO5 in size with axial MUSCL/RK4 fixed,
+against one uniform-size WENO5/axial-MUSCL/RK4 reference on 144×128 cells.
+Fields save 0, 40, 80 and 200 s. Same-mesh startup field/outlet/bulk temporal
+checks accompany independent time/size/axial reference checks
+and logarithmic-size sensitivity runs are exported. WENO5 in both directions
+still fails the empty-start bulk check; those failures are retained without clipping.
+`--full` requests the SI Cartesian mesh arrangement with axial MUSCL fixed
+(25 pairs per eligible size scheme/grid family), and a 250×750 reference.
+It was not executed for the documentation. This is a numerical reference and
+package comparison, not CADET's WENO23/WENO35 or timing reproduction.
+Protein observations are
 experimental markers digitized from Mitchell2023 Figure 4; the committed CSV and
 extraction provenance are in `examples/data/protein_crystallization/`. The
 protein plotter consumes the actual fitted predictions and does not invent
@@ -176,13 +180,20 @@ For the joint protein posterior, add AdvancedHMC 0.8 and MCMCDiagnosticTools 0.3
 to the working environment, alongside Optim and the package:
 
 ```sh
-julia --project=/path/to/working_environment examples/protein_crystallization.jl --posterior-only
+julia --project=/path/to/working_environment examples/protein_crystallization.jl --posterior-parallel
 python docs/benchmarks/plot_protein_posterior.py --usetex
 ```
 
-`--posterior-only` reuses the saved MAP. `--posterior` runs the MAP calculation
-first. The posterior runner uses four chains, 500 warmup and 750 retained draws
-per chain, seed 2027, and 100 additional predictive solves. This repeatedly
+The default broad priors expand logAJ/j/g support and double the log-growth
+prior scale; `priors=:previous` is available for explicit sensitivity reruns.
+Changing priors requires new posterior sampling; never relabel the previous draws.
+`--posterior-only` reuses physical saved MAP values as starts, retransforming them
+when bounds change. `--posterior` runs the MAP calculation
+first. The posterior runner uses four chains, 750 warmup and 1,500 retained draws
+per chain, base seed 2027 (isolated chain seeds 2027–2030), and 100 additional
+predictive solves. The initial 750-draw broad-prior run failed the unchanged
+convergence screen and is retained under `sampling_budget_750/`. The larger
+budget uses isolated processes; `--posterior-only` keeps sequential execution. This repeatedly
 solves the coupled PBM and can take tens of minutes on a CPU.
 Rate-based sampling coordinates improve mixing without changing the
 physical model, priors or posterior. Retained draws, prior densities, chain
@@ -222,23 +233,7 @@ to export the existing package's local prediction sensitivities, a noise-scaled
 SVD and separate likelihood/prior curvature. It performs no fit or sampling.
 These local Hessians are not verified posterior covariance estimates.
 
-The documentation revision starting at `84b0860` measured new constant-growth
-and continuous-precipitation runs with Julia 1.10.3 and one Julia/BLAS thread.
-The local protein identifiability export used Julia 1.13.2. Qamar histories,
-reconstruction/refinement checks and timings were reused from the audited runs;
-only their display changed. Protein draws, observations, priors and predictive
-exports were retained unchanged. Plotting used Python 3.12.3, NumPy 1.26.4 and
-Matplotlib 3.8.4 with LaTeX, without SciPy. Executed checks:
-
-```sh
-julia --project=. -e 'using Pkg; Pkg.test()'  # Julia 1.10.0: 1243 checks
-julia --project=. test/case_study_benchmarks.jl  # Julia 1.10.3: 14 checks
-python test/plotting_summaries.py  # 5 plotting/data checks
-CI=true POPULATIONBALANCEMODELS_DOCS_DEPLOY=false julia --project=docs docs/make.jl
-python test/docs_links.py
-git diff --check
-```
-
-All nine minimal case runs were exercised in environments containing their
-stated optional dependencies. The long-time LNP stiff run and the full SI
-precipitation mesh study are not included in that claim.
+Executed checks, environment versions and historical results are consolidated
+in the [audit register](../src/audit.md). Current case pages link their actual
+CSV exports, settings and limitations. Broader-prior protein results require a
+new fit and NUTS run; older draws must not be relabelled as the new posterior.

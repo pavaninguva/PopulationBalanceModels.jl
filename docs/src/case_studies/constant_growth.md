@@ -50,7 +50,7 @@ nothing # hide
 
 ## A representative set of methods
 
-The comparison uses seven pairings. This keeps the plots readable while showing
+The comparison uses eight pairings. This keeps the plots readable while showing
 first-order transport, limited reconstruction, high-order reconstruction,
 temporal error and a characteristic shift.
 
@@ -61,6 +61,7 @@ temporal error and a characteristic shift.
 | WENO3 | SSPRK33 | 0.5 |
 | WENO5 | SSPRK33 | 0.5 |
 | WENO5 | RK4 | 0.5 |
+| HOC finite-volume compact reconstruction | Native midpoint | 0.5 |
 | Lax–Wendroff complete update | Built into the scheme | 0.5 |
 | Inguva2022 characteristic update | Matched shift | 1 |
 
@@ -80,6 +81,22 @@ of the characteristic method. Its lower cost includes taking fewer steps and
 using a direct copy rather than reconstructing face fluxes. Other available
 schemes remain documented in [Growth](../methods/growth.md) and
 [Time integration](../methods/time.md); they have not been removed from the package.
+
+HOC is selected through the same model and bin-integrated initial state:
+
+```julia
+compact_operator = compile(model,grid;evolution=HOCFiniteVolume(),bc)
+compact_solution = simulate(PBMProblem(compact_operator,initial,(0.,4.));
+    dt=0.5*first(grid.widths)/0.1,check_nonnegative=false)
+```
+
+This is the conservative compact finite-volume method, with fourth-order
+interior space reconstruction and second-order midpoint time integration.
+It is not the legacy two-dimensional `HOCADI` update. At fixed Courant number,
+second-order time error eventually dominates.
+The [compact verification](../methods/compact_verification.md) separates spatial
+and temporal refinements. The sharp-front run retains its dispersive negative
+lobes; this scheme has no positivity guarantee.
 
 ## What happens with Lax–Wendroff?
 
@@ -120,6 +137,8 @@ the Fourier amplification satisfies
 Stability does not imply a nonnegative density. The runner retains negative
 values so their size is visible; a checked physical solve should use a suitable
 positivity-preserving method when these undershoots are unacceptable.
+HOC remains dispersive at ``C=1``: the exact-shift cancellation of
+Lax–Wendroff at that Courant number is not a general property of compact methods.
 
 There are also two differences to account for when comparing entire runs:
 
@@ -175,6 +194,11 @@ p_{\mathrm{obs}}=
 
 ![Measured orders in both error norms](../assets/constant_growth/observed_orders.png)
 
+HOC + midpoint has measured RMSE orders 2.019, 2.005, 2.001 and 2.000
+on the 40–640-bin grids. At the shared ``C=0.5``, temporal error limits this
+complete method to second order; this plot does not isolate its fourth-order
+spatial reconstruction.
+
 WENO3 + SSPRK33 has measured RMSE orders 1.73, 2.28, 3.34, 4.27
 on the successive 40–640-bin refinements. Third-order face reconstruction does
 not ensure an immediate third-order curve: nonlinear weights near extrema and
@@ -197,9 +221,11 @@ shift is at roundoff, where an inferred convergence order is meaningless.
 ![Single-run elapsed time and error versus time, including Inguva2022](../assets/constant_growth/timings.png)
 
 Each configuration has **one measured integration**. Small, separate warmups
-compile the method before measuring; the benchmark-sized problem is not run
+pass the selected time method explicitly, matching the measured call; the benchmark-sized problem is not run
 three times. Timings include stepping, residual evaluation and allocations,
-and exclude compilation, file output and plotting. They have no averaging or
+and exclude compilation, file output and plotting. A full garbage collection
+before each timer prevents earlier configurations' garbage being charged to the
+next method; allocation bytes and in-solve GC time are exported too. They have no averaging or
 repeatability bands and will vary between runs and machines. All plotted timings
 were remeasured together for this revision; [inputs.txt](../assets/constant_growth/inputs.txt)
 records the Julia version, CPU and thread counts.

@@ -1,0 +1,2 @@
+Starting posterior chain 1/1
+Finished posterior chain 1; retained mean leapfrog steps=9.761333333333333

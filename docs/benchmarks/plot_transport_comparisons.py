@@ -25,6 +25,7 @@ def constant_growth():
                ("weno3","ssprk33","WENO3 + SSPRK3", "C6"),
                ("weno5","ssprk33","WENO5 + SSPRK3", "C2"),
                ("weno5","rk4","WENO5 + RK4", "C3"),
+               ("hoc","midpoint","HOC FV + midpoint", "C7"),
                ("lax_wendroff","coupled","Lax--Wendroff", "C4"),
                ("inguva2022","coupled","Inguva2022 ($C=1$)", "C5")]
     fig, axes = plt.subplots(1,2,figsize=(10,3.8),layout="constrained",sharey=True)

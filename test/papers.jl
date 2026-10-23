@@ -90,16 +90,29 @@ end
 
 @testset "Protein prior coordinates and scheduled forward accuracy" begin
     recipe=ProteinCrystallization
-    problem=recipe.estimation_problem(bins=40)
-    spec=only(filter(s->s.name===:AG,problem.parameters))
-    for x in (.05,.367,2.)
-        # A normal density on log(AG) transforms to physical density / AG.
-        expected=exp(-.5*((log(x)-log(.367))/1.5)^2)/(1.5sqrt(2pi)*x)
-        @test recipe.physical_prior_density(spec,x)≈expected
+    for (scenario,sd,jdensity,half_density) in ((:broad,3.,1/20,1/20),(:previous,1.5,1/9,0.))
+        problem=recipe.estimation_problem(bins=40,priors=scenario)
+        spec=only(filter(s->s.name===:AG,problem.parameters))
+        for x in (.05,.367,2.)
+            # Independent physical lognormal density, not the implementation Jacobian.
+            expected=exp(-.5*((log(x)-log(.367))/sd)^2)/(sd*sqrt(2pi)*x)
+            @test recipe.physical_prior_density(spec,x)≈expected
+        end
+        spec=only(filter(s->s.name===:j,problem.parameters))
+        @test recipe.physical_prior_density(spec,2.)≈jdensity
+        @test recipe.physical_prior_density(spec,.5)≈half_density
     end
-    spec=only(filter(s->s.name===:j,problem.parameters))
-    @test recipe.physical_prior_density(spec,2.)≈1/9
-    @test recipe.physical_prior_density(spec,.5)==0
+    @test_throws ArgumentError recipe.estimation_problem(priors=:unknown)
+    mktempdir() do directory
+        write(joinpath(directory,"map_parameters.csv"),
+            "parameter,inference_coordinate,physical_value\nlogAJ,999,18.9\nj,999,2.14\nAG,999,.367\ng,999,2.45\n")
+        for scenario in (:broad,:previous)
+            problem=recipe.estimation_problem(bins=8,priors=scenario)
+            z=recipe.saved_map(directory,problem)
+            # The deliberately incorrect old coordinates must never be reused.
+            @test all(isapprox(getproperty(physical_parameters(problem,z,:batch),name),value) for (name,value) in pairs((logAJ=18.9,j=2.14,AG=.367,g=2.45)))
+        end
+    end
     pb=recipe.build(bins=40,tf=80.)
     scheduled=recipe.scheduled_solver(pb,[0.,20.,50.,80.])
     reference=simulate(pb;dt=.1,saveat=scheduled.t)
@@ -116,4 +129,32 @@ end
     @test det(ForwardDiff.jacobian(map.from_sampler,y))≈1. atol=1e-12
     @test map.logabsdetjac(y)==0
     @test logposterior(p,z)≈logposterior(p,map.from_sampler(y)) atol=1e-10
+end
+
+@testset "Tubular refinement paths and RK4 reference controller" begin
+    recipe=ContinuousPrecipitation
+    configurations=recipe.benchmark_configurations()
+    for name in ("upwind","muscl","weno5")
+        rows=filter(c->c.mesh===:uniform && c.size_method==name,configurations)
+        @test sort([c.nx for c in rows if c.nz==96])==[12,24,48,72]
+        @test sort([c.nz for c in rows if c.nx==72])==[16,32,64,96]
+    end
+    # No precipitation: independent augmented matrix exponential for the linear
+    # conservative axial Upwind/dispersion system with Danckwerts feed.
+    p=merge(recipe.parameters(),(kp=0.,kb=0.,kg=0.))
+    problem=recipe.build(nx=8,nz=4,p=p,axial_scheme=Upwind(),tf=.1)
+    dz=p.L/4;v=p.Q/(p.area*p.porosity);d=p.Dax/dz^2
+    A=zeros(5,5)
+    for j in 1:4
+        A[j,j]=-v/dz-d*((j>1)+(j<4))
+        j>1 && (A[j,j-1]=v/dz+d)
+        j<4 && (A[j,j+1]=d)
+    end
+    A[1,5]=v/dz*p.cfeed
+    exact=(exp(.1A)*[0.,0.,0.,0.,1.])[1:4]
+    solution=recipe.advance(problem,[0.,.1];method=RK4())
+    @test bulk(problem,last(solution.u),:c)≈exact rtol=1e-8 atol=1e-12
+    @test all(iszero,population(problem,last(solution.u),:crystals))
+    @test_throws ArgumentError recipe.advance(problem,[.1,0.])
+    @test_throws ArgumentError recipe.advance(problem,[.1];fraction=0.)
 end

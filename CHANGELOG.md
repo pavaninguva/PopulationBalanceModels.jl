@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Added an optional isolated-process runner for the protein example, joint chain diagnostics and tests. Retained the initial failed sampling budget and regenerated results with 6,000 draws. IPC imports remain outside the physical example loading path.
+
+- Added HOC finite-volume/midpoint to the constant-growth case study. Corrected time-method selection during compilation warmup and exported allocation/GC statistics. Reworked tubular precipitation into independent size/axial refinements, a common WENO5-size/MUSCL-axial/RK4 reference and four startup fields; retained axial-WENO5 startup failures.
+- Broadened the protein example's coefficient/exponent priors, retained an explicit previous-prior scenario, and documented fitted versus fixed quantities. Saved example starts now restore physical values before applying changed parameter transforms.
+
 - Added `HOCFiniteVolume`: conservative compact transport of 1D/2D bin integrals with positive declared growth, prescribed time dependence, physical inflow/outflow and point nucleation; fourth-order interior space and second-order complete time integration. Added cumulative number-flux diagnostics, structural compilation/remake checks, independent refinement tests and runnable comparisons.
 - Added `ExponentialGrowth`, `TimeScaledGrowth`, `PrescribedRate` and `HOCGrowthLaw` declarations. Kept ordinary callbacks for residual methods and the existing constant-periodic `HOCADI` behavior; published nodal formulas remain separate audit implementations. Direct transport operators now reject external ODE conversion immediately.
 

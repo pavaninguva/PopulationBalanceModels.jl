@@ -29,9 +29,9 @@ def moments():
 def precipitation():
     folder=ASSETS/'continuous_precipitation'
     d=np.genfromtxt(folder/'field.csv',delimiter=',',names=True)
-    fig,axes=plt.subplots(1,2,figsize=(9,3.5),sharey=True,layout='constrained')
+    fig,axes=plt.subplots(2,2,figsize=(10,7),sharex=True,sharey=True,layout='constrained')
     vmax=np.max(d['number_density'])
-    for ax,t in zip(axes,[80,200]):
+    for ax,t in zip(axes.ravel(),[0,40,80,200]):
         q=d[d['time']==t];z=np.unique(q['z_m']);x=np.unique(q['size_m'])*1e6
         # Input is axial-major; transpose to size × axial position.
         values=q['number_density'].reshape(len(z),len(x)).T
@@ -39,7 +39,7 @@ def precipitation():
         xe=np.r_[np.unique(q['x_left']),np.max(q['x_right'])]*1e6
         im=ax.pcolormesh(ze,xe,values,shading='flat',cmap='magma',vmin=0,vmax=vmax,rasterized=True)
         ax.set(xlabel=r'$z\ (\mathrm{m})$',title=rf'$t={t}\ \mathrm{{s}}$',yscale='log',ylim=(1,900))
-    axes[0].set_ylabel(r'$x\ (\mu\mathrm{m})$')
+    for ax in axes[:,0]:ax.set_ylabel(r'$x\ (\mu\mathrm{m})$')
     fig.colorbar(im,ax=axes.ravel().tolist(),label=r'$n\ (\mathrm{m}^{-4})$',pad=.03)
     for ext in ('png','svg'):
         target = (folder/'fields').with_suffix('.'+ext)
@@ -51,7 +51,7 @@ def precipitation():
     # Select fixed-size / varying-axial slices, rather than concatenating meshes.
     fig,axes=plt.subplots(1,2,figsize=(10,3.7))
     for nz in np.unique(d['nz']):
-        q=d[(d['mesh']=='log')&(d['size_method']=='muscl')&(d['axial_method']=='muscl')
+        q=d[(d['mesh']=='uniform')&(d['size_method']=='muscl')&(d['axial_method']=='muscl')
             &(d['nx']==max(d['nx']))&(d['nz']==nz)]
         for ax,key,scale in zip(axes,['number_density','volume_density'],[1.,1e-6]):
             ax.plot(q['size_m']*1e6,q[key]*scale,label=rf'$N_x={int(max(d["nx"]))},\ N_z={int(nz)}$')
@@ -65,32 +65,34 @@ def precipitation():
     axes[1].set_ylabel(r'Volume fraction density $(\mu\mathrm{m}^{-1})$');save(fig,folder/'outlets')
 
     d=np.genfromtxt(folder/'performance.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
-    fig,axes=plt.subplots(1,2,figsize=(11,4))
-    for ax,mesh in zip(axes,('log','uniform')):
-        q=d[d['mesh']==mesh]
-        pairs=list(dict.fromkeys(zip(q['size_method'],q['axial_method'])))
-        for i,(size,axial) in enumerate(pairs):
-            r=q[(q['size_method']==size)&(q['axial_method']==axial)]
-            ax.loglog(r['seconds'],r['normalized_L1'],'o',ms=4,color=f'C{i}',label=f'{size.upper()} / {axial.upper()}')
-            front=pareto_mask(r['seconds'],r['normalized_L1'])
-            r=r[front];r=r[np.argsort(r['seconds'])]
-            ax.loglog(r['seconds'],r['normalized_L1'],'-',lw=1,color=f'C{i}')
-        ax.set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='Normalized outlet $L^1$ error',title=f'{mesh.capitalize()} size mesh')
-        ax.legend(fontsize=7,title='Size / axial reconstruction',title_fontsize=8)
-    save(fig,folder/'performance')
-
-    fig,axes=plt.subplots(1,2,figsize=(10,3.7))
-    for ax,mesh in zip(axes,('log','uniform')):
-        for nz in np.unique(d['nz']):
-            q=d[(d['mesh']==mesh)&(d['size_method']=='muscl')&(d['axial_method']=='muscl')&(d['nz']==nz)]
-            order=np.argsort(q['nx']);q=q[order]
-            ax.loglog(q['nx'],q['normalized_L1'],'o-',label=rf'$N_z={int(nz)}$')
-        ax.set(xlabel=r'Size bins $N_x$',ylabel='Normalized outlet $L^1$ error',title=f'{mesh.capitalize()} size mesh')
-        ticks = np.unique(d['nx'])
-        ax.set_xticks(ticks, [str(int(n)) for n in ticks])
-        ax.xaxis.set_minor_locator(NullLocator())
-        ax.legend(fontsize=8)
-    save(fig,folder/'coordinate_refinement')
+    q=d[d['mesh']=='uniform']
+    max_nx,max_nz=max(q['nx']),max(q['nz'])
+    # Connect only one-coordinate refinement paths, rather than a mixed grid
+    # Cartesian product or a visually misleading all-point performance line.
+    for filename,work in [('coordinate_refinement',False),('performance',True)]:
+        fig,axes=plt.subplots(1,2,figsize=(10,3.8))
+        for ax,variable,fixed,fixed_value in (
+            (axes[0],'nx','nz',max_nz),(axes[1],'nz','nx',max_nx)):
+            for color,name in zip(('C0','C1','C2'),('upwind','muscl','weno5')):
+                r=q[(q['size_method']==name)&(q[fixed]==fixed_value)]
+                r=r[np.argsort(r[variable])]
+                spacing=(899/r['nx'] if variable=='nx' else .47/r['nz'])
+                x=r['seconds'] if work else spacing
+                ax.loglog(x,r['normalized_L1'],'o-',ms=4,color=color,label=name.upper())
+                if work:
+                    for xx,yy,n in zip(x,r['normalized_L1'],r[variable]):
+                        ax.annotate(str(int(n)),(xx,yy),xytext=(3,4),textcoords='offset points',fontsize=6,color=color)
+            ax.set(ylabel='Normalized outlet $L^1$ error',
+                   title=(rf'Size refinement, $N_z={int(max_nz)}$' if variable=='nx'
+                          else rf'Axial refinement, $N_x={int(max_nx)}$'))
+            if work:ax.set_xlabel(r'Elapsed time $(\mathrm{s})$')
+            else:
+                ax.set_xlabel(r'$\Delta x\ (\mu\mathrm{m})$' if variable=='nx' else r'$\Delta z\ (\mathrm{m})$')
+                ax.set_xticks(spacing,[f'{value:.3g}' for value in spacing])
+                ax.xaxis.set_minor_locator(NullLocator())
+                ax.invert_xaxis()
+            ax.legend(fontsize=8,title='Size scheme; axial MUSCL',title_fontsize=8)
+        save(fig,folder/filename)
 
 
 def pareto_mask(work,error):

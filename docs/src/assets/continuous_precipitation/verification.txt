@@ -1,13 +1,15 @@
-Zhang et al. (2024) Case 7A, SI S8. Observation at 200 s; fields at 80 and 200 s.
-Executed mode: documentation budget.
-References: size/axial MUSCL/MUSCL, (48, 64), separate logarithmic/uniform size meshes; uniform axial mesh.
-SSPRK33: fraction=.3 divided by axial advection+diffusion+maximum size advection rates; local solute depletion bound; maximum step .25 s.
-No clipping; all native stage checks retained at their existing tolerance.
+Zhang et al. (2024) Case 7A, SI S8. Outlet at 200 s; fields at 0; 40; 80; 200 s.
+Executed mode: independent-coordinate documentation study.
+Common reference: uniform-size WENO5; axial MUSCL; RK4; mesh=(144, 128). Not WENO5 in both directions.
+RK4: fraction=.3 divided by summed size/axial advection and axial diffusion rates; local solute-depletion bound; maximum step .25 s.
+All native stage checks retained at 1e-8; no clipping. Axial WENO5 startup failures retained.
 Error: common-partition piecewise-constant outlet L1 difference divided by reference number; not spline interpolation.
-See reference_checks.csv for temporal and separate size/axial differences; finite numerical references are not exact.
-One measured solve after separate compilation warmup; excludes assembly, file export and plotting; includes step control, state checks and saved states.
+reference_checks.csv isolates time; size; axial refinement. Finite numerical references are not exact.
+Single measured solve after separate small compilation warmup. Timing includes stepping; step control; checks; saved states. Excludes assembly; export; plotting.
 Julia 1.10.3; CPU 13th Gen Intel(R) Core(TM) i9-13900H; Julia threads 1; BLAS threads 1.
-Run starting from 84b0860; solve timings newly measured for this documentation revision.
-Full SI option: Cartesian product Nx=(12,25,50,100,200), Ncol=(37,75,150,300,600), reference=(250,750); not executed in documentation-budget mode.
-Discrete solute exchange conserves centre-weighted x^3. Closed size boundary; inspect upper-bin occupancy.
-Case 6 SI analytical reaction solution does not apply to this coupled precipitation model. Case 7B not claimed.
+Starting revision afda48e603a466b7b981f63d0d4d34ce8960c18a; initially clean working tree.
+Full option: Nx=(12;25;50;100;200) x Ncol=(37;75;150;300;600); reference=(250;750); not executed by default. WENO5 only on uniform sizes; axial MUSCL in all configurations.
+Discrete exchange conserves centre-weighted x^3; closed upper size boundary. Inspect final-bin occupancy; no domain convergence claimed.
+No analytical coupled PSD solution for Case 7. SI analytical reaction solution belongs to Case 6.
+Uniform/reference measurements completed before other Julia checks and inference started. Logarithmic-grid sensitivity timings overlapped those jobs; they are not used in work plots or efficiency rankings.
+Additional transient half-step check reconstructed base bin numbers and bulk states from retained field.csv; only CSV roundoff differs from the original base states. Its repeated verification solve is not an additional timing sample.

@@ -6,8 +6,8 @@ include("../examples/continuous_precipitation.jl")
 @testset "Benchmark configurations and independent outlet integral" begin
     quick = ContinuousPrecipitation.benchmark_configurations()
     full = ContinuousPrecipitation.benchmark_configurations(full=true)
-    @test length(quick) == 36
-    @test length(full) == 150
+    @test length(quick) == 25
+    @test length(full) == 125
     for mesh in (:log,:uniform)
         pairs = [(c.nx,c.nz) for c in full if c.mesh==mesh && c.size_method=="muscl" && c.axial_method=="muscl"]
         @test Set(pairs) == Set(Iterators.product((12,25,50,100,200),(37,75,150,300,600)))
@@ -49,4 +49,13 @@ include("../examples/continuous_precipitation.jl")
     result = ConstantGrowthMethods.measure(grid,N,truth,choice[3],choice[4],4.,.0625,SizeBC(Periodic(),Periodic()))
     @test abs(result.number_drift) < 1e-12
     @test 0 < result.rmse < .01
+    hoc = only(filter(c->c[1]=="hoc",ConstantGrowthMethods.combinations()))
+    @test hoc[3] === nothing && hoc[4] isa HOCFiniteVolume
+    coarse = ConstantGrowthMethods.measure(grid,N,truth,hoc[3],hoc[4],4.,.0625,SizeBC(Periodic(),Periodic()))
+    fine_grid = Grid1D(range(0.,1.;length=161))
+    fine = ConstantGrowthMethods.measure(fine_grid,ConstantGrowthMethods.smooth_counts(fine_grid,0.),
+        ConstantGrowthMethods.smooth_counts(fine_grid,4.),hoc[3],hoc[4],4.,.03125,SizeBC(Periodic(),Periodic()))
+    @test abs(coarse.number_drift) < 1e-12
+    @test 3.8 < coarse.rmse/fine.rmse < 4.2 # independent integrated sine/cosine reference
+    @test all(c.axial_method=="muscl" for c in vcat(quick,full))
 end

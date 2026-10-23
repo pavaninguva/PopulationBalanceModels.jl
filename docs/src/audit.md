@@ -78,7 +78,7 @@ reproducers are in `test/audit_regressions.jl`; compact-policy checks are in
 | A09 | Medium: zero-feed axial populations with ledgers failed dimensions | `compilation/axial_system.jl` constructed an inlet including historical rows. | Feed now has physical-state length. Nonuniform admissibility/face-inventory test includes stationary ledgers. | **Corrected.** Axial extinction remains unsupported. |
 | A10 | Medium: profile stop flags / invalid deposition could mislead | Bayesian Optim profiles relied on objective-stop status; deposition comparisons could let NaN fall through. | Profiles verify reference/nuisance stationarity and detect an improved reference optimum. Analytic Gaussian curvature/minimizers tested. Deposition rejects nonfinite/negative inputs. Invalid ExactClosure runtime states now raise NumericalFailure before rates run; inference rejection is tested. | **Corrected.** Profile thresholds remain target-specific. |
 | A11 | Medium: CI hid or missed normal-user failures | Sensitivities disabled compiled modules; optional tests omitted direct ForwardDiff dependency; full Distributions imports caused `moment` ambiguity on Julia 1.13. | Normal sensitivity checks pass on 1.10.12/1.13.2. CI declares ForwardDiff; selective imports; minimum/current checks, Aqua and targeted JET added. | **Corrected CI.** Old 1.10.3 upstream failure retained explicitly. |
-| A12 | Medium: protein sampling screen could imply model adequacy | `examples/protein_crystallization.jl`, retained residuals/draws: large concentration residuals despite mixing. | Rechecked all 3,000 maps, MAP/tail gradients, selected saved densities, 100 latent curves and 13 temporal points. Bad output times reject; failed predictive draws cannot be silently dropped. | **Numerically consistent; physical limitation unresolved.** Data/prior/noise unchanged. |
+| A12 | Medium: protein sampling screen could imply model adequacy | `examples/protein_crystallization.jl`, retained residuals/draws: large concentration residuals despite mixing. | Rechecked all 3,000 maps, MAP/tail gradients, selected saved densities, 100 latent curves and 13 temporal points. Bad output times reject; failed predictive draws cannot be silently dropped. | **Numerically consistent; physical limitation unresolved.** Original audit kept its data/prior/noise. The later broad-prior example is a new target. |
 | A13 | Medium: primary-inversion conditioning and unresolved closure evolution | First failing original stages: EQMOM growth/source 0.4788 s, collisions 0.4459 s; lognormal collisions 0.0908 s. Last saved times were 0.475/0.445/0.09 s. | Added 256-bit arithmetic refinement of the same Gamma inversion, independent characteristic moments through M6, full width-root feasibility checks, analytic lognormal breakage rates and independently controlled integration. | **Arithmetic defect corrected; remaining limits diagnosed below.** No state repair or family replacement. |
 | A14 | Low: repeated inversion / mixed-term inference work | Moment residual reconstructed twice; JET lost correlated term/method/cache types. `_mechanism` was private and unused across source/tests/examples/docs. | Reuse validating reconstruction, retain third-party hooks; dispatch barrier; shared growth divergence; unused alias removed. Allocation probe and selected JET residuals pass. | **Corrected.** No public family removed. |
 | A15 | Low: softplus AD branch at zero | `inference/parameters.jl`: the private max/abs implementation gave derivative -0.5 instead of +0.5 at zero. The combined symmetric logit Jacobian already had the correct derivative/curvature. | Stable differentiable branch; independent derivative and logit Hessian checks. | **Corrected helper.** No prior/posterior target changed. |
@@ -274,7 +274,7 @@ with LaTeX enabled and grid lines disabled. These remain optional plotting tools
 | Case / assets | Evidence and status |
 |:--|:--|
 | Qamar families | Regenerated `method_comparison.csv`, `method_summary.csv`, `reconstruction_checks.csv` and comparison figures. Analytical number/material equations and continuous daughter moments checked. 32/64-point lognormal growth/source completes after correction; collision/EQMOM failures remain. Timings are single warmed measured runs, with unequal state counts and horizons explicit. |
-| Protein inference | Digitized inputs, priors, draws and figures retained. PDF hash/image calibration and all 32 marker readings independently reproduced by `test/audit_protein_data.py` (four-neighbour flood fill). `test/audit_protein.jl` revalidates without resampling: [protein_checks.csv](assets/audit/protein_checks.csv). Maximum R-hat 1.00311, minimum bulk/tail ESS 925/589, zero retained divergences; 18 warmup divergences remain. Concentration RMS 7.277σ and maximum 24.417σ preclude an experimental-validation claim. |
+| Protein inference (previous-prior audit) | Digitized inputs, priors, draws and figures retained at the audited revision. PDF hash/image calibration and all 32 marker readings independently reproduced by `test/audit_protein_data.py` (four-neighbour flood fill). `test/audit_protein.jl` revalidated those draws without resampling. At that revision: maximum R-hat 1.00311, minimum bulk/tail ESS 925/589, zero retained divergences; 18 warmup divergences remain. Concentration RMS 7.277σ and maximum 24.417σ preclude an experimental-validation claim. |
 | Cooling crystallization | Declared nonnegative adapted initial condition; printed polynomial preserved literally. Fine sectional reference and exactly closed moments test different errors. No faithful reproduction of the printed initial distribution claimed. |
 | Variable-growth 2D / constant-growth comparison | Analytical bin integrals/characteristics, mapped mesh and CFL checks. Smooth/sharp fields and stencil audits retained. Oscillatory Lax–Wendroff/compact results are not called unstable solely because they undershoot. |
 | Continuous precipitator | Declared Zhang Case 7A adaptation; source/volume convention and inlet balance checked. Numerical reference and package schemes differ from the paper; SI-scale full convergence study incomplete. |
@@ -283,8 +283,8 @@ with LaTeX enabled and grid lines disabled. These remain optional plotting tools
 
 Quadrature accuracy does not remove lognormal shape error: inferred M3 is not
 an evolved conserved state. Chain convergence does not establish grid
-convergence, identifiability or adequacy. Protein's retained spatial check
-changes predictions by roughly half a measurement σ. Physical-CSV roundtripping
+convergence, identifiability or adequacy. The previous-prior protein spatial check
+changed predictions by roughly half a measurement σ. Its physical-CSV roundtripping
 changes folded-rank R-hat by 7.61e-6, within measured two-ulp sensitivity 2.53e-5;
 no sampler screen threshold changed.
 
@@ -395,7 +395,9 @@ checks and full-paper interpretation are linked from the
 [compact specification](methods/compact_verification.md). The final checks
 pass 1,366 core tests (including Aqua) on minimum/current Julia and 52 affected
 optional integration checks. Collision EQMOM research and protein inference
-targets were not reopened.
+targets were not reopened in the compact-solver task. The subsequent
+case-study follow-up below explicitly broadens the protein priors and regenerates
+its fit and chains. Historical audit numbers describe the earlier target.
 
 Model/representation constructors retain their names. Accounting adds
 `:nucleation_underflow` and `:nucleation_overflow`, changing packed lengths and
@@ -413,3 +415,75 @@ No runtime dependency was added. Aqua 0.8 is test-only; JET 0.12 lives in an
 isolated CI job. Older optional major versions allowed by compat were not
 exhaustively resolved: current/maintained stacks and minimum core runtime are
 the executed evidence.
+
+## Case-study refinement follow-up
+
+This follow-up started at clean `afda48e603a466b7b981f63d0d4d34ce8960c18a`.
+No applicable repository instructions were found. Collision EQMOM remains parked.
+The constant-growth comparison adds the conservative `HOCFiniteVolume` midpoint
+update through the normal compile/simulate interface. Its fixed-CFL smooth RMSE
+orders approach two (2.019 to 2.000); this does not replace the independent
+fourth-order spatial study in the compact specification.
+
+The tubular work plot previously mixed two mesh directions and different
+reference distributions; its coordinate plot had only two size resolutions.
+The revised study uses one common WENO5-size/MUSCL-axial/RK4 reference and
+four-point one-coordinate paths. Axial WENO5 still fails the empty-start bulk
+check after step reduction; it is not silently used as a reference. Four field
+times include the empty state and 40-s startup. Executed settings and numerical
+reference checks are linked from the [case study](case_studies/continuous_precipitation.md).
+
+The protein default prior scenario now broadens coefficient/exponent support
+and log-growth scale. `priors=:previous` reproduces the former statistical model.
+Observations, Gaussian noise, observation operators and kinetic equations are
+unchanged. Old and new draws are never pooled. Physical saved MAP values are
+retransformed when bounds change; old logit coordinates are not reused.
+The [parameter table](case_studies/protein_crystallization.md) declares all priors
+and fixed quantities. Prior breadth does not settle A12's model discrepancy.
+
+The revised case-study configurations pass 62 focused checks and all 1,384
+core checks on Julia 1.10.0/1.13.2; the optional Bayesian integration passes
+108 checks. The 25 reactor comparisons complete without relaxing stage checks.
+At 200 s, reducing only reference size/axial resolution changes normalized outlet
+L1 by 0.0660/0.0577; halving the time step changes it by 5.5×10⁻¹⁴.
+Startup half-step checks at 40/80 s give maximum field/outlet differences
+2.6×10⁻⁸/5.0×10⁻⁷ and maximum bulk difference 1.3×10⁻⁸ kg m⁻³.
+Spatial uncertainty remains the main verified numerical limitation.
+Uniform reference/refinement timing runs preceded other Julia jobs; additional
+log-grid sensitivity costs overlapped subsequent checks and are excluded from
+work plots. Exact executed commands are in the existing verification CSV.
+
+Reviewing the new HOC timing plot exposed a benchmark warmup mismatch:
+`constant_growth_benchmark.jl` omitted `method=time` in the warmup call, so
+residual methods could warm default SSPRK33 instead of the selected integrator.
+The warmup now uses the same explicit keyword as production. All constant-growth
+timings are regenerated together; a premeasurement GC and exported allocation/GC
+statistics separate earlier runs' garbage from solve costs. This affects the
+timing protocol, not the equations or distribution error definitions.
+
+The first broad-prior protein budget (4 × 750 retained, 500 warmup) failed the
+unchanged screen: j R-hat 1.0100565 and tail ESS 339.6. Raw draws, energies and
+diagnostics are retained under `protein_crystallization/sampling_budget_750/`.
+A larger budget uses 4 × 1,500 retained draws and 750 warmup, with isolated Julia
+processes, independent seeds 2027–2030 and separate PBM caches. The existing
+AdvancedHMC adapter and posterior are unchanged. The example shares its exporter
+between modes and recomputes joint diagnostics, with 11 analytical/serialization/
+seed/prior checks added to optional CI. Final optional CI-sequence checks pass 171.
+
+The 6,000-draw run passes: maximum R-hat 1.00216; minimum bulk/tail ESS
+1,520/1,728; BFMI 0.974–1.042; zero retained divergences/depth hits and 25 warmup
+divergences. The independent retained-data audit passes 12,230 checks: largest
+saved log-density difference 6.8×10⁻¹³, latent prediction difference 1.3×10⁻¹³σ,
+map-gradient discrepancy 4.7×10⁻⁶. Half-step changes remain below 0.0044σ.
+45.1% of broad-prior draws have j<1, excluded by the former prior. Concentration
+RMS/max residuals remain 7.28/24.40σ: A12's model/observation discrepancy remains unresolved.
+
+The final minimum-version run exposed an eager `Serialization` import in the
+physical example under Pkg's restricted test environment. IPC loading is now
+confined to the optional parallel branch and explicitly enters the latest world;
+qualified Serialization calls avoid namespace leakage. The minimum core rerun
+passes 1,384 checks without adding a package runtime dependency. An end-to-end
+short isolated-chain/export check verifies this lazy path, retaining its expected
+failed convergence screen for an intentionally insufficient 16-draw budget.
+These IPC-only corrections change neither the target nor the retained results;
+the independent target/prediction audit supports reuse of the longer run.

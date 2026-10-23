@@ -29,7 +29,7 @@ function audit_protein()
     saved=table("sampler_diagnostics.csv")
     checks=Pair{String,Float64}[]
     @testset "Retained protein posterior: coordinates and diagnostics" begin
-        @test (samples,chains)==(750,4)
+        @test (samples,chains)==(1500,4)
         # Only physical draws were retained. Mapping exp(z) back through log
         # changes some z values by a few ulps; folded ranks can break ties.
         # Measure that sensitivity rather than imposing bitwise rank identity.

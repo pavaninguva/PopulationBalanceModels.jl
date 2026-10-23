@@ -36,10 +36,14 @@ function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=para
     axial_problem(local_problem,reactor;axial_scheme)
 end
 
-# Native SSPRK33 with a state-dependent explicit step bound. This controller is
+# Native explicit RK with a state-dependent explicit step bound. This controller is
 # a benchmark driver, not an adaptive-error solver or a differentiable schedule.
-function advance(problem,times;fraction=.3)
+function advance(problem,times;fraction=.3,method=RK4())
     times = collect(times)
+    isfinite(fraction) && 0 < fraction <= 1 || throw(ArgumentError("fraction must be in (0,1]"))
+    method isa PopulationBalanceModels.AbstractExplicitRK || throw(ArgumentError("advance requires a native explicit Runge–Kutta method"))
+    all(isfinite,times) && issorted(times) && all(t->first(problem.tspan)<=t<=last(problem.tspan),times) ||
+        throw(ArgumentError("output times must be finite, sorted and inside the problem time span"))
     u = copy(problem.u0)
     t = first(problem.tspan)
     operator = problem.operator
@@ -62,7 +66,7 @@ function advance(problem,times;fraction=.3)
             end
             h = min(h,target-t,.25)
             h > 1e-12 || throw(NumericalFailure("precipitation step collapsed; inspect the state"))
-            PopulationBalanceModels._rk_step!(u,cache,problem,t,h,SSPRK33(),true,1e-8)
+            PopulationBalanceModels._rk_step!(u,cache,problem,t,h,method,true,1e-8)
             PopulationBalanceModels._check_problem_state(problem,u,1e-8)
             t = h == target-t ? target : t+h
             steps += 1
