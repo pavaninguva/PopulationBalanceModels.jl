@@ -27,6 +27,8 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
     bc=periodic ? SizeBC(Periodic(),Periodic()) : SizeBC()
     reconstruction=_prepare_reconstruction(axial_scheme,domain.grid,bc)
     localop=local_problem.operator
+    any(pop->any(term->term isa SizeDiffusion,pop.model.terms),values(localop.system.populations)) &&
+        throw(ArgumentError("SizeDiffusion is currently supported in batch populations only, not axial adapters"))
     all(values(localop.system.populations)) do op
         op isa CompiledPBM || (op isa CompiledMomentPBM && op.closure isa AbstractMomentClosure)
     end || throw(ArgumentError("axial systems support fixed sectional or raw-moment populations; direct quadrature states require different transport equations"))

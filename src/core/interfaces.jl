@@ -53,7 +53,7 @@ function _term_method(plan::TermMethods,name,term,representation)
 end
 function _validate_plan(plan::TermMethods,model)
     all(n->n in model.names,keys(plan.by_term)) || throw(ArgumentError("by_term contains an unknown model term name"))
-    known=(:growth,:birth,:death,:dilution,:nucleation,:aggregation,:breakage,:custom)
+    known=(:growth,:size_diffusion,:birth,:death,:dilution,:nucleation,:aggregation,:breakage,:custom)
     all(n->n in known || any(t->mechanism(t)==n,model.terms),keys(plan.defaults)) || throw(ArgumentError("unknown term-method category"))
 end
 function _prepare_terms(model,plan,representation;kwargs...)

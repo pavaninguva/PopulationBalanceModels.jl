@@ -28,6 +28,8 @@ current stage context `ctx`. Read each method's restrictions in the linked manua
 Grid1D(edges; coordinate=:volume)
 PBMModel(; named_terms...)
 TermMethods(; by_term=NamedTuple(), mechanism_methods...)
+SizeDiffusion(D)  # constant or D(L,p,t,ctx), coordinate²/time, Ito convention
+TermMethods(size_diffusion=FiniteVolumeDiffusion())
 compile(model, grid; methods=TermMethods(), bc=SizeBC(), growth_scheme=Upwind())
 compile(model, MomentSet(0:K); method=ExactClosure(), methods=TermMethods(),
         boundary=MomentBoundary())
@@ -50,6 +52,10 @@ what was stored and how it was computed.
 
 Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`, and `RK4`.
 `VanLeer` and geometry-aware `WENO3` support nonuniform 1D grids.
+`SizeDiffusion` supports uniform/nonuniform batch Grid1D residuals, including
+shared-bulk systems, with closed or paired periodic boundaries. See the
+[diffusion contract](methods/growth.md#Random-fluctuation-growth-rate-dispersion)
+for total-flux injection, exchange and timestep restrictions.
 `WENO5` supports fixed nonuniform 1D meshes, rectangular `Grid2D` axes and
 the coupled adapter's axial mesh; at least six bins are required per WENO5 axis.
 Geometry is prepared at compilation. See [Growth](methods/growth.md) for the

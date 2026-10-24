@@ -62,9 +62,16 @@ for an arbitrary spatial reconstruction.
 checks reject nonfinite values and concentrations below `-negative_tolerance`
 (default ``10^{-12}``), at intermediate stages and completed steps. Values are not clipped.
 `suggest_dt` estimates an explicit transport/source bound, including outgoing
-face velocities and removal/collision hazards. It is not a proven positivity
+face velocities, size-diffusion losses and removal/collision hazards. The rates
+are added within each bin: for constant G and D, an interior uniform bin has
+the bound ``\Delta t\le C/(|G|/\Delta L+2D/\Delta L^2)``. It is not a proven positivity
 bound for WENO or custom residuals. For 2D unsplit transport the sum of both
 coordinate Courant numbers matters.
+For a packed sectional PBMSystem, `suggest_dt(problem.operator,u,p,t)` uses
+the current bulk context but does not bound bulk depletion or interactions.
+Neither interface automatically recomputes or enforces a step during `simulate`.
+See [size diffusion](growth.md#Random-fluctuation-growth-rate-dispersion) for
+boundary, nonuniform geometry and RK-stage restrictions.
 
 Load SciMLBase to use `odeproblem(problem)` with an external ODE solver. This
 exports the same residual, including bulk equations. An adaptive or stiff solver

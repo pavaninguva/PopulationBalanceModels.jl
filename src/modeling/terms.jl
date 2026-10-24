@@ -21,6 +21,29 @@ Inguva2022 transport update with `compile(...; evolution=Inguva2022(),p)`.
 struct Growth{F} <: AbstractPBMTerm
     rate::F
 end
+"""
+    SizeDiffusion(D)
+    SizeDiffusion(; diffusivity=D)
+
+Random-fluctuation growth-rate dispersion in one internal coordinate L:
+``∂ₜn = ∂²_L(D n)``. Together with Growth the total flux is
+``F = G n - ∂_L(D n)`` (Ito/Fokker–Planck convention), **not** Fickian
+``-D ∂_L n`` for size-dependent D. D is a finite nonnegative constant or a
+pure callback `D(L,p,t,ctx)` in coordinate²/time, evaluated at bin centres
+using the current integration-stage context, including `ctx.bulk`.
+
+Supports residual-based Grid1D sectional populations, standalone or in PBMSystem,
+on uniform/nonuniform meshes with NoFlux at both ends or paired Periodic ends.
+The default FiniteVolumeDiffusion acts on bin densities Nᵢ/widthᵢ. Select it with
+`TermMethods(size_diffusion=FiniteVolumeDiffusion())`. BoundaryInjection adds
+one prescribed total number flux, including without Growth. Other size
+boundaries, moment/tensor representations and direct evolution are unsupported.
+Use suggest_dt for the combined explicit growth/diffusion/loss recommendation;
+it does not automatically control simulate's timestep.
+"""
+struct SizeDiffusion{F} <: AbstractPBMTerm
+    diffusivity::F
+end
 """Distributed number-density source `source(v,p,t,ctx)` per size per time."""
 struct Birth{F} <: AbstractPBMTerm
     source::F
@@ -138,6 +161,7 @@ mechanism(::AbstractPBMTerm)=:custom
 
 
 mechanism(::Growth)=:growth
+mechanism(::SizeDiffusion)=:size_diffusion
 mechanism(::Birth)=:birth
 mechanism(::Union{Nucleation,DistributedNucleation})=:nucleation
 mechanism(::Aggregation)=:aggregation
@@ -148,6 +172,7 @@ mechanism(::CustomTerm)=:custom
 
 # Named keyword forms expose physical inputs without changing positional APIs.
 Growth(;rate)=Growth(rate)
+SizeDiffusion(;diffusivity)=SizeDiffusion(diffusivity)
 Birth(;source)=Birth(source)
 Death(;rate)=Death(rate)
 Dilution(;rate)=Dilution(rate)

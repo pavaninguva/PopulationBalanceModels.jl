@@ -18,6 +18,7 @@ QMOM additionally evaluates general growth, removal, aggregation and breakage
 through their weak forms. It does not infer source integrals or boundary losses.
 """
 function compile(model::PBMModel,g::MomentSet;closure=ExactClosure(),method=nothing,methods=TermMethods(),fields=_emptyfields,boundary=MomentBoundary(),evolution=nothing)
+    _validate_size_diffusion(model,g,nothing,BatchDomain(),evolution)
     evolution===nothing || throw(ArgumentError("direct sectional HOC/characteristic evolution requires Grid1D or Grid2D bin integrals; moment populations use their moment integration policies"))
     boundary isa MomentBoundary || throw(ArgumentError("boundary must be MomentBoundary"))
     selected=method===nothing ? closure : method

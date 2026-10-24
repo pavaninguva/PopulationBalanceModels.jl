@@ -8,6 +8,7 @@ struct CompiledPBM2D{M,G,S,B,F,P}
 end
 _uniform(g::Grid1D)=maximum(abs.(g.widths.-first(g.widths)))<=1e-10*first(g.widths)
 function compile(model::PBMModel,g::Grid2D;growth_scheme=Upwind(),bc=SizeBC2D(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple(),domain=BatchDomain())
+    _validate_size_diffusion(model,g,bc,domain,evolution)
     domain isa BatchDomain || return _compile_axial(model,g,domain;growth_scheme,bc,fields,methods,evolution,p)
     growth_scheme isa Union{Upwind,WENO5} || throw(ArgumentError("2D transport currently supports Upwind or WENO5"))
     bc isa SizeBC2D || throw(ArgumentError("use SizeBC2D for two coordinates"))

@@ -7,12 +7,12 @@ import ForwardDiff
 using SpecialFunctions: loggamma
 import Distributions: loglikelihood, fit
 
-export Grid1D, Growth, Birth, Death, Nucleation, Aggregation, Breakage,
+export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Breakage,
        AbstractPBMTerm, AbstractPopulationRepresentation, AbstractMomentBasis,
        AbstractTermMethod, AbstractReconstruction, AbstractMomentMethod,
        AbstractMomentClosure, AbstractDirectMomentMethod,
        TermMethods, term_methods, mechanism, default_method, prepare_term, add_term!,
-       MidpointRule, GaussLegendre, BinIntegral, FixedPivot, PointwiseLoss,
+       MidpointRule, FiniteVolumeDiffusion, GaussLegendre, BinIntegral, FixedPivot, PointwiseLoss,
        CellAverageLoss, BoundaryInjection, GaussianInjection, NativeResidual,
        ExactMomentRule, QuadratureMomentRule, LogNormalClosure, QMOM,
        RankAdaptiveQMOM, EQMOM, DQMOM, quadrature_state,
@@ -72,6 +72,7 @@ include("numerics/sectional/transport.jl")
 include("numerics/sectional/nonuniform_weno.jl")
 include("numerics/sectional/deposition.jl")
 include("numerics/sectional/local_sources.jl")
+include("numerics/sectional/size_diffusion.jl")
 include("numerics/sectional/collisions.jl")
 include("numerics/sectional/integrated_sources.jl")
 include("numerics/sectional/term_dispatch.jl")

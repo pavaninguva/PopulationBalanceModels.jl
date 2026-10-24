@@ -146,9 +146,13 @@ material accounting accordingly. Periodic boundaries are useful for numerical
 tests but are generally inappropriate for physical particle size and cannot be
 combined with sectional collisions.
 
-A boundary flux needs Growth in the model. A zero-size nucleation term can
-instead select BoundaryInjection at the matching edge; active injection requires
-inward or zero velocity. Choose one declaration for the same source. Both
+A bare `InflowFlux` boundary needs Growth in the model. A zero-size nucleation
+term can instead select BoundaryInjection at the matching edge; without size
+diffusion, active injection requires inward or zero growth velocity.
+With [`SizeDiffusion`](methods/growth.md#Random-fluctuation-growth-rate-dispersion),
+BoundaryInjection specifies the total incoming number flux even without Growth.
+SizeDiffusion currently requires closed or paired periodic base boundaries.
+Choose one declaration for the same source. These flux forms
 avoid dividing a prescribed flux by a possibly vanishing growth velocity.
 The first positive pivot still assigns incoming particles a finite discrete size.
 

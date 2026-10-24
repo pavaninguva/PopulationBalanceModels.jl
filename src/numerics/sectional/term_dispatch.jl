@@ -88,7 +88,9 @@ function add_term!(dN,N,term::Union{Death,Dilution},m::CellAverageLoss,q,op,p,t,
 end
 function add_term!(dN,N,term::Nucleation,m::BoundaryInjection,cache,op,p,t,ctx)
     J=_nonnegative(term.rate(p,t,ctx),"boundary nucleation rate")
-    if !iszero(J)
+    # With diffusion the closed base face plus this source prescribes TOTAL
+    # influx J, independently of G; no separate boundary density J/G is imposed.
+    if !iszero(J) && !any(term->term isa SizeDiffusion,op.model.terms)
         growth=only(filter(term->term isa Growth,op.model.terms))
         velocity=growth.rate(term.size,p,t,ctx)
         isfinite(velocity) && (m.side===:left ? velocity>=0 : velocity<=0) || throw(ArgumentError("active boundary nucleation requires inward or zero growth velocity"))

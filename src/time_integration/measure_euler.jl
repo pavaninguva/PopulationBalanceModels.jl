@@ -77,6 +77,7 @@ function _validate_measure_operator(op::CompiledSystem,m)
                 item.method isa Union{ExactMomentRule,QuadratureMomentRule} || throw(ArgumentError("custom weak forms require their own admissible evolution rule"))
             end
         elseif pop isa CompiledPBM
+            any(item->item.term isa SizeDiffusion,pop.prepared) && throw(ArgumentError("SizeDiffusion requires a residual RK integrator; MeasureEuler diffusion splitting is not implemented"))
             all(item->!(item.term isa Growth) || item.method isa Upwind,pop.prepared) || throw(ArgumentError("MeasureEuler's sectional guarantee requires explicitly selected Upwind growth"))
             any(item->item.term isa CustomTerm,pop.prepared) && throw(ArgumentError("custom sectional sources have no positivity contract"))
             pop.bc.left isa Periodic && throw(ArgumentError("sectional periodic size transport is not supported by MeasureEuler"))

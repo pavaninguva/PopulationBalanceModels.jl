@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added native Ito/Fokker–Planck `SizeDiffusion` with conservative finite-volume fluxes on uniform/nonuniform batch Grid1D meshes, closed/periodic boundaries, current-stage bulk coefficients, boundary number injection and ForwardDiff-compatible residuals. Included diffusion in default conservative exchange and summed explicit growth/diffusion/loss recommendations, including sectional PBMSystem states. Added analytical refinement/conservation tests and a synthetic broadening example; moment, tensor, axial and direct-update diffusion remain unsupported.
+- Corrected periodic sectional growth accounting: the wrapped internal face is no longer counted as particle escape or an additional bulk-material sink.
+
 - Integrated the protein case's diagnostic Wasserstein distance analytically over common affine-quantile intervals. Independent quadrature exposed the previous finite-midpoint error; fitting still uses its unchanged correlated-CDF likelihood.
 
 - Corrected coupled initial-state validation for forward AD: derivative components of zero-valued bins, bulk states and cumulative states no longer cause false negative-population errors during `remake`. Conditional CDF/quantile support checks likewise inspect physical mass; a positive derivative cannot make an empty window observable. Physical negativity is still rejected.

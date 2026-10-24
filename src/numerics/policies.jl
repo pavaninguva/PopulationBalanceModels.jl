@@ -1,4 +1,14 @@
 struct MidpointRule <: AbstractTermMethod end
+"""
+    FiniteVolumeDiffusion()
+
+Conservative centred flux `q = -(Dᵣ*Nᵣ/wᵣ - Dₗ*Nₗ/wₗ)/(xᵣ-xₗ)` for
+SizeDiffusion on fixed Grid1D meshes. Closed exterior faces have zero flux;
+periodic faces use the wrapped centre distance. Second-order consistent on
+uniform and smoothly graded meshes; no such order is promised for arbitrary
+grading. This is a spatial residual, not an implicit time update or a filter.
+"""
+struct FiniteVolumeDiffusion <: AbstractTermMethod end
 """Gauss–Legendre bin quadrature with a specified point count."""
 struct GaussLegendre <: AbstractTermMethod
     order::Int

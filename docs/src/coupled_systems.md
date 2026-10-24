@@ -114,12 +114,29 @@ It is responsible for its own physical and numerical conservation checks.
 
 ## Derive exchange from the same discrete residual
 
-`ConservativeExchange(:particles,:c,weight; mechanisms=(:growth,:birth,:nucleation))`
+`ConservativeExchange(:particles,:c,weight; mechanisms=(:growth,:size_diffusion,:birth,:nucleation))`
 subtracts the selected resolved particle-property rate from the bulk derivative.
 It uses the selected term methods, including external policies. For a fixed
 particle weight ``w(x)``, this aligns the discretization of ``c+\sum_i w(x_i)N_i``.
 It does not establish continuum moment accuracy at a finite grid size.
 A time- or state-dependent weight needs the additional derivative of that weight.
+
+Size diffusion preserves number but generally changes material moments. Its
+contribution is included by default; an explicitly supplied `mechanisms` tuple
+is preserved. For example, with length-based bin counts and
+`weight=(L,p,t,ctx)->rho_kv*L^3`, the closed-system invariant is
+``c+\rho k_v\sum_i L_i^3N_i`` per unit process volume. Use this exchange **or**
+the corresponding contribution in `bulk_rhs`, never both. Diffusion-only
+evolution may take material from or return it to the bulk. This is exchange,
+not particle escape. Reflecting/periodic diffusion has no external removal.
+For constant G and D with negligible boundaries, the separate continuum check
+is ``dM_3/dt=3GM_2+6DM_1``; it need only converge to the discrete rate.
+
+For example, `SizeDiffusion((L,p,t,ctx)->p.D*ctx.bulk.c/p.c_ref)` uses the current
+stage's dissolved concentration. `suggest_dt(problem.operator,u,p,t)` accepts
+packed sectional system states and uses that same context. It bounds local
+population growth/diffusion/loss rates, not bulk depletion or interactions;
+systems with moments or inter-population interactions need a separate bound.
 
 Open size boundaries are rejected for this exchange because an escaping-particle
 reservoir must be accounted for separately. Collision truncation also needs an

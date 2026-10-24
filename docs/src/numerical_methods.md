@@ -11,6 +11,7 @@ The manual treats these operations separately:
 | Part of the calculation | Numerical treatment |
 |:--|:--|
 | [Growth and dissolution](methods/growth.md) | Signed face fluxes with Upwind, MUSCL, van Leer, WENO3, WENO5, Centered, or LinearUpwind, subject to grid restrictions |
+| [Random-fluctuation GRD](methods/growth.md#Random-fluctuation-growth-rate-dispersion) | `SizeDiffusion` differences D times density, using conservative centred fluxes |
 | [Transport along growth trajectories](methods/characteristics.md) | Inguva2022 and InguvaBraatz2023 for eligible autonomous growth, with matched meshes and time steps |
 | [Nucleation](methods/nucleation.md) | Boundary influx, point deposition, or an integrated size distribution |
 | [Birth, death, and dilution](methods/sources.md) | Bin source integration and nonnegative removal hazards |
@@ -32,7 +33,8 @@ named term with `by_term`; this does not select a time integrator.
 | Physical term | Supplied methods | Conditions |
 |:--|:--|:--|
 | `Growth` | `Upwind`, `MUSCL`, `VanLeer`, `WENO3`, `WENO5`, `Centered`, `LinearUpwind` | The first five support fixed nonuniform 1D meshes, including logarithmic meshes. WENO5 needs at least six bins and numerically resolved reconstruction weights. Centered and LinearUpwind need uniform meshes. WENO and unlimited schemes have no positivity guarantee. |
-| `Nucleation` at one size | `FixedPivot`, `BoundaryInjection`, `GaussianInjection` | Fixed pivot deposits between pivots. Boundary injection needs growth and an inward/zero velocity at that edge. Gaussian width is specified in coordinate units, independently of mesh spacing. |
+| `SizeDiffusion` | `FiniteVolumeDiffusion` | Batch Grid1D, uniform/nonuniform meshes; closed or paired periodic boundaries. Ito/Fokker–Planck convention, current-stage coefficients. Residual integrators only. |
+| `Nucleation` at one size | `FixedPivot`, `BoundaryInjection`, `GaussianInjection` | Fixed pivot deposits between pivots. Boundary injection needs Growth (inward/zero velocity) or SizeDiffusion (prescribed total flux). Gaussian width is specified in coordinate units, independently of mesh spacing. |
 | `Birth`, `DistributedNucleation` | `MidpointRule`, `GaussLegendre(n)` | Callbacks return source density per coordinate; quadrature integrates over each bin. |
 | `IntegratedBirth`, `IntegratedNucleation` | `BinIntegral` | Callback supplies the bin integral directly, including its physical normalization. |
 | `Death`, `Dilution` | `PointwiseLoss`, `CellAverageLoss(quadrature=GaussLegendre(n))` | Nonnegative removal hazard, evaluated at pivots or averaged in each cell. |
@@ -57,7 +59,7 @@ and weighted abscissas; the other families evolve raw moments. See
 [Moment methods](moment_methods.md) for support and realizability restrictions.
 
 For axial reactors, intrinsic terms retain their representation-specific
-choices. The single-population adapter uses axial upwind fluxes. The coupled
+choices, except SizeDiffusion, which currently rejects axial adapters. The single-population adapter uses axial upwind fluxes. The coupled
 `axial_problem` adapter also accepts `axial_scheme=MUSCL()`, `WENO3()` and other
 eligible residual reconstructions. Dispersion uses centered gradient fluxes.
 

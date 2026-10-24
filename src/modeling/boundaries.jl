@@ -1,4 +1,8 @@
 abstract type AbstractSizeBoundary end
+"""Zero external number flux. With SizeDiffusion this prescribes total
+`G*n - ∂_L(D*n) = 0`; it is not a prescribed boundary density. An explicitly
+selected BoundaryInjection replaces the zero total flux by its birth flux.
+"""
 struct NoFlux <: AbstractSizeBoundary end
 """Allow outward flux; impose zero distribution on incoming characteristics."""
 struct OpenBoundary <: AbstractSizeBoundary end

@@ -175,6 +175,7 @@ include("differentiation.jl")
 include("characteristic.jl")
 include("transport_integrators.jl")
 include("nonuniform_weno.jl")
+include("size_diffusion.jl")
 include("axial.jl")
 
 include("li_supplement.jl")

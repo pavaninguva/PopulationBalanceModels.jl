@@ -27,6 +27,7 @@ function compile(model::PBMModel, grid::Grid1D; growth_scheme=Upwind(), bc=SizeB
                  domain=BatchDomain(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple())
     growth_scheme isa AbstractReconstruction || throw(ArgumentError("unsupported growth scheme"))
     bc isa SizeBC || throw(ArgumentError("bc must be SizeBC"))
+    _validate_size_diffusion(model,grid,bc,domain,evolution)
     bc.right isa AbsorbingZero && throw(ArgumentError("AbsorbingZero is a left boundary"))
     bc.left isa AbsorbingZero && first(grid.edges)!=0 && throw(ArgumentError("AbsorbingZero requires a zero left edge"))
     domain isa BatchDomain || return _compile_axial(model,grid,domain;growth_scheme,bc,fields,methods,evolution,p)
@@ -53,8 +54,8 @@ function compile(model::PBMModel, grid::Grid1D; growth_scheme=Upwind(), bc=SizeB
         end
     end
     prepared=_prepare_terms(model,plan,grid;bc)
-    any(item->item.method isa BoundaryInjection,prepared) && !any(term->term isa Growth,model.terms) &&
-        throw(ArgumentError("BoundaryInjection requires a Growth term"))
+    any(item->item.method isa BoundaryInjection,prepared) && !any(term->term isa Union{Growth,SizeDiffusion},model.terms) &&
+        throw(ArgumentError("BoundaryInjection requires Growth or SizeDiffusion"))
     growth=[item.method for item in prepared if item.term isa Growth]
     scheme=isempty(growth) ? growth_scheme : only(growth)
     CompiledPBM(model,grid,scheme,bc,domain,fields,prepared)
@@ -89,8 +90,14 @@ function diagnostics(op::CompiledPBM,N,p,t)
 end
 
 """
-Conservative heuristic step bound for explicit Upwind/source updates. WENO5 and
-CustomTerm have no positivity guarantee from this bound. Check every RK stage.
+    suggest_dt(operator, state, p, t; cfl=0.5)
+
+Local explicit Upwind/diffusion/loss step recommendation. Outgoing rates are
+added before taking the largest cell rate; uniform interior cells contribute
+`abs(G)/ΔL + 2D/ΔL²`. Closed exterior diffusion faces are omitted. Coefficients
+use the supplied current state/context. This does not control simulate's dt,
+bound subsequent coefficient changes or guarantee positivity for arbitrary
+growth reconstructions. Check every RK stage and refine independently.
 """
 function suggest_dt(op::CompiledPBM,N,p,t;cfl=0.5,context=nothing)
     0 < cfl <= 1 || throw(ArgumentError("cfl must be in (0,1]"))
@@ -98,11 +105,16 @@ function suggest_dt(op::CompiledPBM,N,p,t;cfl=0.5,context=nothing)
     x=op.grid.centers
     for c in axes(N,2)
         ctx=_context(op,N,c,t,context)
-        for term in op.model.terms
+        for item in op.prepared
+            term=item.term
             if term isa Growth
                 for i in axes(N,1)
                     l=term.rate(op.grid.edges[i],p,t,ctx); h=term.rate(op.grid.edges[i+1],p,t,ctx)
                     r[i,c]+=(max(-l,zero(l))+max(h,zero(h)))/op.grid.widths[i]
+                end
+            elseif term isa SizeDiffusion
+                for i in axes(N,1)
+                    r[i,c]+=_size_diffusivity(term,x[i],p,t,ctx)*item.cache.loss_factors[i]
                 end
             elseif term isa Union{Death,Breakage,Dilution}
                 for i in axes(N,1)

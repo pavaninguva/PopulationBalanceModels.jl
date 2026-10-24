@@ -113,6 +113,9 @@ Balance a named bulk concentration against the discrete resolved measure change
 from selected population mechanisms. weight(size,p,t,local_context) is mass (or
 another exchanged quantity) per particle. This ensures discrete conservation;
 it is not an independently discretized continuum moment closure.
+The default mechanisms are `(:growth,:size_diffusion,:birth,:nucleation)`;
+diffusion changes nonlinear material moments even when it preserves number.
+Explicit selections are retained. Do not also subtract these rates in bulk_rhs.
 """
 struct ConservativeExchange{F,M}
     population::Symbol
@@ -121,11 +124,12 @@ struct ConservativeExchange{F,M}
     mechanisms::M
 end
 function ConservativeExchange(population::Symbol,bulk::Symbol,weight;
-    mechanisms=(:growth,:birth,:nucleation))
-    all(x->x in (:growth,:birth,:nucleation,:aggregation,:breakage,:death,:dilution,:custom),mechanisms) ||
+    mechanisms=(:growth,:size_diffusion,:birth,:nucleation))
+    all(x->x in (:growth,:size_diffusion,:birth,:nucleation,:aggregation,:breakage,:death,:dilution,:custom),mechanisms) ||
         throw(ArgumentError("unknown exchange mechanism"))
     ConservativeExchange(population,bulk,weight,Tuple(mechanisms))
 end
+
 function _validate_exchange(exchange::ConservativeExchange,op)
     op isa CompiledPBM || throw(ArgumentError("use MomentExchange with a moment population"))
     op.bc.left isa OpenBoundary || op.bc.right isa OpenBoundary ?
@@ -144,6 +148,25 @@ struct CompiledSystem{S,R,B,A}
     length::Int
     physical_length::Int
     ledger_indices::A
+end
+
+"""
+    suggest_dt(operator::CompiledSystem, u, p, t; cfl=0.5)
+
+Minimum local sectional recommendation, with each population's growth,
+SizeDiffusion and loss rates summed using the current shared bulk state.
+Requires sectional populations without inter-population interactions. It does
+not bound bulk depletion or future coefficient changes; native stage checks
+still apply. Moment populations and custom interaction bounds are unsupported.
+"""
+function suggest_dt(op::CompiledSystem,u,p,t; cfl=0.5)
+    0<cfl<=1 || throw(ArgumentError("cfl must be in (0,1]"))
+    length(u)==op.length || throw(DimensionMismatch("packed system state size mismatch"))
+    isempty(op.system.interactions) && all(pop->pop isa CompiledPBM,values(op.system.populations)) ||
+        throw(ArgumentError("suggest_dt for PBMSystem requires sectional populations without interactions; supply a separately verified step bound otherwise"))
+    ctx=_system_context(op,u,zero(u),p,t)
+    minimum(suggest_dt(getproperty(op.system.populations,name),
+        reshape(population(op,u,name),:,1),p,t;cfl,context=ctx) for name in keys(op.ranges))
 end
 
 function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=NamedTuple())

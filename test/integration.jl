@@ -1,4 +1,5 @@
 using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
+include("size_diffusion_integration.jl")
 include("isothermal_protein_optim.jl")
 
 @testset "Nonuniform WENO5 SciML residual adapter" begin

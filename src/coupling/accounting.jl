@@ -70,6 +70,8 @@ function _sectional_losses(op,N,p,t,ctx,mechanisms=nothing)
         term=_effective_term(item)
         mechanisms!==nothing && !(mechanism(term) in mechanisms) && continue
         if term isa Growth
+            # The wrapped face transfers particles internally, not to a reservoir.
+            op.bc.left isa Periodic && continue
             F=_growth_fluxes(term,N,(;grid=op.grid,bc=op.bc,scheme=_prepared_reconstruction(item.method,item.cache)),p,t,ctx)
             if F[1]<0
                 absorb=op.bc.left isa AbsorbingZero

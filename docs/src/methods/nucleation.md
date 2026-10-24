@@ -38,10 +38,13 @@ solution = simulate(problem;dt=0.01)
 sum(solution.u[end])
 ```
 
-The source location must equal the selected edge and the model must contain
-Growth. Active injection requires inward or zero velocity. The alternative
+The source location must equal the selected edge. With Growth alone, active
+injection requires inward or zero velocity. With
+[SizeDiffusion](growth.md#Random-fluctuation-growth-rate-dispersion), injection
+prescribes the total flux ``G n-\partial_L(D n)=J`` at the left edge, including
+without Growth; no boundary density is imposed in addition. The alternative
 `SizeBC(InflowFlux(nucleation_rate),NoFlux())` places the influx in the boundary
-specification instead. Use one declaration for a single mechanism; specifying
+specification instead for advection alone (not SizeDiffusion). Use one declaration for a single mechanism; specifying
 both would count creation twice.
 
 The first bin gains ``J`` particles per process volume per time. Although a
