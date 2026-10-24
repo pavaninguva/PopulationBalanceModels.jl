@@ -1,8 +1,6 @@
 {
   "renderer": "actual LaTeX",
-  "numerical_manifest_sha256": "86c7c8f342cf6ffb625f76ae75ac9bbd000df8c1c30c79907ab71c7833cf8ba1",
-  "plot_driver_sha256": "32abf7a1752616c6ca43991ef9d1f77dcc0384430aa7a1495e3b5fe44546121d",
-  "width_inches": 7,
-  "height_inches": 5.4,
-  "png_dpi": 300
+  "png_dpi": 300,
+  "numerical_manifest_sha256": "53305a1adac939e6ef1ed13f2be75d9e7c9b4cc715a26ea9f7032fd1be780da4",
+  "plot_driver_sha256": "39ff2a16b49be51d34b79ea59cdcc4f92da92a71ea45c422e20c0494d12c7896"
 }

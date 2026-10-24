@@ -92,7 +92,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         kernel=HMC.HMCKernel(HMC.Trajectory{HMC.MultinomialTS}(integrator,HMC.GeneralisedNoUTurn(max_depth=max_depth)))
         adaptor=HMC.StanHMCAdaptor(HMC.MassMatrixAdaptor(mass),HMC.StepSizeAdaptor(target_acceptance,integrator))
         draws,stats=HMC.sample(chain_rng,hamiltonian,kernel,y0,warmup+samples,adaptor,warmup;
-            drop_warmup=false,verbose=false,progress=false)
+            drop_warmup=false,verbose=false,progress=verbose)
         Z[:,:,c]=hcat((from_sampler(y) for y in draws[warmup+1:end])...)
         # Preserve the established meaning of statistics.log_density: p_z(z).
         # Hamiltonian energies remain those of the actual sampler coordinates.

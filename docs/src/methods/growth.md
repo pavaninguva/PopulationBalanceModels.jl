@@ -229,3 +229,11 @@ moment characteristics. A positive computational cutoff uses escape, carrying
 remaining solid material, rather than zero-size extinction. See the
 [boundary and material contract](realizable_evolution.md) and
 [dissolution comparison](../case_studies/dissolution.md).
+
+A size-independent rate may be declared as
+`Growth(PolynomialRate(((p,t,ctx) -> rate(p,t,ctx),)))`.
+The sectional growth-flux assembly evaluates this degree-zero coefficient once,
+using the current stage's bulk state and time. This avoids repeating a costly
+kinetic law at every face. Ordinary callbacks remain supported and are evaluated
+at each face; no spatial independence is inferred by sampling. Rate callbacks
+must be pure.

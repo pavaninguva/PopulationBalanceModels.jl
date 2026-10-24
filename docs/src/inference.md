@@ -1,8 +1,7 @@
 # Parameter estimation
 
-For graph-read curves without a defensible measurement-error model, the
-[isothermal protein example](case_studies/protein_crystallization.md) instead
-uses a deterministic comparison loss. `ResidualObservation` contributes
+A deterministic comparison is available when no probabilistic observation
+model is declared. `ResidualObservation` contributes
 `weight * mean(((prediction-data)/scale).^2)`; `WassersteinObservation`
 integrates squared differences between conditional number quantiles. The
 comparison scales are not sensor standard deviations. These blocks use
@@ -436,7 +435,9 @@ The historical `examples/protein_crystallization.jl` Bayesian recipe uses a
 unit-determinant reference-rate map; its retained sampling checks are described
 in the [audit](audit.md). The current
 [isothermal protein tutorial](case_studies/protein_crystallization.md) uses
-original number distributions and a deterministic calibration loss instead.
+original number distributions, CNT kinetics and an explicit correlated-CDF
+Gaussian likelihood with inferred discrepancy scales. Its Bayesian target is
+separate from the historical recipe.
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
@@ -451,8 +452,8 @@ exponent tradeoffs and predictive mismatch despite a passed sampling screen.
 MCMC `parameter_draws` also returns `indices` into
 `reshape(samples.z, number_of_parameters, :)`, with draws varying before chains.
 Retain these identities when exporting predictive curves. A seed alone need not
-reproduce `randperm` selection across Julia versions; the protein example
-exports `posterior_predictive_indices.csv` for that purpose. Sampling tuning
+reproduce `randperm` selection across Julia versions; the historical protein
+example exports `posterior_predictive_indices.csv` for that purpose. Sampling tuning
 matrices and transformed Hamiltonian energies retain their separate meanings.
 
 ## Check prediction, identifiability and numerical error

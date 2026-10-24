@@ -1,5 +1,9 @@
 [deps]
+AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+MCMCDiagnosticTools = "be115224-59cd-429b-ad48-344e309966f0"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 PopulationBalanceModels = "d67dbf4a-e476-4a75-b295-11f266f08ec0"
 SciMLBase = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
@@ -7,8 +11,12 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 
 [compat]
-Optim = "1, 2"
+AdvancedHMC = "0.8"
+Distributions = "0.25"
+ForwardDiff = "0.10, 1"
 JSON3 = "1"
+MCMCDiagnosticTools = "0.3"
+Optim = "1, 2"
 PopulationBalanceModels = "0.4"
 SciMLBase = "2, 3"
 SpecialFunctions = "2"

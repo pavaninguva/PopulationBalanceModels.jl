@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-- Added a Tang 100 mL isothermal protein tutorial using original concentration and conditional number-CDF readings, conservative population–solute coupling, deterministic joint calibration and held-out prediction. The previous Mitchell-based Bayesian example and its audit assets remain separate.
+- Integrated the protein case's diagnostic Wasserstein distance analytically over common affine-quantile intervals. Independent quadrature exposed the previous finite-midpoint error; fitting still uses its unchanged correlated-CDF likelihood.
+
+- Corrected coupled initial-state validation for forward AD: derivative components of zero-valued bins, bulk states and cumulative states no longer cause false negative-population errors during `remake`. Conditional CDF/quantile support checks likewise inspect physical mass; a positive derivative cannot make an empty window observable. Physical negativity is still rejected.
+
+- Reuse a declared degree-zero polynomial growth rate within each sectional residual. Current-stage bulk/time dependence is retained; ordinary callbacks and higher-degree laws keep their face evaluations. Verified identical fluxes and parameter derivatives across reconstructions and boundary policies.
+
+- Reworked the Tang isothermal protein tutorial around Mitchell Case 3's CNT nucleation and empirical growth, Bayesian joint concentration/number-CDF calibration, explicit literature-informed priors and frozen held-out prediction. The original graph readings are unchanged. Consolidated the fitting/export workflow and removed the superseded power-law/onset drivers and outputs; historical Mitchell audit assets remain separate.
 - Added partial-cell conditional number CDF/quantile observables and `ResidualObservation`/`WassersteinObservation` comparison blocks. These use the existing calibration/Optim interfaces without interpreting comparison scales as noise variances or reporting confidence intervals.
 - Declared the example loader's `DelimitedFiles` dependency in the isolated test target; runtime package dependencies are unchanged.
 

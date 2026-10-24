@@ -1,0 +1,18 @@
+{
+    "bins": 400,
+    "converged": true,
+    "parameters": {
+        "cstar": 2.16,
+        "logAJ": 30.83416662547978,
+        "gamma": 0.5873936022006743,
+        "AG": 0.4752658025830668,
+        "g": 2.891310084042125,
+        "sigma_c": 1.8024340496933546,
+        "sigma_F": 0.02050680616299801
+    },
+    "logposterior": 130.23523895522126,
+    "gradient_norm": 3.8657980254708235e-5,
+    "concentration_prediction_change_g_L": 0.16603096231776604,
+    "CDF_prediction_change": 0.010111244605651826,
+    "used_to_refit_primary_validation": false
+}

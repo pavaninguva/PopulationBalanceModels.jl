@@ -1,0 +1,59 @@
+{
+    "z": [
+        -0.8072260742506429,
+        -0.5323059352622751,
+        -0.7268401990223278,
+        2.8482224739957336,
+        0.6358509944008183,
+        -3.9590479938478857
+    ],
+    "parameters": {
+        "logAJ": 30.848191724868563,
+        "gamma": 0.5872492484266791,
+        "AG": 0.48343413489629944,
+        "g": 2.8904534548832306,
+        "cstar": 2.16,
+        "sigma_c": 1.8886286702118733,
+        "sigma_F": 0.01908127113503771,
+        "c0": 19.965841161400512,
+        "rho": 1240,
+        "kv": 0.81
+    },
+    "converged": true,
+    "loglikelihood": 145.00481888915868,
+    "logprior": -10.653791173924489,
+    "logposterior": 134.35102771523418,
+    "likelihood_coordinates": "concentration and linearly whitened CDF ordinates",
+    "original_CDF_loglikelihood_offset": 14.448267079693075,
+    "gradient": [
+        -2.3148820789520297e-5,
+        2.962241687687328e-5,
+        7.94141578275287e-7,
+        1.6738240127267545e-7,
+        1.4533929526550082e-7,
+        -1.0763533719870821e-7
+    ],
+    "gradient_norm": 2.962241687687328e-5,
+    "elapsed_seconds": 52.384494147,
+    "forward_solves": 690,
+    "failures": 30,
+    "failure_messages": [
+        "negative bulk concentration in coupled solve",
+        "trial requires >200000 steps; initial growth exceeds the calculation budget",
+        "conditional number distribution is undefined for an empty observation window"
+    ],
+    "starts": [
+        {
+            "converged": true,
+            "objective": -134.35102771523418
+        },
+        {
+            "converged": true,
+            "objective": -134.3510277152339
+        },
+        {
+            "converged": true,
+            "objective": -134.35102771523364
+        }
+    ]
+}

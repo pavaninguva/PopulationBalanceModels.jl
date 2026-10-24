@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "prepared_date": "2026-10-23",
-  "status": "implementation_inputs_no_new_PBM_fit",
+  "status": "Historical handover specification for the superseded power-law discrepancy fit; not runtime configuration for CNT.",
   "purpose": "Deploy_calibrate_and_validate_one_isothermal_real_system",
   "experiment": {
     "id": "Tang_100mL_0Cmin",
@@ -304,5 +304,6 @@
     "broad_mechanism_search",
     "mandatory_NUTS",
     "universal_kinetics_claims"
-  ]
+  ],
+  "active_model": "examples/isothermal_protein_crystallization.jl"
 }

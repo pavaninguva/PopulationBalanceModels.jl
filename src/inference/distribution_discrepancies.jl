@@ -18,9 +18,9 @@ function _conditional_window(grid,N,window)
     a,b=window
     isfinite(a) && isfinite(b) && first(grid.edges)<=a<b<=last(grid.edges) ||
         throw(ArgumentError("conditional observation window must lie inside the size domain"))
-    all(isfinite,N) && all(x->x>=0,N) || throw(NumericalFailure("conditional number observations require a finite nonnegative population"))
+    all(isfinite,N) && all(x->_primal(x)>=0,N) || throw(NumericalFailure("conditional number observations require a finite nonnegative population"))
     total=sum(N[i]*max(zero(a),min(b,grid.edges[i+1])-max(a,grid.edges[i]))/grid.widths[i] for i in eachindex(grid.widths))
-    total>0 || throw(NumericalFailure("conditional number distribution is undefined for an empty observation window"))
+    _primal(total)>0 || throw(NumericalFailure("conditional number distribution is undefined for an empty observation window"))
     a,b,total
 end
 
@@ -41,7 +41,7 @@ function conditional_quantiles(grid::Grid1D,N,probabilities;window=(first(grid.e
         while i<=length(grid)
             lo=max(a,grid.edges[i]); hi=min(b,grid.edges[i+1])
             width=max(zero(a),hi-lo); mass=N[i]*width/grid.widths[i]
-            if mass>0 && target<=accumulated+mass
+            if _primal(mass)>0 && _primal(target)<=_primal(accumulated+mass)
                 result[j]=lo+(target-accumulated)*grid.widths[i]/N[i]
                 break
             end

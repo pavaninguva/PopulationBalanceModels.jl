@@ -151,14 +151,14 @@ function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=
     bulk0 isa NamedTuple && all(x->x isa Real && isfinite(x),values(bulk0)) || throw(ArgumentError("bulk0 must contain finite named scalar values"))
     for name in system.nonnegative_bulk
         name in keys(bulk0) || throw(ArgumentError("unknown nonnegative bulk state"))
-        getproperty(bulk0,name)>=0 || throw(ArgumentError("negative initial bulk state"))
+        _primal(getproperty(bulk0,name))>=0 || throw(ArgumentError("negative initial bulk state"))
     end
     all(e->e.bulk in keys(bulk0),system.exchanges) || throw(ArgumentError("unknown bulk exchange target"))
     offset=0
     initial=Tuple(getproperty(u0,name) for name in keys(system.populations))
     ranges=map(values(system.populations),initial) do op,N
         length(N)==population_state_length(op) || throw(DimensionMismatch("population initial size mismatch"))
-        all(isfinite,N) && all(N.>=0) || throw(ArgumentError("initial populations must be finite and nonnegative"))
+        all(isfinite,N) && all(x->_primal(x)>=0,N) || throw(ArgumentError("initial populations must be finite and nonnegative"))
         r=offset+1:offset+length(N); offset+=length(N); r
     end
     namedranges=NamedTuple{keys(system.populations)}(ranges)
@@ -175,14 +175,14 @@ function PBMProblem(op::CompiledSystem,u0::AbstractVector,tspan;p=NamedTuple())
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
     N=float.(copy(u0)); all(isfinite,N) || throw(ArgumentError("initial system state is nonfinite"))
     for r in values(op.ranges)
-        minimum(view(N,r))>=0 || throw(ArgumentError("initial population is negative"))
+        all(x->_primal(x)>=0,view(N,r)) || throw(ArgumentError("initial population is negative"))
     end
     for name in keys(op.ranges)
         _validate_population_state(getproperty(op.system.populations,name),view(N,getproperty(op.ranges,name)))
     end
-    all(>=(0),view(N,op.physical_length+1:op.length)) || throw(ArgumentError("negative initial cumulative state"))
+    all(x->_primal(x)>=0,view(N,op.physical_length+1:op.length)) || throw(ArgumentError("negative initial cumulative state"))
     for name in op.system.nonnegative_bulk
-        N[getproperty(op.bulk_indices,name)]>=0 || throw(ArgumentError("initial bulk state is negative"))
+        _primal(N[getproperty(op.bulk_indices,name)])>=0 || throw(ArgumentError("initial bulk state is negative"))
     end
     PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
 end

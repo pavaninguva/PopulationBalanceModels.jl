@@ -4,7 +4,9 @@ These drivers are independent of Documenter and never read documentation assets.
 They include the existing physical-model/example modules without running those
 modules' standalone benchmarks. The fourth case is the
 [Tang isothermal protein batch](case_studies/04_protein_crystallization/README.md),
-with calibration and held-out prediction; it runs independently of the first three.
+with CNT kinetics, Bayesian calibration and held-out prediction. It runs
+independently of the first three; optional NUTS sampling uses the same model
+and likelihood as its default MAP fit.
 
 Run commands from the repository root. Julia must load **this checkout**; the
 drivers check `pathof(PopulationBalanceModels)` before doing any calculation.
@@ -38,7 +40,7 @@ python paper/plot_all.py --smoke
 python paper/check_data.py --smoke
 ```
 
-All three production calculations, sequentially:
+The production calculations, sequentially (protein defaults to MAP):
 
 ```sh
 OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=1 julia --project=paper paper/run_all.jl

@@ -92,23 +92,29 @@ end
 function _growth_fluxes(term::Growth, N, op, p, t, ctx)
     g=op.grid; m=length(g); n=N ./ g.widths
     F=similar(N,m+1)
+    # A degree-zero PolynomialRate declares spatially uniform growth. Its
+    # parameter/time/current-stage callback is pure and needs one evaluation
+    # per residual, rather than one expensive evaluation per face.
+    uniform=term.rate isa PolynomialRate && length(term.rate.coefficients)==1
+    velocity=uniform ? term.rate(first(g.edges),p,t,ctx) : nothing
+    rate_at(x)=uniform ? velocity : term.rate(x,p,t,ctx)
     periodic=op.bc.left isa Periodic
     if periodic
-        vleft=term.rate(first(g.edges),p,t,ctx)
-        vright=term.rate(last(g.edges),p,t,ctx)
+        vleft=rate_at(first(g.edges))
+        vright=rate_at(last(g.edges))
         isapprox(vleft,vright;rtol=1e-10,atol=1e-14) ||
             throw(ArgumentError("growth rate must match at periodic boundaries"))
         F[1]=vleft*_reconstruct(n,1,op,vleft,true)
         F[end]=F[1]
     else
-        vl=term.rate(first(g.edges),p,t,ctx); vr=term.rate(last(g.edges),p,t,ctx)
+        vl=rate_at(first(g.edges)); vr=rate_at(last(g.edges))
         F[1]=op.bc.left isa InflowFlux ? _nonnegative(op.bc.left.rate(p,t,ctx),"inward number flux") :
             (op.bc.left isa NoFlux || vl>=0 ? zero(vl) : vl*n[1])
         F[end]=op.bc.right isa InflowFlux ? -_nonnegative(op.bc.right.rate(p,t,ctx),"inward number flux") :
             (op.bc.right isa NoFlux || vr<=0 ? zero(vr) : vr*n[end])
     end
     for j in 2:m
-        vel=term.rate(g.edges[j],p,t,ctx)
+        vel=rate_at(g.edges[j])
         F[j]=vel*_reconstruct(n,j,op,vel,periodic)
     end
     all(isfinite,F) || throw(NumericalFailure("nonfinite size-space flux"))
