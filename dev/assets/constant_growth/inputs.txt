@@ -1,8 +1,8 @@
-Inguva et al. (2022), Case 1 Eq.56: g=.1, f0=100exp(-a/.01), domain [0,1], tf=4.0.
-All errors compare analytical bin integrals. Zero inflow/open outflow; far-boundary exponential tail is negligible.
+Adapted constant-growth comparison: g=0.1, f0=100.0*exp(-.5*((a-0.2)/0.03)^2), domain [0,1], tf=4.0.
+Same transport equation as Inguva et al. (2022), Case 1; Gaussian initial data replace the published exponential. Width is the standard deviation.
+All errors compare analytical bin integrals. Zero inflow/open outflow; incoming truncation and far-boundary Gaussian tails are negligible at t=4.
 Smooth check: f0=1+.2sin(2πa)+.1cos(4πa), periodic [0,1].
-Seven representative pairings. HOC uses its native midpoint update (fourth-order space, second-order time). Common C=.5; Inguva2022 requires C=1 and is labelled separately. Front profiles also compare C=1.
+Seven representative pairings. HOC uses its native midpoint update (fourth-order space, second-order time). Common C=.5; Inguva2022 requires C=1 and is labelled separately. Gaussian profiles also compare C=1.
 One measured solve per configuration, following tiny separate compilation warmups with the same explicit time-method keyword. Full GC before each measurement is excluded; in-solve allocation and GC seconds are exported. No timing medians, repeated production runs or timing bands.
 Observed L1 and RMSE orders are measured from successive grids; no fitted or arbitrarily anchored order-guide lines.
 Signed density minima and number drift retained. Julia 1.10.3; CPU 13th Gen Intel(R) Core(TM) i9-13900H; Julia CPU target goldmont; Julia threads 1; BLAS threads 1.
-Presentation follow-up at a3c31d9: HOC shown explicitly in purple dashed curves with diamond markers; Lax-Wendroff omitted from this comparison. Remaining trajectories and single-run timings are unchanged.
