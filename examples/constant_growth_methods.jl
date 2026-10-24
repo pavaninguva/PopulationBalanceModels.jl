@@ -1,7 +1,9 @@
 module ConstantGrowthMethods
 using PopulationBalanceModels
+using Distributions: Normal, cdf, ccdf
 
 const growth = 0.1
+# The separate paper workflow retains this original exponential reference.
 initial_density(a) = a >= 0 ? 100exp(-a/0.01) : 0.0
 primitive(a) = a <= 0 ? 0.0 : -expm1(-a/0.01)
 
@@ -10,6 +12,29 @@ function exact_counts(grid,t)
     [b <= growth*t ? 0.0 : exp(-max(a-growth*t,0)/0.01) *
         (-expm1(-(b-max(a,growth*t))/0.01))
         for (a,b) in zip(grid.edges[1:end-1],grid.edges[2:end])]
+end
+
+const gaussian_height = 100.0
+const gaussian_center = 0.2
+const gaussian_width = 0.03 # standard deviation, independent of bin width
+const gaussian_profile = Normal(gaussian_center,gaussian_width)
+gaussian_density(a) = 0 <= a <= 1 ?
+    gaussian_height*exp(-0.5*((a-gaussian_center)/gaussian_width)^2) : 0.0
+
+"""Exact bin numbers for a Gaussian initially on [0,1], with zero inflow.
+Use survival probabilities above the centre to retain small Gaussian tails.
+"""
+function gaussian_counts(grid,t)
+    shift = growth*t
+    scale = gaussian_height*gaussian_width*sqrt(2pi)
+    map(grid.edges[1:end-1],grid.edges[2:end]) do a,b
+        lo,hi = max(a-shift,0.0),min(b-shift,1.0)
+        hi <= lo && return 0.0
+        fraction = lo >= gaussian_center ?
+            ccdf(gaussian_profile,lo)-ccdf(gaussian_profile,hi) :
+            cdf(gaussian_profile,hi)-cdf(gaussian_profile,lo)
+        scale*fraction
+    end
 end
 
 """Bin integrals of a smooth periodic density; shift the integration endpoints."""

@@ -37,7 +37,7 @@ def constant_growth():
                     **({'marker':'o', 'markersize':3} if markers else {}))
     fig, axes = plt.subplots(1,2,figsize=(10,3.8),layout="constrained",sharey=True)
     a=np.linspace(0,1,4001)
-    truth=np.where(a>=.4,100*np.exp(-(a-.4)/.01),0.)
+    truth=np.where(a>=.4,100*np.exp(-.5*((a-.6)/.03)**2),0.)
     for ax,C in zip(axes,(.5,1.)):
         ax.plot(a,truth,"k-",lw=1.2,label="Analytical density")
         reference=read(folder/f"upwind_euler_{C}_200.csv")
@@ -47,13 +47,13 @@ def constant_growth():
             d=read(folder/f"{name}_{time}_{C}_200.csv")
             ax.plot(d['size'],d['density'],color=color,label=label,
                     **line_style(name,markers=False))
-        ax.set(xlim=(.32,.62),xlabel="$a$",title=fr"$C={C:g}$, 200 bins")
+        ax.set(xlim=(.42,.78),xlabel="$a$",title=fr"$C={C:g}$, 200 bins")
     axes[0].set_ylabel("$f(a,4)$");axes[1].legend(fontsize=7)
     save_figure(fig,folder,"solutions")
 
     # Two physical inputs, with the SAME two error norms for each.
     # Exact shifts have roundoff-level cell-integral errors, not a power-law order.
-    for source,filename,title in [(front,'performance','Exponential with zero inflow'),
+    for source,filename,title in [(front,'performance','Gaussian with zero inflow'),
                                   (smooth,'smooth_refinement','Smooth periodic translation')]:
         fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained")
         for name,time,label,color in choices:

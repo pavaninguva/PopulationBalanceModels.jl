@@ -128,8 +128,9 @@ julia --project=. examples/axially_dispersed_growth.jl
 python docs/benchmarks/plot_transport_comparisons.py axial --usetex
 ```
 
-The constant-growth comparison uses seven representative pairings (including WENO3 + SSPRK33 and HOCFiniteVolume + midpoint) for the 2022
-Case 1 front and a smooth periodic input. Each configuration has one measured
+The constant-growth comparison uses seven representative pairings (including WENO3 + SSPRK33 and HOCFiniteVolume + midpoint) for a translating
+Gaussian and the unchanged smooth periodic input. The Gaussian replaces the
+exponential initialization of the original 2022 Case 1. Each configuration has one measured
 solve following a small compilation warmup. L1/RMSE panels and measured
 refinement orders replace arbitrary h-power guides and repeated-run bands.
 Inguva2022 appears in the timing and error plots at its required C=1, labelled

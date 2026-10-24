@@ -67,12 +67,20 @@ class Summaries(unittest.TestCase):
         for row in rows:
             data=np.genfromtxt(folder/f"hoc_midpoint_{row['courant']}_200.csv",delimiter=',',names=True)
             edges=np.linspace(0.,1.,201)
-            left=np.maximum(edges[:-1]-.4,0.)
-            right=np.maximum(edges[1:]-.4,0.)
-            reference=(np.exp(-left/.01)-np.exp(-right/.01))*200
+            left=np.maximum(edges[:-1],.4)
+            right=edges[1:]
+            nodes,weights=np.polynomial.legendre.leggauss(24)
+            # Independent quadrature of the translated Gaussian, not the CDF
+            # expression used by Julia's exact-bin initializer.
+            reference=np.array([0. if b<=a else
+                (b-a)/2*np.dot(weights,100*np.exp(-.5*((
+                    (a+b)/2+(b-a)/2*nodes-.6)/.03)**2))*200
+                for a,b in zip(left,right)])
             np.testing.assert_allclose(data['exact'],reference,atol=2e-12)
             self.assertAlmostEqual(np.sqrt(np.mean((data['density']-reference)**2)),row['rmse'],places=10)
-            self.assertLess(row['minimum_density'],0.)  # signed lobes were not clipped
+            self.assertAlmostEqual(data['density'].min(),row['minimum_density'],places=12)
+            self.assertAlmostEqual(-np.minimum(data['density'],0.).sum()/200,
+                                   row['negative_number'],places=12)
         smooth=np.genfromtxt(folder/'smooth_errors.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
         hoc=smooth[smooth['scheme']=='hoc']
         self.assertEqual(len(hoc),5)

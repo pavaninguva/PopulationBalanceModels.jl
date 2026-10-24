@@ -5,10 +5,12 @@ without broadening. This makes constant growth a useful test: the exact answer
 is known, and numerical diffusion, oscillations and computational cost can be
 compared without uncertainty about the physical kinetics.
 
-We use Case 1 of [Inguva, Schickel and Braatz (2022)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2022.pdf),
-then repeat the comparison with a smooth periodic distribution to measure
-convergence. The two inputs serve different purposes. A sharp front tests
-resolution and positivity; a smooth input tests the accuracy of the schemes.
+We use the constant-growth equation from Case 1 of
+[Inguva, Schickel and Braatz (2022)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2022.pdf),
+replacing its exponential initial condition with a localized Gaussian. We then
+repeat the comparison with the same smooth periodic distribution to measure
+convergence. The Gaussian makes numerical spreading and distortion easy to see;
+the periodic input separates refinement behaviour from physical boundaries.
 
 ## Model, initial condition and boundaries
 
@@ -17,22 +19,25 @@ For ``0\le a\le1``,
 ```math
 \frac{\partial f(a,t)}{\partial t}
 +0.1\frac{\partial f(a,t)}{\partial a}=0,
-\qquad f(a,0)=100\exp(-a/0.01).
+\qquad f(a,0)=100\exp\!\left[-\frac{(a-0.2)^2}{2(0.03)^2}\right].
 ```
 
 The incoming number flux is zero. The far boundary lets particles leave; the
-initial tail that can reach it by ``t=4`` is negligible. The analytical density is
+initial tail that can reach it by ``t=4`` is negligible. The Gaussian's standard
+deviation is 0.03, independent of bin width, and its centre moves from 0.2 to 0.6.
+The analytical density is
 
 ```math
 f(a,t)=\begin{cases}
-100\exp[-(a-0.1t)/0.01],&a\ge0.1t,\\
-0,&a<0.1t.
+100\exp\!\left[-\frac{(a-0.1t-0.2)^2}{2(0.03)^2}\right],&0\le a-0.1t\le1,\\
+0,&\text{otherwise}.
 \end{cases}
 ```
 
 All numerical states are bin integrals, initialized and assessed against exact
-bin integrals of this function. Sampling the steep exponential only at bin
-centres would add a separate initialization error.
+bin integrals of this function. Sampling the Gaussian only at bin centres
+would add a separate initialization error. Its finite initial support leaves
+only about ``1.3\times10^{-11}`` of the untruncated number below zero.
 
 ```@example growth_comparison
 using PopulationBalanceModels
@@ -41,7 +46,7 @@ import .ConstantGrowthMethods
 model = PBMModel(growth=Growth(AffineGrowth(0.1,0.0)))
 grid = Grid1D(range(0.,1.;length=201);coordinate=:length)
 bc = SizeBC(OpenBoundary(),OpenBoundary())
-initial = ConstantGrowthMethods.exact_counts(grid,0.)
+initial = ConstantGrowthMethods.gaussian_counts(grid,0.)
 operator = compile(model,grid;methods=TermMethods(growth=MUSCL()),bc)
 problem = PBMProblem(operator,initial,(0.,4.))
 solution = simulate(problem;method=SSPRK33(),dt=0.5*first(grid.widths)/0.1)
@@ -72,7 +77,7 @@ uniform in travel time and a step that moves one whole cell. For constant
 shift_operator = compile(model,grid;evolution=Inguva2022(),bc)
 shift_problem = PBMProblem(shift_operator,initial,(0.,4.))
 shift_solution = simulate(shift_problem;dt=first(grid.widths)/0.1)
-maximum(abs.(last(shift_solution.u).-ConstantGrowthMethods.exact_counts(grid,4.)))
+maximum(abs.(last(shift_solution.u).-ConstantGrowthMethods.gaussian_counts(grid,4.)))
 ```
 
 That ``C=1`` is labelled in every comparison. It is not a valid ``C=0.5`` run
@@ -94,14 +99,14 @@ interior space reconstruction and second-order midpoint time integration.
 It is not the legacy two-dimensional `HOCADI` update. At fixed Courant number,
 second-order time error eventually dominates.
 The [compact verification](../methods/compact_verification.md) separates spatial
-and temporal refinements. The sharp-front run retains its dispersive negative
-lobes; this scheme has no positivity guarantee.
+and temporal refinements. Signed undershoots, if present, are retained;
+this scheme has no positivity guarantee even for a smooth input.
 
-## Resolve the moving front
+## Resolve the translating Gaussian
 
-![The moving front at CFL 0.5 and CFL 1](../assets/constant_growth/solutions.png)
+![The translating Gaussian at CFL 0.5 and CFL 1](../assets/constant_growth/solutions.png)
 
-The purple dashed curve is HOC + midpoint. The methods resolve the front
+The purple dashed curve is HOC + midpoint. The methods resolve the Gaussian
 with different amounts of spreading and signed error; the analytical bin
 averages distinguish discretization error from plotting a continuous density
 through bin centres. Negative values remain in this diagnostic calculation.
@@ -120,10 +125,11 @@ E_{\mathrm{RMS}}=\left[
 {a_{\max}-a_{\min}}\right]^{1/2}.
 ```
 
-![L1 and RMSE for the moving exponential front](../assets/constant_growth/performance.png)
+![L1 and RMSE for the translating Gaussian](../assets/constant_growth/performance.png)
 
-The front is discontinuous, so these curves do not establish formal
-smooth-solution order. The companion calculation uses periodic boundaries and
+These errors measure translation of a localized smooth peak with open
+boundaries; the negligible incoming truncation jump is retained in the exact
+reference. The companion calculation keeps its periodic boundaries and
 
 ```math
 f(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a),
@@ -178,7 +184,7 @@ and exclude compilation, file output and plotting. A full garbage collection
 before each timer prevents earlier configurations' garbage being charged to the
 next method; allocation bytes and in-solve GC time are exported too. They have no averaging or
 repeatability bands and will vary between runs and machines. The retained timings
-were measured together before this presentation update; [inputs.txt](../assets/constant_growth/inputs.txt)
+were measured together in the benchmark run; [inputs.txt](../assets/constant_growth/inputs.txt)
 records the Julia version, CPU and thread counts.
 
 Raw results are in [errors.csv](../assets/constant_growth/errors.csv) and
@@ -200,7 +206,7 @@ including a driver does not run its CSV exports.
 using PopulationBalanceModels
 include("examples/constant_growth_methods.jl")
 grid = Grid1D(range(0.0, 1.0; length=201))
-initial = ConstantGrowthMethods.exact_counts(grid, 0.0)
+initial = ConstantGrowthMethods.gaussian_counts(grid, 0.0)
 bc = SizeBC(OpenBoundary(), OpenBoundary())
 problem = ConstantGrowthMethods.make_problem(grid, initial, WENO3(), SSPRK33(), 4.0, bc)
 solution = simulate(problem; method=SSPRK33(), dt=0.025, check_nonnegative=false)

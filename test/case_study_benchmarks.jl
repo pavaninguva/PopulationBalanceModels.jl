@@ -3,6 +3,40 @@ using Test, PopulationBalanceModels
 include("../examples/constant_growth_methods.jl")
 include("../examples/continuous_precipitation.jl")
 
+@testset "Gaussian constant-growth reference" begin
+    C = ConstantGrowthMethods
+    g = Grid1D([0.,.11,.19,.215,.29,.53,.8,1.])
+    q = PopulationBalanceModels._gauss_legendre(GaussLegendre(64))
+    # Independent physical-coordinate quadrature, including partially crossed
+    # bins, rather than reusing the reference's normal CDF calculation.
+    for t in (0.,.37,4.,8.)
+        reference = C.gaussian_counts(g,t)
+        numerical = map(g.edges[1:end-1],g.edges[2:end]) do a,b
+            lo = max(a,C.growth*t)
+            hi = min(b,1+C.growth*t)
+            hi <= lo ? 0. : PopulationBalanceModels._integrate_bin(
+                x->100exp(-.5*((x-.1t-.2)/.03)^2),lo,hi,q)
+        end
+        @test reference ≈ numerical rtol=2e-13 atol=2e-14
+        @test all(>=(0),reference)
+    end
+    @test C.gaussian_density(.2) == 100.
+    @test C.gaussian_density(-.01) == C.gaussian_density(1.01) == 0.
+    # The peak reaches .6 without appreciable outflow at t=4. The exact
+    # characteristic update is still an integer-bin translation at CFL=1.
+    g = Grid1D(range(0,1;length=201))
+    N0 = C.gaussian_counts(g,0.)
+    exact = C.gaussian_counts(g,4.)
+    @test sum(N0) ≈ 100*.03sqrt(2pi) rtol=2e-11
+    @test sum(exact) ≈ sum(N0) rtol=2e-15
+    shift = C.make_problem(g,N0,nothing,Inguva2022(),4.,SizeBC(OpenBoundary(),OpenBoundary()))
+    solution = simulate(shift;dt=.05)
+    @test maximum(abs.(vec(solution.u[end])-exact)) < 2e-14
+    @test g.centers[argmax(exact)] ≈ .6 atol=.003
+    # The separately retained paper benchmark has not changed its input.
+    @test sum(C.exact_counts(g,0.)) ≈ -expm1(-100.) atol=2e-15
+end
+
 @testset "Benchmark configurations and independent outlet integral" begin
     quick = ContinuousPrecipitation.benchmark_configurations()
     full = ContinuousPrecipitation.benchmark_configurations(full=true)

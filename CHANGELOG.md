@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Replaced the documentation's constant-growth exponential profile with a Gaussian using exact bin integrals; retained its method pairings, Courant numbers, periodic convergence companion and separate paper benchmark.
+
 - Added native Ito/Fokker–Planck `SizeDiffusion` with conservative finite-volume fluxes on uniform/nonuniform batch Grid1D meshes, closed/periodic boundaries, current-stage bulk coefficients, boundary number injection and ForwardDiff-compatible residuals. Included diffusion in default conservative exchange and summed explicit growth/diffusion/loss recommendations, including sectional PBMSystem states. Added analytical refinement/conservation tests and a synthetic broadening example; moment, tensor, axial and direct-update diffusion remain unsupported.
 - Corrected periodic sectional growth accounting: the wrapped internal face is no longer counted as particle escape or an additional bulk-material sink.
 
