@@ -14,7 +14,10 @@ three times calibrate; 660 min validates. The 0.5 μm reconstruction grid is not
 the instrument's bin grid and its points are not independent observations.
 Use `psd_summary.csv` for diagnostic quantiles only.
 
-`config/` preserves the handover specification and expected output contract.
+`config/` preserves the historical handover specification and output contract.
+The active CNT model, priors and likelihood are defined in
+`examples/isothermal_protein_crystallization.jl`; the historical configuration
+is not used as its runtime input.
 `provenance/` preserves source hashes, pixel calibrations, measurement methods,
 source coordinates, selected trace snapshots and source conflicts. No source
 PDF or source raster is included. The original handover ZIP hash and integration
