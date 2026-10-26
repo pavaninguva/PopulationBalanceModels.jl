@@ -1,6 +1,6 @@
 module CompactGrowthBenchmark
 using PopulationBalanceModels, LinearAlgebra
-include("compact_growth.jl")
+include("../compact_growth.jl")
 
 function metrics(sol,reference)
     grid=sol.problem.operator.grid; N=sol.u[end]
@@ -145,7 +145,7 @@ function unit_rescaling_check(output)
     end
 end
 
-function run(;output=joinpath(@__DIR__,"..","docs","src","assets","compact_fv"))
+function run(;output=joinpath(@__DIR__,"..","..","docs","src","assets","compact_fv"))
     mkpath(output)
     open(joinpath(output,"results.csv"),"w") do io
         println(io,"scenario,method,nx,ny,dt,steps,seconds,bytes,L1,RMSE,M0_error,M1x_error,M1y_error,number_balance_error,minimum_density,negative_number,status")

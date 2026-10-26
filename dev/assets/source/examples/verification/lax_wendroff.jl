@@ -14,7 +14,7 @@ function reference_step(f,C)
     out
 end
 
-function run_audit(;output=joinpath(@__DIR__,"..","docs","src","assets","constant_growth"))
+function run_audit(;output=joinpath(@__DIR__,"..","..","docs","src","assets","constant_growth"))
     mkpath(output)
     open(joinpath(output,"lax_wendroff_audit.csv"),"w") do io
         println(io,"method,courant,points,requested_time,actual_time,minimum_density,maximum_density,interior_step_difference")

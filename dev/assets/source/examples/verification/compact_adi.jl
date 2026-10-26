@@ -1,6 +1,6 @@
 module CompactADIAudit
 using PopulationBalanceModels, LinearAlgebra
-include("two_coordinate_transport.jl")
+include("../two_coordinate_transport.jl")
 
 function amplification(theta,cfl;order=4)
     m=1+0.5cos(theta); z=0.75cfl*sin(theta)
@@ -8,7 +8,7 @@ function amplification(theta,cfl;order=4)
     gamma=1/(2-2^(1/3))
     order==2 ? cayley(1.0) : cayley(gamma)^2*cayley(1-2gamma)
 end
-function run_audit(;output=joinpath(@__DIR__,"..","docs","src","assets","compact_audit"))
+function run_audit(;output=joinpath(@__DIR__,"..","..","docs","src","assets","compact_audit"))
     mkpath(output)
     # Every resolved Fourier mode, either speed sign, small to large CFL.
     gain=maximum(abs(amplification(2π*k/64,c;order)) for k in 0:63,c in (-10.0,-1.0,-0.1,0.1,1.0,10.0),order in (2,4))

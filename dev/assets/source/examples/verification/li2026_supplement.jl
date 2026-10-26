@@ -88,7 +88,7 @@ function run2d(n,kind;courant=.4,tf=1.,variant=:literal)
     computed=u./weight
     (;rmse=sqrt(sum(abs2,computed.-exact)/length(exact)),minimum=minimum(computed),steps,dt)
 end
-function run(;output=joinpath(@__DIR__,"..","docs","src","assets","li_supplement"))
+function run(;output=joinpath(@__DIR__,"..","..","docs","src","assets","li_supplement"))
     mkpath(output)
     open(joinpath(output,"errors.csv"),"w") do io
         println(io,"dimension,growth,intervals,courant,steps,dt,rmse,observed_order,minimum_density,seconds,status")
@@ -138,7 +138,7 @@ Check the literal temporal-stage interpretation of main Eqs. 8 and 16 with
 an exact nonzero advection eigenvalue i*omega (no spatial error). This is a
 consistency diagnostic for that interpretation, not a full Li ADI solver.
 """
-function main_stage_check(;output=joinpath(@__DIR__,"..","docs","src","assets","li_supplement","main_stage_check.csv"))
+function main_stage_check(;output=joinpath(@__DIR__,"..","..","docs","src","assets","li_supplement","main_stage_check.csv"))
     mkpath(dirname(output));omega=.7
     open(output,"w") do io
         println(io,"tau,omega,normalized_temporal_residual")
