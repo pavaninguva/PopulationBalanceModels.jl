@@ -1,0 +1,31 @@
+{
+  "reviewed_baseline": "a38d582bfe2e7cca7eb6f40b57ecfb00a4957633",
+  "purpose": "Explicit local uncertainty-only source review, followed by current posterior/gradient evaluations; producer manifests are retained.",
+  "sources": {
+    "src/PopulationBalanceModels.jl": {
+      "sha256": "7b0d3d5ce89f67e42e6adc255469ecdc8aa4ff79dd7de64015038f85dd8cccc7",
+      "baseline_sha256": "4b3d9878ff439308bfe1a83e81eb72e11359ee52e080b4be7abb9c87b52316b4",
+      "review": "Adds exports for the Gauss\u2013Newton uncertainty API only; existing forward/posterior includes and definitions unchanged."
+    },
+    "src/inference/bayesian_diagnostics.jl": {
+      "sha256": "010813f96bd92cd7adf127773cec3d06728b2b9ec77b458c5309ed182c4f6db8",
+      "baseline_sha256": "59d926140dfc18d36e34963382c3b776b701abfc5b904f1fd2b86556cdea5d70",
+      "review": "Includes new opt-in uncertainty implementation; shares marginal/draw accessors via a type union. Existing posterior gradient and Laplace calculations unchanged; existing Laplace/MCMC draw semantics retained."
+    },
+    "src/inference/statistical_model.jl": {
+      "sha256": "6c56226b203f5dbc5e660a5385f6f7cb60dba43b06bca9a9129df2877e97e42d",
+      "baseline_sha256": "99e49716ee2242cbd5bbde0832a5166b7bad9d0ba651d94bc2ad690ab4b5d1fe",
+      "review": "MAPResult docstring only; no likelihood, prior, parameter transformation or prediction change."
+    },
+    "ext/PopulationBalanceModelsOptimExt.jl": {
+      "sha256": "1645b24aa6f7d03567743c02937ea2de698b49b64028beec9a87cd29504e6f8e",
+      "baseline_sha256": "398f91b0378786c8fe14d65d522c5ac42c8cd19720c31a3be2d6cd4f70582325",
+      "review": "Adds opt-in uncertainty=:gauss_newton after MAP optimization. Default uncertainty=:none, optimizer and statistical target unchanged."
+    },
+    "src/inference/gauss_newton.jl": {
+      "sha256": "dc618fffeedd4933ef6ea86309b0d1fa4f34240fe33a20bb9d8104e174614952",
+      "baseline_sha256": null,
+      "review": "New opt-in fixed-Gaussian sensitivity covariance calculation. No forward residual, likelihood, prior, sampler or solver replacement."
+    }
+  }
+}

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Added public `gauss_newton_approximation` and `fit(...; uncertainty=:gauss_newton)` for fixed-error Gaussian Bayesian estimation. Joint whitened sensitivities and declared prior curvature include nuisance parameters and coordinate Jacobians; numerical checks resolve covariance-scaled directions without jitter or pseudoinverses. Shared marginal/draw/prediction interfaces retain a distinct approximation label. Unsupported likelihoods and noise callbacks reject explicitly.
+- Applied sensitivity-based uncertainty to both retained protein MAPs without refitting or resampling. Added separate MCMC comparisons and source-bound compatibility evidence; full-Hessian Laplace remains a separate, unchanged verification path.
+
+- Integrated the protein plotting handoff with common axes, external panel labels, analytical prior overlays and vector-first LaTeX exports. Added read-only retained-target compatibility and public-API Laplace analysis, separate from production cache invalidation. Both current protein Laplace calculations fail curvature verification; comparison figures retain those failures beside the unchanged MCMC posterior rather than reporting Gaussian uncertainty.
+- Added a source-checked architecture schematic distinguishing transient/stationary inputs, eligible inference paths and required/optional/development dependencies.
+
 - Removed tracked regenerable paper smoke outputs, archived superseded unindexed growth runs, and grouped numerical verification/reporting utilities. Added example/test catalogues and reused example modules across tests without removing numerical assertions. Retained protein posterior samples, data, figures, diagnostics and historical archives unchanged.
 - Separated explicit retained-result validation from current-producer verification; strict source matching remains the default. Documentation downloads now remove obsolete generated paths before copying current sources.
 

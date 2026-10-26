@@ -452,12 +452,25 @@ def main():
     parser.add_argument("--smoke",action="store_true")
     parser.add_argument("--preview",action="store_true")
     parser.add_argument("--data-only",action="store_true",help="Case 4 observations only; no fit needed")
+    parser.add_argument("--figures-only",action="store_true",help="Case 4: regenerate figures without rewriting result tables")
+    parser.add_argument("--laplace-comparison",action="store_true",help="Case 4: plot separate Laplace/MCMC analysis; read-only production inputs")
+    parser.add_argument("--gauss-newton-comparison",action="store_true",help="Case 4: sensitivity-based covariance/MCMC comparison")
     args = parser.parse_args()
     MODE = "smoke" if args.smoke else "production"
     PREVIEW = args.preview
     if PREVIEW and MODE != "smoke":
         parser.error("fallback previews cannot be labelled production figures")
-    configure(PREVIEW)
+    if args.figures_only and args.case != "4":
+        parser.error("--figures-only requires --case 4")
+    if args.laplace_comparison or args.gauss_newton_comparison:
+        if args.laplace_comparison and args.gauss_newton_comparison:
+            parser.error("Select one comparison per invocation")
+        if args.case != "4" or args.smoke or args.preview or args.data_only:
+            parser.error("--laplace-comparison requires production --case 4")
+        from plot_protein_laplace import main as compare
+        compare(['--approximation','gauss_newton' if args.gauss_newton_comparison else 'laplace'])
+        return
+    configure(PREVIEW,require_dvipng=args.case != "4")
     for i,function in enumerate((growth,moments,precipitation),1):
         if args.case in ("all",str(i)):
             function()
@@ -466,7 +479,7 @@ def main():
             print("Protein smoke mode verifies the forward solve; no calibrated paper figure is produced.")
         else:
             from plot_protein_isothermal import plot
-            plot(data_only=args.data_only)
+            plot(data_only=args.data_only,figures_only=args.figures_only)
 
 if __name__ == "__main__":
     main()

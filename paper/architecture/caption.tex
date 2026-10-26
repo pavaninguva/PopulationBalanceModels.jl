@@ -1,0 +1,16 @@
+\newcommand{\PBMArchitectureCaption}{PopulationBalanceModels.jl architecture.
+(a) Physical terms compose a population equation for particles, cells or other
+entities. Their contributions can be differential or integral operators, sources
+or sinks. Direct bin-integrated discretizations and moment representations pass
+through compatibility checks and reusable numerical preparation. DQMOM uses
+weights and weighted abscissas rather than raw-moment state entries. Optional
+population/bulk coupling and prescribed axial advection--dispersion precede
+transient or stationary problem construction. Initial conditions and a time span
+belong to the transient branch; a numerical guess belongs to the stationary
+branch. Observation operators connect eligible transient forward calculations to
+MAP estimation and optional sensitivity-based Gauss--Newton, full-Hessian
+Laplace or MCMC analysis, with parameter updates
+returning to the forward inputs. This does not imply stationary inference or
+universal compatibility of the displayed methods. (b) Required dependencies,
+optional extension roles and separate development/figure tools, checked against
+the current package declarations. The density glyph is conceptual.}

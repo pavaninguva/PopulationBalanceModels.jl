@@ -438,7 +438,7 @@ function posterior_components(problem::EstimationProblem,z;kwargs...)
     (;loglikelihood=likelihood,logprior=prior,logposterior=likelihood+prior)
 end
 
-"""MAP output, including physical parameters, declared coordinate specifications, component densities, diagnostics and optional Laplace approximation."""
+"""MAP output, including physical parameters, declared coordinate specifications, component densities, diagnostics and optional Gauss–Newton or Laplace uncertainty."""
 struct MAPResult{P,C,L}
     minimizer::Vector{Float64}
     parameters::P

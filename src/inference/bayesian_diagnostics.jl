@@ -92,6 +92,8 @@ struct LaplaceApproximation{F,D,P}
     diagnostics::D
 end
 
+include("gauss_newton.jl")
+
 """
     laplace_approximation(problem,map;step, hessian_tolerance=0.01,...)
 
@@ -141,7 +143,7 @@ function laplace_approximation(problem::EstimationProblem,result::MAPResult;
 end
 
 """Select the kinetic (or nuisance) marginal block from the FULL Laplace covariance, in inference coordinates. This never inverts a conditional Hessian subblock."""
-function marginal_covariance(problem::EstimationProblem,approximation::LaplaceApproximation;role=:kinetic,indices=nothing)
+function marginal_covariance(problem::EstimationProblem,approximation::Union{LaplaceApproximation,GaussNewtonApproximation};role=:kinetic,indices=nothing)
     selected=indices===nothing ? findall(p->p.role===role,problem.parameters) : collect(indices)
     !isempty(selected) && all(i->1<=i<=length(problem.parameters),selected) || throw(ArgumentError("select valid parameter indices"))
     (;indices=selected,parameters=[(problem.parameters[i].experiment,problem.parameters[i].name) for i in selected],
@@ -159,13 +161,14 @@ end
 """Return the sampler report, including rank R-hat, bulk/tail ESS, MCSE, per-chain energy/BFMI and adaptation statistics. A passed screen is evidence to assess, not a proof of convergence."""
 diagnostics(samples::PosteriorSamples)=samples.diagnostics
 
-"""Draw from an explicitly labelled Laplace approximation and transform every draw to physical coordinates. This performs no forward PBM solves."""
-function parameter_draws(problem::EstimationProblem,approximation::LaplaceApproximation;n=1000,seed=2022)
+"""Draw from an explicitly labelled Laplace or Gauss–Newton approximation and transform every draw to physical coordinates. This performs no forward PBM solves; support violations are flagged, not filtered."""
+function parameter_draws(problem::EstimationProblem,approximation::Union{LaplaceApproximation,GaussNewtonApproximation};n=1000,seed=2022)
     n isa Integer && n>0 || throw(ArgumentError("positive draw count required"))
     rng=MersenneTwister(seed)
     Z=approximation.center.+approximation.factor.U\randn(rng,length(approximation.center),n)
     (;z=Z,physical=[physical_parameters(problem,z) for z in eachcol(Z)],
-      in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],coordinates=approximation.coordinates,method=:laplace,seed)
+      in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],coordinates=approximation.coordinates,
+      method=approximation isa LaplaceApproximation ? :laplace : :gauss_newton,seed)
 end
 """Select retained MCMC draws. `indices` records their columns in
 `reshape(samples.z, length(problem.parameters), :)`; preserve it with exported

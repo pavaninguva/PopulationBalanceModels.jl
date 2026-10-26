@@ -331,3 +331,25 @@ crossings, reference differences and literature comparisons. Digitized-point
 differences are pointwise over the extracted range, not a full-domain published
 solution error. Public-CADET L1 differences compare two distinct discretizations;
 they are not errors against an analytical reference.
+
+## Architecture and retained protein analysis
+
+```sh
+# No Julia simulations:
+python paper/architecture/generate_pbm_architecture.py --usetex
+# Separate compatibility/Laplace evidence; no production cache invalidation:
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --laplace
+# Read-only production inputs, matching paper/manual figures:
+python paper/plot_all.py --case 4 --figures-only
+python paper/plot_all.py --case 4 --laplace-comparison
+python paper/check_protein.py
+```
+
+The [architecture generator](architecture/README.md) records its reviewed source
+revision. The [protein workflow](case_studies/04_protein_crystallization/README.md)
+explains the compatibility receipts and rejected Laplace calculations. Retained
+MCMC results and original producer manifests are preserved, not relabelled as
+new production calculations. The figures-only command requires exact source
+matching or the separately verified, source-bound protein compatibility receipt.
+It never rewrites numerical tables. Comparison outputs and marginal/correlation
+tables live in the separate protein `analysis/` directory.

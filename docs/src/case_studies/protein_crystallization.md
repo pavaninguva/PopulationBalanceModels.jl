@@ -211,7 +211,7 @@ logAJ and g, log for positive γ and ``A_G``, and log for GRD in Model 2 only.
 Physical-coordinate prior Jacobians appear exactly once. A transformed MAP is
 not generally a mode of the physical-coordinate density.
 
-Fresh NUTS chains use auxiliary rate coordinates, including the full
+The retained NUTS chains used auxiliary rate coordinates, including the full
 inverse-map Jacobian so the declared posterior is unchanged. CNT uses
 sensitivity-based initial tuning; GRD uses a frozen, invertible preconditioner
 from calibration-only pilots, with starts near both calibration basins.
@@ -233,11 +233,13 @@ on this model and fixed assumptions. They do not include new measurement noise.
 
 ![CNT fit and frozen held-out prediction](../assets/protein_isothermal/protein_fit_cnt.svg)
 
-Panels match the data overview. Solid curves/stairs are MAP predictions;
+Panels match the data overview. Solid curves connect MAP bin averages at their centers;
 shading is the pointwise 95% latent interval. Dashed density curves are the
 supplied reconstructions. Filled observations train; open squares test. The
 vertical line marks 420 min. Panel (d) shows conditional number quantiles;
-undefined early segments are omitted. CDF residuals remain in the CSV exports.
+undefined early segments are omitted. Density bands connect the corresponding
+pointwise limits at the same bin centers. No smoothing is applied to the saved
+bin averages. CDF residuals remain in the CSV exports.
 Common mean growth carries the earliest births to a finite upper front. The
 sharp edge near 12–17 μm is inside the size domain, not escape at its 50 μm
 boundary. Its plateau and abrupt cutoff miss the measured peak and tail even
@@ -249,7 +251,10 @@ rounding; it does not remove this restriction of the model.
 Diagonal curves show normalized NUTS marginal summaries and dashed analytical
 priors. Joint KDE contours, where shown, mark approximately 68% and 95%
 probability. Raw draws show the thin curved prefactor–barrier relation; orange
-markers identify the transformed inference-coordinate MAP. Broad priors extend
+markers identify the transformed inference-coordinate MAP. The compact logarithmic
+axis labels use reference units ``A_J^\circ=1`` particle/(m³ s),
+``A_G^\circ=1`` nm/min and ``t^\circ=1`` min.
+Broad priors extend
 beyond these posterior-focused axes and are not renormalized over the crop.
 Here logAJ and γ have correlation about 0.997. The growth exponent also presses
 against its upper prior bound: about 36% of draws lie in the upper 1% of its
@@ -274,6 +279,72 @@ by about −0.95. The broad logAJ interval reaches close to its upper prior
 bound; 2.6% of draws occupy the upper 1% of that range. GRD improves some size
 profiles without resolving this kinetic ambiguity. Bound contact must be
 judged alongside systematic residuals and numerical error.
+
+## Local uncertainty around the MAP
+
+The package offers two local Gaussian calculations alongside MCMC.
+[Gauss–Newton uncertainty](../inference.md#Request-sensitivity-based-uncertainty)
+uses measurement-weighted prediction sensitivities and actual prior curvature.
+Full-Hessian Laplace additionally retains residual-weighted second prediction
+derivatives. Both use the declared inference coordinates: logit(logAJ), log(γ),
+log(AG), logit(g), and, for GRD, log(θ), with the required prior Jacobians.
+Sampler tuning matrices are separate from these uncertainty calculations.
+
+```julia
+# Use the same estimation problem and converged MAP as above.
+local_gaussian = gauss_newton_approximation(estimation,fitted)
+kinetic_covariance = marginal_covariance(estimation,local_gaussian)
+approximate_draws = parameter_draws(estimation,local_gaussian;n=1000,seed=23)
+```
+
+Both sensitivity-based calculations pass the independent derivative and joint
+information checks. The table concerns the existing discrete likelihood; it
+is not a grid-error estimate or evidence that every kinetic parameter is well
+identified. All nuisance/kinetic coordinates would enter the joint calculation;
+this particular fit has only its four/five kinetic coordinates.
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.parse(read(joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","protein_isothermal","gauss_newton_verification.txt"),String))
+```
+
+![CNT: sensitivity-based approximation and retained NUTS](../assets/protein_isothermal/protein_gauss_newton_mcmc_cnt.svg)
+
+![CNT with GRD: sensitivity-based approximation and retained NUTS](../assets/protein_isothermal/protein_gauss_newton_mcmc_cnt_grd.svg)
+
+Left: the inference-coordinate Gaussian transformed to the displayed parameter
+coordinates. Its marginal densities are analytical; the joint curves transform
+Gaussian ellipses containing 68% and 95% probability, rather than claiming
+highest-density regions in physical coordinates. Right: the retained NUTS
+posterior. Axes, prior overlays and MAP markers match. Separate manuscript-size
+[CNT](../assets/protein_isothermal/protein_gauss_newton_panel_cnt.pdf) and
+[GRD](../assets/protein_isothermal/protein_gauss_newton_panel_cnt_grd.pdf)
+approximation panels are available. Gaussian draws are not truncated to the
+prior; support violations are exported.
+
+Numerical acceptance does not establish posterior-shape accuracy. For CNT,
+the approximate 95% interval for g extends down to about 2.11, compared with
+2.88 for MCMC. For GRD, its dispersion interval is about 6.19–14.54 min, while
+MCMC gives 1.27–13.60 min. The local Gaussian misses the low-dispersion tail
+and does not reproduce the full curved, two-basin compensation. These are
+**local approximation intervals**, not replacements for the MCMC intervals.
+[Marginal summaries for CNT](../assets/protein_isothermal/gauss_newton_marginal_comparison_cnt.csv)
+and [GRD](../assets/protein_isothermal/gauss_newton_marginal_comparison_cnt_grd.csv)
+retain both calculations. The physical fit figures continue to use MCMC-derived
+latent bands; no new sampling, refitting or predictive propagation was performed.
+
+Full-Hessian Laplace still fails its unchanged verification checks: CNT's
+Hessian disagreement is 7–24%; GRD's weakest curvature is below its absolute
+verification resolution. The [CNT](../assets/protein_isothermal/protein_laplace_mcmc_cnt.pdf)
+and [GRD](../assets/protein_isothermal/protein_laplace_mcmc_cnt_grd.pdf)
+rejection comparisons remain available. No covariance is substituted for those
+failed calculations. The sensitivity-based calculation verifies its own
+approximate information matrix, rather than relaxing the Laplace checks.
+
+Separate source-bound receipts record the reviewed uncertainty-only API additions,
+stationary refactors, unchanged dependencies and reproduced posterior values at
+both saved MAPs plus 14/17 retained CNT/GRD chain-end or tail points. Original
+producer manifests, posterior draws and numerical production tables remain intact.
 
 ## Estimates and model comparison
 
@@ -340,6 +411,27 @@ python paper/plot_all.py --case 4
 python paper/check_protein.py
 julia --project=docs docs/make.jl
 ```
+
+The figures can be restyled from the retained production exports without
+repeating the simulations or parameter estimation:
+
+```sh
+python paper/plot_all.py --case 4 --figures-only
+# New calculations, with separate outputs and no sampling/prediction propagation:
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --laplace
+python paper/plot_all.py --case 4 --laplace-comparison
+# Sensitivity-based covariance and retained-MCMC comparisons:
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --gauss-newton
+python paper/plot_all.py --case 4 --gauss-newton-comparison
+python test/protein_publication.py
+```
+
+This plotting-only command validates the saved manifests and leaves numerical
+result tables unchanged. It exports matching 300-dpi PNGs and vector PDF/SVGs.
+`--compatibility-only` runs the reviewed retained-target checks without
+calculating curvature. Analysis files are separate from the immutable
+`production/` inputs, under `paper/results/04_protein_crystallization/analysis/`.
+The analysis modes never enter the production cache-invalidation branch.
 
 Use `--model=cnt` or `--model=cnt_grd` for one model. `--sample` is an alias for
 `--full`; the no-flag default is MAP-only. Sampling uses isolated local workers

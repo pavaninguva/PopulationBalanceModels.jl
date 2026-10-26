@@ -7,6 +7,7 @@ const C=IsothermalProteinCrystallization
 const ROOT=realpath(joinpath(@__DIR__,"..","..",".."))
 include("report.jl")
 const DRIVER_HASHES=Dict(f=>hashfile(joinpath(@__DIR__,f)) for f in ("run.jl","report.jl","config.toml"))
+include("laplace.jl")
 
 function main(args=ARGS)
     if !isempty(args) && first(args)=="--chain-worker"
@@ -16,12 +17,17 @@ function main(args=ARGS)
         return
     end
     allowed=("--model","--bins","--warmup","--samples","--chains","--seed","--predictive-draws","--maxiters","--target-acceptance")
-    flags=("--smoke","--map","--full","--sample","--data-only","--verify","--force")
+    flags=("--smoke","--map","--full","--sample","--data-only","--verify","--force","--laplace","--gauss-newton","--compatibility-only")
     all(a->a in flags || first(split(a,'=')) in allowed,args) || error("Unknown flag; see README.md")
     option(name,default)=let found=filter(a->startswith(a,name*"="),args)
         isempty(found) ? default : split(last(found),'=';limit=2)[2]
     end
     smoke="--smoke" in args
+    analysis=any(a->a in ("--laplace","--gauss-newton","--compatibility-only"),args)
+    count(a->a in ("--laplace","--gauss-newton","--compatibility-only"),args)<=1 ||
+        error("Select one uncertainty/compatibility analysis per invocation")
+    analysis && any(a->a in ("--smoke","--map","--full","--sample","--data-only","--verify","--force"),args) &&
+        error("Uncertainty/compatibility modes are read-only analyses; do not combine them with reproduction flags")
     config=TOML.parsefile(joinpath(@__DIR__,"config.toml"))[smoke ? "smoke" : "production"]
     for (flag,key) in (("--bins","bins"),("--warmup","warmup"),("--samples","samples"),
                        ("--chains","chains"),("--seed","seed"),("--predictive-draws","predictive_draws"),("--maxiters","maxiters"))
@@ -34,7 +40,7 @@ function main(args=ARGS)
     mode=smoke ? "smoke" : "production"
     root=joinpath(ROOT,"paper","results","04_protein_crystallization",mode)
     normpath(dirname(dirname(pathof(PopulationBalanceModels))))==ROOT || error("develop the checkout with paper/setup.jl")
-    export_data(root)
+    analysis || export_data(root)
     "--data-only" in args && return
     for name in (model=="both" ? (:cnt,:cnt_grd) : (Symbol(model),))
         active=copy(config)
@@ -47,7 +53,10 @@ function main(args=ARGS)
                 any(a->startswith(a,flag),args) || (active[key]=value)
             end
         end
-        if "--verify" in args
+        if analysis
+            analyze_uncertainty(root,name,active;compatibility_only="--compatibility-only" in args,
+                method="--gauss-newton" in args ? :gauss_newton : :laplace)
+        elseif "--verify" in args
             smoke && error("--verify checks completed production posteriors; use --smoke for forward checks")
             verify_saved_target(root,name,active)
         else

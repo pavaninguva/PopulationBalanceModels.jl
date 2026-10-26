@@ -119,6 +119,16 @@ declarations, `Measurement`, `InferenceExperiment`, and `EstimationProblem`.
 `fit(problem)` performs MAP using Optim. `loglikelihood`, `logprior`, and
 `logposterior` share the density used by `laplace_approximation` and
 `sample_posterior`. Sampling requires both AdvancedHMC and MCMCDiagnosticTools.
+`gauss_newton_approximation(problem,map)` supplies a distinct, sensitivity-based
+local Gaussian for fixed-error Gaussian measurements. It combines the joint
+whitened residual Jacobian with actual prior curvature in inference coordinates.
+`fit(problem;uncertainty=:gauss_newton)` requests it after MAP optimization;
+the default `uncertainty=:none` keeps fitting and uncertainty separate.
+`GaussNewtonFailure.report` retains failed numerical checks. Noise callbacks,
+count likelihoods and truncated Gaussians are explicitly outside its initial
+support. `marginal_covariance` and `parameter_draws` accept both approximation
+types while preserving their labels; neither a tuning matrix nor a full
+posterior covariance is inferred from a sampler metric.
 `parameter_draws` transforms draws, and `posterior_predictive` requires an explicit
 forward-solve budget. The Bayesian and legacy frequentist uncertainty APIs have
 different interpretations; see the estimation chapter.

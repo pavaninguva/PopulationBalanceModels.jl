@@ -172,6 +172,7 @@ include("numerical_contracts.jl")
 
 include("uncertainty.jl")
 include("bayesian.jl")
+include("gauss_newton.jl")
 include("differentiation.jl")
 include("characteristic.jl")
 include("transport_integrators.jl")

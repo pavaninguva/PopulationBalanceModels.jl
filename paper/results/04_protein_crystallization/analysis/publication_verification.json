@@ -1,0 +1,46 @@
+{
+  "starting_revision": "a38d582bfe2e7cca7eb6f40b57ecfb00a4957633",
+  "starting_working_tree": "clean before the supplied ZIP was added",
+  "current_revision": "a38d582bfe2e7cca7eb6f40b57ecfb00a4957633",
+  "production_file_count": 140,
+  "production_before_sha256": "3259f1800d61d1482a5851688bb3b532230844869f461d5240ec87c3e6c73111",
+  "production_after_sha256": "3259f1800d61d1482a5851688bb3b532230844869f461d5240ec87c3e6c73111",
+  "all_production_files_byte_identical": true,
+  "no_protein_MCMC_or_latent_predictions_recomputed": true,
+  "julia": "1.10.3 (analysis/tests); 1.10.12 (Documenter)",
+  "newly_executed": "Full posterior/gradient compatibility at both MAPs plus 14/17 retained points; public full-posterior Laplace, three verification steps per model; both rejected",
+  "checks": {
+    "bayesian_Laplace_API": 51,
+    "protein_and_synthetic_sampler_checks": 500,
+    "analysis_readonly_modes": 4,
+    "python_result_contracts": 7,
+    "python_publication_contracts": 5,
+    "plotting_summaries": 8
+  },
+  "limitations": [
+    "No verified protein Laplace covariance/intervals; failures retained without regularization",
+    "Retained MCMC sampling convergence does not establish physical adequacy",
+    "Core numerical sources, experiments and statistical targets unchanged; full core suite not rerun"
+  ],
+  "docs_build": "passed; existing API HTML/search-size warnings only",
+  "local_links": "HTML pages: 32; checked local links/assets: 2611; broken: 0; deployment metadata: 64",
+  "figure_artifacts": "12 PDF/SVG/300-dpi PNG sets, embedded PDF fonts and matching manual copies; visually inspected main figures, comparisons, architecture and typeset marginal tables",
+  "executed_commands": [
+    "julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --laplace",
+    "julia --project=paper -e 'using Test, PopulationBalanceModels, LinearAlgebra; include(\"test/bayesian.jl\")'",
+    "julia --project=paper -e 'using Test, PopulationBalanceModels, LinearAlgebra; include(\"test/isothermal_protein.jl\"); include(\"test/protein_parallel.jl\")'",
+    "julia --project=paper test/protein_analysis_modes.jl",
+    "python paper/plot_all.py --case 4 --data-only --figures-only",
+    "python paper/plot_all.py --case 4 --figures-only",
+    "python paper/plot_all.py --case 4 --laplace-comparison",
+    "python paper/architecture/generate_pbm_architecture.py --usetex",
+    "python paper/check_protein.py",
+    "python test/protein_publication.py",
+    "python test/plotting_summaries.py",
+    "julia --project=docs docs/make.jl",
+    "python test/docs_links.py docs/build",
+    "git diff --check"
+  ],
+  "execution_environment": "JULIA_LOAD_PATH=@:@stdlib JULIA_DEPOT_PATH=/tmp/pbm-stationary-depot:/tmp/pbm-julia-depot:/home/pavan/.julia OPENBLAS_NUM_THREADS=1; Python /tmp/bmlm-pcsaft-py312/bin/python, PYTHONPATH=/tmp/pbm-pdf-tools MPLCONFIGDIR=/tmp/pbm-publication-mpl",
+  "scope": "Historical verification of the preceding plotting/Laplace update, before the Gauss\u2013Newton capability. Its numerical inputs remain retained; see gauss_newton_verification.json for the follow-up."
+}

@@ -47,6 +47,7 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        posterior_components, posterior_gradient, likelihood_gradient, check_gradient, MAPResult,
        SciMLSensitivitySolver, DifferentiationFailure,
        LaplaceApproximation, LaplaceFailure, laplace_approximation, marginal_covariance,
+       GaussNewtonApproximation, GaussNewtonFailure, gauss_newton_approximation,
        parameter_draws, posterior_predictive, identifiability_report, estimation_profile,
        replace_priors, prior_sensitivity, refinement_study, sample_posterior, check_sampling_map, PosteriorSamples,
        PBMSystem, SystemContext, PopulationTransfer, CrossAggregation,

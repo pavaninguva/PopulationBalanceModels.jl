@@ -1,0 +1,35 @@
+{
+  "model": "cnt",
+  "approximation": "gauss_newton",
+  "status": "accepted",
+  "approximation_sha256": "3f52edd131b3a46442af92109467b3f74cdd641c43ef4031a0cca92b6c11b8a1",
+  "posterior_sha256": "70870518b30c325dadeef0c597e1815516daf20c1af6a8a7a5b9432e00587575",
+  "gaussian_draws": {
+    "seed": 20261026,
+    "draws": 100000,
+    "prior_support_violations": {
+      "logAJ": 0,
+      "gamma": 0,
+      "AG": 0,
+      "g": 0
+    },
+    "nonfinite_physical": 0,
+    "nonfinite_display": 0,
+    "filtering": "none; no rejection, truncation or renormalization"
+  },
+  "renderer": "actual LaTeX; vector PDF rendered at 300 dpi",
+  "plotting_source_sha256": "26d0b3952e21f4eaa35b6f95230ca99adf264b66a4406e3b26b560ef58f51d56",
+  "figures": {
+    "protein_gauss_newton_mcmc_cnt.pdf": "477dd534a528f1fe03296c6cb1365c45d60fecbaa8ada0c258415d26fc975a97",
+    "protein_gauss_newton_mcmc_cnt.svg": "f54f5fa11f4511adf75212557fe91a7b6ff78946c2155a49a800f12381490ac7",
+    "protein_gauss_newton_mcmc_cnt.png": "f120f019a404a07986b056bbae187581f395ca39124af9b6a6bf1e82b83561f1",
+    "protein_gauss_newton_panel_cnt.pdf": "594334fc1f9f3cff3652a6b3f76293d14a137a3823d6ce47293e8a99b7915b6d",
+    "protein_gauss_newton_panel_cnt.svg": "e339f0916f610c31fd862510ba067c83dbed7a81d9e0f177500b988320f9fee6",
+    "protein_gauss_newton_panel_cnt.png": "2ec128025850bd2e2afc0a2389d69e5827c10b7683a274ccfdfb2170e2f02b7c",
+    "protein_gauss_newton_mcmc_panel_cnt.pdf": "7bf12e08a3946212c1d07dc67de5f099f7cdb0e985791ecb90e59e5c788c2eef",
+    "protein_gauss_newton_mcmc_panel_cnt.svg": "e67f3ccfb661a49c9309ba6c6e2ef3ea3bccb3484ea1f6c948baf9c327c92f99",
+    "protein_gauss_newton_mcmc_panel_cnt.png": "5a3cee44cbc39682a6b8dde01cb7471da78b6de9c4c44269c8b5e9fc6452ac77"
+  },
+  "contour_convention": "MCMC whitened KDE 68/95%; local Gaussian transformed probability ellipses, not displayed-coordinate HDRs",
+  "numerical_production_files": "read only; no fit, sampling or latent propagation"
+}

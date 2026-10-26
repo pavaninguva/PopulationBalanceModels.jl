@@ -1,0 +1,7 @@
+{
+  "archive": "protein_crystallization_replotted.zip",
+  "archive_sha256": "051683681bfe3b4f1aabb2c786dd9729a36d318c871f231f91090e375756910f",
+  "patch_sha256": "307c967bec47cc411945228d6aaecced8f0d15f81eaf726270d5660bebe14831",
+  "role": "plotting handoff only; production figures were regenerated from retained numerical exports",
+  "application": "reviewed patch applied then adapted for separate compatibility receipts, read-only figure-only operation, dimensional labels and current source conventions"
+}

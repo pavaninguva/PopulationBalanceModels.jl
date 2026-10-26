@@ -13,17 +13,23 @@ COLORS = dict(zip(METHODS,["#0072B2","#D55E00","#009E73","#CC79A7","#222222","#6
 MARKERS = dict(zip(METHODS,["o","s","^","v","x","D"]))
 STYLES = dict(zip(METHODS,["-","--","-.","-",":","--"]))
 
-def configure(preview=False):
-    if not preview and (not shutil.which("latex") or not shutil.which("dvipng")):
-        raise RuntimeError("Final figures require latex and dvipng; --preview is smoke-only")
+def configure(preview=False, *, require_dvipng=True):
+    if not preview and (not shutil.which("latex") or (require_dvipng and not shutil.which("dvipng"))):
+        required="latex and dvipng" if require_dvipng else "latex"
+        raise RuntimeError(f"Final figures require {required}; --preview is smoke-only")
     plt.rcParams.update({"text.usetex":not preview,"font.family":"serif",
-        "font.serif":["Computer Modern Roman"] if not preview else ["DejaVu Serif"],
+        # LaTeX's default serif is Computer Modern. Generic family declarations
+        # avoid adding the unrelated CM-Super/type1ec package to every figure.
+        "font.serif":["serif"] if not preview else ["DejaVu Serif"],
+        "font.sans-serif":["sans-serif"] if not preview else ["DejaVu Sans"],
+        "font.monospace":["Courier"] if not preview else ["DejaVu Sans Mono"],
         "font.size":8.5,"axes.labelsize":9,"legend.fontsize":8,
         "xtick.labelsize":8,"ytick.labelsize":8,"axes.grid":False,
         "axes.spines.top":False,"axes.spines.right":False,"legend.frameon":False,
         "savefig.facecolor":"white","figure.facecolor":"white",
         "savefig.bbox":None,"figure.constrained_layout.use":False,
-        "text.latex.preamble":r"\usepackage{amsmath}","pdf.fonttype":42})
+        "text.latex.preamble":r"\usepackage{amsmath}","pdf.fonttype":42,
+        "svg.hashsalt":"PopulationBalanceModels-paper"})
 
 def panel(ax,letter):
     ax.text(-.12,1.02,f"({letter})",transform=ax.transAxes,ha="left",va="bottom",fontsize=10)

@@ -2,6 +2,7 @@ include("fixtures/example_modules.jl")
 using Test, LinearAlgebra, Random, Statistics, ForwardDiff
 using Distributions: Normal, Exponential
 using PopulationBalanceModels, Optim, AdvancedHMC, MCMCDiagnosticTools
+include("gauss_newton_optim.jl")
 isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
 
 @testset "MAP, full Laplace and shared sampler density" begin

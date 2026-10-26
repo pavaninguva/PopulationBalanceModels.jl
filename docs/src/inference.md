@@ -330,7 +330,80 @@ interfaces. Merely adding `sensealg` to an ODE solve differentiated with
 ForwardDiff does not select an adjoint. The adapter explicitly invokes the
 sensitivity equations while reusing the package's likelihood.
 
-## Request Laplace uncertainty
+## Request sensitivity-based uncertainty
+
+For fixed-error Gaussian measurements, a useful first calculation is a local
+Gauss–Newton approximation at the MAP:
+
+```julia
+using PopulationBalanceModels, Optim
+result = fit(problem) # MAP only; the statistical target is unchanged
+local_gaussian = gauss_newton_approximation(problem,result)
+# Equivalent opt-in convenience:
+result = fit(problem; uncertainty=:gauss_newton)
+kinetics = marginal_covariance(problem,local_gaussian; role=:kinetic)
+draws = parameter_draws(problem,local_gaussian; n=1000,seed=23)
+```
+
+Let ``r(z)`` contain all observation residuals after covariance whitening and
+any independent contrasts. The response, times, experiments, parameter sharing
+and uncertain initial conditions are the same as in the likelihood. Then
+
+```math
+J=\left.\frac{\partial r}{\partial z}\right|_{\widehat z},\qquad
+P_{\mathrm{GN}}=J^\mathsf TJ+
+\left.\frac{\partial^2[-\log p_z(z)]}{\partial z\,\partial z^\mathsf T}
+\right|_{\widehat z},\qquad
+C_{\mathrm{GN}}=P_{\mathrm{GN}}^{-1}.
+```
+
+This is a **Gaussian in the declared inference coordinates**, with exact local
+prior curvature, including physical-prior transformation Jacobians. No averaging
+over bins/times or residual-based noise rescaling is introduced. Factorizations
+and solves produce the covariance. A kinetic marginal uses the relevant block
+of the full joint covariance, including calibration and initial-state nuisance
+parameters; it does not fix those parameters at their MAP values.
+The [Ceres covariance guide](https://ceres-solver.readthedocs.io/latest/nnls_covariance.html)
+explains the measurement-weighted sensitivity construction for least squares;
+the prior term above extends that local construction to this declared posterior.
+
+Initial support is `GaussianLikelihood` with fixed scalar/array standard
+deviations or fixed covariance matrices, including projected fraction covariance.
+Noise callbacks, inferred covariance, count likelihoods and truncated Gaussians
+are rejected explicitly: their information cannot be obtained just by weighting
+the mean-prediction Jacobian. Use full-posterior Laplace or MCMC for those targets.
+The legacy deterministic discrepancy blocks are not statistical uncertainties.
+
+ForwardDiff computes prediction Jacobians by default. The independently
+step-halved checks also verify prior curvature and the assembled precision in
+its covariance-scaled directions, so a large error confined to a strong direction
+is not confused with unresolved weak curvature. An information discrepancy
+``e<1`` bounds the checked candidate covariances between
+``C_{\mathrm{GN}}/(1+e)`` and ``C_{\mathrm{GN}}/(1-e)``. This checks derivatives
+of the **chosen discrete model**, not continuum accuracy or the omitted Hessian
+terms. Grid, domain and time refinement remain separate checks.
+Independent residual/prior gradients are also checked in the covariance metric;
+small Jacobian errors are not allowed to hide cancellation in ``J^\mathsf Tr``
+near the mode. These checks do not rescale errors by the observed residual size.
+
+`GaussNewtonFailure.report` records nonstationarity, unresolved sensitivities,
+nonpositive precision or excessive conditioning. No ridge or pseudoinverse
+inserts apparent certainty. Data rank and prior curvature are reported
+separately: a proper prior can support a data-null direction without making it
+identified by measurements. An external solver must support the prediction
+Jacobian's AD path. This does not convert an adjoint scalar-gradient callback
+into a prediction Jacobian; `derivatives=:finite_difference` is an explicit
+alternative, subject to the same checks.
+
+Parameter draws cost no PBM solves. They transform to physical units and retain
+`in_support` flags rather than truncating the Gaussian. `posterior_predictive`
+still needs its explicit solve budget. Label resulting intervals **Gauss–Newton
+approximations**. The construction omits ``\sum_i r_i\nabla^2r_i`` from the full
+posterior Hessian; it need not capture bounds, curved compensation, multiple
+basins or systematic model error. Positive information and optimizer convergence
+also do not independently certify a minimum of the full posterior.
+
+## Request full-Hessian Laplace uncertainty
 
 ```julia
 laplace = laplace_approximation(problem,result)

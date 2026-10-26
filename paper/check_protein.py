@@ -11,7 +11,7 @@ import numpy as np
 ROOT=Path(__file__).resolve().parent.parent
 BASE=ROOT/'paper/results/04_protein_crystallization/production'
 sys.path.insert(0,str(ROOT/'paper'))
-from plot_protein_isothermal import prior_density
+from plot_protein_isothermal import prior_density, verify_model
 
 def rows(folder,name):
     with (folder/name).open(newline='') as f: return list(csv.DictReader(f))
@@ -22,10 +22,7 @@ def record(folder,name): return json.loads((folder/name).read_text())
 class ProteinResults(unittest.TestCase):
     def test_producer_sources_match_checkout(self):
         for name in ('cnt','cnt_grd'):
-            manifest=record(BASE/name,'manifest.json')
-            for path,digest in manifest['source_files'].items():
-                with self.subTest(model=name,path=path):
-                    self.assertEqual(hashlib.sha256((ROOT/path).read_bytes()).hexdigest(),digest,path)
+            verify_model(BASE/name)
 
     def test_original_data_split_and_fixed_uncertainties(self):
         folder=ROOT/'examples/data/protein_crystallization/tang2018_isothermal'

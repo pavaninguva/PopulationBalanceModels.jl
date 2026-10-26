@@ -83,7 +83,9 @@ end
 MAP fit of the shared EstimationProblem posterior. Starts are inference-coordinate
 vectors; defaults come from physical ParameterSpec initial values. Additional
 starts use a seeded Gaussian perturbation. Scaling changes optimizer coordinates
-only and does not change the declared posterior density. Laplace is opt-in.
+only and does not change the declared posterior density. Uncertainty is opt-in:
+`:gauss_newton` uses fixed-Gaussian prediction sensitivities and prior curvature;
+`:laplace` uses the full posterior Hessian. Neither changes the fitted target.
 """
 function PopulationBalanceModels.fit(problem::EstimationProblem;
         method=:map,initial=initial_coordinates(problem),starts=nothing,nstarts=1,
@@ -91,7 +93,7 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
         algorithm=Optim.BFGS(linesearch=Optim.LineSearches.BackTracking()),gradient_tolerance=1e-3,
         derivative_step=cbrt(eps(Float64)),uncertainty=:none,derivatives=problem.derivatives)
     method===:map || throw(ArgumentError("fit defaults to MAP; request sampling separately with sample_posterior"))
-    uncertainty in (:none,:laplace) || throw(ArgumentError("uncertainty must be :none or :laplace"))
+    uncertainty in (:none,:gauss_newton,:laplace) || throw(ArgumentError("uncertainty must be :none, :gauss_newton or :laplace"))
     n=length(problem.parameters)
     isfinite(gradient_tolerance) && gradient_tolerance>0 || throw(ArgumentError("gradient_tolerance must be positive and finite"))
     length(scaling)==n && all(x->isfinite(x) && x>0,scaling) || throw(ArgumentError("one positive optimizer scale per coordinate required"))
@@ -166,8 +168,9 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
     result=MAPResult(z,physical_parameters(problem,z),components.loglikelihood,
         components.logprior,components.logposterior,best.converged && norm(scaled_gradient,Inf)<=gradient_tolerance,
         diagnostics,ParameterSpec[problem.parameters...],nothing)
-    if uncertainty===:laplace
-        approximation=laplace_approximation(problem,result;derivatives)
+    if uncertainty!==:none
+        approximation=uncertainty===:laplace ? laplace_approximation(problem,result;derivatives) :
+            gauss_newton_approximation(problem,result;derivatives)
         return MAPResult(result.minimizer,result.parameters,result.loglikelihood,result.logprior,
             result.logposterior,result.converged,result.diagnostics,result.coordinates,approximation)
     end

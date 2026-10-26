@@ -1,0 +1,337 @@
+{
+    "schema": 1,
+    "model": "cnt_grd",
+    "approximation": "laplace",
+    "coordinates": "original inference z; full negative log posterior, including all prior Jacobians",
+    "parameter_names": [
+        "logAJ",
+        "gamma",
+        "AG",
+        "g",
+        "grd_strength"
+    ],
+    "center": [
+        1.61105312016052,
+        0.10167865799539966,
+        -0.7714598025290357,
+        1.6905022380048524,
+        2.2497840655285577
+    ],
+    "physical_center": {
+        "cstar": 2.16,
+        "logAJ": 83.3557546973833,
+        "gamma": 1.1070276800717307,
+        "AG": 0.4623376537690029,
+        "g": 2.688580395282762,
+        "grd_strength": 9.485687328315228
+    },
+    "priors": [
+        {
+            "name": "logAJ",
+            "meaning": "Natural log nucleation prefactor AJ in particles/(m³ s)",
+            "units": "dimensionless",
+            "label": "log A_J",
+            "family": "uniform",
+            "arguments": [
+                0,
+                100
+            ],
+            "density_coordinates": "physical",
+            "transform": "logit",
+            "plotting_coordinate": "physical",
+            "lower": 0,
+            "upper": 100
+        },
+        {
+            "name": "gamma",
+            "meaning": "Effective interfacial energy",
+            "units": "mJ/m²",
+            "label": "gamma",
+            "family": "lognormal",
+            "arguments": [
+                -0.4462871026284195,
+                0.7
+            ],
+            "density_coordinates": "physical",
+            "transform": "log",
+            "plotting_coordinate": "physical",
+            "lower": null,
+            "upper": null
+        },
+        {
+            "name": "AG",
+            "meaning": "Mean-growth prefactor",
+            "units": "nm/min",
+            "label": "A_G",
+            "family": "uniform",
+            "arguments": [
+                -4.605170185988091,
+                7.313220387090301
+            ],
+            "density_coordinates": "inference",
+            "transform": "log",
+            "plotting_coordinate": "log",
+            "lower": null,
+            "upper": null
+        },
+        {
+            "name": "g",
+            "meaning": "Supersaturation growth exponent",
+            "units": "dimensionless",
+            "label": "g",
+            "family": "uniform",
+            "arguments": [
+                1,
+                3
+            ],
+            "density_coordinates": "physical",
+            "transform": "logit",
+            "plotting_coordinate": "physical",
+            "lower": 1,
+            "upper": 3
+        },
+        {
+            "name": "grd_strength",
+            "meaning": "Random-fluctuation growth dispersion strength",
+            "units": "min",
+            "label": "theta_GRD",
+            "family": "exponential",
+            "arguments": [
+                10
+            ],
+            "density_coordinates": "physical",
+            "transform": "log",
+            "plotting_coordinate": "log",
+            "lower": null,
+            "upper": null
+        }
+    ],
+    "attempts": [
+        {
+            "step": 0.0001220703125,
+            "status": "rejected",
+            "report": {
+                "valid": false,
+                "reason": "weak curvature is unresolved by derivative verification",
+                "hessian_agreement": 0.0001994181485768428,
+                "hessian_backend": "forwarddiff",
+                "eigenvalues": [
+                    0.9707212772436951,
+                    5.196694295682242,
+                    40.77131427374308,
+                    2558.340269990296,
+                    1.09832251035974e7
+                ],
+                "weak_direction": [
+                    0.9827130443118822,
+                    0.0737974224718699,
+                    0.04696980011012651,
+                    -0.14492027532832288,
+                    0.07497309285442882
+                ],
+                "condition_number": 1.1314499188462842e7,
+                "gradient": [
+                    -1.2077426880807707e-7,
+                    1.6039511132603934e-6,
+                    -1.8429410886255937e-8,
+                    -7.780676769542083e-9,
+                    -1.7606511804046932e-9
+                ],
+                "gradient_check": {
+                    "valid": false,
+                    "error": 0.0023938869288071085,
+                    "halving": 0.0018283128607717199,
+                    "gradient": [
+                        -1.2077426880807707e-7,
+                        1.6039511132603934e-6,
+                        -1.8429410886255937e-8,
+                        -7.780676769542083e-9,
+                        -1.7606511804046932e-9
+                    ],
+                    "reference": [
+                        0.00010392524386878876,
+                        0.002393228723615953,
+                        -4.6935716640013194e-9,
+                        -4.442297971320731e-8,
+                        -8.344928272747147e-9
+                    ],
+                    "backend": "forwarddiff"
+                },
+                "curvature_resolution": 2190.254474995908,
+                "forward_solves": 45,
+                "posterior_evaluations": 45,
+                "elapsed_seconds": 36.890016443
+            }
+        },
+        {
+            "step": 3.0517578125e-5,
+            "status": "rejected",
+            "report": {
+                "valid": false,
+                "reason": "weak curvature is unresolved by derivative verification",
+                "hessian_agreement": 0.0001796610815823485,
+                "hessian_backend": "forwarddiff",
+                "eigenvalues": [
+                    0.9707212772436951,
+                    5.196694295682242,
+                    40.77131427374308,
+                    2558.340269990296,
+                    1.09832251035974e7
+                ],
+                "weak_direction": [
+                    0.9827130443118822,
+                    0.0737974224718699,
+                    0.04696980011012651,
+                    -0.14492027532832288,
+                    0.07497309285442882
+                ],
+                "condition_number": 1.1314499188462842e7,
+                "gradient": [
+                    -1.2077426880807707e-7,
+                    1.6039511132603934e-6,
+                    -1.8429410886255937e-8,
+                    -7.780676769542083e-9,
+                    -1.7606511804046932e-9
+                ],
+                "gradient_check": {
+                    "valid": false,
+                    "error": 0.0023938869288071085,
+                    "halving": 0.0018283128607717199,
+                    "gradient": [
+                        -1.2077426880807707e-7,
+                        1.6039511132603934e-6,
+                        -1.8429410886255937e-8,
+                        -7.780676769542083e-9,
+                        -1.7606511804046932e-9
+                    ],
+                    "reference": [
+                        0.00010392524386878876,
+                        0.002393228723615953,
+                        -4.6935716640013194e-9,
+                        -4.442297971320731e-8,
+                        -8.344928272747147e-9
+                    ],
+                    "backend": "forwarddiff"
+                },
+                "curvature_resolution": 1973.258154920203,
+                "forward_solves": 45,
+                "posterior_evaluations": 45,
+                "elapsed_seconds": 3.033918782
+            }
+        },
+        {
+            "step": 7.62939453125e-6,
+            "status": "rejected",
+            "report": {
+                "valid": false,
+                "reason": "weak curvature is unresolved by derivative verification",
+                "hessian_agreement": 0.0005667260123980577,
+                "hessian_backend": "forwarddiff",
+                "eigenvalues": [
+                    0.9707212772436951,
+                    5.196694295682242,
+                    40.77131427374308,
+                    2558.340269990296,
+                    1.09832251035974e7
+                ],
+                "weak_direction": [
+                    0.9827130443118822,
+                    0.0737974224718699,
+                    0.04696980011012651,
+                    -0.14492027532832288,
+                    0.07497309285442882
+                ],
+                "condition_number": 1.1314499188462842e7,
+                "gradient": [
+                    -1.2077426880807707e-7,
+                    1.6039511132603934e-6,
+                    -1.8429410886255937e-8,
+                    -7.780676769542083e-9,
+                    -1.7606511804046932e-9
+                ],
+                "gradient_check": {
+                    "valid": false,
+                    "error": 0.0023938869288071085,
+                    "halving": 0.0018283128607717199,
+                    "gradient": [
+                        -1.2077426880807707e-7,
+                        1.6039511132603934e-6,
+                        -1.8429410886255937e-8,
+                        -7.780676769542083e-9,
+                        -1.7606511804046932e-9
+                    ],
+                    "reference": [
+                        0.00010392524386878876,
+                        0.002393228723615953,
+                        -4.6935716640013194e-9,
+                        -4.442297971320731e-8,
+                        -8.344928272747147e-9
+                    ],
+                    "backend": "forwarddiff"
+                },
+                "curvature_resolution": 6224.479535136822,
+                "forward_solves": 45,
+                "posterior_evaluations": 45,
+                "elapsed_seconds": 2.926392191
+            }
+        }
+    ],
+    "refined": false,
+    "compatibility_sha256": "7eb9789158a889996ba7b01fc4ed29ccfd35a28ab7e969ee99f5dcd9b9f84273",
+    "analysis_source_sha256": "c0ead307e5b38733fab1310d6f0c5d384d5094f0b56fe63faee2d3a90f09dc5e",
+    "nonfinite_diagnostics": "JSON null denotes a nonfinite value, not regularization",
+    "no_sampling_or_latent_propagation": true,
+    "status": "rejected",
+    "diagnostics": {
+        "valid": false,
+        "reason": "weak curvature is unresolved by derivative verification",
+        "hessian_agreement": 0.0005667260123980577,
+        "hessian_backend": "forwarddiff",
+        "eigenvalues": [
+            0.9707212772436951,
+            5.196694295682242,
+            40.77131427374308,
+            2558.340269990296,
+            1.09832251035974e7
+        ],
+        "weak_direction": [
+            0.9827130443118822,
+            0.0737974224718699,
+            0.04696980011012651,
+            -0.14492027532832288,
+            0.07497309285442882
+        ],
+        "condition_number": 1.1314499188462842e7,
+        "gradient": [
+            -1.2077426880807707e-7,
+            1.6039511132603934e-6,
+            -1.8429410886255937e-8,
+            -7.780676769542083e-9,
+            -1.7606511804046932e-9
+        ],
+        "gradient_check": {
+            "valid": false,
+            "error": 0.0023938869288071085,
+            "halving": 0.0018283128607717199,
+            "gradient": [
+                -1.2077426880807707e-7,
+                1.6039511132603934e-6,
+                -1.8429410886255937e-8,
+                -7.780676769542083e-9,
+                -1.7606511804046932e-9
+            ],
+            "reference": [
+                0.00010392524386878876,
+                0.002393228723615953,
+                -4.6935716640013194e-9,
+                -4.442297971320731e-8,
+                -8.344928272747147e-9
+            ],
+            "backend": "forwarddiff"
+        },
+        "curvature_resolution": 6224.479535136822,
+        "forward_solves": 45,
+        "posterior_evaluations": 45,
+        "elapsed_seconds": 2.926392191
+    }
+}

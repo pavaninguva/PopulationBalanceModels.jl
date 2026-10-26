@@ -1,5 +1,6 @@
 """Two-model isothermal comparison, generated only from the active exports."""
 from pathlib import Path
+import argparse
 import csv
 import hashlib
 import json
@@ -8,7 +9,12 @@ import sys
 import platform
 import numpy as np
 import matplotlib.pyplot as plt
-from plotting_style import configure, panel, DOUBLE
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from matplotlib.ticker import FuncFormatter
+import pymupdf
+from protein_provenance import verify_compatibility
+from plotting_style import configure, DOUBLE
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'docs/benchmarks'))
 from plot_protein_posterior import joint_density, probability_levels
 
@@ -18,12 +24,12 @@ BASE=PAPER/'results/04_protein_crystallization/production'
 OUT=PAPER/'figures/04_protein_crystallization/production'
 DOCS=ROOT/'docs/src/assets/protein_isothermal'
 TIMES=(74.,180.,420.,660.)
-DENSITY_YMAX=.2 # common, data-independent display bound, in inverse micrometres
+DENSITY_YMAX=.16 # common declared display bound, checked against every curve/band
 COLORS={74.:'#0072B2',180.:'#D55E00',420.:'#009E73',660.:'#6A3D9A'}
 QUANTILES={.1:('D10_um',r'$d_{10}$','#0072B2','-'),.5:('D50_um',r'$d_{50}$','#D55E00','--'),.9:('D90_um',r'$d_{90}$','#009E73','-.')}
-LABELS={'logAJ':r'$\log A_J$','gamma':r'$\gamma$ (mJ m$^{-2}$)',
-        'AG':r'$\log[A_G/(\mathrm{nm\,min}^{-1})]$','g':r'$g$',
-        'grd_strength':r'$\log[\theta_{\mathrm{GRD}}/\mathrm{min}]$'}
+LABELS={'logAJ':r'$\ln(A_J/A_J^\circ)$','gamma':r'$\gamma$ (mJ m$^{-2}$)',
+        'AG':r'$\ln(A_G/A_G^\circ)$','g':r'$g$',
+        'grd_strength':r'$\ln(\theta_{\mathrm{GRD}}/t^\circ)$'}
 
 def read(folder,name):
     return np.atleast_1d(np.genfromtxt(folder/name,delimiter=',',names=True,dtype=None,encoding='utf8'))
@@ -49,12 +55,21 @@ def verify_shared_data():
 
 def export(fig,name):
     OUT.mkdir(parents=True,exist_ok=True);DOCS.mkdir(parents=True,exist_ok=True)
-    for suffix in ('png','pdf','svg'):
+    creator='PopulationBalanceModels isothermal CNT/GRD comparison'
+    pdf=OUT/f'{name}.pdf'
+    fig.savefig(pdf,dpi=300,metadata={'Creator':creator,'CreationDate':None,'ModDate':None})
+    # Rasterize the final vector artwork so PNG and PDF have identical layout.
+    # This route uses actual LaTeX without requiring Agg's separate dvipng step.
+    with pymupdf.open(pdf) as document:
+        document[0].get_pixmap(dpi=300,alpha=False).save(OUT/f'{name}.png')
+    svg=OUT/f'{name}.svg'
+    fig.savefig(svg,dpi=300,metadata={'Creator':creator,'Date':None})
+    svg.write_text('\n'.join(line.rstrip() for line in svg.read_text().splitlines())+'\n')
+    for suffix in ('png','svg','pdf'):
         path=OUT/f'{name}.{suffix}'
-        fig.savefig(path,dpi=300,metadata={'Creator':'PopulationBalanceModels isothermal CNT/GRD comparison'})
-        if suffix=='svg': path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines())+'\n')
-        if suffix in ('png','svg'): shutil.copy2(path,DOCS/path.name)
+        shutil.copy2(path,DOCS/path.name)
     plt.close(fig)
+    print(f'Rendered {name}',flush=True)
 
 def prior_density(meta,display):
     """Normalized analytical prior in the DISPLAY coordinate; never peak-scaled."""
@@ -114,8 +129,10 @@ def verify_model(folder):
     if not m['complete'] or m['mode']!='production': raise ValueError(f'{folder.name}: full verified posterior run required')
     for name,digest in m['files'].items():
         if hashlib.sha256((folder/name).read_bytes()).hexdigest()!=digest: raise ValueError(f'Changed numerical result {folder/name}')
-    for name,digest in m['source_files'].items():
-        if hashlib.sha256((ROOT/name).read_bytes()).hexdigest()!=digest: raise ValueError(f'Changed target source {name}')
+    changed = any(hashlib.sha256((ROOT/name).read_bytes()).hexdigest()!=digest
+                  for name,digest in m['source_files'].items())
+    if changed:
+        verify_compatibility(folder,m)
     d=json.loads((folder/'sampling_diagnostics.json').read_text())
     if not d['passed']: raise ValueError(f'{folder.name}: posterior sampling screen failed')
     verification=folder/'target_verification.json'
@@ -139,26 +156,51 @@ def verify_model(folder):
     return m
 
 def layout():
-    fig,axes=plt.subplots(2,2,figsize=(DOUBLE,5.8))
-    fig.subplots_adjust(left=.1,right=.98,bottom=.09,top=.95,wspace=.33,hspace=.37)
-    for letter,ax in zip('abcd',axes.flat): panel(ax,letter)
+    fig,axes=plt.subplots(2,2,figsize=(DOUBLE,5.45))
+    fig.subplots_adjust(left=.095,right=.985,bottom=.18,top=.95,wspace=.30,hspace=.36)
+    for letter,ax in zip('abcd',axes.flat):
+        ax.text(0.,1.025,f'({letter})',transform=ax.transAxes,ha='left',va='bottom',fontsize=9)
+        ax.tick_params(direction='out',length=3,width=.7,pad=3,labelsize=8)
+        for spine in ax.spines.values(): spine.set_linewidth(.7)
     axes[0,0].set(xlim=(-8,690),ylim=(0,22),xlabel='Time (min)',ylabel=r'$c$ (g L$^{-1}$)')
+    axes[0,0].set_xticks([0,200,400,600]);axes[0,0].set_yticks([0,5,10,15,20])
     for ax in (axes[0,1],axes[1,0]):
-        ax.set(xlim=(2.5,25),xlabel=r'Equivalent diameter ($\mu$m)',ylabel=r'Conditional number density ($\mu$m$^{-1}$)')
-    axes[1,1].set(xlim=(-8,690),ylim=(2.5,25),xlabel='Time (min)',ylabel=r'Conditional number quantile ($\mu$m)')
+        ax.set(xlim=(2.5,25),xlabel=r'Equivalent diameter ($\mu$m)',ylabel=r'Conditional density ($\mu$m$^{-1}$)')
+        ax.set_xticks([5,10,15,20,25]);ax.set_yticks([0,.04,.08,.12,.16])
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda x,pos: '0' if x==0 else f'{x:.2f}'))
+    axes[1,1].set(xlim=(-8,690),ylim=(2.5,25),xlabel='Time (min)',ylabel=r'Diameter quantile ($\mu$m)')
+    axes[1,1].set_xticks([0,200,400,600]);axes[1,1].set_yticks([5,10,15,20,25])
     return fig,axes
 
-def observation_panels(axes,data,psds,quantiles,*,guide=False):
+def figure_legend(fig,*,fitted):
+    handles=[]
+    if fitted:
+        handles.extend([
+            Line2D([],[],color='.15',lw=1.3,label='MAP prediction'),
+            Line2D([],[],color='.35',ls='--',lw=1.,marker='o',ms=3,label='Digitized PSD'),
+            Patch(facecolor='.55',alpha=.2,edgecolor='none',label=r'95\% latent interval'),
+        ])
+    handles.extend([
+        Line2D([],[],color='.2',ls='none',marker='o',ms=3.5,label='Training observation'),
+        Line2D([],[],color='.2',ls='none',marker='s',mfc='white',ms=3.5,label='Test observation'),
+        Line2D([],[],color='.2',ls='none',marker='D',ms=3.5,label='Fixed initial condition'),
+    ])
+    fig.legend(handles=handles,loc='lower center',bbox_to_anchor=(.53,.025),ncol=3,
+               fontsize=7.2,columnspacing=1.7,handlelength=2.,handletextpad=.6)
+
+def observation_panels(axes,data,psds,quantiles,*,guide=False,fitted=False):
     ax=axes[0,0]
     for split,marker,label,fill in (('calibration','o','Training',True),('validation','s','Test',False),('initial_condition','D','Fixed initial',True)):
         q=data[data['split']==split]
         if len(q):
-            ax.errorbar(q['time_min'],q['observed_g_L'],yerr=q['sigma_g_L'],fmt=marker,ms=3.5,
-                mfc='k' if fill else 'white',mec='k',color='k',elinewidth=.65,capsize=2,label=label)
+            ax.errorbar(q['time_min'],q['observed_g_L'],yerr=q['sigma_g_L'],fmt=marker,ms=3.2,
+                mfc='.2' if fill else 'white',mec='.2',color='.2',elinewidth=.65,capsize=2,zorder=4)
     for t in TIMES:
         q=psds[psds['time_min']==t];ax=axes[0,1] if t<660 else axes[1,0]
-        ax.plot(q['size_um'],q['conditional_density_per_um'],ls='--',marker='o',markevery=6,ms=2.5,
-            lw=.8,color=COLORS[t],label=f'{t:g} min data'+(' (test)' if t==660 else ''))
+        marker='o' if t<660 else 's'
+        ax.plot(q['size_um'],q['conditional_density_per_um'],ls='--',marker=marker,
+            markevery=6,ms=2.7,mfc=COLORS[t] if t<660 else 'white',mew=.7,
+            lw=.9,color=COLORS[t],zorder=3)
     ax=axes[1,1]
     for p,(key,label,color,ls) in QUANTILES.items():
         q=quantiles[quantiles['probability']==p]
@@ -166,8 +208,15 @@ def observation_panels(axes,data,psds,quantiles,*,guide=False):
         for split,marker in (('calibration','o'),('validation','s')):
             s=q[q['split']==split]
             ax.plot(s['time_min'],s['observed_um'],ls='none',marker=marker,ms=3.5,
-                mfc=color if split=='calibration' else 'white',mec=color,color=color,label=label if split=='calibration' else None)
-    for ax in axes.flat: ax.legend(fontsize=6.5,loc='best')
+                mfc=color if split=='calibration' else 'white',mec=color,color=color,zorder=4)
+    for ax,times in ((axes[0,1],TIMES[:-1]),(axes[1,0],TIMES[-1:])):
+        handles=[Line2D([],[],color=COLORS[t],lw=1.2,label=f'{t:g} min') for t in times]
+        ax.legend(handles=handles,fontsize=7.5,loc='upper right',handlelength=1.7,labelspacing=.35)
+    handles=[Line2D([],[],color=color,ls=ls if fitted else ':',lw=1.2,label=label)
+             for key,label,color,ls in QUANTILES.values()]
+    axes[1,1].legend(handles=handles,fontsize=7.5,loc='upper right',ncol=3,
+                     handlelength=1.5,columnspacing=.8)
+    figure_legend(axes[0,0].figure,fitted=fitted)
 
 def interval_at(table,time,quantity):
     values=table[table['time_min']==time][quantity]
@@ -185,18 +234,20 @@ def four_panel(name,data,psds,quantiles,ymax):
     a.axvline(420,color='.5',ls=':',lw=.7,ymax=.65)
     for t in TIMES:
         a=axes[0,1] if t<660 else axes[1,0];q=curves[curves['time_min']==t]
-        edges=np.r_[q['left_um'],q['right_um'][-1]]
         draws=drawcurves[drawcurves['time_min']==t]
         values=np.array([draws[draws['left_um']==x]['conditional_density_per_um'] for x in q['left_um']])
         lo,hi=np.quantile(values,[.025,.975],axis=1)
-        a.fill_between(edges,np.r_[lo,lo[-1]],np.r_[hi,hi[-1]],step='post',alpha=.12,color=COLORS[t])
-        a.stairs(q['conditional_density_per_um'],edges,color=COLORS[t],lw=1.1,label=f'{t:g} min MAP'+(' (test)' if t==660 else ''))
+        centers=.5*(q['left_um']+q['right_um'])
+        # Display the stored bin averages at their centers; no smoothing,
+        # remeshing or forward-model evaluation is performed.
+        a.fill_between(centers,lo,hi,alpha=.15,color=COLORS[t],linewidth=0)
+        a.plot(centers,q['conditional_density_per_um'],color=COLORS[t],lw=1.35)
     a=axes[1,1]
     for p,(key,label,color,ls) in QUANTILES.items():
         ci=np.array([interval_at(latent,t,key) for t in times])
         a.fill_between(times,ci[:,0],ci[:,1],color=color,alpha=.12)
         a.plot(trajectory['time_min'],trajectory[key],ls=ls,color=color,lw=1.1)
-    observation_panels(axes,data,psds,quantiles)
+    observation_panels(axes,data,psds,quantiles,fitted=True)
     for a in (axes[0,1],axes[1,0]): a.set_ylim(0,ymax)
     export(fig,'protein_fit_'+name)
 
@@ -206,14 +257,14 @@ def marginal(values,x,bounds):
     centers=[values]+[2*b-values for b in bounds if np.isfinite(b)]
     return sum(np.exp(-.5*((x[:,None]-v)/h)**2).sum(axis=1) for v in centers)/(len(values)*h*np.sqrt(2*np.pi))
 
-def corner(name,metadata):
+def corner(name,metadata,*,write_tables=True):
     folder=BASE/name;draws=read(folder,'posterior_draws.csv');mode=json.loads((folder/'map.json').read_text())['parameters']
     metas=json.loads((folder/'priors.json').read_text());n=len(metas)
     samples=np.column_stack([np.log(draws[m['name']]) if m['plotting_coordinate']=='log' else draws[m['name']] for m in metas])
     point=[np.log(mode[m['name']]) if m['plotting_coordinate']=='log' else mode[m['name']] for m in metas]
     bounds=[support(m) for m in metas]
-    fig,axes=plt.subplots(n,n,figsize=(DOUBLE,6.3 if n==4 else 7.3))
-    fig.subplots_adjust(left=.12,right=.98,bottom=.12,top=.96,wspace=.12,hspace=.12)
+    fig,axes=plt.subplots(n,n,figsize=(DOUBLE,5.9 if n==4 else 6.8))
+    fig.subplots_adjust(left=.12,right=.98,bottom=.12,top=.96,wspace=.13,hspace=.13)
     limits=[]
     for i in range(n):
         q=np.quantile(samples[:,i],[.0005,.9995]);margin=.15*(q[1]-q[0])
@@ -225,35 +276,52 @@ def corner(name,metadata):
             if j>i: a.axis('off');continue
             if i==j:
                 x=np.linspace(lo,hi,601)
-                a.plot(x,marginal(samples[:,i],x,bounds[i]),color='#0072B2',lw=1.1,label='NUTS posterior')
-                a.plot(x,prior_density(metas[i],x),'k--',lw=1.1,label='Analytical prior')
+                density=marginal(samples[:,i],x,bounds[i])
+                a.fill_between(x,0,density,color='#0072B2',alpha=.13,linewidth=0)
+                a.plot(x,density,color='#0072B2',lw=1.2)
+                a.plot(x,prior_density(metas[i],x),color='.35',ls='--',lw=1.)
                 a.axvline(point[i],color='#D55E00',lw=.8,ls=':')
                 a.set_xlim(lo,hi);a.set_ylim(bottom=0);a.tick_params(labelleft=False)
-                if i==0: a.legend(fontsize=6,loc='upper right',bbox_to_anchor=(n*.95,1.0))
+                a.set_yticks([])
             else:
                 curved={metas[j]['name'],metas[i]['name']}=={'logAJ','gamma'}
                 if not curved:
                     X,Y,density=joint_density(samples[:,j],samples[:,i],bounds[j],bounds[i],points=151)
-                    a.contour(X,Y,density,levels=probability_levels(density),colors=['#79A8C5','#0072B2'],linewidths=[.7,1.])
+                    levels=probability_levels(density)
+                    a.contourf(X,Y,density,levels=[*levels,density.max()*1.001],
+                               colors=['#e7f0f7','#bad7e8'])
+                    a.contour(X,Y,density,levels=levels,colors=['#86b2cc','#0072B2'],linewidths=[.65,.9])
                 # This CNT relation is curved and thinner than a Cartesian KDE
                 # bandwidth. Actual draws preserve its width without a blur.
-                count=1400 if curved else 300
-                index=np.linspace(0,len(samples)-1,min(count,len(samples)),dtype=int)
-                a.plot(samples[index,j],samples[index,i],'.',color='#0072B2',
-                    ms=.9 if curved else .5,alpha=.3 if curved else .12)
+                if curved:
+                    index=np.linspace(0,len(samples)-1,min(2000,len(samples)),dtype=int)
+                    a.plot(samples[index,j],samples[index,i],'.',color='#0072B2',ms=.8,alpha=.35)
                 a.plot(point[j],point[i],'x',color='#D55E00',ms=4,mew=.8)
                 a.set_ylim(lo,hi);a.set_xlim(*limits[j])
-            if i==n-1: a.set_xlabel(LABELS[metas[j]['name']],fontsize=8)
+            if i==n-1: a.set_xlabel(LABELS[metas[j]['name']],fontsize=8.5,labelpad=5)
             else: a.tick_params(labelbottom=False)
-            if j==0 and i!=j: a.set_ylabel(LABELS[metas[i]['name']],fontsize=8)
+            if j==0 and i!=j: a.set_ylabel(LABELS[metas[i]['name']],fontsize=8.5,labelpad=5)
             elif i!=j: a.tick_params(labelleft=False)
-            a.tick_params(labelsize=6.5);a.locator_params(axis='x',nbins=3)
+            a.tick_params(labelsize=7.2,direction='out',length=2.5,width=.65,pad=2)
+            for spine in a.spines.values(): spine.set_linewidth(.65)
+            a.locator_params(axis='x',nbins=3)
             if i!=j: a.locator_params(axis='y',nbins=3)
+    handles=[Line2D([],[],color='#0072B2',lw=1.2,label='NUTS posterior'),
+             Line2D([],[],color='.35',ls='--',lw=1.,label='Analytical prior'),
+             Line2D([],[],color='#D55E00',ls='none',marker='x',ms=4,label='MAP'),
+             Patch(facecolor='#bad7e8',edgecolor='#0072B2',lw=.6,label=r'68\% joint region'),
+             Patch(facecolor='#e7f0f7',edgecolor='#86b2cc',lw=.6,label=r'95\% joint region')]
+    fig.legend(handles=handles,loc='upper right',bbox_to_anchor=(.965,.96),fontsize=7.5,
+               handlelength=2.,labelspacing=.5)
+    reference=(r'$A_J^\circ=1\ \mathrm{m}^{-3}\mathrm{s}^{-1}$'+'\n'+r'$A_G^\circ=1\ \mathrm{nm\,min}^{-1}$')
+    if n==5: reference+='\n'+r'$t^\circ=1\ \mathrm{min}$'
+    fig.text(.68,.72 if n==5 else .68,reference,fontsize=8,va='top',linespacing=1.6)
     export(fig,'protein_corner_'+name)
     coordinates=[('log_'+m['name']) if m['plotting_coordinate']=='log' else m['name'] for m in metas]
-    write_csv(BASE/f'posterior_correlations_{name}.csv',[
-        dict(coordinate=coordinates[i],**dict(zip(coordinates,row)))
-        for i,row in enumerate(np.corrcoef(samples.T))])
+    if write_tables:
+        write_csv(BASE/f'posterior_correlations_{name}.csv',[
+            dict(coordinate=coordinates[i],**dict(zip(coordinates,row)))
+            for i,row in enumerate(np.corrcoef(samples.T))])
 
 def result_tables(metadata):
     rows=[];comp=[];numerical=[]
@@ -322,6 +390,11 @@ def captions(data_only=False):
 \newcommand{\ProteinFitCaption}{CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview. Solid curves/stairs show the inference-coordinate MAP; observations are dashed density reconstructions and markers. Shading is the pointwise 95\% latent interval from screened NUTS draws, conditional on fixed observation errors and physical constants; it excludes additional measurement noise. The vertical dotted line marks the end of training at 420 min. The 660-min PSD and later concentrations are predicted without refitting. Quantile segments are omitted when the conditioning window is empty; quantiles derived from PSDs are not independent likelihood data. Numerical densities use actual bin edges without smoothing.}
 \newcommand{\ProteinCornerCaption}{Four-parameter CNT or five-parameter CNT+GRD NUTS posterior, identified by filename. Diagonals show normalized posterior KDEs and dashed analytical priors generated from the active specifications; positive wide-scale parameters use labelled natural-log plotting coordinates, including the correct prior Jacobian. Broad priors are not renormalized to the displayed posterior window; full support is in the prior table. Where shown, joint KDE contours enclose approximately 68\% and 95\% probability. The thin, curved nucleation-prefactor/interfacial-energy relation is shown directly with retained draws. Orange markers denote the transformed inference-coordinate MAP. Sampling convergence does not establish numerical convergence, identifiability or physical model adequacy.}
 '''
+    text=text.replace('Solid curves/stairs show','Solid curves show')
+    text=text.replace('Numerical densities use actual bin edges without smoothing.',
+        'Numerical density curves and bands connect the stored bin averages at their bin centers; no smoothing or extra forward solves are used.')
+    text=text.replace('Orange markers denote the transformed inference-coordinate MAP.',
+        r'Orange markers denote the transformed inference-coordinate MAP. The reference units are $A_G^\circ=1\,\mathrm{nm\,min}^{-1}$ and $t^\circ=1\,\mathrm{min}$.')
     text=text.replace(r'\ProteinFitCaption',r'\ProteinFitDetails').replace(r'\ProteinCornerCaption',r'\ProteinCornerDetails')
     text=text.replace('CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview.',
         '(a) Concentration; (b) training conditional number densities at 74, 180 and 420 min; (c) held-out 660-min density; (d) conditional number quantiles. All densities and quantiles condition on 2.5--25 $\\mu$m.')
@@ -343,11 +416,13 @@ def captions(data_only=False):
     text+=r'\newcommand{\ProteinParameterTableCaption}{Inference-coordinate MAP estimates transformed to physical units, posterior medians and equal-tailed 95\% credible intervals. Model 1 fixes dispersion to zero. Intervals condition on the model, fixed observation errors and physical constants.}'+'\n'
     (OUT/'captions.tex').write_text(text)
 
-def plot(data_only=False):
-    configure();OUT.mkdir(parents=True,exist_ok=True);DOCS.mkdir(parents=True,exist_ok=True)
+def plot(data_only=False,figures_only=False):
+    configure(require_dvipng=False)
+    OUT.mkdir(parents=True,exist_ok=True);DOCS.mkdir(parents=True,exist_ok=True)
     verify_shared_data()
     shared=BASE/'shared';data=read(shared,'concentration.csv');psds=read(shared,'psd.csv');qs=read(shared,'quantiles.csv')
-    metadata=json.loads((shared/'priors.json').read_text());prior_tables(metadata)
+    metadata=json.loads((shared/'priors.json').read_text())
+    if not figures_only: prior_tables(metadata)
     ymax=DENSITY_YMAX
     required=1.05*np.max(psds['conditional_density_per_um'])
     if not data_only:
@@ -364,14 +439,25 @@ def plot(data_only=False):
     export(fig,'protein_data')
     if not data_only:
         for name in ('cnt','cnt_grd'):
-            four_panel(name,data,psds,qs,ymax);corner(name,metadata)
-        result_tables(metadata)
+            four_panel(name,data,psds,qs,ymax);corner(name,metadata,write_tables=not figures_only)
+        if not figures_only: result_tables(metadata)
     captions(data_only=data_only)
-    files={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in OUT.iterdir() if p.suffix in ('.png','.pdf','.svg')}
+    names=('protein_data',) if data_only else ('protein_data','protein_fit_cnt','protein_fit_cnt_grd','protein_corner_cnt','protein_corner_cnt_grd')
+    files={f'{name}.{ext}':hashlib.sha256((OUT/f'{name}.{ext}').read_bytes()).hexdigest()
+        for name in names for ext in ('png','pdf','svg')}
+    inputs={f'{name}/{file}':hashlib.sha256((BASE/name/file).read_bytes()).hexdigest()
+        for name in (('shared',) if data_only else ('shared','cnt','cnt_grd'))
+        for file in (('concentration.csv','psd.csv','quantiles.csv') if name=='shared' else
+                     ('manifest.json','posterior_draws.csv','map.json','latent_predictions.csv','latent_distribution_curves.csv'))}
     (OUT/'plot_provenance.json').write_text(json.dumps(dict(renderer='actual LaTeX',dpi=300,files=files,
+        retained_inputs=inputs,figures_only=figures_only,
         python=platform.python_version(),numpy=np.__version__,matplotlib=plt.matplotlib.__version__,
         driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()),indent=2)+'\n')
     print(OUT)
 
 if __name__=='__main__':
-    plot(data_only='--data-only' in sys.argv)
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--data-only',action='store_true')
+    parser.add_argument('--figures-only',action='store_true',help='Regenerate figures without rewriting result tables')
+    args=parser.parse_args()
+    plot(data_only=args.data_only,figures_only=args.figures_only)
