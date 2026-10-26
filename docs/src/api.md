@@ -37,6 +37,10 @@ characteristic_grid(AffineGrowth(:g0,:g1),(0.0,1.4);dt,p)
 compile(model, grid; evolution=Inguva2022(),p,bc)
 PBMProblem(operator, initial, (t0,tf); p=NamedTuple())
 simulate(problem; dt, saveat=[t0,tf], method=SSPRK33())
+StationaryPBMProblem(operator, guess; p=NamedTuple(), autonomous=true)
+StationaryPBMProblem(system, population_guesses; bulk=NamedTuple(), p, autonomous=true)
+solve_stationary(problem) # load NonlinearSolve; RobustMultiNewton by default
+continue_stationary(problem, lambda -> parameters, (0.0,1.0))
 compile(model, grid; evolution=LaxWendroff(),bc)
 compile(model, grid; evolution=HOCFiniteVolume(),bc,p)
 compile(model, grid; domain=AxialDispersion(AxialGrid(z_edges);
@@ -49,6 +53,11 @@ in the documentation build. `solution.t` and `solution.u` hold saved times and
 states; standalone 1D sectional and moment states have one column. Use
 `density(grid,N)`, `moment(grid,N,k)`, and `term_methods(operator)` to interpret
 what was stored and how it was computed.
+
+Stationary problems have no time span. `solution.u` holds one physical state;
+`solution.converged`, `diagnostics(solution)` and `solution.balance_residual`
+report independently checked balances. See [Stationary population balances](steady_state.md)
+for optional solver setup, scaling, constraints, accounting rates and continuation.
 
 Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`, and `RK4`.
 `VanLeer` and geometry-aware `WENO3` support nonuniform 1D grids.

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added direct stationary PBM problems and an optional NonlinearSolve adapter using RobustMultiNewton by default. Reused physical residuals, same-state bulk exchange and named accessors; excluded historical ledgers from stationary unknowns and retained their instantaneous rates.
+- Added scaled balance acceptance, explicit inventory constraints, frozen-condition declarations and natural-parameter continuation with failure records. Added analytical well-mixed continuous-crystallizer verification and a runnable coupled example. Direct transport updates and moment boundary events remain unsupported for stationary solves.
+
 - Added a documentation case study of stem-cell self-renewal and differentiation, using Brown et al.'s synthetic OCT4-cargo model. Native growth, binary breakage, removal and coupled exit balances retain cell-event and cargo accounting; runnable examples, analytical division tests and independent numerical-refinement checks accompany the figures. No experimental comparison or paper workflow is included.
 
 - Reorganized the Tang isothermal protein case around CNT versus CNT with native random-fluctuation GRD. Both use unchanged training/test readings, fixed concentration/CDF uncertainties, common kinetic priors and separate four-/five-parameter Bayesian targets. Added data-only, fit and prior-overlaid posterior figures, generated comparison tables, native combined timestep control and numerical/target verification; archived the superseded inferred-noise results.

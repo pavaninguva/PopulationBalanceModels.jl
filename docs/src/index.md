@@ -15,6 +15,9 @@ Start with [a complete first model](getting_started.md). Then read
 boundaries, or [Coupled systems](coupled_systems.md) to include bulk balances.
 The [numerical guide](numerical_methods.md) explains the treatment of each term,
 including restrictions on grids, boundaries, and positivity.
+For a direct solution of time-independent balances, see
+[Stationary population balances](steady_state.md), including a well-mixed
+continuous crystallizer and parameter continuation.
 
 The [case studies](case_studies/index.md) develop cooling crystallization,
 lipid nanoparticle formation, growth in two particle dimensions, and

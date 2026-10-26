@@ -21,12 +21,16 @@ moments and are rejected. Velocity and dispersion are prescribed, not solved.
 """
 function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::AxialDispersion;
                        initial=nothing,axial_scheme=Upwind())
+    op=_compile_axial_system(local_problem.operator,domain,axial_scheme)
+    u=initial===nothing ? repeat(local_problem.u0,1,length(domain.grid)) : initial
+    PBMProblem(op,u,local_problem.tspan;p=local_problem.p)
+end
+function _compile_axial_system(localop::CompiledSystem,domain::AxialDispersion,axial_scheme)
     axial_scheme isa AbstractReconstruction || throw(ArgumentError("axial_scheme must be a residual reconstruction"))
     _validate_reconstruction(axial_scheme,domain.grid)
     periodic=domain.boundary===:periodic
     bc=periodic ? SizeBC(Periodic(),Periodic()) : SizeBC()
     reconstruction=_prepare_reconstruction(axial_scheme,domain.grid,bc)
-    localop=local_problem.operator
     any(pop->any(term->term isa SizeDiffusion,pop.model.terms),values(localop.system.populations)) &&
         throw(ArgumentError("SizeDiffusion is currently supported in batch populations only, not axial adapters"))
     all(values(localop.system.populations)) do op
@@ -39,9 +43,7 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
             nonnegative_bulk=s.nonnegative_bulk,accounting=s.accounting)
         CompiledSystem(sys,localop.ranges,localop.bulk_indices,localop.length,localop.physical_length,localop.ledger_indices)
     end
-    op=CompiledAxialSystem(domain,locals,axial_scheme,reconstruction)
-    u=initial===nothing ? repeat(local_problem.u0,1,length(domain.grid)) : initial
-    PBMProblem(op,u,local_problem.tspan;p=local_problem.p)
+    CompiledAxialSystem(domain,locals,axial_scheme,reconstruction)
 end
 function PBMProblem(op::CompiledAxialSystem,u::AbstractMatrix,tspan;p=NamedTuple())
     localop=first(op.local_operators)

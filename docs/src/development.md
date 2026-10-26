@@ -7,7 +7,9 @@ physical terms, laws, sources, and boundaries; `representations/` defines grids
 and moment bases. `numerics/` contains selectable algorithms, and `compilation/`
 validates combinations and creates prepared terms. `coupling/` packs populations
 and bulk balances; `time_integration/` advances them; `inference/` maps results
-to observations and estimation. Optional dependencies live in `ext/`.
+to observations and estimation. `stationary/` assembles stationary problems and
+parameter paths from the same residuals; its optional NonlinearSolve adapter
+lives alongside other integrations in `ext/`.
 
 This separation lets physical laws survive changes of representation and
 numerical method. `core/interfaces.jl` defines public dispatch contracts and

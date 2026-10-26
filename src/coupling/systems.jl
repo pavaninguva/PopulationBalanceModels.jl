@@ -169,7 +169,7 @@ function suggest_dt(op::CompiledSystem,u,p,t; cfl=0.5)
         reshape(population(op,u,name),:,1),p,t;cfl,context=ctx) for name in keys(op.ranges))
 end
 
-function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=NamedTuple())
+function _pack_system(system::PBMSystem,u0::NamedTuple,bulk0::NamedTuple)
     Set(keys(u0))==Set(keys(system.populations)) || throw(ArgumentError("initial population names must match the system"))
     bulk0 isa NamedTuple && all(x->x isa Real && isfinite(x),values(bulk0)) || throw(ArgumentError("bulk0 must contain finite named scalar values"))
     for name in system.nonnegative_bulk
@@ -190,6 +190,12 @@ function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=
     ledgers,total=_ledger_indices(system.accounting,physical)
     op=CompiledSystem(system,namedranges,indices,total,physical,ledgers)
     flat=float.(vcat((vec(N) for N in initial)...,collect(values(bulk0)),zeros(total-physical)))
+    op,flat
+end
+
+function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=NamedTuple())
+    bulk0 isa NamedTuple || throw(ArgumentError("bulk0 must contain finite named scalar values"))
+    op,flat=_pack_system(system,u0,bulk0)
     PBMProblem(op,flat,tspan;p)
 end
 

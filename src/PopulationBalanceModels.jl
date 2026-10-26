@@ -52,7 +52,9 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        PBMSystem, SystemContext, PopulationTransfer, CrossAggregation,
        ConservativeExchange, CustomCoupling, population, bulk, stateview,
        PopulationMoment, BulkObservable, PopulationHistogram, SystemObservable,
-       fit, FitResult, odeproblem
+       fit, FitResult, odeproblem,
+       StationaryPBMProblem, StationaryPBMSolution, StationaryBranch,
+       stationary_residual!, nonlinearproblem, solve_stationary, continue_stationary
 
 include("core/interfaces.jl")
 include("representations/grids.jl")
@@ -109,6 +111,9 @@ include("inference/parameters.jl")
 include("inference/statistical_model.jl")
 include("inference/bayesian_diagnostics.jl")
 include("inference/sampling_coordinates.jl")
+
+include("stationary/problems.jl")
+include("stationary/continuation.jl")
 
 @doc "Load Optim to enable fit(calibration, initial_parameters; ...) or MAP fit(estimation_problem; ...)." fit
 

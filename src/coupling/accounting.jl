@@ -111,10 +111,13 @@ cumulative increments of MeasureEuler, rather than an invented density trace.
 function accounting_rates(prob::PBMProblem,u,p=prob.p,t=first(prob.tspan))
     prob.operator isa Union{CompiledSystem,CompiledAxialSystem} || throw(ArgumentError("accounting_rates requires a PBMSystem or coupled axial problem"))
     du=zero(u);rhs!(du,u,prob.operator,p,t)
-    op=prob.operator isa CompiledAxialSystem ? first(prob.operator.local_operators) : prob.operator
+    _accounting_rate_tree(prob.operator,du)
+end
+function _accounting_rate_tree(operator,du)
+    op=operator isa CompiledAxialSystem ? first(operator.local_operators) : operator
     NamedTuple{keys(op.ledger_indices)}(Tuple(
         NamedTuple{_LOSS_MECHANISMS}(Tuple(NamedTuple{keys(ind)}(Tuple(
-            prob.operator isa CompiledAxialSystem ? copy(view(du,i,:)) : du[i] for i in values(ind)))
+            operator isa CompiledAxialSystem ? copy(view(du,i,:)) : du[i] for i in values(ind)))
             for ind in values(getproperty(op.ledger_indices,name)))) for name in keys(op.ledger_indices)))
 end
 

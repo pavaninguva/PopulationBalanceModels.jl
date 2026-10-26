@@ -53,6 +53,7 @@ makedocs(;
         "Defining models" => "defining_models.md",
         "Coupled systems" => "coupled_systems.md",
         "Axially dispersed reactors" => "axial_reactors.md",
+        "Stationary population balances" => "steady_state.md",
         "Numerical methods" => [
             "Overview and method selection" => "numerical_methods.md",
             "Growth and dissolution" => "methods/growth.md",
