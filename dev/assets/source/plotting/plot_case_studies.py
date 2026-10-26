@@ -124,7 +124,7 @@ def lnp(folder):
 
 def illustrations():
     diagnostics=Path(__file__).resolve().parent/"diagnostics"
-    cooling(diagnostics/"cooling_benchmark",ASSETS/"illustrations"/"cooling")
+    cooling(diagnostics/"cooling_benchmark",ASSETS.parents[2]/".cache/legacy_docs_assets/illustrations/cooling")
     folder=diagnostics/"lnp_demo";history=load(folder/"history.csv");psd=load(folder/"psd.csv")
     fig,axes=plt.subplots(2,2,figsize=(9,6.5),layout="constrained")
     axes[0,0].plot(history["time"]*1e3,history["number"])
@@ -140,7 +140,7 @@ def illustrations():
     axes[1,1].plot(history["time"]*1e3,(material-material[0])/material[0])
     axes[1,1].set(xlabel=r"$t\;[\mathrm{ms}]$",ylabel=r"$[m_{\mathrm{lipid}}(t)-m_{\mathrm{lipid}}(0)]/m_{\mathrm{lipid}}(0)$")
     fig.suptitle("Nanoparticle formation: synthetic material and mixing inputs")
-    save_figure(fig,ASSETS/"illustrations"/"lnp","demonstration")
+    save_figure(fig,ASSETS.parents[2]/".cache/legacy_docs_assets/illustrations/lnp","demonstration")
 
 
 def temperature_moments(folder):

@@ -4,7 +4,7 @@
 The mixed-unit and noise-scaled SVDs use the declared inference coordinates.
 Observed Hessians are local derivatives, not verified Laplace covariances.
 """
-function run_identifiability(;output=joinpath(@__DIR__,"..","..","docs","src","assets","protein_crystallization"),bins=80,priors=:broad)
+function run_identifiability(;output=joinpath(@__DIR__,"..","..",".cache","legacy_docs_assets","protein_crystallization"),bins=80,priors=:broad)
     problem = estimation_problem(;bins,solver=scheduled_solver,priors)
     z = saved_map(output,problem)
     report = identifiability_report(problem,z)

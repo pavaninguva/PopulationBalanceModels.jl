@@ -4,7 +4,7 @@ using PopulationBalanceModels, Optim, Random
 export run_example
 
 """A seeded synthetic realization with analytical data, two fitted rates, and known Gaussian errors."""
-function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","parameter_estimation"))
+function run_example(;output=joinpath(@__DIR__,"..",".cache","legacy_docs_assets","parameter_estimation"))
     grid=Grid1D([0.0,0.5,1.0])
     model=PBMModel(primary=Nucleation(rate=(p,t,ctx)->p.J,size=0.25),
         loss=Death(rate=(v,p,t,ctx)->p.k))

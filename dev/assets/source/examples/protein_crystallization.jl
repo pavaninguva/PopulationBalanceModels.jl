@@ -90,7 +90,7 @@ function estimation_problem(;bins=100,solver=nothing,dt=.5,priors=:broad,
     EstimationProblem(specs,(ex,))
 end
 
-function run_study(;output=joinpath(@__DIR__,"..","docs","src","assets","protein_crystallization"),bins=80,
+function run_study(;output=joinpath(@__DIR__,"..",".cache","legacy_docs_assets","protein_crystallization"),bins=80,
         solver=scheduled_solver,dt=.5,maxiters=300,priors=:broad,posterior=false,posterior_options=NamedTuple())
     # Optional dependency loaded by the caller, preserving the package extension.
     Base.get_extension(PopulationBalanceModels,:PopulationBalanceModelsOptimExt)!==nothing ||
@@ -226,7 +226,7 @@ sensitivities plus prior curvature; it is NOT a verified Laplace approximation.
 Chains, draws, proper physical-coordinate priors and diagnostic failures are
 exported even when the convergence screen fails. Such draws are provisional.
 """
-function run_posterior(;output=joinpath(@__DIR__,"..","docs","src","assets","protein_crystallization"),
+function run_posterior(;output=joinpath(@__DIR__,"..",".cache","legacy_docs_assets","protein_crystallization"),
         bins=80,initial=nothing,samples=1500,warmup=750,chains=4,seed=2027,
         time_scale=1.,predictive_draws=100,min_ess=400,target_acceptance=.9,max_depth=9,priors=:broad,parallel=false)
     Base.get_extension(PopulationBalanceModels,:PopulationBalanceModelsAdvancedHMCExt)!==nothing ||
