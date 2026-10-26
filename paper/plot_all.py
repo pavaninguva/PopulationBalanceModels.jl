@@ -446,6 +446,7 @@ def main():
     parser.add_argument("--case",choices=["all","1","2","3","4"],default="all")
     parser.add_argument("--smoke",action="store_true")
     parser.add_argument("--preview",action="store_true")
+    parser.add_argument("--data-only",action="store_true",help="Case 4 observations only; no fit needed")
     args = parser.parse_args()
     MODE = "smoke" if args.smoke else "production"
     PREVIEW = args.preview
@@ -460,7 +461,7 @@ def main():
             print("Protein smoke mode verifies the forward solve; no calibrated paper figure is produced.")
         else:
             from plot_protein_isothermal import plot
-            plot()
+            plot(data_only=args.data_only)
 
 if __name__ == "__main__":
     main()

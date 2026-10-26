@@ -435,9 +435,10 @@ The historical `examples/protein_crystallization.jl` Bayesian recipe uses a
 unit-determinant reference-rate map; its retained sampling checks are described
 in the [audit](audit.md). The current
 [isothermal protein tutorial](case_studies/protein_crystallization.md) uses
-original number distributions, CNT kinetics and an explicit correlated-CDF
-Gaussian likelihood with inferred discrepancy scales. Its Bayesian target is
-separate from the historical recipe.
+original number distributions to compare CNT with CNT plus native GRD. Its
+concentration errors and correlated-CDF covariance are fixed assumptions;
+neither model estimates noise parameters. The four-/five-parameter targets are
+separate from the historical recipes and their archived draws.
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)

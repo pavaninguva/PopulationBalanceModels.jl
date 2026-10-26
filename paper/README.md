@@ -4,9 +4,10 @@ These drivers are independent of Documenter and never read documentation assets.
 They include the existing physical-model/example modules without running those
 modules' standalone benchmarks. The fourth case is the
 [Tang isothermal protein batch](case_studies/04_protein_crystallization/README.md),
-with CNT kinetics, Bayesian calibration and held-out prediction. It runs
-independently of the first three; optional NUTS sampling uses the same model
-and likelihood as its default MAP fit.
+comparing CNT kinetics with CNT plus random-fluctuation growth dispersion.
+It runs independently of the first three. Its two models share fixed observation
+uncertainties; four- and five-dimensional NUTS posteriors supply separate corner
+plots and latent prediction bands.
 
 Run commands from the repository root. Julia must load **this checkout**; the
 drivers check `pathof(PopulationBalanceModels)` before doing any calculation.
@@ -26,10 +27,12 @@ Each PDF is checked for embedded fonts; each PNG carries 300-dpi metadata.
 The Julia manifest is retained; package solver dependencies are unchanged.
 Its development path records this checkout; `setup.jl` rewrites that path if the
 repository is moved while retaining resolved dependency versions.
-`provenance/numerical_checkout.patch` and `numerical_sources.json` capture the
-uncommitted numerical changes used here, including nonuniform WENO5. Git HEAD
-alone does not identify that implementation. Apply that snapshot only to a
-clean matching baseline; the drivers always load the normal root package.
+For the first three datasets, `provenance/numerical_checkout.patch` and
+`numerical_sources.json` capture their uncommitted numerical changes, including
+nonuniform WENO5. The later protein runs record their own numerical sources and
+producer hashes in each model's result folder. Git HEAD alone does not identify
+either implementation. Apply a snapshot only to its matching clean baseline;
+the drivers always load the normal root package.
 
 First exercise the small configurations and the numerical contracts:
 
@@ -40,12 +43,16 @@ python paper/plot_all.py --smoke
 python paper/check_data.py --smoke
 ```
 
-The production calculations, sequentially (protein defaults to MAP):
+The production calculations, sequentially (`run_all.jl` fits the protein MAPs;
+the explicit second command completes both protein posteriors):
 
 ```sh
 OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=1 julia --project=paper paper/run_all.jl
+OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=1 julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --full
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --verify
 python paper/plot_all.py
 python paper/check_data.py
+python paper/check_protein.py
 ```
 
 Or run a case independently:

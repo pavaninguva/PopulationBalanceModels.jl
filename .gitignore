@@ -6,3 +6,7 @@ __pycache__/
 /protein_crystallization_handover.zip
 /protein_crystallization_handover/
 docs/src/assets/source/
+
+# Regenerable isolated-chain caches; portable draws/statistics are retained.
+/paper/results/04_protein_crystallization/**/chains/*.bin
+/paper/results/04_protein_crystallization/**/chains/*.log

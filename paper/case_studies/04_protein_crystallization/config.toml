@@ -1,0 +1,47 @@
+# Observation assumptions and priors come from the example's active specs.
+[production]
+bins = 200
+Lmax = 50.0
+maximum_dt = 2.0
+coefficient_interval = 5.0
+cfl = 0.35
+maxiters = 500
+warmup = 300
+samples = 500
+chains = 4
+seed = 20261024
+predictive_draws = 200
+target_acceptance = 0.97
+max_depth = 9
+
+[production.bins_by_model]
+cnt = 400
+cnt_grd = 100
+
+# A fresh CNT run follows the retained 0.90-adaptation run's single divergence.
+[production.sampler_by_model.cnt]
+warmup = 300
+target_acceptance = 0.97
+
+[production.sampler_by_model.cnt_grd]
+warmup = 1000
+samples = 2000
+target_acceptance = 0.999
+max_depth = 12
+sampling_coordinates = "transport_rates"
+metric_initialization = "transport_empirical"
+transport_file = "sampling_transport.json"
+# Calibration-pilot geometry suggests S≈5.9; use the simple reference S=6.
+# This changes an auxiliary sampling coordinate only, not G or any prior.
+growth_reference_supersaturation = 6.0
+# Second stationary calibration basin from the retained 200-bin multistart.
+# Order: logit(logAJ), log(gamma), log(AG), logit(g), log(theta).
+# Half the chains start near each calibration basin.
+secondary_start_inference = [-0.7180347903313198, -0.4607779131407843, -1.0000077606762097, 3.4695733558049704, 0.5499387786891053]
+
+[smoke]
+bins = 40
+Lmax = 50.0
+maximum_dt = 1.0
+coefficient_interval = 5.0
+cfl = 0.35

@@ -1,7 +1,0 @@
-name,MAP,prior_coordinates,prior
-logAJ,30.848191724868563,physical,"Distributions.Uniform{Float64}(a=0.0, b=100.0)"
-gamma,0.5872492484266791,physical,"Distributions.LogNormal{Float64}(μ=-0.4462871026284195, σ=0.7)"
-AG,0.48343413489629944,inference,"Distributions.Uniform{Float64}(a=-4.605170185988091, b=7.313220387090301)"
-g,2.8904534548832306,physical,"Distributions.Uniform{Float64}(a=1.0, b=3.0)"
-sigma_c,1.8886286702118733,physical,Distributions.Exponential{Float64}(θ=1.0)
-sigma_F,0.01908127113503771,physical,Distributions.Exponential{Float64}(θ=0.1)

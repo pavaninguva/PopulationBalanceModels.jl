@@ -1,7 +1,7 @@
 using Distributions: Normal, LogNormal, Exponential, Uniform, MvNormal, logpdf
 using Random
 
-include("fixtures/bayesian_linear.jl")
+isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
 
 @testset "One Bayesian density and coordinate conventions" begin
     f=bayesian_linear_fixture();p=f.problem;z=f.mode

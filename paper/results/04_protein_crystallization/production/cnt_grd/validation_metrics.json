@@ -1,0 +1,10 @@
+{
+    "evaluated_at": "2026-10-26T00:03:01.394",
+    "calibration_concentration_RMSE_g_L": 1.286137874534808,
+    "validation_concentration_RMSE_g_L": 0.23964835398167111,
+    "maximum_material_error_g_L": 8.277822871605167e-13,
+    "maximum_upper_bin_fraction": 1.84510817162855e-17,
+    "solve_seconds": 0.0252566,
+    "allocated_bytes": 13632768,
+    "steps": 741
+}

@@ -1,6 +1,9 @@
 using Test, PopulationBalanceModels, ForwardDiff, LinearAlgebra
+import Distributions
+using Distributions: Normal
 include(joinpath(@__DIR__,"..","examples","isothermal_protein_crystallization.jl"))
 using .IsothermalProteinCrystallization
+include(joinpath(@__DIR__,"..","examples","support","isothermal_protein_sampling.jl"))
 
 @testset "Conditional number observations" begin
     grid=Grid1D([0.,1.,3.,6.]);N=[1.,4.,0.]
@@ -23,89 +26,195 @@ using .IsothermalProteinCrystallization
     @test ForwardDiff.jacobian(f,N)[:,1] ≈ (f(N+[h,0,0])-f(N-[h,0,0]))/(2h) rtol=1e-7
 end
 
-@testset "CNT protein model, units and conservative stage coupling" begin
+@testset "CNT/GRD units, boundary flux and same-stage material" begin
     p=parameters();S=p.c0/p.cstar
-    # Independent SI expression, including seconds/minutes and nm/μm conversions.
     B=16pi*(p.gamma/1000)^3*(2.97e-26)^2/(3*(1.380649e-23*293.15)^3)
-    J=60exp(p.logAJ)*exp(-B/log(S)^2)
-    G=p.AG*(S-1)^p.g/1000
+    J=60exp(p.logAJ)*exp(-B/log(S)^2);G=p.AG*(S-1)^p.g/1000
     @test collect(rates(p,0.,p.c0)) ≈ [J,G]
     @test rates(p,0.,p.cstar)==(0.,0.)
     @test rates(p,0.,p.cstar/2)==(0.,0.)
-    # Subnormal tails must not produce negative Dual-zero source values.
     @test IsothermalProteinCrystallization.nucleation_rate(merge(p,(gamma=100.,)),p.c0)==0
     @test ForwardDiff.derivative(c->IsothermalProteinCrystallization.nucleation_rate(merge(p,(gamma=100.,)),c),p.c0)==0
-    pb=build(bins=30,tf=74.);op=pb.operator.system.populations.crystals
-    @test all(iszero,population(pb,pb.u0,:crystals))
-    for N in (zeros(30),exp.(-op.grid.centers))
-        u=copy(pb.u0);population(pb,u,:crystals).=N
-        du=similar(u);rhs!(du,u,pb.operator,p,0.)
-        @test sum(population(pb,du,:crystals))≈J/1e12 rtol=1e-12
-        @test bulk(pb,du,:c)+1e-6*p.rho*p.kv*moment(op.grid,population(pb,du,:crystals),3)≈0 atol=1e-12
-        # Cross-check the documented derivative-based coupling against the
-        # package's separate ConservativeExchange implementation.
-        system=PBMSystem((crystals=op,);exchanges=(ConservativeExchange(:crystals,:c,
-            (L,p,t,ctx)->1e-6*p.rho*p.kv*L^3),))
-        reference=PBMProblem(system,(crystals=N,),(0.,74.);bulk0=(c=p.c0,),p)
-        dr=similar(reference.u0);rhs!(dr,reference.u0,reference.operator,p,0.)
-        @test dr≈du rtol=1e-12 atol=1e-12
+    for model in (:cnt,:cnt_grd)
+        p=parameters(grd_strength=model===:cnt ? 0. : 3.)
+        pb=build(bins=30,tf=74.,p=p,model=model);op=pb.operator.system.populations.crystals
+        @test all(iszero,population(pb,pb.u0,:crystals))
+        for N in (zeros(30),exp.(-op.grid.centers)),c in (p.c0,.8p.c0)
+            u=copy(pb.u0);population(pb,u,:crystals).=N;u[end]=c
+            du=similar(u);rhs!(du,u,pb.operator,p,0.)
+            @test sum(population(pb,du,:crystals))≈rates(p,0.,c)[1]/1e12 rtol=1e-12
+            @test bulk(pb,du,:c)+1e-6*p.rho*p.kv*moment(op.grid,population(pb,du,:crystals),3)≈0 atol=1e-12
+            system=PBMSystem((crystals=op,);exchanges=(ConservativeExchange(:crystals,:c,
+                (L,p,t,ctx)->1e-6*p.rho*p.kv*L^3),))
+            reference=PBMProblem(system,(crystals=N,),(0.,74.);bulk0=(c=c,),p=p)
+            dr=similar(reference.u0);rhs!(dr,reference.u0,reference.operator,p,0.)
+            @test dr≈du rtol=1e-12 atol=1e-12
+        end
+        sol=forward(p;model=model,bins=30,times=[0.,74.])
+        @test minimum(last(sol.u))>=0
+        @test bulk(pb,last(sol.u),:c)+1e-6*p.rho*p.kv*moment(op.grid,population(pb,last(sol.u),:crystals),3)≈p.c0 atol=1e-10
     end
-    sol=forward(p;bins=30,times=[0.,74.])
-    @test minimum(last(sol.u))>=0
-    @test bulk(pb,last(sol.u),:c)+1e-6*p.rho*p.kv*moment(op.grid,population(pb,last(sol.u),:crystals),3)≈p.c0 atol=1e-10
+    # The nested model at theta=0 has exactly the same native operator/update.
+    p=parameters();a=forward(p;model=:cnt,bins=40,times=[0.,74.,180.])
+    b=forward(p;model=:cnt_grd,bins=40,times=[0.,74.,180.])
+    @test a.u==b.u
+    @test a.steps==b.steps
+    # Explicit interval caps reject violations instead of clipping the rates.
+    pb=build(bins=30,tf=1.);u=copy(pb.u0);du=zero(u)
+    @test_throws NumericalFailure rhs!(du,u,pb.operator,merge(p,(interval_cmax=1.,)),0.)
 end
 
-@testset "Bayesian CNT target and held-out exclusion" begin
-    data=load_data()
+@testset "Fixed-error four/five-dimensional posterior and held-out exclusion" begin
+    C=IsothermalProteinCrystallization;data=load_data()
     @test length(data.concentration)==16
     @test length(select_concentration(data))==11
     @test [first(r).time_min for r in select_psds(data)]==[74.,180.,420.]
     @test first(data.concentration).model_time_min==0
-    @test first(data.concentration).concentration_g_L==IsothermalProteinCrystallization.C0
-    b=estimation_problem(bins=30);z=initial_coordinates(b)
-    ex=only(b.experiments)
-    @test length(ex.measurements)==4
-    @test size(first(ex.measurements).data)==(1,11)
-    @test size(ex.measurements[2].data)==(22,1)
-    @test [only(m.times) for m in ex.measurements[2:end]]==[74.,180.,420.]
-    changed=merge(data,(concentration=[r.split=="validation" ? merge(r,(concentration_g_L=999.,)) : r for r in data.concentration],
-        psd=[r.split=="validation" ? merge(r,(conditional_cdf=-999.,)) : r for r in data.psd]))
-    @test logposterior(b,z)==logposterior(estimation_problem(data=changed,bins=30),z)
-    @test check_gradient(b,z).valid
-    # Independently normalize the first correlated Gaussian CDF block.
-    predicted=predictions(b,z)[1];theta=physical_parameters(b,z,:batch)
-    whitened_residual=vec(predicted[2]-ex.measurements[2].data)
-    R=[exp(-abs(i-j)/2) for i in 1:22,j in 1:22]
-    Rfactor=cholesky(Symmetric(R)).L
-    residual=Rfactor*whitened_residual
-    C=theta.sigma_F^2*R
-    L=cholesky(Symmetric(C)).L
-    expected=-.5*(sum(abs2,L\residual)+2sum(log,diag(L))+22log(2pi))
-    actual=PopulationBalanceModels._measurement_loglikelihood(ex.measurements[2].likelihood,
-        ex.measurements[2].data,predicted[2],theta,ex)
-    @test actual≈expected+sum(log,diag(Rfactor)) rtol=1e-12
-    # Nonconstant inverse-map Jacobian: an independent dense determinant.
-    map=IsothermalProteinCrystallization.sampling_coordinates(b)
-    for delta in (zeros(6),[.01,.02,-.03,.04,.02,-.02])
-        at=z+delta;y=map.to_sampler(at)
-        @test map.from_sampler(y)≈at rtol=1e-11
-        @test map.logabsdetjac(y)≈logabsdet(ForwardDiff.jacobian(map.from_sampler,y))[1] rtol=1e-11
-        @test check_sampling_map(b,map,at).valid
+    @test first(data.concentration).concentration_g_L==C.C0
+    for model in (:cnt,:cnt_grd)
+        b=estimation_problem(bins=30,model=model);z=initial_coordinates(b);n=length(z)
+        @test n==(model===:cnt ? 4 : 5)
+        @test all(s->s.name ∉ (:sigma_c,:sigma_F),b.parameters)
+        ex=only(b.experiments);theta=physical_parameters(b,z,:batch)
+        @test length(ex.measurements)==4
+        @test size(first(ex.measurements).data)==(1,11)
+        @test first(ex.measurements).likelihood.sigma==.05 .* first(ex.measurements).data
+        @test size(ex.measurements[2].data)==(22,1)
+        @test [only(m.times) for m in ex.measurements[2:end]]==[74.,180.,420.]
+        @test all(m.likelihood.sigma==.03 for m in ex.measurements[2:end])
+        changed=merge(data,(concentration=[r.split=="validation" ? merge(r,(concentration_g_L=999.,)) : r for r in data.concentration],
+            psd=[r.split=="validation" ? merge(r,(conditional_cdf=-999.,)) : r for r in data.psd]))
+        @test logposterior(b,z)==logposterior(estimation_problem(data=changed,bins=30,model=model),z)
+        @test check_gradient(b,z).valid
+        predicted=predictions(b,z)[1]
+        whitened=vec(predicted[2]-ex.measurements[2].data)
+        R=[exp(-abs(i-j)/2) for i in 1:22,j in 1:22];RF=cholesky(Symmetric(R)).L
+        original=RF*whitened;L=cholesky(Symmetric(.03^2*R)).L
+        expected=-.5*(sum(abs2,L\original)+2sum(log,diag(L))+22log(2pi))
+        actual=PopulationBalanceModels._measurement_loglikelihood(ex.measurements[2].likelihood,
+            ex.measurements[2].data,predicted[2],theta,ex)
+        @test actual≈expected+sum(log,diag(RF)) rtol=1e-12
+        # Independent scalar Gaussian sum verifies every concentration SD and
+        # its normalizer, not an averaged residual or an inferred global scale.
+        yc=vec(first(ex.measurements).data);pc=vec(predicted[1]);sc=.05yc
+        expected=sum(-.5*((a-b)/s)^2-log(s)-.5log(2pi) for (a,b,s) in zip(yc,pc,sc))
+        actual=PopulationBalanceModels._measurement_loglikelihood(first(ex.measurements).likelihood,
+            first(ex.measurements).data,predicted[1],theta,ex)
+        @test actual≈expected rtol=1e-13
+        map=C.sampling_coordinates(b)
+        for delta in (zeros(n),collect(range(.01,.04;length=n)))
+            at=z+delta;y=map.to_sampler(at)
+            @test map.from_sampler(y)≈at rtol=1e-11
+            @test map.logabsdetjac(y)≈logabsdet(ForwardDiff.jacobian(map.from_sampler,y))[1] rtol=1e-11
+            @test check_sampling_map(b,map,at).valid
+        end
+        y=map.to_sampler(z)
+        H=-ForwardDiff.hessian(v->logprior(b,map.from_sampler(v))+map.logabsdetjac(v),y)
+        sg=(theta.g-1)/2;expected=[0.,1/.7^2,0.,2sg*(1-sg)]
+        n==5 && push!(expected,theta.grd_strength/10)
+        @test H≈Diagonal(expected) atol=1e-10
+        tuning=C.sampler_tuning(b,z,map)
+        @test isposdef(Symmetric(tuning.covariance))
+        @test tuning.information*tuning.covariance≈Matrix{Float64}(I,n,n) atol=1e-7
+        @test length(C.prior_metadata(b))==n
+        if n==5
+            @test C.prior_metadata(b)[end].arguments==[10.]
+        else
+            @test theta.grd_strength==0
+        end
+        y[1]=-1e6
+        @test_throws NumericalFailure map.from_sampler(y)
     end
-    # In initial-rate y coordinates the Uniform(logAJ)/logit Jacobian
-    # cancels its inverse-map factor. Check the entire transformed prior.
-    y=map.to_sampler(z)
-    H=-ForwardDiff.hessian(v->logprior(b,map.from_sampler(v))+map.logabsdetjac(v),y)
-    sig=(theta.g-1)/2
-    expected=[0.,1/.7^2,0.,2sig*(1-sig),theta.sigma_c,10theta.sigma_F]
-    @test H≈Diagonal(expected) atol=1e-10
-    tuning=IsothermalProteinCrystallization.sampler_tuning(b,z,map)
-    @test isposdef(Symmetric(tuning.covariance))
-    @test tuning.information*tuning.covariance≈Matrix{Float64}(I,6,6) atol=1e-8
-    @test tuning.covariance[5,5]≈1/(2*11+theta.sigma_c)
-    @test tuning.covariance[6,6]≈1/(2*66+10theta.sigma_F)
-    y[1]=-1e6
-    @test_throws NumericalFailure map.from_sampler(y)
+end
+
+@testset "Positive-barrier protein sampling coordinates" begin
+    C=IsothermalProteinCrystallization;S=IsothermalProteinSampling
+    for model in (:cnt,:cnt_grd), Sref in (nothing,6.)
+        problem=estimation_problem(;bins=30,model)
+        z=initial_coordinates(problem);map=S.bounded_rate_coordinates(C,problem,z;
+            growth_reference_supersaturation=Sref)
+        physical=physical_parameters(problem,z,:batch)
+        s=isnothing(Sref) ? C.C0/physical.cstar : Sref
+        @test map.to_sampler(z)[3]≈log(.001physical.AG)+physical.g*log(s-1) atol=1e-12
+        for A in (.001,30.,95.,99.999),gamma in (1e-6,.64,1.3)
+            q=copy(z);q[1]=log(A/(100-A));q[2]=log(gamma)
+            y=map.to_sampler(q);J=ForwardDiff.jacobian(map.from_sampler,y)
+            @test map.from_sampler(y)≈q atol=2e-13
+            @test map.logabsdetjac(y)≈logabsdet(J)[1] atol=2e-12
+            @test physical_parameters(problem,map.from_sampler(y),:batch).logAJ≈A rtol=1e-11
+            # Independent physical-density change of variables, including the
+            # log-uniform AG prior, checks every transform factor exactly once.
+            theta=physical_parameters(problem,q,:batch)
+            physical_prior=Distributions.logpdf(Distributions.Uniform(0.,100.),theta.logAJ)+
+                Distributions.logpdf(Distributions.LogNormal(log(.64),.7),theta.gamma)+
+                Distributions.logpdf(Distributions.Uniform(log(.01),log(1500.)),log(theta.AG))-log(theta.AG)+
+                Distributions.logpdf(Distributions.Uniform(1.,3.),theta.g)
+            length(z)==5 && (physical_prior+=Distributions.logpdf(Distributions.Exponential(10.),theta.grd_strength))
+            physical_vector(v)=let p=physical_parameters(problem,map.from_sampler(v),:batch)
+                [getproperty(p,s.name) for s in problem.parameters]
+            end
+            actual=physical_prior+logabsdet(ForwardDiff.jacobian(physical_vector,y))[1]
+            @test logprior(problem,q)+map.logabsdetjac(y)≈actual atol=2e-11
+        end
+        @test check_sampling_map(problem,map,z).valid
+        @test_throws ArgumentError S.bounded_rate_coordinates(C,problem,z;growth_reference_supersaturation=1.)
+        tuning=S.expected_information_tuning(problem,z,map)
+        @test isposdef(Symmetric(tuning.covariance))
+        @test tuning.information*tuning.covariance≈Matrix{Float64}(I,length(z),length(z)) atol=1e-7
+    end
+end
+
+@testset "Local curvature is only sampler tuning" begin
+    isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
+    f=bayesian_linear_fixture();p=f.problem
+    A=[2. .7;-.3 1.5]
+    map=(to_sampler=z->A*z,from_sampler=y->A\y,
+         logabsdetjac=y->-logabsdet(A)[1],label=:linear_tuning_test)
+    tuning=IsothermalProteinSampling.curvature_tuning(p,f.mode,map)
+    @test tuning.covariance≈A*f.covariance*A' rtol=1e-12
+    @test tuning.information≈inv(f.covariance) rtol=1e-12
+end
+
+include("fixtures/protein_transport.jl")
+@testset "Sampler transport preserves physical priors and inverse derivatives" begin
+    C=IsothermalProteinCrystallization;S=IsothermalProteinSampling
+    problem=C.estimation_problem(model=:cnt_grd,bins=30)
+    reference=initial_coordinates(problem);configuration=protein_transport_fixture()
+    mapping=S.transported_rate_coordinates(C,problem,reference,configuration;growth_reference_supersaturation=6.)
+    for A in (.001,30.,83.4,99.999),gamma in (.1,.6,1.1),g in (1.001,2.7,2.999)
+        z=copy(reference);z[1]=log(A/(100-A));z[2]=log(gamma);z[4]=log((g-1)/(3-g))
+        u=mapping.to_sampler(z)
+        @test mapping.from_sampler(u)≈z atol=3e-10
+        @test mapping.logabsdetjac(u)≈logabsdet(ForwardDiff.jacobian(mapping.from_sampler,u))[1] atol=3e-10
+        theta=physical_parameters(problem,z,:batch)
+        density=Distributions.logpdf(Distributions.Uniform(0.,100.),theta.logAJ)+
+            Distributions.logpdf(Distributions.LogNormal(log(.64),.7),theta.gamma)+
+            Distributions.logpdf(Distributions.Uniform(log(.01),log(1500.)),log(theta.AG))-log(theta.AG)+
+            Distributions.logpdf(Distributions.Uniform(1.,3.),theta.g)+
+            Distributions.logpdf(Distributions.Exponential(10.),theta.grd_strength)
+        physical(v)=let p=physical_parameters(problem,mapping.from_sampler(v),:batch)
+            [getproperty(p,s.name) for s in problem.parameters]
+        end
+        @test logprior(problem,z)+mapping.logabsdetjac(u)≈
+            density+logabsdet(ForwardDiff.jacobian(physical,u))[1] atol=3e-10
+    end
+    @test check_sampling_map(problem,mapping,reference).valid
+    @test_throws NumericalFailure mapping.from_sampler([-2.4723409036924306,361.36754204893145,
+        51.971302738649065,-110.08883962313041,4.55248276569897])
+    # Independent inverse-function derivatives, including nested Duals.
+    mixture=Distributions.MixtureModel([Normal(-1.,.2),Normal(1.5,1.)],[.2,.8])
+    for p in (.0001,.05,.2,.5,.95,.9999)
+        x=Distributions.quantile(mixture,p)
+        f=Distributions.pdf(mixture,x)
+        fp=sum(w*Distributions.pdf(d,x)*(-(x-Distributions.mean(d))/Distributions.std(d)^2)
+            for (w,d) in zip((.2,.8),(Normal(-1.,.2),Normal(1.5,1.))))
+        @test ForwardDiff.derivative(q->S._mixture_quantile(mixture,q),p)≈inv(f) rtol=2e-12
+        @test ForwardDiff.derivative(q->ForwardDiff.derivative(v->S._mixture_quantile(mixture,v),q),p)≈-fp/f^3 rtol=2e-10
+    end
+    @test_throws ArgumentError S.transported_rate_coordinates(C,problem,reference,
+        merge(configuration,(mixture_weights=[0.,1.],)))
+    @test_throws ArgumentError S.transported_rate_coordinates(C,problem,reference,
+        merge(configuration,(blend_width=0.,)))
 end
 
 @testset "Uniform polynomial growth reuses one stage rate without changing fluxes" begin

@@ -9,6 +9,24 @@ function _grd_gaussian_bins(g,mean,variance)
 end
 
 @testset "Native Ito size diffusion" begin
+    @testset "Declared uniform diffusion reuses the current coefficient" begin
+        g=Grid1D([0.,.1,.3,.6,1.]);N=reshape([.1,.3,.2,.4],:,1)
+        for bc in (SizeBC(),_grd_periodic),t in (0.,.4)
+            generic=compile(PBMModel(SizeDiffusion((x,p,t,c)->p.D*(1+t))),g;bc)
+            polynomial=compile(PBMModel(SizeDiffusion(PolynomialRate(((p,t,c)->p.D*(1+t),)))),g;bc)
+            @test _grd_rhs(generic,N,(D=.2,),t)==_grd_rhs(polynomial,N,(D=.2,),t)
+            function derivative(D,op)
+                u=N .+ zero(D);du=zero(u);rhs!(du,u,op,(D=D,),t);vec(du)
+            end
+            @test ForwardDiff.derivative(D->sum(abs2,derivative(D,generic)),.2) ≈
+                ForwardDiff.derivative(D->sum(abs2,derivative(D,polynomial)),.2) rtol=1e-13
+        end
+        calls=Ref(0)
+        law=PolynomialRate(((p,t,c)->(calls[]+=1;p.D),))
+        op=compile(PBMModel(SizeDiffusion(law)),g)
+        _grd_rhs(op,N,(D=.1,))
+        @test calls[]==1
+    end
     @testset "Declarations, geometry and support" begin
         g = Grid1D([0.,.1,.35,.9,1.5];coordinate=:length)
         N = reshape([.2,.3,.1,.4],:,1)

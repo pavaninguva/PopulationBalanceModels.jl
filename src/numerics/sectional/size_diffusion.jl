@@ -47,10 +47,14 @@ end
 function add_term!(dN, N, term::SizeDiffusion, ::FiniteVolumeDiffusion,
                    geometry, op::CompiledPBM, p, t, ctx)
     g = op.grid
-    first_value = _size_diffusivity(term,g.centers[1],p,t,ctx)*(N[1]/g.widths[1])
+    # A degree-zero polynomial declares spatial uniformity, as for Growth.
+    # Reuse its current-stage coefficient, never one from a previous stage.
+    uniform = term.diffusivity isa PolynomialRate && length(term.diffusivity.coefficients)==1
+    coefficient = uniform ? _size_diffusivity(term,g.centers[1],p,t,ctx) : nothing
+    first_value = (uniform ? coefficient : _size_diffusivity(term,g.centers[1],p,t,ctx))*(N[1]/g.widths[1])
     previous = first_value
     for i in 1:length(N)-1
-        next = _size_diffusivity(term,g.centers[i+1],p,t,ctx)*(N[i+1]/g.widths[i+1])
+        next = (uniform ? coefficient : _size_diffusivity(term,g.centers[i+1],p,t,ctx))*(N[i+1]/g.widths[i+1])
         q = -(next-previous)*geometry.inverse_distances[i]
         dN[i] -= q
         dN[i+1] += q

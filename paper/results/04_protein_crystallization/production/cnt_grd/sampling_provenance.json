@@ -1,0 +1,15 @@
+{
+    "producer_sha256": "56c9306e2b72d1f8a37d664a4911fed0f764d6a3f9b44f570f350cec57b72dd2",
+    "recorded_at": "2026-10-26T00:00:27.755",
+    "coordinate_source_sha256": "5c0a4c618235bb85f4da21a88c44d26f3938e8d0363ca1d3052ddd8b6f94a8b6",
+    "transport_configuration_sha256": "8808ec2da98ae90ae05a18a748c429b15798f8c9afd2e9d453e99fdf4cefb6ea",
+    "process_isolation": true,
+    "diagnostic_source_sha256": "9c010b934408f1de5ba375134ed846d978a76c53bc46ac423b12fc2733fd89f8",
+    "chain_key": "cdb52ae565b93bf6",
+    "chain_files": [
+        "chains/cdb52ae565b93bf6_1.json",
+        "chains/cdb52ae565b93bf6_2.json",
+        "chains/cdb52ae565b93bf6_3.json",
+        "chains/cdb52ae565b93bf6_4.json"
+    ]
+}

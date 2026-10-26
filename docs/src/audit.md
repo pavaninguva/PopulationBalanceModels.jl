@@ -442,8 +442,8 @@ The historical `prior_configuration` and `estimation_problem` builders in
 `examples/protein_crystallization.jl` declare those priors and fixed quantities.
 Prior breadth does not settle A12's model discrepancy. The current
 [protein tutorial](case_studies/protein_crystallization.md) is a separate Tang
-isothermal Bayesian calibration/held-out-prediction study with CNT kinetics,
-original number-CDF data and an explicit correlated-CDF likelihood. It does
+isothermal Bayesian comparison of CNT and CNT with native GRD, using original
+number-CDF data and fixed concentration/correlated-CDF uncertainties. It does
 not replace or revalidate these historical draws.
 
 The revised case-study configurations pass 62 focused checks and all 1,384

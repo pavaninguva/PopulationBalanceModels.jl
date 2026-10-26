@@ -28,8 +28,8 @@ boundaries, and numerical choices used in its implementation.
   and dispersion carry both solute and crystals; startup and outlet distributions
   are compared under refinement.
 - [Calibrating an isothermal protein batch](protein_crystallization.md): original
-  concentration and number distributions calibrate a coupled population–solute
-  model, followed by a frozen prediction of later observations.
+  concentration and number distributions calibrate CNT and CNT with growth
+  dispersion, followed by frozen predictions of later observations.
 
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition

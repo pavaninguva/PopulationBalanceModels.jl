@@ -1,7 +1,7 @@
 using Test, LinearAlgebra, Random, Statistics, ForwardDiff
 using Distributions: Normal, Exponential
 using PopulationBalanceModels, Optim, AdvancedHMC, MCMCDiagnosticTools
-include("fixtures/bayesian_linear.jl")
+isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
 
 @testset "MAP, full Laplace and shared sampler density" begin
     f=bayesian_linear_fixture();p=f.problem

@@ -1,0 +1,8 @@
+{
+    "max_depth": 9,
+    "samples": 500,
+    "seed": 20261024,
+    "target_acceptance": 0.97,
+    "chains": 4,
+    "warmup": 300
+}

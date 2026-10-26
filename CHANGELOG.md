@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Reorganized the Tang isothermal protein case around CNT versus CNT with native random-fluctuation GRD. Both use unchanged training/test readings, fixed concentration/CDF uncertainties, common kinetic priors and separate four-/five-parameter Bayesian targets. Added data-only, fit and prior-overlaid posterior figures, generated comparison tables, native combined timestep control and numerical/target verification; archived the superseded inferred-noise results.
+- Reuse a declared degree-zero size-diffusion coefficient once per residual while retaining current-stage parameter, time and bulk dependence. Verified flux and derivative agreement with the general callback path.
+
 - Replaced the documentation's constant-growth exponential profile with a Gaussian using exact bin integrals; retained its method pairings, Courant numbers, periodic convergence companion and separate paper benchmark.
 
 - Added native Ito/Fokker–Planck `SizeDiffusion` with conservative finite-volume fluxes on uniform/nonuniform batch Grid1D meshes, closed/periodic boundaries, current-stage bulk coefficients, boundary number injection and ForwardDiff-compatible residuals. Included diffusion in default conservative exchange and summed explicit growth/diffusion/loss recommendations, including sectional PBMSystem states. Added analytical refinement/conservation tests and a synthetic broadening example; moment, tensor, axial and direct-update diffusion remain unsupported.

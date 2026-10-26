@@ -1,8 +1,0 @@
-{
-  "calibration_concentration_RMSE_g_L": 1.9634336726197463,
-  "validation_concentration_RMSE_g_L": 0.31320120326272277,
-  "validation_W2_um": 0.8663644205232289,
-  "maximum_material_error_g_L": 5.506706202140776e-13,
-  "maximum_upper_bin_fraction": 4.261805687360153e-118,
-  "evaluated_at": "2026-10-23T22:42:15.842"
-}

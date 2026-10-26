@@ -1,0 +1,42 @@
+{
+    "model": "cnt",
+    "parameters": {
+        "logAJ": 29.706882058244183,
+        "gamma": 0.5696003729545788,
+        "AG": 0.3694824721286949,
+        "g": 2.9574109367283308,
+        "cstar": 2.16,
+        "grd_strength": 0,
+        "c0": 19.965841161400512,
+        "rho": 1240,
+        "kv": 0.81
+    },
+    "frozen_at": "2026-10-24T21:41:19.192",
+    "validation_used": false,
+    "target_hash": "7160f4409a03f6959f390f96f242bac111533ba70001cf773b1b3ec6e8a08a5b",
+    "settings": {
+        "model": "cnt",
+        "bins": 400,
+        "Lmax_um": 50,
+        "maximum_dt_min": 2,
+        "coefficient_interval_min": 5,
+        "cfl": 0.35,
+        "time_method": "SSPRK33",
+        "growth_reconstruction": "MUSCL",
+        "diffusion_method": "none",
+        "constants": {
+            "c0": 19.965841161400512,
+            "cstar": 2.16,
+            "T": 293.15,
+            "nu": 2.97e-26,
+            "kB": 1.380649e-23,
+            "rho": 1240,
+            "kv": 0.81
+        },
+        "observation_model": {
+            "concentration_relative_sd": 0.05,
+            "CDF_absolute_sd": 0.03,
+            "CDF_correlation_length_um": 2
+        }
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "selection": "calibration-only numerical adequacy and computational cost; no held-out fit score",
+  "production_bins": 100,
+  "domain_um": [
+    0,
+    50
+  ],
+  "reference_bins": [
+    200,
+    400
+  ],
+  "maximum_CDF_change_at_200bin_MAP": 0.0021374519270056513,
+  "maximum_concentration_change_g_L_at_200bin_MAP": 0.0060661825544077175,
+  "fixed_CDF_sigma": 0.03,
+  "interpretation": "100-bin kinetics refitted under the same priors and fixed uncertainties; all production posterior results must be fresh on this mesh"
+}

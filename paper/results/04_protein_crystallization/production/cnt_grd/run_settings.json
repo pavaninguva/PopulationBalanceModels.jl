@@ -1,0 +1,25 @@
+{
+    "model": "cnt_grd",
+    "bins": 100,
+    "Lmax_um": 50,
+    "maximum_dt_min": 2,
+    "coefficient_interval_min": 5,
+    "cfl": 0.35,
+    "time_method": "SSPRK33",
+    "growth_reconstruction": "MUSCL",
+    "diffusion_method": "FiniteVolumeDiffusion (Ito)",
+    "constants": {
+        "c0": 19.965841161400512,
+        "cstar": 2.16,
+        "T": 293.15,
+        "nu": 2.97e-26,
+        "kB": 1.380649e-23,
+        "rho": 1240,
+        "kv": 0.81
+    },
+    "observation_model": {
+        "concentration_relative_sd": 0.05,
+        "CDF_absolute_sd": 0.03,
+        "CDF_correlation_length_um": 2
+    }
+}

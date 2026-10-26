@@ -1,6 +1,25 @@
 {
   "renderer": "actual LaTeX",
-  "png_dpi": 300,
-  "numerical_manifest_sha256": "53305a1adac939e6ef1ed13f2be75d9e7c9b4cc715a26ea9f7032fd1be780da4",
-  "plot_driver_sha256": "39ff2a16b49be51d34b79ea59cdcc4f92da92a71ea45c422e20c0494d12c7896"
+  "dpi": 300,
+  "files": {
+    "protein_corner_cnt.pdf": "f797fa1d6841255f7c96ce55693895102953649039470840a9fe7209a5601cc2",
+    "protein_corner_cnt.png": "9abec74e4de359b136483e9312ec352f256c198cb2cd92fddc856a76dbbf5feb",
+    "protein_corner_cnt.svg": "e77eea0b8cd9bdb397bac44adf03ccd6f2e542a981256a601c2a38c353db4053",
+    "protein_corner_cnt_grd.pdf": "de5617c1ac8b3699effb49854cbfee5f04243d49f7b8cfcebf57aaa53c2f452e",
+    "protein_corner_cnt_grd.png": "471f8b5996e61b2e787a2c64f2434dcb5d937309b073607ce64e9927cc13e40f",
+    "protein_corner_cnt_grd.svg": "95a1a385a40f5edbb5ab2cafdad7f2c76ff89bfc776cb1466049058744595b78",
+    "protein_data.pdf": "7518e63509dbd96236ad9cbea01c83040a0a951e24a51ec4f08c7ab8b5940502",
+    "protein_data.png": "347d111c92cfe4dc73a4fd82a5a18e49d7098716557bd0c4cb49f86633ba9b80",
+    "protein_data.svg": "cf4e86fdaecebe004854c72ca40c90688ca0c417d94626e42c18181c0cb5c72d",
+    "protein_fit_cnt.pdf": "f2268eeb6d03c8c35887b8088537524d5f3c0043b3f5d9b87fe5d78c66a1796f",
+    "protein_fit_cnt.png": "b99ff2b233da64bdce15cc71d49405d38468a5ef4f7e1d14ce8a299bdc1921c3",
+    "protein_fit_cnt.svg": "e85baad833c7d8137b24d43a5b9e9c577667728bbf05fd2dcf078e47070e06de",
+    "protein_fit_cnt_grd.pdf": "97483df90ae332868dd7a06eed82eb2a86e4a2596f7f3d1c22b6569d32506443",
+    "protein_fit_cnt_grd.png": "af42e9679befd0f298a8a43da606f446a67ba2bc490ac1c7083fced9c6a12128",
+    "protein_fit_cnt_grd.svg": "573dae29cb85b1a4e7d6f4e15e9ba226752ff1d4dee5e746c9fef2c392e0b514"
+  },
+  "python": "3.12.3",
+  "numpy": "1.26.4",
+  "matplotlib": "3.8.4",
+  "driver_sha256": "606b49ceca9c51510d7682b069bd010a051ec3a524d9c284420f8ecc0ecc4b25"
 }

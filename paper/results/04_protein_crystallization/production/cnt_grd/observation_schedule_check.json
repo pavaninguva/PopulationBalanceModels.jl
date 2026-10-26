@@ -1,0 +1,5 @@
+{
+    "maximum_concentration_change_g_L": 7.801309998001216e-8,
+    "maximum_CDF_change": 6.978751099229186e-8,
+    "interpretation": "dense figure saves versus the exact calibration solve schedule; same parameters and native controller"
+}

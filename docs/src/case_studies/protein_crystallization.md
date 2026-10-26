@@ -1,287 +1,393 @@
-# Inferring protein crystallization kinetics
+# Protein crystallization: CNT and growth dispersion
 
-How much can dissolved concentration and crystal-size distributions tell us
-about nucleation and growth? This example assembles an initially unseeded,
-isothermal lysozyme batch, estimates four kinetic parameters jointly, and
-predicts observations withheld from calibration.
+Dissolved concentration measures how much protein has crystallized; a number
+size distribution measures how that material is divided among crystals. Here
+we use both to calibrate two descriptions of one isothermal lysozyme batch:
+CNT nucleation with a common mean growth rate, and the same model with
+random-fluctuation growth-rate dispersion (GRD). Later observations test their
+predictions. Neither model is presented as a universal kinetic law.
 
-## Data
+## System and measurements
 
-The observations are the original 100 mL experiment at 20 °C from
+The 100 mL batch at 20 °C is from
 [Tang et al. (2018), Figures 11(d) and 12(a)](https://doi.org/10.1016/j.jcrysgro.2018.06.023).
-The supplied graph readings are unchanged. Concentrations are in g/L and sizes
-are microscopy equivalent diameters in μm.
+The source records describe 0.1 M sodium acetate buffer at pH 4.5, with
+40 g/L protein and 10% w/w NaCl stocks. The mixed-solution salt convention and
+the conflicting 100/210 rpm stirring descriptions remain unresolved; we do not
+infer a mixing history from them.
 
-| Observations | Use |
-|:--|:--|
-| Initial concentration, 19.96584 g/L | Fixed initial condition at model time zero |
-| Eleven subsequent concentrations | Calibration |
-| Conditional **number** distributions at 74, 180 and 420 min | Calibration |
-| Four later concentrations and the 660-min distribution | Held-out prediction |
+Concentrations were measured after 0.22 μm filtration and 50-fold dilution by
+UV absorbance at 280 nm. Sizes are microscopy/image-analysis equivalent
+diameters, and these are **number** distributions. The separate 1 L
+laser-diffraction volume measurements are not used. Our supplied curves are
+graph reconstructions, not raw crystal counts or independent 0.5 μm measurements.
+The [data and provenance](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/examples/data/protein_crystallization/tang2018_isothermal)
+retain the original readings and unrounded graph-read times.
 
-The distributions are conditioned on 2.5–25 μm. Their reconstructed 0.5 μm
-ordinates are neither raw particle counts nor independent measurements.
-Diagnostic quantiles are derived from these curves and are not fitted again.
-The [data directory](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/examples/data/protein_crystallization/tang2018_isothermal)
-retains the original readings, time labels and digitization provenance.
+![Original isothermal observations, without a model fit](../assets/protein_isothermal/protein_data.svg)
 
-## Model
+Panel (a) shows concentration; its diamond fixes ``c(0)=19.965841161400512`` g/L.
+Filled circles are the eleven training observations; open squares are the four
+later test observations. Panels (b) and (c) show the three training distributions
+at 74, 180 and 420 min and the held-out distribution at 660 min. Each density
+integrates to one over **2.5–25 μm**, the `isothermal_core` window. Panel (d)
+shows conditional number ``d_{10},d_{50},d_{90}``; dotted connections are guides
+only. These quantiles agree with the supplied CDFs and are not fitted again.
+The error bars in (a) are the assumed uncertainties below, not reported
+experimental standard deviations. No PSD or quantile error bars are invented.
 
-Let ``n(L,t)`` be number density per unit process volume and particle length.
-With no aggregation or breakage,
+## Two population models
 
-```math
-\frac{\partial n(L,t)}{\partial t}
-+\frac{\partial [G(c(t))n(L,t)]}{\partial L}=0,
-\qquad G(c(t))n(0,t)=J(c(t)),\qquad n(L,0)=0.
-```
-
-Classical nucleation theory (CNT) makes nucleation fall rapidly as dissolved
-protein is consumed. We use the CNT/empirical-growth combination in
-[Mitchell et al. (2023), Case 3, equations (3) and (9)](https://doi.org/10.1016/j.cherd.2023.02.016):
+Let ``n(L,t)`` denote number per process volume per unit equivalent diameter.
+Both models start with ``n(L,0)=0`` and share a well-mixed, constant-volume
+bulk concentration ``c(t)``.
+Their CNT nucleation and size-independent mean growth use the kinetic form of
+[Mitchell et al. (2023), Case 3](https://doi.org/10.1016/j.cherd.2023.02.016):
 
 ```math
 S=\frac{c}{c_*},\qquad
-J=A_J\exp\!\left[-\frac{16\pi\gamma^3\nu^2}
- {3(k_{\mathrm B}T)^3(\ln S)^2}\right],\qquad
-G=A_G(S-1)^g.
+B(\gamma)=\frac{16\pi(10^{-3}\gamma)^3\nu^2}{3(k_{\mathrm B}T)^3},
 ```
 
-Both rates are zero for ``S\leq1``. Growth is independent of particle size.
-Temperature is fixed at 293.15 K, so the growth Arrhenius factor is absorbed
-into ``A_G``. There is no extra supersaturation prefactor in the CNT law.
-This is the same kinetic form as Mitchell's Case 3; the observations and
-observation model here differ from that paper's parameter-estimation exercise.
+```math
+J(c)=60\exp\!\left[\log A_J-\frac{B(\gamma)}{(\log S)^2}\right],\qquad
+G(c)=10^{-3}A_G(S-1)^g.
+```
 
-The code accepts ``\gamma`` in mJ/m², ``A_J`` in particles/(m³ s), and
-``A_G`` in nm/min. It follows the growth units printed in Mitchell's
-parameter-estimation Tables 3, 5 and 7; Table 2 instead lists μm/min.
-The conversion to min and μm is explicit in the code.
-Molecular volume is fixed at ``\nu=2.97\times10^{-26}`` m³/molecule, as used by
-[Lin et al. (2017)](https://doi.org/10.1016/j.jcrysgro.2016.10.028).
-Only the combination ``\gamma^3\nu^2`` enters the CNT barrier, so the
-inferred surface energy is conditional on this molecular-volume convention.
-Nominal solubility ``c_*=2.16`` g/L, density ``\rho=1240`` kg/m³ and shape
-factor ``k_v=0.81`` are conditional modelling assumptions, not fitted quantities.
+Both rates are zero for ``S\le1``. There is no extra S prefactor in J.
+``\log A_J`` is the natural log of the numerical prefactor in particles/(m³ s);
+J is returned in particles/(m³ min). Enter γ in mJ/m² and ``A_G`` in nm/min;
+G is returned in μm/min. These conversions follow the growth units in Mitchell's
+estimation tables, rather than silently interpreting its inconsistent table units.
+This case uses Tang's original readings and a different observation model; it
+is not a reproduction of Mitchell's parameter estimates.
 
-In SI length units, dissolved material and crystals share the balance
+**Model 1 (CNT)** gives every crystal the same instantaneous growth velocity:
+
+```math
+\frac{\partial n(L,t)}{\partial t}
++\frac{\partial [G(c(t))n(L,t)]}{\partial L}=0.
+```
+
+**Model 2 (CNT + GRD)** adds independent, temporally fluctuating growth:
+
+```math
+\frac{\partial n(L,t)}{\partial t}
++\frac{\partial [G(c(t))n(L,t)]}{\partial L}
+=\frac{\partial^2[D_G(c(t))n(L,t)]}{\partial L^2},\qquad
+D_G(c)=\theta_{\mathrm{GRD}}G(c)^2.
+```
+
+``\theta_{\mathrm{GRD}}`` (`grd_strength`) is nonnegative, in minutes; D is in
+μm²/min. It combines relative fluctuation variance and correlation time, rather
+than measuring either separately. This is an effective Brownian closure, not
+permanent fast/slow crystal classes. D is independent of size here, so its Ito
+operator reduces to ``D_G\,\partial^2 n/\partial L^2``. A better fit would not
+establish the microscopic origin of that dispersion. See the reusable
+[SizeDiffusion contract](../methods/growth.md#Random-fluctuation-growth-rate-dispersion).
+
+For both models, the **total** left flux is J:
+
+```math
+F(0,t)=J(c(t)),\qquad
+F=G n\quad\text{(CNT)},\qquad
+F=G n-\frac{\partial(D_G n)}{\partial L}\quad\text{(CNT + GRD)}.
+```
+
+`BoundaryInjection` supplies this flux once; Model 2 does not also impose
+``n(0)=J/G``. The base size boundaries are closed. Their remote upper edge must
+remain inactive, as checked by occupancy and domain extension.
+
+The package assembly uses the same rate callbacks for both models:
+
+```julia
+using PopulationBalanceModels
+include("examples/isothermal_protein_crystallization.jl")
+const I = IsothermalProteinCrystallization
+
+terms = (
+    growth=Growth(PolynomialRate(((p,t,ctx)->I.growth_rate(p,ctx.bulk.c),))),
+    primary=Nucleation((p,t,ctx)->I.nucleation_rate(p,ctx.bulk.c)/1e12,0.0),
+)
+cnt = PBMModel(;terms...)
+cnt_grd = PBMModel(;terms...,
+    dispersion=SizeDiffusion(PolynomialRate(((p,t,ctx)->
+        p.grd_strength*I.growth_rate(p,ctx.bulk.c)^2,))),
+)
+methods = TermMethods(growth=MUSCL(),by_term=(primary=BoundaryInjection(:left),))
+```
+
+`build(model=:cnt)` and `build(model=:cnt_grd)` complete this assembly and the
+bulk balance. The degree-zero `PolynomialRate` declares size independence,
+while its callback still uses **current-stage** concentration. Sectional states
+are bin-integrated counts divided by ``10^{12}``, with lengths in μm. The same
+stage's full population derivative, including GRD, sets
 
 ```math
 \frac{\mathrm dc}{\mathrm dt}
-=-\rho k_v\frac{\mathrm d}{\mathrm dt}
- \int_0^\infty L^3n(L,t)\,\mathrm dL.
+=-10^{-6}\rho k_v\sum_i L_i^3\frac{\mathrm dN_i}{\mathrm dt}.
 ```
 
-Concentrations in g/L equal kg/m³. Internally, lengths are in μm and bin
-populations are divided by ``10^{12}``; the discrete solid concentration is
-``10^{-6}\rho k_v\sum_iL_i^3N_i``. The bulk callback uses the **same stage's**
-population derivative, so the discrete total is conserved without lagging
-solute exchange. This conservation statement does not establish grid accuracy.
+Thus ``c+10^{-6}\rho k_v\sum_iL_i^3N_i`` is the discrete material invariant.
+There is no second analytical diffusion sink. Away from boundaries, the
+separate continuum check is ``dM_3/dt=3GM_2+6D_GM_1``: number-conserving
+diffusion can consume solute. First-bin nucleation uses the same centre-cubed
+material weight and vanishes with refinement towards zero size.
 
-The essential package assembly is:
+The bulk callback uses `ctx.derivatives`, which already contains both active
+transport mechanisms:
 
 ```julia
-include("examples/isothermal_protein_crystallization.jl")
-using PopulationBalanceModels, .IsothermalProteinCrystallization
-
-p = parameters(logAJ=41.0, gamma=0.76, AG=1.0, g=2.4)
-problem = build(bins=200, p=p)  # empty population and one dissolved state
-solution = cfl_solve(problem, [0.0, 74.0, 180.0, 420.0, 660.0])
+grid = Grid1D(range(0.0,50.0;length=101);coordinate=:length)
+operator = compile(cnt_grd,grid;methods,bc=SizeBC())
+function solute_balance(ctx,p,t)
+    dM3 = sum(grid.centers[i]^3*ctx.derivatives.crystals[i] for i in 1:length(grid))
+    (c=-1e-6*p.rho*p.kv*dM3,)
+end
+system = PBMSystem((crystals=operator,);bulk_rhs=solute_balance,nonnegative_bulk=(:c,))
 ```
 
-Inside `build`, the physical terms are declared directly:
+For a complete short run, `build` also installs the stage-wise coefficient
+checks used by the timestep controller:
 
 ```julia
-growth_rate = IsothermalProteinCrystallization.growth_rate
-nucleation_rate = IsothermalProteinCrystallization.nucleation_rate
-model = PBMModel(
-    growth = Growth(PolynomialRate(((p,t,ctx) -> growth_rate(p,ctx.bulk.c),))),
-    primary = Nucleation(rate=(p,t,ctx) -> nucleation_rate(p,ctx.bulk.c)/1e12,
-                         size=0.0),
-)
-methods = TermMethods(growth=MUSCL(), by_term=(primary=BoundaryInjection(:left),))
+problem = I.build(model=:cnt_grd,bins=100,p=I.parameters(grd_strength=10.0))
+solution = I.cfl_solve(problem,[0.0,74.0,180.0,420.0,660.0])
 ```
 
-The degree-zero polynomial declares size-independent growth while allowing
-current dissolved concentration to change its rate. The actual example keeps
-these rate functions inside its module. `BoundaryInjection(:left)` inserts the nucleation number flux once.
-MUSCL and native SSPRK33 advance the bin integrals. Boundary births enter
-the first bin; their discrete material uses the same centre-cubed weight as
-the bulk exchange and vanishes with grid refinement. The upper boundary is
-closed on the 0–50 μm domain; upper-bin occupancy and a 75 μm domain check
-must confirm that it is inactive. No seeds or normalization floors are added.
-An empty predicted observation window is an invalid likelihood evaluation.
+The active parameter specifications generate this prior table and the corner
+plot overlays:
 
-## Bayesian estimation
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.parse(read(joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","protein_isothermal","prior_table.txt"),String))
+```
 
-Concentration uses a Gaussian likelihood with inferred scale ``\sigma_c``.
-Each calibration distribution contributes **one correlated CDF block**:
+The four common priors are inherited modeling choices, not same-data
+posteriors reused as prior information. The additional Exponential prior has
+**scale/mean 10 min**, not rate 10; it is a regularizing assumption, not a
+measured material property. Model 1 fixes GRD to zero and has no log(0) coordinate.
+
+Fixed quantities are ``T=293.15`` K, the initial concentration above,
+``c_*=2.16`` g/L, ``\rho=1240`` kg/m³, ``k_v=0.81``,
+``\nu=2.97\times10^{-26}`` m³/molecule and
+``k_{\mathrm B}=1.380649\times10^{-23}`` J/K. The molecular-volume convention
+follows [Lin et al. (2017)](https://doi.org/10.1016/j.jcrysgro.2016.10.028).
+Solubility, density, geometry and the diameter-to-length mapping are conditional
+assumptions, not additional fitted parameters.
+
+## Observation errors and inference
+
+The initial concentration is excluded from the likelihood. The eleven later
+training concentrations use individual, **fixed** standard deviations
+``\sigma_{c,i}=0.05c_{\mathrm{obs},i}``. We do not infer any noise parameters.
+For each training PSD, 22 interior conditional-CDF ordinates at 3–24 μm form
+one correlated Gaussian block:
 
 ```math
 F_\theta(L,t)=\frac{\int_{2.5}^{L}n(\ell,t)\,\mathrm d\ell}
  {\int_{2.5}^{25}n(\ell,t)\,\mathrm d\ell},\qquad
-\mathbf F_{\rm obs}(t)\sim\mathcal N(\mathbf F_\theta(t),\sigma_F^2R),
-\qquad R_{ij}=\exp\!\left(-\frac{|L_i-L_j|}{2\,\mu\mathrm m}\right).
+\Sigma_{F,ij}=(0.03)^2\exp\!\left[-\frac{|L_i-L_j|}{2\,\mu\mathrm m}\right].
 ```
 
-We evaluate 22 interior ordinates at 1 μm spacing; the fixed endpoints are
-excluded. `PopulationCDF` integrates partial grid cells and normalizes over
-the stated window. The Gaussian CDF discrepancy and its 2 μm correlation
-length are explicit observation-model assumptions. They do not recover an
-unknown microscope sample count or a measured instrument covariance.
-Likelihood normalization is retained when estimating both scales. The code
-factorizes the fixed correlation matrix once and whitens observations and
-predictions through `Measurement.response`. The normalized Gaussian likelihood
-is evaluated in these whitened coordinates. Its density differs from the
-original-CDF density by a known, parameter-independent determinant; the MAP
-export records that conversion and the posterior is unchanged.
-
-Mitchell's Table 3 gives **initial search ranges**, not Bayesian prior
-distributions. We use them to inform the following declared priors. We do
-not use that paper's final estimates from the same experiment as independent
-prior information.
-
-| Parameter | Prior | Interpretation/source |
-|:--|:--|:--|
-| ``\ln A_J`` | Uniform(0, 100) | Table 3's broad initial bounds |
-| ``\gamma`` (mJ/m²) | LogNormal(log(0.64), 0.7) | Table 3's 0.64 value; log width is our assumption |
-| ``\ln[A_G/(\mathrm{nm/min})]`` | Uniform(log(0.01), log(1500)) | Broad log-uniform growth scale |
-| ``g`` | Uniform(1, 3) | Table 3's initial exponent range |
-| ``\sigma_c`` (g/L) | Exponential(mean 1) | Inferred concentration discrepancy |
-| ``\sigma_F`` | Exponential(mean 0.1) | Inferred dimensionless CDF discrepancy |
-
-Table 3's initial growth range, 600–1500 nm/min, excludes even the paper's
-final fitted coefficient. Treating it as hard prior support would rule out
-much slower growth in advance. We therefore extend its lower bound to
-0.01 nm/min and state that choice explicitly.
-
-The example defines `Measurement` blocks and an `InferenceExperiment`, then
-uses the package's shared posterior for MAP, optional Laplace and NUTS:
+The fixed endpoints are excluded. The 0.03 is **three percentage points** of
+CDF fraction, not 3% of each reading, a size error, a physical PSD width or GRD.
+These scales and the 2 μm correlation length are observation-model assumptions;
+Tang did not establish them experimentally. Fixed linear whitening uses
+`Measurement.response`; normalized likelihoods and the known determinant
+converting back to original CDF coordinates are exported. Both models use
+exactly the same measurements and likelihood. Derived quantiles are diagnostics.
 
 ```julia
 using Optim
-estimation = estimation_problem(bins=200)
-map = IsothermalProteinCrystallization.fit_model(estimation) # three starts
-map.converged || error("Inspect optimizer diagnostics")
-physical_parameters(estimation, map.minimizer, :batch)
+estimation = I.estimation_problem(model=:cnt_grd,bins=100)
+fitted = I.fit_model(estimation) # three calibration-only starts
+fitted.converged || error("Inspect optimizer diagnostics")
+physical_parameters(estimation,fitted.minimizer,:batch)
 ```
 
-Positive parameters use logarithmic coordinates; bounded parameters use logit
-coordinates. The prior Jacobian is included exactly once. The reported MAP
-is a mode in these inference coordinates, transformed to physical values.
-Optional NUTS uses initial log-rate coordinates to reduce coefficient
-correlation while preserving this posterior. Its starting metric comes from noise-scaled prediction sensitivities and
-expected Gaussian information. It is sampler tuning, not a verified posterior
-covariance. The retained diagnostic report determines
-whether draws may supply posterior summaries or predictive bands. A failed
-Laplace verification is reported rather than repaired.
+MAP optimization uses four/five inference coordinates: logit for bounded
+logAJ and g, log for positive γ and ``A_G``, and log for GRD in Model 2 only.
+Physical-coordinate prior Jacobians appear exactly once. A transformed MAP is
+not generally a mode of the physical-coordinate density.
 
-## Fits and held-out prediction
+Fresh NUTS chains use auxiliary rate coordinates, including the full
+inverse-map Jacobian so the declared posterior is unchanged. CNT uses
+sensitivity-based initial tuning; GRD uses a frozen, invertible preconditioner
+from calibration-only pilots, with starts near both calibration basins.
+Its mixture and conditional matrices describe **sampler geometry**, not extra
+populations, priors, observation noise or a verified Laplace covariance.
+The auxiliary growth rate is evaluated at fixed supersaturation 6; this
+coordinate choice does not change the physical growth law. The
+[sampling helper](../assets/source/examples/support/isothermal_protein_sampling.jl)
+and retained settings specify these transformations. Joint rank Rhat,
+bulk/tail ESS, energy diagnostics and divergences determine whether draws
+may supply figures.
 
-![CNT calibration and held-out prediction](../assets/protein_isothermal/protein_crystallization.svg)
+All priors, observation errors and calibration choices are frozen before
+scoring held-out observations. The displayed 95% bands propagate parameter
+draws through the PBM; they are pointwise **latent credible intervals**, conditional
+on this model and fixed assumptions. They do not include new measurement noise.
 
-Solid curves are the CNT MAP prediction; dashed density curves and sparse
-markers are the supplied observations. Concentration and the three earlier
-number distributions calibrate jointly. Open squares and the complete 660-min
-distribution are held out. Panel (d) shows signed CDF residuals, making shape
-errors visible even when quantiles look reasonable. A CDF difference of 0.03
-means three percentage points of the conditional number fraction. The conditional densities
-integrate to one over 2.5–25 μm; they do not measure absolute particle number.
-A concentration band, when present, summarizes latent NUTS predictions and
-excludes additional observation noise.
+## Model 1: CNT
 
-The MAP concentration RMSE is **1.96 g/L** on calibration and **0.31 g/L** on
-held-out observations. Distribution ``W_2`` distances are 1.19, 0.86 and 0.85 μm
-at the calibration times, and **0.87 μm** at 660 min. These distances describe
-distribution discrepancy; they are not likelihood standard deviations.
-The early concentration plateau/drop remains poorly captured. The steep upper
-edges in the computed densities have a physical origin within this idealized
-model: with births starting at zero and the same growth rate for every
-particle, the oldest particles reach only
-``L_{\max}(t)=\int_0^t G(c(s))\,\mathrm ds``. The numerical method broadens this
-finite-age front; refining the grid does not supply the measured long tail.
-These edges are well inside the inactive 50 μm computational boundary.
+![CNT fit and frozen held-out prediction](../assets/protein_isothermal/protein_fit_cnt.svg)
 
-The retained CSVs report individual concentration and CDF residuals and
-diagnostic Wasserstein distances separately for calibration and prediction. CNT can
-produce a nucleation burst as supersaturation falls, but changing the rate law
-is not evidence of adequate agreement. The remaining concentration and shape
-residuals must be judged alongside the inferred discrepancy scales.
+Panels match the data overview. Solid curves/stairs are MAP predictions;
+shading is the pointwise 95% latent interval. Dashed density curves are the
+supplied reconstructions. Filled observations train; open squares test. The
+vertical line marks 420 min. Panel (d) shows conditional number quantiles;
+undefined early segments are omitted. CDF residuals remain in the CSV exports.
+Common mean growth carries the earliest births to a finite upper front. The
+sharp edge near 12–17 μm is inside the size domain, not escape at its 50 μm
+boundary. Its plateau and abrupt cutoff miss the measured peak and tail even
+when several quantiles are close. Refinement changes the front's numerical
+rounding; it does not remove this restriction of the model.
 
-![Declared priors and NUTS marginal summaries](../assets/protein_isothermal/protein_posterior.svg)
+![CNT posterior and analytical priors](../assets/protein_isothermal/protein_corner_cnt.svg)
 
-![Kinetic-parameter posterior correlations](../assets/protein_isothermal/protein_corner.svg)
+Diagonal curves show normalized NUTS marginal summaries and dashed analytical
+priors. Joint KDE contours, where shown, mark approximately 68% and 95%
+probability. Raw draws show the thin curved prefactor–barrier relation; orange
+markers identify the transformed inference-coordinate MAP. Broad priors extend
+beyond these posterior-focused axes and are not renormalized over the crop.
+Here logAJ and γ have correlation about 0.997. The growth exponent also presses
+against its upper prior bound: about 36% of draws lie in the upper 1% of its
+declared range. These are conditional estimates with strong kinetic
+compensation, not four independent measurements of material constants.
 
-The corner plot shows actual joint draws and smoothed marginals; nuisance
-scales are integrated over, not fixed at their MAP values. Correlation ridges
-show how coefficients and the barrier/exponent can compensate. The growth
-exponent posterior accumulates near the chosen upper prior bound, ``g=3``.
-That bound influences the inference: this is not evidence for a precisely
-identified universal exponent, or for a model that explains every measured
-shape. A wider range would be a different declared prior analysis.
+## Model 2: CNT with random-fluctuation GRD
 
-The central 95% posterior intervals below use the retained NUTS draws.
-They include uncertainty in both discrepancy scales and are conditional on
-the model, priors, fixed inputs and mesh.
+![CNT plus GRD fit and frozen held-out prediction](../assets/protein_isothermal/protein_fit_cnt_grd.svg)
 
-| Quantity | MAP | Posterior median | Central 95% interval |
-|:--|--:|--:|:--|
-| ``\ln A_J`` | 30.848 | 30.863 | 29.446–32.596 |
-| ``\gamma`` (mJ/m²) | 0.5872 | 0.5877 | 0.5571–0.6218 |
-| ``A_G`` (nm/min) | 0.4834 | 0.4482 | 0.3758–0.8363 |
-| ``g`` | 2.890 | 2.927 | 2.629–2.997 |
-| ``\sigma_c`` (g/L) | 1.889 | 1.951 | 1.233–3.099 |
-| ``\sigma_F`` | 0.01908 | 0.01969 | 0.01664–0.02395 |
+The panel roles, data colors and corresponding axis limits match Model 1.
+The density bands propagate the population state itself; CDF uncertainty is not
+drawn as an arbitrary density or size band. Diffusion broadens particle histories
+but does not imply a Gaussian full distribution under continuous nucleation.
 
-All four chains pass the declared screen: maximum rank ``\widehat R=1.0049``,
-minimum bulk/tail ESS 886/879, no retained divergences or depth-limit hits.
-The correlations are 0.995 between ``\ln A_J`` and ``\gamma``, and −0.989
-between ``\ln A_G`` and ``g``. These compensations remain important despite
-successful chain mixing.
+![CNT plus GRD posterior and analytical priors](../assets/protein_isothermal/protein_corner_cnt_grd.svg)
 
-Prior and posterior curves use the labelled parameter coordinates. The display
-zooms to the posterior region; the table above gives full prior support.
-Coefficient–barrier and coefficient–exponent trade-offs remain possible.
-Good chain diagnostics do not establish identifiability, numerical convergence
-or physical validity. These are conditional kinetic estimates: digitization,
-fixed solubility and molecular volume, diameter-to-length mapping, uncertain detection and sparse
-observation times still limit interpretation.
+GRD is now a fifth inferred parameter. Correlations describe compensating
+kinetics and dispersion, not evidence that every coefficient is independently
+identified: logAJ and γ correlate by about 0.985, while log(AG) and g correlate
+by about −0.95. The broad logAJ interval reaches close to its upper prior
+bound; 2.6% of draws occupy the upper 1% of that range. GRD improves some size
+profiles without resolving this kinetic ambiguity. Bound contact must be
+judged alongside systematic residuals and numerical error.
 
-## Run it
+## Estimates and model comparison
 
-From the repository root:
+The table reports the inference-coordinate MAP transformed to physical units,
+then posterior medians and equal-tailed 95% intervals. ``A_G`` and GRD are in
+physical units even though their corner axes use natural logarithms.
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.parse(read(joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","protein_isothermal","parameter_estimates.txt"),String))
+```
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.parse(read(joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","protein_isothermal","fit_comparison.txt"),String))
+```
+
+CDF RMSE is an unweighted fraction over the supplied tabulated ordinates
+(including the two fixed endpoints), rather than the whitened likelihood.
+W₂ compares conditional quantiles, using linear interpolation of the supplied
+CDF table; its units are μm. Quantile errors are predicted minus observed.
+
+The MAP tradeoff is clearest at 180 min: GRD reduces W₂ from about 0.85 to
+0.23 μm, while training concentration RMSE increases from 0.98 to 1.29 g/L
+(test RMSE: 0.17 to 0.24 g/L). At 660 min W₂ improves but
+CDF RMSE does not; these metrics weight distribution discrepancies differently.
+Both models still put the 74-min median roughly 0.6–0.7 μm below the reading.
+Broadening alone does not resolve every shape or timing discrepancy.
+
+Concentration constrains transferred material; conditional PSDs constrain
+shape within the observation window and do not measure absolute particle
+number. Coefficients, exponents, the CNT barrier and GRD can compensate.
+Successful chain diagnostics do not establish structural identifiability,
+numerical convergence or physical adequacy. The raw MAP posterior values have
+different dimensions and are **not** a Bayes factor or model evidence.
+A positive GRD interval under its continuous positive prior is not, by itself,
+a test against the separate zero-GRD model.
+The comparison remains conditional on graph digitization, solubility, molecular
+volume, shape, detection and the diameter convention. The final concentration
+is not assumed to be equilibrium.
+
+## Reproduce and verify
+
+The [model and likelihood source](../assets/source/examples/isothermal_protein_crystallization.jl)
+and [sampling-coordinate helper](../assets/source/examples/support/isothermal_protein_sampling.jl)
+are downloadable. The [paper driver and configuration](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/paper/case_studies/04_protein_crystallization)
+handle complete reproduction and exports.
+
+From the repository root, using the checkout and the paper plotting environment:
 
 ```sh
 julia --project=paper paper/setup.jl
+python -m pip install -r paper/requirements.txt
+# Observations and data-only figure: no optimization or sampling needed.
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --data-only
+python paper/plot_all.py --case 4 --data-only
+# Short native forward checks, both models.
 julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --smoke
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl
-# Optional posterior sampling through the same statistical model:
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --sample
+# MAP only, or full reproduction including BOTH posterior corners and bands.
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --map
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --full
+julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --verify
 python paper/plot_all.py --case 4
 python paper/check_protein.py
+julia --project=docs docs/make.jl
 ```
 
-The default production command fits and predicts without waiting for MCMC.
-The sampling command uses 300 warmup and 500 retained draws in each of four
-chains; its diagnostic screen, rather than this budget alone, determines
-whether posterior plots and prediction bands are exported.
-The [example](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/examples/isothermal_protein_crystallization.jl)
-contains the model and Bayesian definitions; the
-[existing paper entry point](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/paper/case_studies/04_protein_crystallization/run.jl)
-handles export. Results record the checkout, dirty state, data/source hashes,
-solver settings, optimizer diagnostics, conservation and independent temporal,
-size-grid and domain checks. Validation is never used to choose the fit.
-Reducing the maximum timestep from 2 to 0.1 min changes calibration CDFs by
-at most ``1.54\times10^{-5}``. Doubling to 400 bins changes them by up to 0.0078
-at fixed parameters; a calibration-only refined refit changes predictions by
-up to 0.166 g/L and 0.0101 in CDF. Extending the domain to 75 μm at unchanged
-bin width has no observed effect. The material residual is below
-``6\times10^{-13}`` g/L, with negligible upper-bin occupancy. Spatial error
-therefore remains more relevant than time or domain error; posterior summaries
-are conditional on the stated 200-bin discretization. Selected posterior-draw
-refinement checks are exported separately: the four tested rate/barrier extremes
-change CDFs by at most 0.0084 on doubling the grid, and have no observed domain
-effect.
+Use `--model=cnt` or `--model=cnt_grd` for one model. `--sample` is an alias for
+`--full`; the no-flag default is MAP-only. Sampling uses isolated local workers
+and checkpoints each chain; matching completed results can be resumed. Explicit
+`--warmup=`, `--samples=`, `--chains=`, `--seed=` and `--predictive-draws=` flags
+record changed budgets. Sampling must pass Rhat ≤ 1.01, bulk/tail ESS ≥ 400,
+BFMI ≥ 0.3 and zero retained divergences/depth hits before producing bands.
 
-The older Mitchell-based example remains a historical audit reproduction;
-its posterior and adequacy findings are separate from this calculation.
+Both calculations use conservative bin counts, `MUSCL()` growth and native
+`SSPRK33()` (SSPRK3) time integration. Model 2 adds the centred Ito flux of
+`FiniteVolumeDiffusion()`, the default method for `SizeDiffusion`. Population
+and concentration advance in the same RK stages.
+
+The primary CNT mesh has 400 bins on 0–50 μm; GRD uses 100 bins. The smoother
+GRD population permits a cheaper mesh: calibration-only 100/200-bin differences
+were at most 0.0032 in CDF fraction at tested parameter points, compared with
+the assumed 0.03 uncertainty, and below 0.007 g/L in concentration. GRD is
+refitted and sampled on that mesh, with 200/400-bin checks retained separately;
+no coarse/fine posterior samples are mixed. The
+native combined growth/diffusion recommendation adds outgoing rates:
+``G/\Delta L+2D_G/\Delta L^2`` for an interior uniform bin. The controller bounds
+rates in short intervals and rejects a cap violation at any RK stage. It does
+not assume `suggest_dt` automatically adapts `simulate`. Native positivity
+checks remain enabled, with no clipping or seeds.
+ForwardDiff differentiates the locally fixed timestep schedule; this is not a
+claim of differentiability across controller or limiter branch changes. The
+verification command checks gradients again at retained posterior points.
+Fixed-parameter time, size and domain checks, representative posterior checks
+and a separate finer-grid refit are exported. The discrete material invariant
+is checked separately from continuum/grid accuracy.
+
+```@eval
+using Markdown, PopulationBalanceModels
+Markdown.parse(read(joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","protein_isothermal","numerical_verification.txt"),String))
+```
+
+CDF changes are absolute fractions, comparable with the assumed 0.03 error.
+Time checks halve both step controls; size checks double the bin count; domain
+checks extend 50 to 75 μm at unchanged bin width. These are fixed-parameter
+checks, distinct from the separately exported calibration-only finer-grid refit.
+The exported third-moment rate defect compares the numerical residual with
+``3GM_2+6D_GM_1`` evaluated using resolved moments. For GRD its largest relative
+defect decreases under size refinement. This is a weak-form consistency check, separate from the exact
+discrete material balance and from a full continuum solution.
+
+Numerical settings, source/data hashes, producer revision/dirty state, seeds,
+actual steps, sampler diagnostics and individual residuals are in
+`paper/results/04_protein_crystallization/production/{cnt,cnt_grd}`.
+CSV, Markdown and LaTeX tables are generated from those same draws and prior
+specifications. PDF/300-dpi PNG/SVG figures are shared by the paper and manual.
+Old inferred-noise results are archived as a historical target, not reused here.
