@@ -11,7 +11,7 @@ Files are grouped by behaviour, rather than by development milestone:
 
 | Area | Main files |
 |:--|:--|
-| Physical terms and coupling | `sources_moments.jl`, `systems.jl`, `papers.jl`, `size_diffusion.jl` |
+| Physical terms and coupling | `sources_moments.jl`, `systems.jl`, `papers.jl`, `size_diffusion.jl`, `tensor_diffusion.jl` |
 | Transport and time methods | `transport_integrators.jl`, `nonuniform_weno.jl`, `compact_finite_volume.jl`, `tensor.jl` |
 | Moment representations and accounting | `extended_moments.jl`, `measure_evolution.jl`, `qamar_moments.jl` |
 | Axial and stationary balances | `axial.jl`, `axial_system.jl`, `stationary.jl` |
@@ -35,6 +35,7 @@ julia --project=/path/to/optional-env test/bayesian_integration.jl
 julia --project=/path/to/optional-env test/protein_parallel.jl
 julia --project=/path/to/optional-env test/stationary_integration.jl
 julia --project=/path/to/optional-env test/stationary_inference.jl
+julia --project=/path/to/optional-env test/tensor_integration.jl
 julia --project=/path/to/sensitivity-env test/sensitivity_integration.jl
 ```
 

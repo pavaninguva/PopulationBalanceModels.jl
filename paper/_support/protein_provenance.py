@@ -62,8 +62,9 @@ def verify_analysis_compatibility(folder, manifest, report):
     """Keep an original calculation tied to its original, preserved receipt.
 
     A new source review can establish equivalence without rewriting old results.
-    Only source-review identity may differ: the statistical inputs, settings and
-    resolved environment must still match the current numerical checks.
+    Source-review identity and an explicitly checked test-only Statistics
+    declaration may differ; statistical inputs and resolved runtime versions
+    must still match the current numerical checks.
     """
     current = verify_compatibility(folder, manifest)
     directory = ANALYSIS / folder.name
@@ -79,6 +80,13 @@ def verify_analysis_compatibility(folder, manifest, report):
         for field in ("original_target_hash", "inputs", "settings", "parameter_names",
                       "likelihood", "projects", "dependencies"):
             if original[field] != current[field]:
+                if field == "projects":
+                    before, after = dict(original[field]), dict(current[field])
+                    review = current["source_review"].get("test_project_review")
+                    if (review and before.pop("Project.toml", None) == review["baseline_sha256"]
+                            and after.pop("Project.toml", None) == review["current_sha256"]
+                            and before == after):
+                        continue
                 raise ValueError(f"Approximation target/environment changed: {field}")
     return dict(producing_compatibility_sha256=original_hash,
                 current_compatibility_sha256=current_hash,

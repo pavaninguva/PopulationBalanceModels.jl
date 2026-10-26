@@ -40,6 +40,19 @@ class PublicationContracts(unittest.TestCase):
                 self.assertTrue(result['reused_under_review'])
                 self.assertEqual(result['producing_compatibility_sha256'],digest)
                 self.assertEqual(provenance.sha(preserved),digest)
+                changed_project = copy.deepcopy(current)
+                changed_project['projects']['Project.toml'] = 'test-only Statistics addition'
+                with patch.object(provenance,'verify_compatibility',return_value=changed_project):
+                    with self.assertRaisesRegex(ValueError,'target/environment changed: projects'):
+                        provenance.verify_analysis_compatibility(directory,{},report)
+                changed_project['source_review']['test_project_review'] = dict(
+                    baseline_sha256='project',current_sha256='test-only Statistics addition')
+                with patch.object(provenance,'verify_compatibility',return_value=changed_project):
+                    self.assertTrue(provenance.verify_analysis_compatibility(directory,{},report)['reused_under_review'])
+                changed_project['projects']['paper/Manifest.toml'] = 'changed runtime'
+                with patch.object(provenance,'verify_compatibility',return_value=changed_project):
+                    with self.assertRaisesRegex(ValueError,'target/environment changed: projects'):
+                        provenance.verify_analysis_compatibility(directory,{},report)
                 for field in ('inputs','settings','parameter_names','likelihood','dependencies'):
                     changed = dict(current)
                     changed[field] = 'changed'

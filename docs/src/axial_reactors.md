@@ -161,11 +161,12 @@ accessors return views; every column is a complete local coupled state.
 See [Continuous precipitation](case_studies/continuous_precipitation.md) for a
 working material-conserving model.
 
-The coupled adapter supports one-coordinate sectional populations and raw
+The coupled adapter supports one-/two-coordinate sectional populations and raw
 moments with residual-based local methods. It rejects DQMOM states: linearly
 advecting weights and weighted abscissas does not implement the spatial direct
-moment equations. Tensor populations remain available through the separate
-single-population `compile(...;domain=reactor)` adapter. Direct evolution methods,
+moment equations. `axial_stateview(problem,u,cell).populations.name` restores
+each tensor's intrinsic matrix; the axial solver still stores flattened local
+states in columns. Intrinsic `SizeDiffusion` remains batch-only. Direct evolution methods,
 negative flow, state-dependent dispersion and a solved flow field are outside
 both adapters. Limited reconstruction of individual raw moments can still lose
 joint realizability; check moment stage validity and refine rather than

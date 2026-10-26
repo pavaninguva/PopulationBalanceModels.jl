@@ -77,8 +77,8 @@ every integration stage it evaluates their derivatives from the same state.
 `population`, `bulk`, and `stateview` recover named views from that vector.
 Freezing concentration during a particle update would define a different method.
 
-The coupled backend accepts named 1D sectional and moment populations. The
-standalone Grid2D transport operator is not yet a coupled-system population block.
+The coupled backend accepts named Grid1D, Grid2D and supported moment
+populations. One- and two-coordinate populations may share the same bulk states.
 
 ## Shared state and independent representations
 
@@ -146,7 +146,65 @@ its state-to-moment chain rule. Its invariant assumes a fixed factor.
 
 All of these rates use the same current stage state. Freezing solute while
 advancing the distribution would define a different integration algorithm.
-The standalone `Grid2D` backend is not currently a block in `PBMSystem`.
+
+## Two internal coordinates and growth dispersion
+
+For a rectangular Grid2D, each state entry is an integrated count over an
+internal-coordinate cell. `population(problem,u,:crystals)` and
+`ctx.derivatives.crystals` are matrices with `size(grid)`. Other populations
+retain their vector layouts; the full solver state remains a packed vector.
+Use `PopulationMoment(:crystals,(kx,ky))` for a joint moment. A marginal
+measurement requires an explicit `SystemObservable`; the one-coordinate
+histogram/CDF constructors do not choose a marginal for you.
+
+Here the two coordinate velocities and diagonal diffusivities depend on the
+current solute concentration. The exchanged property is proportional to
+``x y^2``, a possible fixed-shape volume convention:
+
+```@example coupled_tensor
+using PopulationBalanceModels
+grid = Grid2D(0.0:0.2:4.0, 0.0:0.2:3.0)
+model = PBMModel(
+    growth=Growth2D((x,y,p,t,ctx)->(p.gx*ctx.bulk.c,p.gy*ctx.bulk.c)),
+    dispersion=SizeDiffusion((xy,p,t,ctx)->(p.Dx*ctx.bulk.c,p.Dy*ctx.bulk.c)),
+)
+operator = compile(model,grid) # Upwind growth and finite-volume diffusion
+system = PBMSystem((crystals=operator,);
+    exchanges=(ConservativeExchange(:crystals,:c,(xy,p,t,ctx)->p.alpha*xy[1]*xy[2]^2),),
+    nonnegative_bulk=(:c,))
+N0 = zeros(size(grid)); N0[8,6] = 1.0 # a bin-integrated initial population
+p = (gx=0.1,gy=0.05,Dx=0.02,Dy=0.01,alpha=0.001)
+problem = PBMProblem(system,(crystals=N0,),(0.0,0.05);bulk0=(c=1.0,),p)
+inventory(u) = bulk(problem,u,:c)+p.alpha*moment(grid,population(problem,u,:crystals),(1,2))
+total = inventory(problem.u0)
+upper = copy(problem.u0); upper[end] = total # c <= total for nonnegative solids
+dt = suggest_dt(problem.operator,upper,p,0.0;cfl=0.3)
+solution = simulate(problem;dt)
+@assert maximum(abs(inventory(u)-total) for u in solution.u) < 1e-12
+(shape=size(population(problem,last(solution.u),:crystals)),
+ material_error=inventory(last(solution.u))-total)
+```
+
+The closed-domain discrete invariant is
+``c+\alpha\sum_{i,j}x_i y_j^2N_{ij}``, including diffusion's material change.
+With spatially constant coefficients and negligible boundary traces, its
+continuum particle-property rate is
+``G_x M_{02}+2G_y M_{11}+2D_y M_{10}``. Upwind also introduces mesh-dependent
+smearing; agreement with this continuum rate needs separate refinement.
+The coefficient bounds used above follow from the nonnegative inventory
+and the declared monotone concentration dependence; `suggest_dt` itself does
+not predict future coefficients or bound bulk depletion.
+
+Tensor `ConservativeExchange` requires closed/periodic size boundaries.
+Tensor escape ledgers, zero-size extinction and tensor collision/transfer
+algorithms are unavailable. Tensor populations without SizeDiffusion can also
+use `axial_problem`; intrinsic SizeDiffusion still rejects axial adapters.
+The existing [GRD example](assets/source/examples/random_fluctuation_grd.jl)
+has a smooth two-coordinate version:
+
+```sh
+julia --project=. examples/random_fluctuation_grd.jl --two-coordinate
+```
 
 ## Account for removed solids separately from dissolved solute
 

@@ -179,6 +179,7 @@ include("characteristic.jl")
 include("transport_integrators.jl")
 include("nonuniform_weno.jl")
 include("size_diffusion.jl")
+include("tensor_diffusion.jl")
 include("stem_cells.jl")
 include("axial.jl")
 

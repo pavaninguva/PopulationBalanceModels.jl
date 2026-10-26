@@ -1,11 +1,11 @@
 {
   "reviewed_baseline": "a38d582bfe2e7cca7eb6f40b57ecfb00a4957633",
-  "purpose": "Explicit retained-target source review for optional uncertainty and stationary estimation integration, followed by current posterior/gradient evaluations; original producer manifests and posterior files are retained.",
+  "purpose": "Explicit source review for tensor bulk/diffusion support and test-only dependency correction, followed by current posterior/gradient checks; original producer manifests, draws and uncertainty calculations are retained.",
   "sources": {
     "src/PopulationBalanceModels.jl": {
-      "sha256": "a0eb2ef1dd42de571f5b8c6980ac8b63a26701a9c396420ac07b853ae39ce172",
+      "sha256": "a687b48f13c23a793bc7d4904c9be0a86d451d1b2df6b5280555a40b309478c7",
       "baseline_sha256": "4b3d9878ff439308bfe1a83e81eb72e11359ee52e080b4be7abb9c87b52316b4",
-      "review": "Retains the opt-in Gauss–Newton API; adds observe, CellObservable, StationarySolver exports and includes stationary inference after the existing transient definitions. No forward equation or statistical target change."
+      "review": "Preserves the previous stationary/Gauss–Newton additions; includes the new tensor-only diagonal diffusion methods. No replacement of one-coordinate transport, likelihood, priors or posterior definitions."
     },
     "src/inference/bayesian_diagnostics.jl": {
       "sha256": "3c2bf56516403428717251d0d74318224b68bc566bcd64833d5719f6ca24788b",
@@ -28,9 +28,9 @@
       "review": "New opt-in fixed-Gaussian sensitivity covariance calculation. No forward residual, likelihood, prior, sampler or solver replacement."
     },
     "src/inference/observations.jl": {
-      "sha256": "32e36b59613b4d05e0ceda8f2723b05d41535653927e39dd07e1eddbf0c5bfd3",
+      "sha256": "ab761de1cc266ece126d1ff0da1850100210a51e2aa17005136d4e0c19d799e9",
       "baseline_sha256": "944ae3b3c6fb93c0f0d84df237014504e2bdec5fae21db35e41de0bcc3866d35",
-      "review": "Adds axial-local CellObservable and timeless Observation constructors. Timed Observation delegates the same validation/covariance code to a helper; existing protein CDF, quantile and bulk observation calculations are unchanged."
+      "review": "Retains the prior timeless/axial observation additions. Adds an explicit rejection for a tensor passed to the one-coordinate histogram API, before accessing grid.centers. Retained one-coordinate CDF/bulk/quantile calculations are unchanged."
     },
     "src/inference/calibration.jl": {
       "sha256": "c5957ebd8dce94ccef659e6737c237e1cf3b654fcea822e9e34047d93d49f92a",
@@ -56,6 +56,41 @@
       "sha256": "b0161c5772c18c6b08cc10d720124b6bc828e81a87e38b94623de85636916a8d",
       "baseline_sha256": null,
       "review": "New opt-in stationary inference and direct observation methods. Checked equilibrium roots and implicit derivatives dispatch exclusively on StationaryPBMProblem; no replacement of transient residuals, integration, priors or posterior definitions."
+    },
+    "src/numerics/sectional/size_diffusion.jl": {
+      "sha256": "9eccab9ab8cbf2f2b468b53005ad898de99bd438142f80451582315e69637363",
+      "baseline_sha256": "b68304cd4925b0488f1c7688a74b278d401d2af482b48c84da7b0ee706c9eda5",
+      "review": "Broadens compile-time geometry validation to Grid2D and extracts the identical geometry computation to a helper. The complete one-coordinate flux, coefficient evaluation, uniform-coefficient optimization and return values are unchanged."
+    },
+    "src/coupling/systems.jl": {
+      "sha256": "4c75d5d891cee865c6a5dec30ff7fcd2158bbe1a063c812de889ffc95ba816f2",
+      "baseline_sha256": "e523d7965d9d329614f357b14dbb02f5f275c61714572553d2718712632fc195",
+      "review": "Adds representation-shaped tensor views and residual dispatch. One-coordinate populations still return the identical flat views and reshape to the same one-column states. Factors the unchanged one-coordinate exchange sum, selected loss correction and ledger check into _exchange_amount, with a separate tensor specialization."
+    },
+    "src/compilation/tensor.jl": {
+      "sha256": "778396a04967e1a8d81fc83625cdb64ef578efb6cce05af871eba4ef249944a5",
+      "baseline_sha256": "f8f62cda292fc79a863df4d169c1c45c73ee8a0e2e805edc53002614ee17dc16",
+      "review": "Adds Grid2D bulk context, shaped accessors/exchange, diagonal diffusion timestep contributions, and primal-value initial-state validation for AD. These methods dispatch on CompiledPBM2D and are not used by the retained one-coordinate protein problems."
+    },
+    "src/compilation/axial_system.jl": {
+      "sha256": "55e4bea300392b431443d0c424d7b24a43ebd3e7d5508ebfac4b79c286cf058a",
+      "baseline_sha256": "593fa2f88f9cb86901821e556e051000d861fe6dd3fb2e2a242b14b87555c79d",
+      "review": "Retains the reviewed axial packing refactor and accepts tensor populations without intrinsic diffusion. Batch protein problems use no axial adapter; the existing intrinsic-diffusion rejection remains in place."
+    },
+    "src/modeling/terms.jl": {
+      "sha256": "b93188a8a49d37fbcb83e2cd308e7bb6ae5ea43c662d63a0ac493f743de50d68",
+      "baseline_sha256": "7f0871ac29c9490e8bb6939991ec888e4a60fe2f7732aed128d872c19c3364c0",
+      "review": "Extends the SizeDiffusion docstring to describe the implemented diagonal tensor contract; no term structures, one-coordinate constructors, mechanism identifiers or callbacks changed."
+    },
+    "src/numerics/policies.jl": {
+      "sha256": "206e7a8288929fb10ad91afa32e0eca85e6b34693a0e49317c11b0be20c60780",
+      "baseline_sha256": "c0b9845663d54bcd15b3bc5b86d25f992e4be17e6b8ea2593483f1449ed8f836",
+      "review": "Documents transverse-width scaling in Grid2D FiniteVolumeDiffusion. Method types and the one-coordinate numerical contract are unchanged."
+    },
+    "src/numerics/tensor/size_diffusion.jl": {
+      "sha256": "c4f29318127e856ca932b33f42c835bef3cf517025031dd48a42b94240fe2878",
+      "baseline_sha256": null,
+      "review": "New Grid2D-only diagonal Ito finite-volume methods, with nonnegative coefficients and conservative face fluxes. No one-coordinate dispatch, posterior or observation formula is overridden."
     }
   }
 }

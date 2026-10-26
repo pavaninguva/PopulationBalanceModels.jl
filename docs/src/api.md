@@ -29,6 +29,7 @@ Grid1D(edges; coordinate=:volume)
 PBMModel(; named_terms...)
 TermMethods(; by_term=NamedTuple(), mechanism_methods...)
 SizeDiffusion(D)  # constant or D(L,p,t,ctx), coordinate²/time, Ito convention
+SizeDiffusion((Dx,Dy)) # diagonal Grid2D diffusion; callback D(xy,p,t,ctx) also supported
 TermMethods(size_diffusion=FiniteVolumeDiffusion())
 compile(model, grid; methods=TermMethods(), bc=SizeBC(), growth_scheme=Upwind())
 compile(model, MomentSet(0:K); method=ExactClosure(), methods=TermMethods(),
@@ -61,7 +62,7 @@ for optional solver setup, scaling, constraints, accounting rates and continuati
 
 Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`, and `RK4`.
 `VanLeer` and geometry-aware `WENO3` support nonuniform 1D grids.
-`SizeDiffusion` supports uniform/nonuniform batch Grid1D residuals, including
+`SizeDiffusion` supports uniform/nonuniform batch Grid1D and diagonal Grid2D residuals, including
 shared-bulk systems, with closed or paired periodic boundaries. See the
 [diffusion contract](methods/growth.md#Random-fluctuation-growth-rate-dispersion)
 for total-flux injection, exchange and timestep restrictions.

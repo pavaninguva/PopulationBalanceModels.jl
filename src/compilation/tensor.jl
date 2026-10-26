@@ -6,6 +6,27 @@ struct CompiledPBM2D{M,G,S,B,F,P}
     fields::F
     prepared::P
 end
+_system_population(::CompiledPBM2D)=true
+_population_shape(op::CompiledPBM2D)=size(op.grid)
+function _population_view(op::CompiledPBM2D,N)
+    length(N)==length(op.grid) || throw(DimensionMismatch("tensor population state length differs from Grid2D"))
+    (N isa AbstractVector || size(N)==size(op.grid)) ||
+        throw(DimensionMismatch("tensor population matrix must match Grid2D shape $(size(op.grid))"))
+    reshape(N,size(op.grid))
+end
+_population_context(op::CompiledPBM2D,N,t,system)=_tensor_context(op,_population_view(op,N),t,system)
+population_moment(op::CompiledPBM2D,N,k::Tuple{Integer,Integer})=moment(op.grid,_population_view(op,N),k)
+population_moment(::CompiledPBM2D,N,k)=throw(ArgumentError("two-coordinate moments require orders (kx,ky)"))
+
+function _validate_exchange(::ConservativeExchange,op::CompiledPBM2D)
+    all(b->(b.left isa NoFlux && b.right isa NoFlux) || b.left isa Periodic,(op.bc.x,op.bc.y)) ||
+        throw(ArgumentError("Grid2D ConservativeExchange requires closed or periodic size boundaries; tensor boundary-escape reservoirs are not implemented"))
+end
+function _exchange_amount(exchange,popop::CompiledPBM2D,op,N,scratch,p,t,ctx)
+    g=popop.grid
+    sum(_nonnegative(exchange.weight((g.x.centers[i],g.y.centers[j]),p,t,ctx),
+        "per-particle exchanged amount")*scratch[i,j] for j in axes(N,2),i in axes(N,1))
+end
 _uniform(g::Grid1D)=maximum(abs.(g.widths.-first(g.widths)))<=1e-10*first(g.widths)
 function compile(model::PBMModel,g::Grid2D;growth_scheme=Upwind(),bc=SizeBC2D(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple(),domain=BatchDomain())
     _validate_size_diffusion(model,g,bc,domain,evolution)
@@ -33,26 +54,34 @@ end
 
 function PBMProblem(op::CompiledPBM2D,u0::AbstractMatrix,tspan;p=NamedTuple())
     size(u0)==size(op.grid) || throw(DimensionMismatch("one state value per internal-coordinate bin is required"))
-    N=float.(copy(u0)); all(isfinite,N) && all(N.>=0) || throw(ArgumentError("initial number must be finite and nonnegative"))
+    N=float.(copy(u0)); all(isfinite,N) && all(x->_primal(x)>=0,N) || throw(ArgumentError("initial number must be finite and nonnegative"))
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
     PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
 end
-_tensor_context(op,N,t)=(;grid=op.grid,operator=op,N,cell=1,fields=op.fields(1,t),
-    bulk=(;),populations=(;),system=nothing)
+function _tensor_context(op,N,t,system=nothing)
+    localfields=op.fields(1,t)
+    system===nothing && return (;grid=op.grid,operator=op,N,cell=1,fields=localfields,
+        bulk=(;),populations=(;),system=nothing)
+    (;grid=op.grid,operator=op,N,cell=1,fields=merge(system.fields,localfields),
+      bulk=system.bulk,populations=system.populations,system)
+end
 
-function rhs!(dN::AbstractMatrix,N::AbstractMatrix,op::CompiledPBM2D,p,t)
+function rhs!(dN::AbstractMatrix,N::AbstractMatrix,op::CompiledPBM2D,p,t;context=nothing)
     size(dN)==size(N)==size(op.grid) || throw(DimensionMismatch("tensor state size mismatch"))
-    fill!(dN,zero(eltype(dN))); ctx=_tensor_context(op,N,t)
+    fill!(dN,zero(eltype(dN))); ctx=_tensor_context(op,N,t,context)
     for item in op.prepared
         _add_prepared!(dN,N,item,op,p,t,ctx)
     end
     all(isfinite,dN) || throw(NumericalFailure("nonfinite 2D derivative"))
     nothing
 end
-function suggest_dt(op::CompiledPBM2D,N,p,t;cfl=0.5)
+function suggest_dt(op::CompiledPBM2D,N,p,t;cfl=0.5,context=nothing)
     0<cfl<=1 || throw(ArgumentError("cfl must be in (0,1]"))
-    g=op.grid; ctx=_tensor_context(op,N,t); hazards=zeros(size(g))
-    for term in op.model.terms
+    size(N)==size(op.grid) || throw(DimensionMismatch("tensor state size mismatch"))
+    g=op.grid; ctx=_tensor_context(op,N,t,context)
+    hazards=zeros(promote_type(eltype(N),eltype(g.x.widths),eltype(g.y.widths)),size(g))
+    for item in op.prepared
+        term=item.term
         if term isa Growth2D
             for j in axes(N,2), i in axes(N,1)
                 vl=_velocity(term,g.x.edges[i],g.y.centers[j],p,t,ctx)[1]
@@ -60,6 +89,11 @@ function suggest_dt(op::CompiledPBM2D,N,p,t;cfl=0.5)
                 vb=_velocity(term,g.x.centers[i],g.y.edges[j],p,t,ctx)[2]
                 vt=_velocity(term,g.x.centers[i],g.y.edges[j+1],p,t,ctx)[2]
                 hazards[i,j]+=(max(-vl,0)+max(vr,0))/g.x.widths[i]+(max(-vb,0)+max(vt,0))/g.y.widths[j]
+            end
+        elseif term isa SizeDiffusion
+            for j in axes(N,2),i in axes(N,1)
+                Dx,Dy=_tensor_diffusivities(term,(g.x.centers[i],g.y.centers[j]),p,t,ctx)
+                hazards[i,j]+=Dx*item.cache.x.loss_factors[i]+Dy*item.cache.y.loss_factors[j]
             end
         elseif term isa Union{Death,Dilution}
             for j in axes(N,2),i in axes(N,1)

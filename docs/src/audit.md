@@ -4,6 +4,58 @@ This register records demonstrated defects, corrections and limits of the
 verification. Passing a test establishes its stated configuration; it does not
 certify every closure, callback, numerical resolution or physical model.
 
+## Isolated core tests and tensor GRD, 26 October 2026
+
+Started from clean `ebf5f7fca0dea1195b8ece7ef3823e12d07a4bd2`;
+no applicable AGENTS.md was present. The source/metadata snapshot and protected
+protein-file hashes were recorded before changes.
+
+| Finding | Evidence and correction | Disposition |
+|:--|:--|:--|
+| Core CI stops before completing scientific tests | Isolated `Pkg.test("PopulationBalanceModels")` on Julia 1.10.3 and 1.13.2 failed at `test/gauss_newton.jl:1`: Statistics was imported without a test dependency. The richer development environment passed 2,349 checks and masked this packaging error. Added Statistics to test extras/target/compatibility and to the isolated optional-CI environment. | Corrected; no numerical assertion or tolerance was removed. |
+| Example loader reads newly introduced bindings in an old world | Current Julia warned for modules included inside `_load_example`. Use `Base.invokelatest(getfield,...)` for that binding access. A fresh Julia 1.13.2 load with `--depwarn=error` passed. | Corrected. |
+| Tensor populations could not share bulk balances or use GRD | Added shape-preserving tensor population/derivative views, shared-stage bulk context/exchange and diagonal Ito finite-volume diffusion. The flux uses cell density and transverse width; geometry is reusable, coefficients are current-stage values. | Implemented with explicit support limits. |
+
+`test/tensor_diffusion.jl` passed 120 checks against independent tensor-product
+generators, analytical periodic/graded diffusion and translating Gaussian
+solutions, and a matrix exponential for independent time refinement. Checks
+cover coefficient admissibility, number/material balances, timestep loss
+sums, selected exchange mechanisms, axial tensor inventories, zero-D recovery
+and AD versus finite differences. Upwind's analytical numerical variance is
+separate from physical GRD; the coarse-Gaussian WENO undershoot failure remains
+an expected failure under native checks. No clipping or tolerance relaxation
+was introduced. `test/tensor_integration.jl` passed 12 checks of SciML, checked
+stationary roots and parameter estimation against independently closed total
+number/bulk balances. The existing optional regression entry points passed
+254 checks.
+
+The runnable `random_fluctuation_grd.jl --two-coordinate` example preserved
+number and its discrete bulk/particle inventory to 2.22e-16. Grid2D diffusion
+supports closed or paired-periodic boundaries per axis on fixed rectangular
+meshes. Cross diffusion, intrinsic diffusion in axial adapters, tensor escape
+ledgers, tensor collisions/transfers and direct-update diffusion remain
+unsupported. Tensor axial coupling without intrinsic diffusion is verified.
+
+All 140 protected protein production files remain byte-identical. A separate
+source review re-evaluated both MAPs and 31 retained chain/tail points, preserving
+the original producer records and uncertainty calculations. Test-only project
+metadata changes are accepted only after checking the complete expected
+Statistics declaration; observations, runtime dependencies, priors, likelihoods
+and parameter coordinates must still match. No fit or sampling was repeated.
+The existing collision-EQMOM investigation remains parked.
+
+Final isolated `Pkg.test("PopulationBalanceModels")` passed **2,469 checks
+each on Julia 1.10.0 and 1.13.2**, including Aqua and the new tensor checks.
+The minimum environment used ForwardDiff 0.10.38; the current environment used
+ForwardDiff 1.4.6. Both resolved Distributions 0.25.132 and Aqua 0.8.18. Measured
+diffusion spatial slopes were 1.994 (uniform) and 1.953 (smoothly graded);
+SSPRK33 time refinement against the fixed discrete matrix exponential gave
+3.032. The Gaussian Upwind comparison gave 0.952, as expected when its
+first-order advection limits the combined method. These are separate
+refinements, not a single coupled spatial/time slope. Documentation and local
+link/asset checks passed. Windows CI remains configured but was not executed
+locally; no commit, push or deployment was performed.
+
 ## Shared forward-model estimation, 26 October 2026
 
 This addition started at `fc8b563981190dc98c1ed45d69ab2028a07db06b`
@@ -362,7 +414,7 @@ imports to avoid its exported sample-moment name.
 |:--|:--|:--|
 | 1D sectional | Integrated bin number/process volume; signed growth, point/boundary/distributed births, removal, fixed-pivot collisions | Density=N/ΔL. Center-weighted moments define the discrete invariant. Products use additive-property deposition; no other aggregation algorithms implemented. |
 | Sectional growth | Upwind, MUSCL, van Leer, WENO3, WENO5 on fixed nonuniform meshes; uniform centered and linear upwind | Per-term/grid eligibility checked. WENO/unlimited methods do not imply positivity. Lax–Wendroff/Beam–Warming are restricted space–time policies. |
-| Tensor distributions | Two-coordinate growth, point/distributed births and removal | Upwind/WENO5 on fixed rectangular axes; transverse-width fluxes. No tensor aggregation/breakage. |
+| Tensor distributions | Two-coordinate growth, diagonal Ito diffusion, point/distributed births and removal; shared bulk balances | Upwind/WENO5 and conservative diffusion on fixed rectangular axes; transverse-width fluxes. No mixed diffusion, tensor aggregation/breakage or escape ledgers. |
 | Trajectory methods | Eligible structured 1D/2D growth on travel-time meshes; exact constant shifts | CFL/output alignment and autonomous/separable laws checked. No arbitrary growth, bulk coupling or hidden interpolation. HOCADI is a periodic constant-growth variant, not Li2026 reproduction. |
 | Conservative compact | Positive declared 1D/2D separable growth on uniform axes; prescribed time dependence, point births, periodic or physical inflow/outflow | HOCFiniteVolume: fourth-order interior space / second-order complete time; compiled dependencies and combined terms checked. Actual number-flux history, no positivity guarantee, no bulk/axial/collision/AD support. See [specification](methods/compact_verification.md). |
 | Raw moments | Dependency-closed exact laws; QMOM, rank-adaptive QMOM, Gamma EQMOM, assumed lognormal weak forms | Realizability, closure representability, integration quadrature and evolution accuracy differ. Continuous daughter integrals use `daughter_moment` where supplied. |

@@ -284,14 +284,15 @@ stationary state has ``n_i\propto1/D_i``, rather than uniform density.
 
 | Configuration | Support |
 |:--|:--|
-| Standalone or named `PBMSystem` population | Residual-based `Grid1D` bin integrals; growth, sources and supported local terms compose normally |
+| Standalone or named `PBMSystem` population | Residual-based `Grid1D` or `Grid2D` bin integrals; growth, sources and supported local terms compose normally |
 | Uniform / nonuniform meshes | Conservative fluxes on either; second-order spatial consistency verified on uniform and smoothly graded meshes, not arbitrary grading |
 | `SizeBC()` | Zero external **total** flux; for diffusion alone, ``\partial_L(Dn)=0`` rather than ``\partial_L n=0`` |
 | Paired `Periodic()` | Conservative wrapped face using ``(w_1+w_m)/2`` as centre distance; a mathematical test boundary, not physical size recycling |
 | `BoundaryInjection(:left)` with `Nucleation(J,first(grid.edges))` | Adds ``F_{left}=J`` once, with or without Growth; right injection analogously sets ``F_{right}=-J`` |
 | Native Euler / SSPRK22 / SSPRK33 / SSPRK54 / RK4 | Same residual and stage checks; user supplies dt. RK4 has no SSP positivity guarantee |
 | Optional `odeproblem` | Same residual; no native positivity checks or automatic diffusion step bound |
-| MomentSet, Grid2D, axial adapters, MeasureEuler and direct characteristic/compact updates | Rejected; no diffusion rule is implemented for these combinations |
+| Grid2D | Diagonal diffusion on uniform/nonuniform rectangular axes; closed or paired periodic boundaries independently per axis |
+| MomentSet, axial adapters, MeasureEuler and direct characteristic/compact updates | Rejected; no diffusion rule is implemented for these combinations |
 
 For closed boundaries the growth and diffusion base exterior fluxes are zero;
 an explicitly selected boundary source replaces the prescribed total exterior
@@ -335,6 +336,56 @@ the variance approaches ``0.25+2(0.08)(0.5)=0.33``. The separate smoothly graded
 heat-equation test gives slopes 1.98 and 2.00, while time refinement against a
 fixed semidiscrete eigenmode gives SSPRK33 slopes 3.05 and 3.03. These tests
 separate physical broadening, spatial error and time error.
+
+### Two internal coordinates
+
+For two fluctuating coordinates, the implemented diagonal Ito model is
+
+```math
+\frac{\partial n(x,y,t)}{\partial t}
++\frac{\partial [G_x(x,y,t)n(x,y,t)]}{\partial x}
++\frac{\partial [G_y(x,y,t)n(x,y,t)]}{\partial y}
+=\frac{\partial^2[D_x(x,y,t)n(x,y,t)]}{\partial x^2}
++\frac{\partial^2[D_y(x,y,t)n(x,y,t)]}{\partial y^2}.
+```
+
+Use `SizeDiffusion((Dx,Dy))` for constants, or
+`SizeDiffusion((xy,p,t,ctx)->(Dx,Dy))`, where `xy=(x,y)`. Each coefficient may
+depend on both coordinates, time and current `ctx.bulk`. Their units are
+x²/time and y²/time. A scalar shorthand applies the same numerical coefficient
+to both axes and assumes compatible coordinate units. The coordinate Brownian
+increments are independent: correlated fluctuations and mixed derivatives are
+not implemented, and a matrix coefficient is rejected.
+
+Here ``N_{ij}`` integrates over a rectangular cell, so its density is
+``n_{ij}=N_{ij}/(\Delta x_i\Delta y_j)``. The x-face flux is
+
+```math
+q^x_{i+1/2,j}=-\frac{D^x_{i+1,j}n_{i+1,j}-D^x_{ij}n_{ij}}{x_{i+1}-x_i}.
+```
+
+The same flux times ``\Delta y_j`` leaves one cell and enters its neighbour;
+y faces analogously use ``\Delta x_i``. This preserves total number on uniform
+or nonuniform rectangular grids. Closed and paired-periodic conditions can be
+chosen independently for each axis. Existing interior `Nucleation2D` fixed-pivot
+or Gaussian sources compose with the residual; corner/boundary point injection
+is not implemented for tensors.
+
+The explicit loss coefficient adds **both** directional contributions,
+``D^x_{ij}\sum 1/h_x\,/\Delta x_i+D^y_{ij}\sum 1/h_y\,/\Delta y_j``, and growth/removal.
+On a uniform interior cell it is
+``|G_x|/\Delta x+|G_y|/\Delta y+2D_x/\Delta x^2+2D_y/\Delta y^2``.
+Upwind and a compatible SSP step preserve nonnegativity under the tested bound;
+WENO has no positivity limiter and can fail native checks on a narrow coarse
+profile. No population is clipped. Periodic/graded heat-equation refinements
+verify the diffusion order independently from the time integrator. The
+translating-Gaussian test with Upwind explicitly separates its numerical variance
+``|G|\Delta x\,t`` from the physical increment ``2Dt``.
+
+[Bulk coupling](../coupled_systems.md#Two-internal-coordinates-and-growth-dispersion)
+uses the same-stage weighted **complete** residual. Run the synthetic example with
+`julia --project=. examples/random_fluctuation_grd.jl --two-coordinate` or the
+focused checks with `julia --project=/path/to/test-env test/tensor_diffusion.jl`.
 
 ## Disappearance at physical zero
 

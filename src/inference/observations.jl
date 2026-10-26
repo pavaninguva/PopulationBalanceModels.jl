@@ -89,6 +89,7 @@ _observe(obs::SystemObservable,N,op::CompiledSystem,p,t)=_vector(obs.f(stateview
 function _observe(obs::PopulationHistogram,N,op::CompiledSystem,p,t)
     popop=getproperty(op.system.populations,obs.population)
     popop isa CompiledMomentPBM && throw(ArgumentError("a moment population needs an explicit distribution reconstruction/measurement model for histograms"))
+    popop.grid isa Grid1D || throw(ArgumentError("PopulationHistogram requires one internal coordinate; use SystemObservable for an explicitly defined tensor marginal or joint measurement"))
     weights=obs.weight.(popop.grid.centers)
     all(isfinite,weights) && all(weights.>=0) || throw(ArgumentError("histogram observation weights must be finite and nonnegative"))
     weighted=weights.*population(op,N,obs.population)

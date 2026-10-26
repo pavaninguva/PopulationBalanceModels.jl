@@ -32,12 +32,19 @@ Random-fluctuation growth-rate dispersion in one internal coordinate L:
 pure callback `D(L,p,t,ctx)` in coordinate²/time, evaluated at bin centres
 using the current integration-stage context, including `ctx.bulk`.
 
-Supports residual-based Grid1D sectional populations, standalone or in PBMSystem,
-on uniform/nonuniform meshes with NoFlux at both ends or paired Periodic ends.
+On Grid2D, supply `(Dx,Dy)` constants or `D((x,y),p,t,ctx)` returning that pair.
+A scalar means equal diagonal coefficients (compatible coordinate units required).
+The PDE contribution is `∂xx(Dx*n)+∂yy(Dy*n)`: independent coordinate fluctuations,
+with no mixed derivative or cross-covariance. Coefficients may depend on both
+coordinates and the current bulk state. Matrices are rejected.
+
+Supports residual-based Grid1D/Grid2D sectional populations, standalone or in PBMSystem,
+on uniform/nonuniform rectangular meshes with NoFlux at both ends or paired Periodic ends on each axis.
 The default FiniteVolumeDiffusion acts on bin densities Nᵢ/widthᵢ. Select it with
 `TermMethods(size_diffusion=FiniteVolumeDiffusion())`. BoundaryInjection adds
-one prescribed total number flux, including without Growth. Other size
-boundaries, moment/tensor representations and direct evolution are unsupported.
+one prescribed total number flux in 1D, including without Growth. Tensor point
+sources use Nucleation2D's fixed-pivot/Gaussian methods; tensor boundary injection
+is unavailable. Other size boundaries, moment/axial representations and direct evolution are unsupported.
 Use suggest_dt for the combined explicit growth/diffusion/loss recommendation;
 it does not automatically control simulate's timestep.
 """

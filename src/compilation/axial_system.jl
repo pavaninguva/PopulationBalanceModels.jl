@@ -15,7 +15,7 @@ each cell. The initial matrix has packed local states in rows and axial cells
 in columns; by default repeat local_problem.u0. domain.inlet(p,t) returns either
 that packed vector or `(populations=(name=bin_numbers,...),bulk=(name=value,...))`.
 Danckwerts inlet fluxes and zero-gradient outlets apply to all components.
-Supports 1D sectional populations and raw moments, with residual-based methods.
+Supports Grid1D/Grid2D sectional populations and raw moments, with residual-based methods.
 Direct quadrature states cannot be transported as if they were conserved raw
 moments and are rejected. Velocity and dispersion are prescribed, not solved.
 """
@@ -34,7 +34,7 @@ function _compile_axial_system(localop::CompiledSystem,domain::AxialDispersion,a
     any(pop->any(term->term isa SizeDiffusion,pop.model.terms),values(localop.system.populations)) &&
         throw(ArgumentError("SizeDiffusion is currently supported in batch populations only, not axial adapters"))
     all(values(localop.system.populations)) do op
-        op isa CompiledPBM || (op isa CompiledMomentPBM && op.closure isa AbstractMomentClosure)
+        op isa Union{CompiledPBM,CompiledPBM2D} || (op isa CompiledMomentPBM && op.closure isa AbstractMomentClosure)
     end || throw(ArgumentError("axial systems support fixed sectional or raw-moment populations; direct quadrature states require different transport equations"))
     locals=map(domain.grid.centers) do z
         s=localop.system

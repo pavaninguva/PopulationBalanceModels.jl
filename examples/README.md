@@ -16,6 +16,8 @@ These small examples introduce physical terms, per-term methods and shared bulk
 balances. Other capability examples are `nucleation_sources.jl`,
 `aggregation_and_breakage.jl`, `moment_closures.jl`, `coupled_moment_balance.jl`,
 `nonuniform_weno.jl`, `random_fluctuation_grd.jl` and `axially_dispersed_growth.jl`.
+`random_fluctuation_grd.jl --two-coordinate` demonstrates a coupled tensor
+population with bulk-dependent growth/dispersion and a closed material balance.
 `steady_state_crystallizer.jl` needs the optional NonlinearSolve integration.
 `estimate_stationary_crystallizer.jl` adds synthetic stationary Bayesian
 calibration with Optim, implicit sensitivities and local uncertainty; optional

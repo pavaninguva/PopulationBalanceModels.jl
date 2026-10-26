@@ -17,7 +17,9 @@ _zero_bulk(ctx,p,t)=NamedTuple()
               exchanges=(), fields=(p,t)->(;), nonnegative_bulk=())
 
 A NamedTuple of separately compiled populations, shared scalar bulk states,
-and simultaneous interactions. Each population may have a different Grid1D.
+and simultaneous interactions. Populations may use different Grid1D, Grid2D
+or supported moment representations. Tensor population/derivative accessors
+return matrices in the declared Grid2D shape; the system solver state stays flat.
 Bulk initial values are supplied to PBMProblem through `bulk0`.
 """
 struct PBMSystem{P,B,I,E,F,N,A}
@@ -155,19 +157,26 @@ end
 
 Minimum local sectional recommendation, with each population's growth,
 SizeDiffusion and loss rates summed using the current shared bulk state.
-Requires sectional populations without inter-population interactions. It does
+Requires Grid1D/Grid2D sectional populations without inter-population interactions. It does
 not bound bulk depletion or future coefficient changes; native stage checks
 still apply. Moment populations and custom interaction bounds are unsupported.
 """
 function suggest_dt(op::CompiledSystem,u,p,t; cfl=0.5)
     0<cfl<=1 || throw(ArgumentError("cfl must be in (0,1]"))
     length(u)==op.length || throw(DimensionMismatch("packed system state size mismatch"))
-    isempty(op.system.interactions) && all(pop->pop isa CompiledPBM,values(op.system.populations)) ||
+    isempty(op.system.interactions) && all(pop->pop isa Union{CompiledPBM,CompiledPBM2D},values(op.system.populations)) ||
         throw(ArgumentError("suggest_dt for PBMSystem requires sectional populations without interactions; supply a separately verified step bound otherwise"))
     ctx=_system_context(op,u,zero(u),p,t)
-    minimum(suggest_dt(getproperty(op.system.populations,name),
-        reshape(population(op,u,name),:,1),p,t;cfl,context=ctx) for name in keys(op.ranges))
+    minimum(begin
+        pop=getproperty(op.system.populations,name)
+        suggest_dt(pop,_population_array(pop,population(op,u,name)),p,t;cfl,context=ctx)
+    end for name in keys(op.ranges))
 end
+
+_population_shape(op)=(population_state_length(op),1)
+_population_view(op,N)=N
+_population_array(op,N)=reshape(N,_population_shape(op))
+_population_context(op,N,t,system)=_context(op,_population_array(op,N),1,t,system)
 
 function _pack_system(system::PBMSystem,u0::NamedTuple,bulk0::NamedTuple)
     Set(keys(u0))==Set(keys(system.populations)) || throw(ArgumentError("initial population names must match the system"))
@@ -181,6 +190,7 @@ function _pack_system(system::PBMSystem,u0::NamedTuple,bulk0::NamedTuple)
     initial=Tuple(getproperty(u0,name) for name in keys(system.populations))
     ranges=map(values(system.populations),initial) do op,N
         length(N)==population_state_length(op) || throw(DimensionMismatch("population initial size mismatch"))
+        _population_view(op,N) # validate tensor shape before flattening
         all(isfinite,N) && all(x->_primal(x)>=0,N) || throw(ArgumentError("initial populations must be finite and nonnegative"))
         r=offset+1:offset+length(N); offset+=length(N); r
     end
@@ -217,12 +227,13 @@ function PBMProblem(op::CompiledSystem,u0::AbstractVector,tspan;p=NamedTuple())
 end
 _validate_population_state(op,N)=nothing
 
-population(op::CompiledSystem,u,name::Symbol)=view(u,getproperty(op.ranges,name))
+population(op::CompiledSystem,u,name::Symbol)=_population_view(
+    getproperty(op.system.populations,name),view(u,getproperty(op.ranges,name)))
 population(prob::PBMProblem,u,name::Symbol)=population(prob.operator,u,name)
 bulk(op::CompiledSystem,u,name::Symbol)=u[getproperty(op.bulk_indices,name)]
 bulk(prob::PBMProblem,u,name::Symbol)=bulk(prob.operator,u,name)
 function stateview(op::CompiledSystem,u)
-    pops=NamedTuple{keys(op.ranges)}(Tuple(view(u,r) for r in values(op.ranges)))
+    pops=NamedTuple{keys(op.ranges)}(Tuple(population(op,u,name) for name in keys(op.ranges)))
     b=NamedTuple{keys(op.bulk_indices)}(Tuple(u[i] for i in values(op.bulk_indices)))
     (;populations=pops,bulk=b)
 end
@@ -230,7 +241,7 @@ stateview(prob::PBMProblem,u)=stateview(prob.operator,u)
 function _system_context(op,u,du,p,t)
     state=stateview(op,u)
     grids=map(x->x.grid,op.system.populations)
-    derivatives=NamedTuple{keys(op.ranges)}(Tuple(view(du,r) for r in values(op.ranges)))
+    derivatives=NamedTuple{keys(op.ranges)}(Tuple(population(op,du,name) for name in keys(op.ranges)))
     SystemContext(state.populations,state.bulk,grids,op.system.fields(p,t),derivatives,op.system.populations)
 end
 
@@ -284,12 +295,17 @@ function _exchange!(exchange,ctx,op,du,p,t)
     popop=getproperty(op.system.populations,exchange.population)
     N=getproperty(ctx.populations,exchange.population)
     scratch=similar(N); fill!(scratch,zero(eltype(N)))
-    localctx=_context(popop,reshape(N,:,1),1,t,ctx)
+    localctx=_population_context(popop,N,t,ctx)
     for item in popop.prepared
         if mechanism(item.term) in exchange.mechanisms
             _add_prepared!(scratch,N,item,popop,p,t,localctx)
         end
     end
+    change=_exchange_amount(exchange,popop,op,N,scratch,p,t,localctx)
+    du[getproperty(op.bulk_indices,exchange.bulk)]-=change
+end
+
+function _exchange_amount(exchange,popop::CompiledPBM,op,N,scratch,p,t,localctx)
     change=sum(_nonnegative(exchange.weight(x,p,t,localctx),"per-particle exchanged amount")*scratch[i]
         for (i,x) in enumerate(popop.grid.centers))
     losses=_sectional_losses(popop,N,p,t,localctx,exchange.mechanisms)
@@ -299,7 +315,7 @@ function _exchange!(exchange,ctx,op,du,p,t)
     if haskey(op.ledger_indices,exchange.population)
         _validate_exchange_property(exchange,op,popop,p,t,localctx)
     end
-    du[getproperty(op.bulk_indices,exchange.bulk)]-=change
+    change
 end
 
 function rhs!(du::AbstractVector,u::AbstractVector,op::CompiledSystem,p,t)
@@ -308,7 +324,8 @@ function rhs!(du::AbstractVector,u::AbstractVector,op::CompiledSystem,p,t)
     ctx=_system_context(op,u,du,p,t)
     for name in keys(op.ranges)
         popop=getproperty(op.system.populations,name)
-        rhs!(reshape(getproperty(ctx.derivatives,name),:,1),reshape(getproperty(ctx.populations,name),:,1),popop,p,t;context=ctx)
+        rhs!(_population_array(popop,getproperty(ctx.derivatives,name)),
+             _population_array(popop,getproperty(ctx.populations,name)),popop,p,t;context=ctx)
     end
     for interaction in op.system.interactions
         _interaction!(interaction,ctx,op,du,p,t)

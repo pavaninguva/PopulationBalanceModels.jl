@@ -72,7 +72,7 @@ end
         for closure in (ExactClosure(),QMOM(2),RankAdaptiveQMOM(2),EQMOM(2),DQMOM(2),LogNormalClosure())
             @test_throws ArgumentError compile(model,MomentSet(0:3);closure)
         end
-        @test_throws ArgumentError compile(model,Grid2D(g,g))
+        @test term_methods(compile(model,Grid2D(g,g))).dispersion isa FiniteVolumeDiffusion
         for method in (HOCFiniteVolume(),Inguva2022(),LaxWendroff())
             @test_throws ArgumentError compile(model,g;evolution=method)
             @test_throws ArgumentError simulate(PBMProblem(compile(model,g),N,(0.,.1));dt=.01,method)

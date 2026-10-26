@@ -68,8 +68,24 @@ function source_review(manifest)
     original_project=TOML.parse(read(`git -C $ROOT show $(REVIEWED_PRODUCER*":Project.toml")`,String))
     project=TOML.parsefile(joinpath(ROOT,"Project.toml"))
     project["deps"]==original_project["deps"] || error("Required dependencies changed; review before reusing draws")
+    # The core-CI correction adds Statistics to tests only. Check the complete
+    # expected change, retaining all runtime dependencies/compatibility exactly.
+    baseline_project=read(`git -C $ROOT show $(REVIEWED_CURRENT*":Project.toml")`)
+    expected=TOML.parse(String(copy(baseline_project)))
+    test_project_review=if project==expected
+        nothing
+    else
+        expected["extras"]["Statistics"]="10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+        expected["compat"]["Statistics"]="1"
+        push!(expected["targets"]["test"],"Statistics")
+        project==expected || error("Unreviewed Project.toml change beyond the test-only Statistics declaration")
+        (baseline_sha256=bytes2hex(sha256(baseline_project)),
+         current_sha256=hashfile(joinpath(ROOT,"Project.toml")),
+         change="Statistics added to test extras/target and test compatibility only; complete remaining project unchanged")
+    end
     (;original_sources=old,current_sources=current,changes,additions=sort!(collect(added)),
       reviewed_source_revision=REVIEWED_PRODUCER,reviewed_current_revision=REVIEWED_CURRENT,
+      test_project_review,
       uncertainty_review_sha256=extension===nothing ? nothing : hashfile(extension_path))
 end
 

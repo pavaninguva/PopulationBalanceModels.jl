@@ -33,7 +33,7 @@ named term with `by_term`; this does not select a time integrator.
 | Physical term | Supplied methods | Conditions |
 |:--|:--|:--|
 | `Growth` | `Upwind`, `MUSCL`, `VanLeer`, `WENO3`, `WENO5`, `Centered`, `LinearUpwind` | The first five support fixed nonuniform 1D meshes, including logarithmic meshes. WENO5 needs at least six bins and numerically resolved reconstruction weights. Centered and LinearUpwind need uniform meshes. WENO and unlimited schemes have no positivity guarantee. |
-| `SizeDiffusion` | `FiniteVolumeDiffusion` | Batch Grid1D, uniform/nonuniform meshes; closed or paired periodic boundaries. Ito/Fokker–Planck convention, current-stage coefficients. Residual integrators only. |
+| `SizeDiffusion` | `FiniteVolumeDiffusion` | Batch Grid1D or diagonal Grid2D diffusion, standalone/coupled; uniform/nonuniform rectangular meshes, closed or paired periodic boundaries per axis. Ito/Fokker–Planck convention, current-stage coefficients. Residual integrators only. |
 | `Nucleation` at one size | `FixedPivot`, `BoundaryInjection`, `GaussianInjection` | Fixed pivot deposits between pivots. Boundary injection needs Growth (inward/zero velocity) or SizeDiffusion (prescribed total flux). Gaussian width is specified in coordinate units, independently of mesh spacing. |
 | `Birth`, `DistributedNucleation` | `MidpointRule`, `GaussLegendre(n)` | Callbacks return source density per coordinate; quadrature integrates over each bin. |
 | `IntegratedBirth`, `IntegratedNucleation` | `BinIntegral` | Callback supplies the bin integral directly, including its physical normalization. |
@@ -48,6 +48,9 @@ fixed-pivot and bin-integrated Gaussian deposition. WENO5 supports fixed rectang
 meshes with uniform or nonuniform axes (at least six bins per axis).
 Other 1D reconstruction policies, sectional collisions and boundary point
 injection are not general 2D implementations.
+Tensor populations can share bulk balances with other populations in `PBMSystem`.
+`SizeDiffusion((Dx,Dy))` adds independent coordinate diffusion; mixed derivative
+terms and tensor boundary-escape ledgers remain unavailable.
 
 MomentSet selects a closure separately from each term's weak-form rule.
 ExactClosure uses ExactMomentRule for supported polynomial/closed terms.

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Declared Statistics as a test dependency and in the optional CI test environment, fixing isolated core-test failures; updated the example loader for current Julia world-age rules.
+- Added diagonal Ito size diffusion on Grid2D, including nonuniform rectangular meshes, per-axis closed/periodic boundaries, current-stage bulk coefficients and combined explicit step recommendations. Tensor populations now participate in PBMSystem with shaped population/derivative views, conservative bulk exchange, observations and stationary estimation. Tensor axial coupling is available without intrinsic diffusion; mixed diffusion, tensor escape ledgers and tensor collision/transfer methods remain unsupported.
+
 - Unified observation and parameter-estimation workflows for transient and stationary forward models. Added timeless measurements, `observe`, axial `CellObservable`, and `StationarySolver` with checked roots and implicit first/second sensitivities. Shared MAP, priors, likelihoods, uncertainty, profiles, prediction and optional NUTS remain one statistical target; AD-incompatible closures require an explicit finite-difference path. Added analytical and representation/solver verification plus a synthetic stationary crystallizer example.
 - Stationary closure-admissibility failures now report `NumericalFailure` during numerical state validation, allowing estimation to reject invalid trials while preserving programming/model-definition errors.
 - Simplified the paper workspace to four case folders, each with a run script, plot script, settings, data and figures. Removed dispatchers and duplicate guides; moved tests/history out of the active workflow. Retained protein samples and original producer manifests byte-for-byte, with separate derived analysis outputs.

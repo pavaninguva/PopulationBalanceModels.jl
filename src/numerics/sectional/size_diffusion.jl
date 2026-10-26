@@ -8,14 +8,20 @@ end
 
 function _validate_size_diffusion(model, grid, bc, domain, evolution)
     any(term -> term isa SizeDiffusion, model.terms) || return
-    grid isa Grid1D && domain isa BatchDomain || throw(ArgumentError(
-        "SizeDiffusion requires a batch Grid1D sectional population; moment, tensor and axial adapters are not supported"))
+    grid isa Union{Grid1D,Grid2D} && domain isa BatchDomain || throw(ArgumentError(
+        "SizeDiffusion requires a batch Grid1D or Grid2D sectional population; moment and axial adapters are not supported"))
     evolution === nothing || throw(ArgumentError(
         "SizeDiffusion requires a residual time integrator (e.g. SSPRK33), not a direct transport update"))
-    closed = bc.left isa NoFlux && bc.right isa NoFlux
-    periodic = bc.left isa Periodic && bc.right isa Periodic
-    closed || periodic || throw(ArgumentError(
-        "SizeDiffusion requires NoFlux at both ends or paired Periodic boundaries; use Nucleation with BoundaryInjection for an imposed total number influx"))
+    boundaries=if grid isa Grid1D
+        bc isa SizeBC || throw(ArgumentError("Grid1D SizeDiffusion requires SizeBC"))
+        (bc,)
+    else
+        bc isa SizeBC2D || throw(ArgumentError("Grid2D SizeDiffusion requires SizeBC2D"))
+        (bc.x,bc.y)
+    end
+    all(b->(b.left isa NoFlux && b.right isa NoFlux) ||
+           (b.left isa Periodic && b.right isa Periodic),boundaries) || throw(ArgumentError(
+        "SizeDiffusion requires NoFlux at both ends or paired Periodic boundaries on each axis; open, absorbing and prescribed face-flux diffusion closures are unavailable"))
 end
 
 function _size_diffusivity(term::SizeDiffusion, x, p, t, ctx)
@@ -31,6 +37,10 @@ function prepare_term(term::SizeDiffusion, ::FiniteVolumeDiffusion, g::Grid1D;
                       bc=SizeBC(), kwargs...)
     _validate_size_diffusion(PBMModel(term),g,bc,BatchDomain(),nothing)
     term.diffusivity isa Real && _size_diffusivity(term,first(g.centers),nothing,0,nothing)
+    _diffusion_geometry(g,bc)
+end
+
+function _diffusion_geometry(g,bc)
     distances = inv.(diff(g.centers))
     wrap = bc.left isa Periodic ? inv((first(g.widths)+last(g.widths))/2) : zero(eltype(distances))
     factors = zeros(eltype(distances),length(g))
