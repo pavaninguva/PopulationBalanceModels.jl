@@ -15,7 +15,7 @@ the instrument's bin grid and its points are not independent observations.
 Use `psd_summary.csv` for diagnostic quantiles only.
 
 `config/` preserves the historical handover specification and output contract.
-The active CNT model, priors and likelihood are defined in
+The active CNT/CNT+GRD models, priors and fixed-error likelihood are defined in
 `examples/isothermal_protein_crystallization.jl`; the historical configuration
 is not used as its runtime input.
 `provenance/` preserves source hashes, pixel calibrations, measurement methods,
