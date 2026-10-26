@@ -1,0 +1,124 @@
+{
+  "mode": "production",
+  "renderer": "Matplotlib + external LaTeX",
+  "source_digest": "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0",
+  "workflow_digest": "cf4fd462b7eb5ab4f16e149729287e85bc5c668e9a3e0ed097643281d9c343ac",
+  "checkout_verified": false,
+  "retained_redraw": true,
+  "inputs": {
+    "paper/growth/data/index.toml": "b93a3ba2b0db7e225d105b81e831009daae74bb91971be40b18c6cfb6fa2e15b",
+    "paper/growth/data/front_hoc_N100_fd38ed15485d/provenance.toml": "9108a695b1fbf8d28ee4871eb2581306ab8aea8dc8b86e9bc254042000cf442b",
+    "paper/growth/data/front_inguva2022_N100_4de216ef1af1/provenance.toml": "46c9295b9417306966898e085e0f255b2c421a09a92ee1df1cce700c3a6c5d01",
+    "paper/growth/data/front_muscl_N100_d1b3659ce15b/provenance.toml": "309483b9d64f07453a67b88809f9a97ad21fe7798631f52b2e9a9a84c3fbb512",
+    "paper/growth/data/front_upwind_N100_b81ec535f6d0/provenance.toml": "e12bb14305eb629ed4107a7aeddfda6e8c5661e8acdc4f386fa8b0af747df115",
+    "paper/growth/data/front_weno3_N100_f6530cd3d262/provenance.toml": "4e7f905b0eb81ca4787b247a26f86d8cb616da9a5fc1bca32380bd03e0b6fdcf",
+    "paper/growth/data/front_weno5_N100_a7734d8b52ef/provenance.toml": "c556a213a124c61753bec8d9ca9cc5cab20ffcecd634451582607ecc65b778ae",
+    "paper/growth/data/smooth_hoc_N1280_1639ee25585a/provenance.toml": "4388f9274e3ecb6b451178addd9b52ef6eda34db1211fbb7eb9a608101cab14e",
+    "paper/growth/data/smooth_hoc_N160_3c968eb999ea/provenance.toml": "cb73ef19616a322d62d95745956893495612f7c92986bd71777c6472cacb0a5d",
+    "paper/growth/data/smooth_hoc_N2560_a1ccc77b1ced/provenance.toml": "b183ca2eecc4d8d98dba9a901fdd5e72db2ff318f7f332217212b819756c1680",
+    "paper/growth/data/smooth_hoc_N320_184666d3eb84/provenance.toml": "c9160ca9bde87b0f6fbe63782490250e05e60bdc8c2405fc85ba58eb98c50ec8",
+    "paper/growth/data/smooth_hoc_N40_8f101d1173a5/provenance.toml": "c5e9a2a3870a6a8bf23c2d4db18a5dc87e2723ab32d94e60b3e1f958bc5db878",
+    "paper/growth/data/smooth_hoc_N640_6b0ee24d957b/provenance.toml": "1ff5bfc1657a36509e324097f466159e33747bb8d155cc9acc151f696e5c9ad0",
+    "paper/growth/data/smooth_hoc_N80_ebd2f48f2109/provenance.toml": "a0c241b50244818e3f7581f8ab5cb6697498c8126af195b2f1e106273d59baa4",
+    "paper/growth/data/smooth_inguva2022_N1280_c5b8be9ac7a4/provenance.toml": "4702f5dbb7195d22bf06036000cafa8410d9b78f20aae18a4b251b254bf4db6c",
+    "paper/growth/data/smooth_inguva2022_N160_dd62391bf498/provenance.toml": "90e31058cbf80e507ad2ab856395803621f1da6ff43d04766dc3c56f523639cc",
+    "paper/growth/data/smooth_inguva2022_N2560_bf7bd521d28c/provenance.toml": "b70f80243e62f50579ecf52ec79bd1516e994ebbdc76c7ef29ca764fc4b0c01a",
+    "paper/growth/data/smooth_inguva2022_N320_f36a3ae84536/provenance.toml": "ef6b32bedefc5fc5cbeab70156181b758e7020d8412d04d112725eb7c80fcdce",
+    "paper/growth/data/smooth_inguva2022_N40_3542d3cb8986/provenance.toml": "d2ff3ee90146efccded63fa85c6e35fc4185462f3922137bb7131b603ec94f71",
+    "paper/growth/data/smooth_inguva2022_N640_3d17a5c1850f/provenance.toml": "2fc0eebf75b4c33716fbdb695d7fe82c87392e2d5ac6bc81d6dbf790283e7b8c",
+    "paper/growth/data/smooth_inguva2022_N80_32f7c9f67c5a/provenance.toml": "33cb4d3bffbe60bc8099517171fe9cccc17fa96906f5281b9a0e8bcd1abecc52",
+    "paper/growth/data/smooth_muscl_N1280_48fe113e36b8/provenance.toml": "03e2c5a174edb5ae571d852685512de901a1fcc75fd5c124966dab025b886f5f",
+    "paper/growth/data/smooth_muscl_N160_4b5c5ba379d8/provenance.toml": "765495575b879e7a0769d01da1000325d1315a59b1d1f9c370bb0da16b6cb2fb",
+    "paper/growth/data/smooth_muscl_N2560_dd8b9449dcdd/provenance.toml": "1d0fbc5ada669e4e0d2ecdef063357c45a9df38ee5efba45b29b0f83dc4e1281",
+    "paper/growth/data/smooth_muscl_N320_55b8c99bcd47/provenance.toml": "8758d84a32356ac7cedbfad2b751333347181c745fb68bacc0d1dfa42f8c84f7",
+    "paper/growth/data/smooth_muscl_N40_b34fd1843c4b/provenance.toml": "5dbd0d4c64b50539b1cb9fc014cc1725f5861bf74bbf5e27a70fbb4c8392edd5",
+    "paper/growth/data/smooth_muscl_N640_8301c6418db4/provenance.toml": "c7b631fe047e1f3e568178072af6a4270742135d832a38e254bb5c4df6c91308",
+    "paper/growth/data/smooth_muscl_N80_e7fca38df57e/provenance.toml": "2d878d7e927a584ae28adbd07d8de9b7ac8d577ffb352f31ef34d41ef9cd9af7",
+    "paper/growth/data/smooth_upwind_N1280_236bff6f2b1a/provenance.toml": "ccf7c545c127592774014f5161c56f1eae439956fb0e89f68a2090c36f79a753",
+    "paper/growth/data/smooth_upwind_N160_d824414d2c90/provenance.toml": "2e7a57e24e07cb86ad239c196cc7d77ffcc9a349fc5b4c472f5619a1494f90b4",
+    "paper/growth/data/smooth_upwind_N2560_b85f04c4a6df/provenance.toml": "c928a5290f6967880d0f4240ee5729e1f52cb170a7e6d0d583b1c82e55db3888",
+    "paper/growth/data/smooth_upwind_N320_eb01cba60f2c/provenance.toml": "3980ed36c2698234c3ef912ca6afe23bcf533e3500a96358d19a8b8ccaba7339",
+    "paper/growth/data/smooth_upwind_N40_f942332eb281/provenance.toml": "2c9800fa52014a1115d51790db68fb75ccd77ee72571dd97da6b0b0ebabac310",
+    "paper/growth/data/smooth_upwind_N640_c636354c7381/provenance.toml": "fbc1c417a7dc512ad864245405fca46d4c7245a75143f5874a24da415f85c406",
+    "paper/growth/data/smooth_upwind_N80_a17cad04f884/provenance.toml": "4651273fa5c5954038579fce76b7b46c9ff25f93b9eba96ade62f91b63234f3b",
+    "paper/growth/data/smooth_weno3_N1280_a816790dfec6/provenance.toml": "5418dc12ddd5d205eb6b4b168eaaec9d596c780c6d1355a7b3328aab84e326d2",
+    "paper/growth/data/smooth_weno3_N160_86bca964d5cc/provenance.toml": "21f6eb869a527d6c44845e103691ff4a9074c50d96a900945f4a307583c9bab9",
+    "paper/growth/data/smooth_weno3_N2560_15e3b203a66c/provenance.toml": "86a91b6caa36b3fd108775634715004cf12ce431ea61517922cb9dce43c83fef",
+    "paper/growth/data/smooth_weno3_N320_2ec262393b73/provenance.toml": "7d7295102b2bee216a813f09c80230af053b21783b0ef0ba9ea5061fa572d0bf",
+    "paper/growth/data/smooth_weno3_N40_a12cbaa090a4/provenance.toml": "e9ab52e125c23e726f8c8bb6e7d42b5bb516459252c199719527b7918f398afb",
+    "paper/growth/data/smooth_weno3_N640_78984ddb8b30/provenance.toml": "7af78d6c535f0e3a0d4e85b39a334fea0e8f1863e69ae1f9bf3e6beee4d6f600",
+    "paper/growth/data/smooth_weno3_N80_ffb70ee902a5/provenance.toml": "d27298b22d1ee89585cb206ae11669d68d640782a071174f38ebfc58ce7be34e",
+    "paper/growth/data/smooth_weno5_N1280_4c741e9b81f2/provenance.toml": "5f374e41eb7783fc128fb822f966772285ecf0a543ef5c90f6bf10c9c1d5f29a",
+    "paper/growth/data/smooth_weno5_N160_a768ea9f3584/provenance.toml": "cdc2aaedd07f9f52388d942b2528dc5d0a9dcc34beaced9586da9583d128919d",
+    "paper/growth/data/smooth_weno5_N2560_78214d9835a7/provenance.toml": "b2552cdb77b4ed6fabf8a8ac3f6785b6379bda19f042ec4710a697b2fc60b610",
+    "paper/growth/data/smooth_weno5_N320_01189a485931/provenance.toml": "aa972ffcc3910ac54e14f77a61a8326b384b2cc826f0816178ed07eeb3ffeb29",
+    "paper/growth/data/smooth_weno5_N40_bd0cc9839653/provenance.toml": "e5d87affe97506b3849763b22a55fc9f0592328b05962b56e9734cdf85f6b14d",
+    "paper/growth/data/smooth_weno5_N640_4fc6d11c454b/provenance.toml": "1668fa741cc1f59211f0565fc631ebb9095c57cd0e905e6dc209145e948dec07",
+    "paper/growth/data/smooth_weno5_N80_ed05b8af8284/provenance.toml": "9d9f160ca3c1ce318553bc925916eb19fe944aae82b1509d18b515bd0fbb6671",
+    "paper/growth/data/analysis/growth_comparison.csv": "dca702ac7b33a43e490f5cc95f2b10a8d42e1e0aa106f7715bcc8d52cef5ee3e"
+  },
+  "plotter_sha256": "8c0fe51735dfa351aed0eae52af6ed23b1eede8fec534bdd414f15447d00031b",
+  "shared_plotting_sha256": "2b73a5d5c8990cb69eb030e1fc5bf1f94ee5ba448c507308b833a9e03e4b14f1",
+  "style_sha256": "8de37764733a09022d791dff6f5a3aaf53f74ed4b018181cd3dc53e325b0cb01",
+  "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
+  "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
+  "matplotlib": "3.9.4",
+  "numpy": "1.26.4",
+  "pillow": "13.0.0",
+  "pymupdf": "1.28.2",
+  "latex_version": "pdfTeX 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian)",
+  "display_conventions": {},
+  "inches": [
+    7.0,
+    5.3
+  ],
+  "png_pixels": [
+    2100,
+    1590
+  ],
+  "png_dpi": [
+    299.9994,
+    299.9994
+  ],
+  "fonts": [
+    {
+      "name": "CMMI8",
+      "type": "Type1",
+      "embedded_bytes": 34904
+    },
+    {
+      "name": "CMMI9",
+      "type": "Type1",
+      "embedded_bytes": 35529
+    },
+    {
+      "name": "CMR10",
+      "type": "Type1",
+      "embedded_bytes": 35187
+    },
+    {
+      "name": "CMR6",
+      "type": "Type1",
+      "embedded_bytes": 32169
+    },
+    {
+      "name": "CMR8",
+      "type": "Type1",
+      "embedded_bytes": 32161
+    },
+    {
+      "name": "CMR9",
+      "type": "Type1",
+      "embedded_bytes": 33428
+    },
+    {
+      "name": "CMSY6",
+      "type": "Type1",
+      "embedded_bytes": 32022
+    }
+  ],
+  "files": {
+    ".pdf": "aa261855cf12286fd32c7444f80121cbacaf5ec0279745b6d9286f864e5f4105",
+    ".png": "5e41bba454e4856ab5fca29d254704663b8f8a4a05590677d71aaba872d02504"
+  }
+}

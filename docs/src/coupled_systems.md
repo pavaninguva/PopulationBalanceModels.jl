@@ -168,5 +168,5 @@ populations, bulk values and matching histories; the added birth-loss histories
 cannot be inferred from an old saved state that never recorded them.
 [The accounting contract](methods/realizable_evolution.md) defines units,
 endpoint-pivot weighting, collision restrictions and the discrete invariant.
-The [dissolution example](case_studies/dissolution.md) couples both representations
-to a shared solute and reports numerical reconstruction defects separately.
+The executable `examples/realizable_dissolution.jl` verifies both representations
+with a shared solute, separately from numerical reconstruction defects.

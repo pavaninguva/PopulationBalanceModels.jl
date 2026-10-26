@@ -342,8 +342,7 @@ Choose `SizeBC(AbsorbingZero(),NoFlux())` for a sectional zero-size outflow, or
 `MomentBoundary(left=:absorb)` and native `MeasureEuler()` for supported atomic
 moment characteristics. A positive computational cutoff uses escape, carrying
 remaining solid material, rather than zero-size extinction. See the
-[boundary and material contract](realizable_evolution.md) and
-[dissolution comparison](../case_studies/dissolution.md).
+[boundary and material contract](realizable_evolution.md).
 
 A size-independent rate may be declared as
 `Growth(PolynomialRate(((p,t,ctx) -> rate(p,t,ctx),)))`.

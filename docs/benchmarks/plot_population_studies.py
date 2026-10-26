@@ -124,7 +124,7 @@ def pareto_mask(work,error):
                      for w,e in zip(work,error)])
 
 def protein():
-    folder=ASSETS/'protein_crystallization';d=np.genfromtxt(folder/'predictions.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
+    folder=ROOT/'.cache/legacy_docs_assets/protein_crystallization';d=np.genfromtxt(folder/'predictions.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
     obs=np.genfromtxt(ROOT/'examples/data/protein_crystallization/figure4_observations.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
     fig,axes=plt.subplots(1,2,figsize=(9,3.4))
     for ax,observable,ycolumn,label in zip(axes,['concentration','D50'],['concentration_g_L','D50_um'],[r'$c\ (\mathrm{g\,L}^{-1})$',r'$D_{50}\ (\mu\mathrm{m})$']):

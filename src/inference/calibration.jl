@@ -5,6 +5,7 @@ end
 function Experiment(problem::PBMProblem,observations::AbstractObservation...)
     isempty(observations) && throw(ArgumentError("an experiment needs observations"))
     for obs in observations
+        obs.times===nothing && throw(ArgumentError("transient observations require explicit times"))
         problem.tspan[1]<=first(obs.times)<=last(obs.times)<=problem.tspan[2] || throw(ArgumentError("observation time outside experiment"))
         expected=_observation_size(obs.observable)
         expected===nothing || expected==size(obs.data,1) || throw(DimensionMismatch("observable output dimension differs from data"))
@@ -16,6 +17,7 @@ _observation_size(::Union{MomentObservable,PopulationMoment,BulkObservable})=1
 _observation_size(obs::HistogramObservable)=length(obs.edges)-1
 _observation_size(obs::PopulationHistogram)=length(obs.histogram.edges)-1
 _observation_size(::Union{FunctionObservable,SystemObservable})=nothing
+_observation_size(obs::CellObservable)=_observation_size(obs.observable)
 
 """
     CalibrationProblem(experiments; parameters=(z,experiment)->z, dt=nothing, solver=nothing)
@@ -41,7 +43,9 @@ function CalibrationProblem(experiments;parameters=(z,experiment)->z,dt=nothing,
     !isempty(ex) && all(e->e isa Experiment,ex) || throw(ArgumentError("provide at least one Experiment"))
     kinds=[o isa ResidualObservation for e in ex for o in e.observations]
     all(kinds) || !any(kinds) || throw(ArgumentError("do not mix discrepancy blocks and probabilistic observations in one calibration"))
-    (dt===nothing ? solver!==nothing : isfinite(dt) && dt>0) ||
+    stationary=all(e->_is_stationary(e.problem),ex)
+    stationary && dt!==nothing && throw(ArgumentError("stationary calibration has no timestep; omit dt"))
+    (dt===nothing ? (stationary || solver!==nothing) : isfinite(dt) && dt>0) ||
         throw(ArgumentError("supply a positive dt or solver=(problem,times)->solution"))
     CalibrationProblem(ex,parameters,dt,solver,_derivative_choice(derivatives))
 end
@@ -50,6 +54,7 @@ end
 function predictions(cal::CalibrationProblem,z)
     all(isfinite,z) || throw(ArgumentError("parameters must be finite"))
     map(cal.experiments) do ex
+        _is_stationary(ex.problem) && return _stationary_calibration_predictions(cal,z,ex)
         p=cal.parameters(z,ex)
         prob=_inference_problem(remake(ex.problem;p),z)
         ts=sort!(unique(vcat((o.times for o in ex.observations)...)))

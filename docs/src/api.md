@@ -103,6 +103,13 @@ local sectional/raw-moment systems, including every scalar bulk state.
 `axial_stateview(problem,u,cell)` exposes a named local state; population and
 bulk accessors return axial arrays. Direct moment states are rejected.
 
+`observe(observable, solution)` evaluates a converged stationary solution or the
+last saved native transient state (`index` selects another saved transient state).
+`observe(observable, problem, state; time=t)` evaluates an explicit transient
+state; stationary problems use their declared evaluation time instead.
+`CellObservable(observable, cell)` selects a local axial population/bulk state.
+Moment, histogram and reconstruction restrictions are the same in both workflows.
+
 `Observation(times,data,observable; sigma)` or a fixed `covariance` block becomes part of
 `Experiment(problem,observations...)` and then
 `CalibrationProblem(experiments; parameters,dt,solver)`. `residuals`, `objective`,
@@ -113,6 +120,16 @@ residuals, and numerical sensitivity; `confidence_ellipsoid` and `ellipse_points
 construct local joint regions. `fit_multistart` and `profile_likelihood` use the
 fitting backend for multiple starts and nuisance-parameter refits.
 See [Parameter estimation](inference.md) for assumptions and examples.
+
+For stationary data use `Measurement(data, observable; likelihood=...)` and
+`InferenceExperiment(:name, stationary_problem, measurements...;
+solver=StationarySolver())`. Vectors are output columns; matrix columns are
+replicates at one equilibrium. Shared parameters, priors, MAP, uncertainty and
+sampling use `EstimationProblem` unchanged. `StationarySolver` requires
+NonlinearSolve and differentiates isolated equilibria implicitly; eigen-based
+closures may require explicit finite differences. The legacy analogue is
+`Observation(data, observable)` with `Experiment(stationary_problem, ...)`.
+See [stationary estimation](steady_state.md#Observe-and-estimate-parameters).
 
 New Bayesian calculations use `ParameterSpec`, explicitly coordinated `Prior`
 declarations, `Measurement`, `InferenceExperiment`, and `EstimationProblem`.

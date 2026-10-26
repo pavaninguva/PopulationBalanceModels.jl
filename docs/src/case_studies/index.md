@@ -43,10 +43,6 @@ with material assumptions and explicit failed domain/convergence checks. These a
 are stated beside the relevant inputs. The [axial reactor tutorial](../axial_reactors.md)
 adds a physical position coordinate to an intrinsic growth model.
 
-[Dissolving a finite population](dissolution.md) compares sectional and
-rank-adaptive moment predictions with an analytical disappearance solution,
-including their solute and historical removal balances.
-
 Each page ends with a minimal calculation and links to its full reproduction
 driver. Downloads preserve the source layout; a repository checkout is the
 easiest way to keep recipes, data and plotting helpers together. Figure-specific

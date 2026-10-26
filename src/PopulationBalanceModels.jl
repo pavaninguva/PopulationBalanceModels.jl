@@ -33,7 +33,7 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        CustomTerm, PBMModel, Upwind, MUSCL, WENO5, NoFlux, OpenBoundary, Periodic,
        InflowFlux, AbsorbingZero, MomentBoundary, CumulativeAccounting, cumulative, accounting_rates, MeasureEuler, SizeBC, AbstractPopulationDomain, BatchDomain, compile, PBMProblem, remake,
        rhs!, simulate, PBMSolution, density, moment, number_concentration,
-       diagnostics, suggest_dt, NumericalFailure, MomentObservable,
+       diagnostics, suggest_dt, NumericalFailure, MomentObservable, observe, CellObservable,
        HistogramObservable, FunctionObservable, Observation, Experiment,
        ResidualObservation, PopulationCDF, PopulationQuantiles, WassersteinObservation,
        conditional_cdf, conditional_quantiles, cdf_quantiles, loss_contributions,
@@ -54,7 +54,7 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        ConservativeExchange, CustomCoupling, population, bulk, stateview,
        PopulationMoment, BulkObservable, PopulationHistogram, SystemObservable,
        fit, FitResult, odeproblem,
-       StationaryPBMProblem, StationaryPBMSolution, StationaryBranch,
+       StationaryPBMProblem, StationaryPBMSolution, StationaryBranch, StationarySolver,
        stationary_residual!, nonlinearproblem, solve_stationary, continue_stationary
 
 include("core/interfaces.jl")
@@ -115,6 +115,7 @@ include("inference/sampling_coordinates.jl")
 
 include("stationary/problems.jl")
 include("stationary/continuation.jl")
+include("inference/stationary.jl")
 
 @doc "Load Optim to enable fit(calibration, initial_parameters; ...) or MAP fit(estimation_problem; ...)." fit
 

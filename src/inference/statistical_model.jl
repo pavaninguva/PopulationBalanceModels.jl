@@ -92,7 +92,7 @@ function _observe(o::DistributionObservable,u,op,p,t)
     else
         pop=op;state=vec(u)
     end
-    (pop isa CompiledPBM || (pop isa CompiledCharacteristic && pop.grid isa Grid1D)) ||
+    (pop isa CompiledPBM || (pop isa Union{CompiledCharacteristic,CompiledHOC} && pop.grid isa Grid1D)) ||
         throw(ArgumentError("distribution observations require a 1D bin-integrated state or an explicit reconstruction"))
     g=pop.grid
     g.coordinate===o.coordinate || throw(ArgumentError("measurement and model coordinates differ; supply a coordinate-response model"))
@@ -142,6 +142,20 @@ function Measurement(times,data,observable::AbstractObservable;likelihood::Abstr
     Y=data isa AbstractVector ? reshape(float.(copy(data)),1,:) : float.(copy(data))
     !isempty(ts) && all(isfinite,ts) && all(diff(ts).>0) || throw(ArgumentError("measurement times must increase"))
     Y isa AbstractMatrix && size(Y,1)>0 && size(Y,2)==length(ts) || throw(DimensionMismatch("one measurement column per time required"))
+    _measurement(ts,Y,observable,likelihood,response,source)
+end
+"""`Measurement(data, observable; likelihood, response, source)` declares
+stationary measurements without timestamps. Vectors contain outputs; matrix
+columns are replicate observations of one equilibrium. Likelihood normalization,
+covariance, response and source-dependence rules are unchanged."""
+function Measurement(data,observable::AbstractObservable;likelihood::AbstractMeasurementLikelihood,
+        response=(y,theta,experiment)->y,source=nothing)
+    Y=data isa AbstractVector ? reshape(float.(copy(data)),:,1) : float.(copy(data))
+    Y isa AbstractMatrix && all(>(0),size(Y)) || throw(DimensionMismatch("stationary data must be a nonempty output vector or output-by-replicate matrix"))
+    _measurement(nothing,Y,observable,likelihood,response,source)
+end
+Measurement(::Nothing,data,observable::AbstractObservable;kwargs...)=Measurement(data,observable;kwargs...)
+function _measurement(ts,Y,observable,likelihood,response,source)
     all(x->x isa Real && isfinite(x),Y) || throw(ArgumentError("measurements must be finite and real"))
     expected=_observation_size(observable)
     expected===nothing || expected==size(Y,1) || throw(DimensionMismatch("observable and data sizes differ"))
@@ -187,6 +201,7 @@ function InferenceExperiment(name::Symbol,problem::PBMProblem,measurements...;
     all(o->o isa Measurement,blocks) || throw(ArgumentError("provide Measurement or Observation blocks"))
     (dt===nothing ? solver!==nothing : isfinite(dt) && dt>0) || throw(ArgumentError("supply dt or an external solver"))
     for o in blocks
+        o.times===nothing && throw(ArgumentError("transient measurements require explicit times"))
         problem.tspan[1]<=first(o.times)<=last(o.times)<=problem.tspan[2] || throw(ArgumentError("measurement outside experiment"))
     end
     sources=[o.source for o in blocks if o.source!==nothing]
@@ -353,11 +368,14 @@ function _experiment_problem(problem,z,ex)
     problem.constraints(physical) || throw(NumericalFailure("physical parameter constraint failed"))
     theta=merge(physical.shared,getproperty(physical.experiments,ex.name))
     pb=ex.setup(theta,ex.problem)
-    pb isa PBMProblem || throw(ArgumentError("setup must return a PBMProblem"))
+    _validate_experiment_problem(pb,ex.problem)
     _inference_problem(pb,z)
 end
+_validate_experiment_problem(pb,base::PBMProblem)=pb isa PBMProblem ? nothing :
+    throw(ArgumentError("transient experiment setup must return a PBMProblem"))
 _experiment_times(ex)=sort!(unique(vcat((m.times for m in ex.measurements)...)))
-function _experiment_solution(problem,z,ex,counts)
+_experiment_solution(problem,z,ex,counts)=_experiment_solution(problem,z,ex,counts,ex.problem)
+function _experiment_solution(problem,z,ex,counts,::PBMProblem)
     pb=_experiment_problem(problem,z,ex);ts=_experiment_times(ex)
     counts===nothing || (counts.solves+=1)
     sol=ex.solver===nothing ? simulate(pb;dt=ex.dt,saveat=ts) : ex.solver(pb,ts)

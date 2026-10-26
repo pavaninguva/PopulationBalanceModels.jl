@@ -1,10 +1,8 @@
-.cache/
 __pycache__/
-# Fast checks are reproducible outputs, not retained manuscript datasets.
-/results/*/smoke/
-/figures/*/smoke/
-literature/cadet/reference.h5
-literature/cadet/settings_crystallization.py
+precipitation/data/literature/cadet/reference.h5
+precipitation/data/literature/cadet/settings_crystallization.py
+protein/data/**/chains/*.bin
+protein/data/**/chains/*.log
 *.aux
 *.log
 *.dvi

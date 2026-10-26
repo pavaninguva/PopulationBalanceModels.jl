@@ -4,7 +4,82 @@ This register records demonstrated defects, corrections and limits of the
 verification. Passing a test establishes its stated configuration; it does not
 certify every closure, callback, numerical resolution or physical model.
 
-## Repository organization, 26 October 2026
+## Shared forward-model estimation, 26 October 2026
+
+This addition started at `fc8b563981190dc98c1ed45d69ab2028a07db06b`
+with the preceding paper/manual cleanup still uncommitted. It preserves that
+work. Stationary experiments now use the existing observations, parameter
+coordinates, likelihoods and priors, with no artificial time series. Timeless
+vectors contain outputs; matrix columns are repeats at one operating point.
+`CellObservable` selects local axial measurements; `observe` evaluates native
+transient or converged stationary solutions. The schematic connects both paths
+to estimation.
+
+`StationarySolver` checks the original and constrained balances. Smooth isolated
+equilibria use implicit first and second derivatives, including bulk coupling,
+with a checked, equilibrated state Jacobian. This implementation uses dense
+factorizations. Singular roots, branch/rank changes and unsupported closure AD
+remain explicit restrictions; quadrature closures use selected finite
+differences. Inadmissible closure trials report `NumericalFailure` without
+changing state-validation tolerances.
+
+Julia 1.10.3 passed 2,347 core checks, 79 focused observation/stationary/AD
+checks and 352 optional checks (98 new stationary-inference checks plus 254
+existing integrations). Analytical references cover posterior gradients,
+full Hessians, nuisance covariance, unit rescaling, diffusion equilibria and
+axial/coupled balances. A two-chain Gaussian-reference NUTS run gave
+R̂ = 1.003, bulk/tail ESS = 451/693 and zero divergences. A synthetic stationary
+MSMPR fit recovered G = 0.399998 and J = 1.199978 from truths 0.4 and 1.2.
+A Julia 1.13.2 analytical derivative/MAP/Laplace probe also passed.
+The current-stack Julia 1.13.2 continuous forward/adjoint regression passed
+21 checks with normal compiled modules. The older pinned Julia 1.10.3
+sensitivity environment still fails during Enzyme precompilation with
+`Missing Julia object for global '+Core.Float64#19661'`, before its tests run.
+That upstream limitation does not affect the native implicit derivative tests.
+
+All 140 protected protein production files remain unchanged. Current posterior
+values agree exactly with the saved values at both MAPs and 31 retained
+chain/tail points; independent gradient checks pass. Separate compatibility
+receipts preserve their predecessors. Existing uncertainty calculations retain
+their original receipt identity and are reused only after matching their
+inputs, settings, parameter specifications and dependency versions. No protein
+fit or sampling was repeated. Publication checks passed, the schematic's
+PDF/SVG/300-dpi PNG copies agree, and Documenter built 31 pages with 2,542
+local links/assets and no broken targets.
+
+Reproduction uses `test/runtests.jl`, `test/stationary_inference.jl`,
+`test/stationary_integration.jl`, `test/integration.jl` and
+`test/bayesian_integration.jl`; the optional environment loads NonlinearSolve,
+Optim, AdvancedHMC, MCMCDiagnosticTools and OrdinaryDiffEqTsit5.
+The tutorial links [estimate_stationary_crystallizer.jl](assets/source/examples/estimate_stationary_crystallizer.jl).
+
+## Paper and manual organization follow-up, 26 October 2026
+
+This follow-up began at clean `fc8b563981190dc98c1ed45d69ab2028a07db06b`.
+The paper workspace has four case folders: `growth`, `moments`, `precipitation`
+and `protein`. Each has one run script, one plot script, settings, data and
+figures. One README replaces the dispatchers and per-case guides. Implementation
+helpers are private under `_support/`; tests, literature preparation and history
+are under `test/`. Quick checks write outside `paper/` to ignored caches. The [paper guide](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/paper)
+documents the commands and distinguishes retained redraws from current-producer
+verification. Derived protein tables write to `protein/data/analysis/tables/` instead of
+overwriting original production exports.
+
+All 140 current protein production files and the architecture source/figures
+were unchanged under SHA-256 comparison. The 54 superseded manual assets,
+including older protein draws, are preserved with a checksum manifest in
+`test/fixtures/archives/legacy_docs_assets.zip`. The dissolution case study was
+removed; extinction implementations, analytical tests and the runnable
+verification remain. No runtime numerical or statistical target changed.
+
+The 67 paper numerical contracts, eight read-only analysis contracts, retained
+growth/moment/protein checks and plotting checks passed. The rebuilt manual has
+31 pages with local links/assets checked and no broken targets. The tubular
+paper dataset still lacks `time_refinement`; its production checker continues
+to reject the incomplete study. No new production timings or posterior samples
+were generated.
+
+## Earlier repository organization, 26 October 2026
 
 The cleanup began at clean `ba90fd09049ea227bc7658d949f66aec66b9524f`.
 No applicable AGENTS.md was present. Runtime `src/` and `ext/` implementations,
@@ -12,10 +87,10 @@ observations, priors and numerical acceptance tolerances were unchanged.
 
 The cleanup removes 713 tracked regenerable smoke outputs for paper cases 1–3,
 with future smoke outputs ignored. It consolidates 36 unindexed growth runs
-(108 files) into `paper/results/01_growth_time_methods/historical/superseded_runs.zip`;
+(108 files) into `test/fixtures/archives/paper_history/01_growth_time_methods/superseded_runs.zip`;
 archive entries were checked against the original bytes. Active indexes and
 production data are unchanged. Verification drivers and reporting tools are
-grouped under `examples/verification/`, `paper/verification/` and `test/tools/`.
+grouped under `examples/verification/`, `test/fixtures/archives/paper_history/` and `test/tools/`.
 Shared test setup reuses example modules without removing numerical assertions.
 The [example catalogue](assets/source/examples/README.txt) and
 [development guide](development.md) identify the entry points in the source tree.
@@ -341,7 +416,7 @@ Julia 1.13 selects different `randperm` indices from the same MersenneTwister
 seed than the original Julia 1.10 export. Comparing different predictive draws
 caused 100 apparent curve mismatches, although all 6,023 density/map/diagnostic
 checks passed. The original selections are now retained explicitly in
-[posterior_predictive_indices.csv](assets/protein_crystallization/posterior_predictive_indices.csv).
+[posterior_predictive_indices.csv](assets/audit/legacy_protein_predictive_indices.csv).
 Future MCMC `parameter_draws` results include flattened `indices`, and the
 example exports chain/draw identities. This corrects provenance and the audit
 comparison; the 100 curves, posterior target and model inadequacy are unchanged.
@@ -508,7 +583,7 @@ timing protocol, not the equations or distribution error definitions.
 
 The first broad-prior protein budget (4 × 750 retained, 500 warmup) failed the
 unchanged screen: j R-hat 1.0100565 and tail ESS 339.6. Raw draws, energies and
-diagnostics are retained under `protein_crystallization/sampling_budget_750/`.
+diagnostics are retained under `test/fixtures/archives/legacy_docs_assets.zip` (the `protein_crystallization/sampling_budget_750/` member).
 A larger budget uses 4 × 1,500 retained draws and 750 warmup, with isolated Julia
 processes, independent seeds 2027–2030 and separate PBM caches. The existing
 AdvancedHMC adapter and posterior are unchanged. The example shares its exporter

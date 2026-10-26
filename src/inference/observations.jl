@@ -37,6 +37,26 @@ end
 struct SystemObservable{F} <: AbstractObservable
     f::F
 end
+"""`CellObservable(observable, cell)` evaluates a local observation in one axial
+cell, using that cell's intrinsic representation and population/bulk layout.
+The result is a local concentration, not a reactor-integrated inventory."""
+struct CellObservable{O<:AbstractObservable} <: AbstractObservable
+    observable::O
+    cell::Int
+    function CellObservable(observable::AbstractObservable,cell::Integer)
+        cell>0 || throw(ArgumentError("axial observation cell must be positive"))
+        new{typeof(observable)}(observable,Int(cell))
+    end
+end
+function _observe(obs::CellObservable,N,op::CompiledAxial,p,t)
+    1<=obs.cell<=length(op.local_operators) || throw(ArgumentError("axial observation cell lies outside the grid"))
+    _observe(obs.observable,axial_population(op,N,obs.cell),op.local_operators[obs.cell],p,t)
+end
+function _observe(obs::CellObservable,N,op::CompiledAxialSystem,p,t)
+    1<=obs.cell<=length(op.local_operators) || throw(ArgumentError("axial observation cell lies outside the grid"))
+    _observe(obs.observable,view(N,:,obs.cell),op.local_operators[obs.cell],p,t)
+end
+_observe(::CellObservable,N,op,p,t)=throw(ArgumentError("CellObservable requires an axial operator; use the underlying observable for a batch population"))
 _vector(x::Number)=[x]
 _vector(x)=vec(collect(x))
 _observe(obs::MomentObservable,N,op,p,t)=[moment(op.grid,view(N,:,obs.cell),obs.order)]
@@ -119,6 +139,18 @@ function Observation(times,data,observable::AbstractObservable;sigma=nothing,cov
     ts=float.(collect(times)); Y=data isa AbstractVector ? reshape(float.(copy(data)),1,:) : float.(copy(data))
     !isempty(ts) && all(isfinite,ts) && all(diff(ts).>0) || throw(ArgumentError("observation times must increase"))
     Y isa AbstractMatrix && size(Y,2)==length(ts) || throw(DimensionMismatch("one data column per time required"))
+    _observation(ts,Y,observable,sigma,covariance)
+end
+"""`Observation(data, observable; sigma, covariance)` declares stationary data.
+A vector contains outputs at one operating point; matrix columns are replicate
+measurements of that same state. No artificial observation time is introduced."""
+function Observation(data,observable::AbstractObservable;sigma=nothing,covariance=nothing)
+    Y=data isa AbstractVector ? reshape(float.(copy(data)),:,1) : float.(copy(data))
+    Y isa AbstractMatrix && all(>(0),size(Y)) || throw(DimensionMismatch("stationary data must be a nonempty output vector or output-by-replicate matrix"))
+    _observation(nothing,Y,observable,sigma,covariance)
+end
+Observation(::Nothing,data,observable::AbstractObservable;kwargs...)=Observation(data,observable;kwargs...)
+function _observation(ts,Y,observable,sigma,covariance)
     all(x->x isa Real && isfinite(x),Y) || throw(ArgumentError("data must be finite and real"))
     if covariance!==nothing
         sigma===nothing || throw(ArgumentError("supply sigma or covariance, not both"))

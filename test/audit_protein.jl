@@ -6,7 +6,8 @@ using Test, PopulationBalanceModels, ForwardDiff, MCMCDiagnosticTools
 using Random, Statistics, LinearAlgebra
 _load_example(:ProteinCrystallization, "protein_crystallization.jl")
 const PC=ProteinCrystallization
-const ASSETS=joinpath(@__DIR__,"..","docs","src","assets","protein_crystallization")
+const ASSETS=joinpath(@__DIR__,"..",".cache","legacy_docs_assets","protein_crystallization")
+isdir(ASSETS) || error("Extract test/fixtures/archives/legacy_docs_assets.zip into .cache/legacy_docs_assets before this historical audit")
 const PBM=PopulationBalanceModels
 table(name)=[split(row,',') for row in readlines(joinpath(ASSETS,name))[2:end]]
 number(row,i)=parse(Float64,row[i])

@@ -118,6 +118,80 @@ reports success and both constrained and original scaled residuals satisfy
 `abstol + reltol*r0`, with `r0` the initial constrained infinity norm. The default
 `reltol=0` makes this an absolute scaled-balance test.
 
+## Observe and estimate parameters
+
+Observation operators apply to the converged state, with no invented time
+history. For a coupled sectional system, for example,
+`observe(PopulationMoment(:crystals, 0), solution)` returns number concentration
+and `observe(BulkObservable(:c), solution)` returns dissolved concentration.
+For an axial system, wrap a local observation in
+`CellObservable(BulkObservable(:c), outlet_cell)`.
+
+Use the same Bayesian estimation API as for transient models. Omit timestamps
+when declaring stationary data:
+
+```julia
+measurement = Measurement([observed_number], MomentObservable(0);
+    likelihood=GaussianLikelihood(sigma=number_sd))
+experiment = InferenceExperiment(:vessel, problem, measurement;
+    solver=StationarySolver(abstol=1e-12))
+parameter = ParameterSpec(:J; initial=1.0, transform=LogTransform(),
+    prior=Prior(Normal(0, 1); coordinates=:inference)) # log(J) prior
+estimation = EstimationProblem((parameter,), (experiment,))
+result = fit(estimation) # load Optim; MAP by default
+```
+
+Here `problem` is a `StationaryPBMProblem` with a parameter `p.J`; load
+Distributions for `Normal`. A stationary data vector contains outputs at one
+operating point. Matrix columns are repeat measurements of that same state.
+Different feeds, residence times or frozen conditions need separate experiments;
+kinetic parameters can be shared, while calibration/noise parameters can be
+experiment-specific. Time-labelled measurements are rejected for this overload.
+
+`predictions`, likelihood/prior evaluations, MAP, profiles, Gauss–Newton and
+Laplace approximations, posterior prediction and optional NUTS all use this same
+statistical model. Failed equilibria become visible `NumericalFailure`s, never
+valid predictions. The legacy `Observation(data, observable)` and
+`CalibrationProblem` interface also supports stationary calibration; its
+frequentist likelihood/discrepancy interpretation remains distinct from priors.
+
+For a smooth isolated equilibrium ``R(u,\theta)=0``, sensitivities solve
+
+```math
+\frac{\partial R}{\partial u}\frac{\partial u}{\partial\theta}
+=-\frac{\partial R}{\partial\theta}.
+```
+
+The default ForwardDiff path differentiates these equations, including parameter
+transforms, bulk coupling, constraints and the observation response. Nested
+derivatives retain the full posterior Hessian; differentiating Newton's iteration
+history is unnecessary. The implementation currently forms dense Jacobians and
+linear factorizations. `StationarySolver(condition_limit=...)` checks the
+equilibrated state Jacobian without jitter or a pseudoinverse. Singular roots
+and unresolved conditioning reject implicit sensitivities. Constraints must
+remove genuine inventory nullspaces, as in the forward problem.
+
+An eigen-based moment inversion may not support dual numbers. Explicit
+`derivatives=:finite_difference` fits the same posterior by resolving each
+perturbed equilibrium; verify gradient and solve-tolerance refinement. There is
+no silent derivative fallback. Root branch changes, rank changes and extinction
+events are not smooth sensitivity paths. A numerical guess selects a branch;
+it is not a physical initial condition or evidence of uniqueness. The solver
+restarts from the declared guess at each evaluation, without hidden continuation.
+
+Run the small synthetic MSMPR calibration in
+[estimate_stationary_crystallizer.jl](assets/source/examples/estimate_stationary_crystallizer.jl):
+
+```sh
+julia -e 'using Pkg; Pkg.activate("/tmp/pbm-steady"); Pkg.develop(path=pwd()); Pkg.add(["NonlinearSolve", "Optim", "Distributions"])'
+julia --project=/tmp/pbm-steady examples/estimate_stationary_crystallizer.jl
+# AdvancedHMC and MCMCDiagnosticTools additionally enable --sample.
+```
+
+The example compares exact stationary moments with a joint growth/nucleation
+fit, verifies gradients and reports local sensitivity-based uncertainty. It uses
+synthetic measurements and imposes no experimental interpretation.
+
 ## Continue an operating point
 
 Continuation repeatedly solves the same stationary equations with new physical
@@ -157,8 +231,8 @@ coupled material balance against a scalar analytical reduction. Additional tests
 cover axial feed inventories, diffusion equilibrium, loss rates, conservation
 constraints and continuation failure. A small residual is a statement about
 the discretized equations; check size/domain refinement separately. It does not
-establish uniqueness or dynamical stability. Stationary inference and automatic
-sensitivities through nonlinear solves are not added by this interface.
+establish uniqueness or dynamical stability. Estimation additionally requires a
+compatible observation model and a resolved, consistent solution branch.
 
 Run the complete verification example after installing NonlinearSolve in your
 working environment:

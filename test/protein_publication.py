@@ -2,6 +2,7 @@
 import copy
 import importlib.util
 import json
+import tempfile
 from pathlib import Path
 import sys
 import unittest
@@ -10,13 +11,45 @@ from unittest.mock import patch
 import numpy as np
 
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'paper'))
+sys.path.insert(0,str(ROOT/'paper/_support'))
 import protein_provenance as provenance
-from plot_protein_isothermal import BASE, prior_density
-from plot_protein_laplace import physical, display, gaussian_marginal, gaussian_draws
+from protein_plot import BASE, prior_density
+from protein_uncertainty import physical, display, gaussian_marginal, gaussian_draws
 
 
 class PublicationContracts(unittest.TestCase):
+    def test_reviewed_reuse_preserves_original_analysis_identity(self):
+        fields = dict(passed=True, model='cnt', original_target_hash='target',
+                      inputs={'map.json': 'map'}, settings={'bins': 100},
+                      parameter_names=['logAJ'], likelihood='same density',
+                      projects={'Project.toml': 'project'}, dependencies={'ForwardDiff': '1'})
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)/'cnt'
+            (directory/'history').mkdir(parents=True)
+            original = directory/'compatibility.json'
+            original.write_text(json.dumps(fields))
+            digest = provenance.sha(original)
+            preserved = directory/'history'/f'compatibility_{digest}.json'
+            preserved.write_bytes(original.read_bytes())
+            current = dict(fields, source_review={'current_sources': 'reviewed change'})
+            original.write_text(json.dumps(current))
+            with patch.object(provenance,'ANALYSIS',Path(temporary)), \
+                 patch.object(provenance,'verify_compatibility',return_value=current):
+                report = {'compatibility_sha256': digest}
+                result = provenance.verify_analysis_compatibility(directory,{},report)
+                self.assertTrue(result['reused_under_review'])
+                self.assertEqual(result['producing_compatibility_sha256'],digest)
+                self.assertEqual(provenance.sha(preserved),digest)
+                for field in ('inputs','settings','parameter_names','likelihood','dependencies'):
+                    changed = dict(current)
+                    changed[field] = 'changed'
+                    with patch.object(provenance,'verify_compatibility',return_value=changed):
+                        with self.assertRaisesRegex(ValueError,'target/environment changed'):
+                            provenance.verify_analysis_compatibility(directory,{},report)
+                preserved.unlink()
+                with self.assertRaisesRegex(ValueError,'Missing original'):
+                    provenance.verify_analysis_compatibility(directory,{},report)
+
     def test_gaussian_change_of_variables(self):
         metas=json.loads((BASE/'cnt_grd/priors.json').read_text())
         # Independent integrals use known Normal/lognormal/logit-normal changes

@@ -311,6 +311,5 @@ events is unsupported. Verified residual-based differentiable paths remain
 available for compatible event-free models.
 
 Run `examples/realizable_startup.jl`, `examples/realizable_dissolution.jl` and
-`examples/realizable_axial_transport.jl` for executable checks. The
-[dissolution case study](../case_studies/dissolution.md) compares quadrature and
-sectional approximations with the analytical solution.
+`examples/realizable_axial_transport.jl` for executable checks, including analytical
+extinction, quadrature-rank refinement and the shared-solute balance.

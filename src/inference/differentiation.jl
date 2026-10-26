@@ -52,6 +52,7 @@ function _inference_problem(pb,z)
     T=promote_type(eltype(pb.u0),eltype(z))
     T===eltype(pb.u0) ? pb : remake(pb;u0=T.(pb.u0))
 end
+_is_stationary(problem)=false
 _numeric_type(x::Real)=typeof(x)
 _numeric_type(x::Union{Tuple,NamedTuple,AbstractArray})=foldl(promote_type,(_numeric_type(v) for v in x);init=Float64)
 _numeric_type(x)=Float64

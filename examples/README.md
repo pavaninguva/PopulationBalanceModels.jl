@@ -17,6 +17,9 @@ balances. Other capability examples are `nucleation_sources.jl`,
 `aggregation_and_breakage.jl`, `moment_closures.jl`, `coupled_moment_balance.jl`,
 `nonuniform_weno.jl`, `random_fluctuation_grd.jl` and `axially_dispersed_growth.jl`.
 `steady_state_crystallizer.jl` needs the optional NonlinearSolve integration.
+`estimate_stationary_crystallizer.jl` adds synthetic stationary Bayesian
+calibration with Optim, implicit sensitivities and local uncertainty; optional
+sampling uses AdvancedHMC and MCMCDiagnosticTools.
 
 ## Manual case studies
 
@@ -24,7 +27,7 @@ balances. Other capability examples are `nucleation_sources.jl`,
 |:--|:--|:--|
 | Gaussian growth and time methods | [constant_growth_methods.jl](constant_growth_methods.jl) | [Growth comparison](../docs/src/case_studies/constant_growth.md) |
 | Batch cooling | [cooling_crystallization_benchmark.jl](cooling_crystallization_benchmark.jl) | [Cooling crystallization](../docs/src/case_studies/crystallization.md) |
-| Extinction and solute release | [realizable_dissolution.jl](realizable_dissolution.jl) | [Dissolution](../docs/src/case_studies/dissolution.md) |
+| Extinction and solute release | [realizable_dissolution.jl](realizable_dissolution.jl) | [Boundary and material accounting](../docs/src/methods/realizable_evolution.md) |
 | Aggregation/fragmentation and source pulse | [qamar_moment_benchmarks.jl](qamar_moment_benchmarks.jl) | [Moment methods](../docs/src/case_studies/moment_crystallization.md) |
 | Tubular precipitation | [continuous_precipitation.jl](continuous_precipitation.jl) | [Continuous precipitation](../docs/src/case_studies/continuous_precipitation.md) |
 | Isothermal CNT versus CNT + GRD | [isothermal_protein_crystallization.jl](isothermal_protein_crystallization.jl) | [Protein crystallization](../docs/src/case_studies/protein_crystallization.md) |
@@ -40,9 +43,9 @@ reuses these builders, with its own configurations, results and figures.
 physical solvers. `papers/` contains the shared cooling and nanoparticle recipes.
 
 The active protein entry point is
-`paper/case_studies/04_protein_crystallization/run.jl`. Its retained CNT/GRD draws
-are under `paper/results/04_protein_crystallization/production/`; the earlier
-`protein_crystallization.jl` and `docs/src/assets/protein_crystallization/` belong
+`paper/protein/run.jl`. Its retained CNT/GRD draws
+are under `paper/protein/data/`; the earlier
+`protein_crystallization.jl` and the historical fixture archive belong
 to a different, historical inference problem. Keep their observations, priors,
 draws and metadata together; do not mix them with the active comparison.
 

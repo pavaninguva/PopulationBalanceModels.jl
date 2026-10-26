@@ -19,6 +19,9 @@ function _gradient_backend(problem,derivatives)
     derivatives===:finite_difference && return :finite_difference
     derivatives===:auto && problem.gradient!==nothing && return :callback
     derivatives===:auto && any(ex->ex.solver isa SciMLSensitivitySolver,problem.experiments) && return :sciml_sensitivities
+    if any(ex->_is_stationary(ex.problem),problem.experiments)
+        return all(ex->_is_stationary(ex.problem),problem.experiments) ? :implicit_stationary : :mixed_forwarddiff_implicit
+    end
     :forwarddiff
 end
 

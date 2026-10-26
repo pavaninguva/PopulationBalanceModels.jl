@@ -1,0 +1,11 @@
+\begin{tabular}{llll}
+\hline
+Parameter & Units & Prior & Model \\
+\hline
+logAJ & dimensionless & Uniform(0, 100) & Both \\
+gamma & mJ/m$^2$ & LogNormal(log(0.64), 0.7) & Both \\
+AG & nm/min & log-uniform AG on [0.01, 1500] & Both \\
+g & dimensionless & Uniform(1, 3) & Both \\
+grd\_strength & min & Exponential(scale/mean 10 min) & CNT + GRD only \\
+\hline
+\end{tabular}

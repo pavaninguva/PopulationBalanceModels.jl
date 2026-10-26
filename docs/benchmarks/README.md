@@ -25,7 +25,6 @@ interpretation, parameters and numerical restrictions.
 | Two-coordinate variable growth | `inguva_braatz_case2.jl` | `plot_case_studies.py transport --usetex` |
 | Stem-cell marker dynamics | `stem_cell_population.jl` | `plot_stem_cells.py --usetex` |
 | Synthetic Bayesian growth fit | `estimate_size_dependent_growth.jl` | `plot_bayesian_growth.py --usetex` |
-| Dissolution | `realizable_dissolution.jl` | `plot_dissolution.py --usetex` |
 | Axial advection/dispersion | `axially_dispersed_growth.jl` | `plot_transport_comparisons.py axial --usetex` |
 | Gamma density reconstruction | `quadrature_moment_methods.jl` | `plot_population_studies.py moments --usetex` |
 
@@ -68,20 +67,20 @@ The isothermal CNT/CNT + GRD case shares one model/inference implementation and
 one paper/documentation figure producer:
 
 ```sh
-julia --project=paper paper/setup.jl
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --data-only
-python paper/plot_all.py --case 4 --data-only
+julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
+julia --project=paper paper/protein/run.jl --data-only
+python paper/protein/plot.py --data-only
 # Expensive: refit and sample both targets only when intentionally reproducing them.
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --full
-python paper/plot_all.py --case 4
+julia --project=paper paper/protein/run.jl --full
+python paper/protein/plot.py
 ```
 
-The [case driver guide](../../paper/case_studies/04_protein_crystallization/README.md)
+The [case driver guide](../../paper/README.md)
 records its settings. The five paper figures are copied to
 `docs/src/assets/protein_isothermal/` by that producer. Preserve the retained
 posterior draws, priors, chain diagnostics, coordinate settings, predictions and
-provenance under `paper/results/04_protein_crystallization/`.
-`python paper/check_protein.py --retained` checks those stored artifacts without
+provenance under `paper/protein/data/`.
+`python test/protein_results.py --retained` checks those stored artifacts without
 claiming equivalence to a later checkout. Default production checks remain strict.
 Plot-only work does not require new sampling, but its source/provenance checks
 must still be respected; do not relabel historical draws as a revised target.
@@ -102,13 +101,14 @@ The supplement's literal coefficient transcription remains separate from its
 independently corrected interpretation. Moving the files does not strengthen
 any order, stability, positivity or paper-reproduction claim.
 
-`diagnostics/` holds earlier transport/cooling/LNP evidence. The labelled LNP
-illustration remains referenced by the manual. The earlier protein calculation
-is `examples/protein_crystallization.jl`; its samples and figures remain under
-`docs/src/assets/protein_crystallization/`, with different observations and
+`diagnostics/` holds earlier transport/cooling/LNP evidence. The earlier protein calculation
+is `examples/protein_crystallization.jl`; its samples and figures are preserved in
+`test/fixtures/archives/legacy_docs_assets.zip`, with different observations and
 priors from the active isothermal comparison. Its plotters remain available as
 `plot_population_studies.py protein --usetex` and
-`plot_protein_posterior.py --usetex`. Earlier teaching calculations are listed
+`plot_protein_posterior.py --usetex`; use the
+[historical-fixture extraction recipe](../../test/fixtures/archives/README.md)
+first. Earlier teaching calculations are listed
 in the [example catalogue](../../examples/README.md).
 
 `plot_population_studies.py` replaces the vague `plot_new_case_studies.py` name;

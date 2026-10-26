@@ -15,14 +15,16 @@ existing paper environment. `--preview` explicitly produces differently named
 mathtext previews; they do not replace final assets.
 
 The drawing adapts the supplied two-panel Matplotlib generator. Its architecture
-was reviewed against a38d582bfe2e7cca7eb6f40b57ecfb00a4957633 (including stationary
-solving), the public exports, source layout and extension declarations. It is
+is reviewed against the current public exports, source layout and extension
+declarations; each generated receipt records the revision and working-tree state. It is
 7.2 inches wide and 8.4 inches high, with 7–8 pt body text. The taller layout
 keeps the two problem branches and dependency roles legible. The distribution
 glyph is schematic, not benchmark data. No artwork from other packages is used.
 
 Transient initial conditions/time spans and stationary numerical guesses remain
-distinct. The estimation arrow leaves only the eligible transient branch;
-stationary inference/sensitivities are not implemented. Each numerical route
-still has its own compatibility restrictions. DQMOM evolves weights and weighted
+distinct. Both solution branches feed observation operators and the shared
+estimation workflow. Stationary inference uses checked equilibria and implicit
+sensitivities for smooth isolated roots; AD-incompatible closures need an explicit
+finite-difference choice. Each numerical route retains its compatibility
+restrictions. DQMOM evolves weights and weighted
 abscissas, unlike the raw-moment closures.

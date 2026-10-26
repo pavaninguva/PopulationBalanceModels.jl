@@ -113,6 +113,11 @@ function ResidualObservation(times,data,observable::AbstractObservable;scale=1.,
     checked=Observation(times,data,observable)
     ResidualObservation(checked.times,checked.data,observable,float(scale),float(weight),name)
 end
+function ResidualObservation(data,observable::AbstractObservable;scale=1.,weight=1.,name=:residual)
+    scale>0 && isfinite(scale) && weight>0 && isfinite(weight) || throw(ArgumentError("positive finite discrepancy scale and weight required"))
+    checked=Observation(data,observable)
+    ResidualObservation(nothing,checked.data,observable,float(scale),float(weight),name)
+end
 _whiten(o::ResidualObservation,raw)=raw.*(sqrt(o.weight/length(o.data))/o.scale)
 _discrepancy(cal)=first(first(cal.experiments).observations) isa ResidualObservation
 
@@ -130,6 +135,14 @@ function WassersteinObservation(time,x,F,population;window,points=256,scale=1.,w
     u=((1:points).-0.5)./points
     ResidualObservation([time],reshape(cdf_quantiles(x,F,u),:,1),
         PopulationQuantiles(population,u;window);scale,weight,name)
+end
+"""`WassersteinObservation(x, F, population; window, ...)` declares the same
+conditional-number discrepancy for a stationary operating point, without time."""
+function WassersteinObservation(x,F,population;window,points=256,scale=1.,weight=1.,name=:distribution)
+    points isa Integer && points>=2 || throw(ArgumentError("use at least two quantile integration points"))
+    first(x)==first(window) && last(x)==last(window) || throw(ArgumentError("observed CDF endpoints must match the conditioning window"))
+    u=((1:points).-0.5)./points
+    ResidualObservation(cdf_quantiles(x,F,u),PopulationQuantiles(population,u;window);scale,weight,name)
 end
 
 """Individual deterministic discrepancy contributions, with no likelihood interpretation."""

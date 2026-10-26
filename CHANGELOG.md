@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Unified observation and parameter-estimation workflows for transient and stationary forward models. Added timeless measurements, `observe`, axial `CellObservable`, and `StationarySolver` with checked roots and implicit first/second sensitivities. Shared MAP, priors, likelihoods, uncertainty, profiles, prediction and optional NUTS remain one statistical target; AD-incompatible closures require an explicit finite-difference path. Added analytical and representation/solver verification plus a synthetic stationary crystallizer example.
+- Stationary closure-admissibility failures now report `NumericalFailure` during numerical state validation, allowing estimation to reject invalid trials while preserving programming/model-definition errors.
+- Simplified the paper workspace to four case folders, each with a run script, plot script, settings, data and figures. Removed dispatchers and duplicate guides; moved tests/history out of the active workflow. Retained protein samples and original producer manifests byte-for-byte, with separate derived analysis outputs.
+- Removed the dissolution case study from the manual while retaining extinction functionality and verification. Archived superseded manual assets, including older posterior samples, with checksums instead of keeping unused versions in `docs/src/assets`.
+
 - Added public `gauss_newton_approximation` and `fit(...; uncertainty=:gauss_newton)` for fixed-error Gaussian Bayesian estimation. Joint whitened sensitivities and declared prior curvature include nuisance parameters and coordinate Jacobians; numerical checks resolve covariance-scaled directions without jitter or pseudoinverses. Shared marginal/draw/prediction interfaces retain a distinct approximation label. Unsupported likelihoods and noise callbacks reject explicitly.
 - Applied sensitivity-based uncertainty to both retained protein MAPs without refitting or resampling. Added separate MCMC comparisons and source-bound compatibility evidence; full-Hessian Laplace remains a separate, unchanged verification path.
 

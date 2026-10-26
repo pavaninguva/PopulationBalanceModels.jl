@@ -1,0 +1,61 @@
+{
+  "reviewed_baseline": "a38d582bfe2e7cca7eb6f40b57ecfb00a4957633",
+  "purpose": "Explicit retained-target source review for optional uncertainty and stationary estimation integration, followed by current posterior/gradient evaluations; original producer manifests and posterior files are retained.",
+  "sources": {
+    "src/PopulationBalanceModels.jl": {
+      "sha256": "a0eb2ef1dd42de571f5b8c6980ac8b63a26701a9c396420ac07b853ae39ce172",
+      "baseline_sha256": "4b3d9878ff439308bfe1a83e81eb72e11359ee52e080b4be7abb9c87b52316b4",
+      "review": "Retains the opt-in Gauss–Newton API; adds observe, CellObservable, StationarySolver exports and includes stationary inference after the existing transient definitions. No forward equation or statistical target change."
+    },
+    "src/inference/bayesian_diagnostics.jl": {
+      "sha256": "3c2bf56516403428717251d0d74318224b68bc566bcd64833d5719f6ca24788b",
+      "baseline_sha256": "59d926140dfc18d36e34963382c3b776b701abfc5b904f1fd2b86556cdea5d70",
+      "review": "Retains opt-in Gauss–Newton support and adds stationary/mixed backend labels only after existing explicit finite-difference, callback and SciML choices. Transient gradient, Hessian, likelihood and posterior definitions unchanged."
+    },
+    "src/inference/statistical_model.jl": {
+      "sha256": "fa9db7f56e36efbb60b31d40fed3cd9dbbbcdb1b55bafc223d93cb27456176a9",
+      "baseline_sha256": "99e49716ee2242cbd5bbde0832a5166b7bad9d0ba651d94bc2ad690ab4b5d1fe",
+      "review": "Timed measurements delegate their unchanged validation/likelihood setup to a shared helper. Adds timeless measurements and stationary family dispatch; existing transient solution body is unchanged. Adds eligible one-dimensional HOC histogram support; the retained sectional protein calculation uses its unchanged path."
+    },
+    "ext/PopulationBalanceModelsOptimExt.jl": {
+      "sha256": "1645b24aa6f7d03567743c02937ea2de698b49b64028beec9a87cd29504e6f8e",
+      "baseline_sha256": "398f91b0378786c8fe14d65d522c5ac42c8cd19720c31a3be2d6cd4f70582325",
+      "review": "Adds opt-in uncertainty=:gauss_newton after MAP optimization. Default uncertainty=:none, optimizer and statistical target unchanged."
+    },
+    "src/inference/gauss_newton.jl": {
+      "sha256": "dc618fffeedd4933ef6ea86309b0d1fa4f34240fe33a20bb9d8104e174614952",
+      "baseline_sha256": null,
+      "review": "New opt-in fixed-Gaussian sensitivity covariance calculation. No forward residual, likelihood, prior, sampler or solver replacement."
+    },
+    "src/inference/observations.jl": {
+      "sha256": "32e36b59613b4d05e0ceda8f2723b05d41535653927e39dd07e1eddbf0c5bfd3",
+      "baseline_sha256": "944ae3b3c6fb93c0f0d84df237014504e2bdec5fae21db35e41de0bcc3866d35",
+      "review": "Adds axial-local CellObservable and timeless Observation constructors. Timed Observation delegates the same validation/covariance code to a helper; existing protein CDF, quantile and bulk observation calculations are unchanged."
+    },
+    "src/inference/calibration.jl": {
+      "sha256": "c5957ebd8dce94ccef659e6737c237e1cf3b654fcea822e9e34047d93d49f92a",
+      "baseline_sha256": "32dbd8c9fa6475a6fa9463c15dd9017b4402543ee9e0057db68c606d814270ab",
+      "review": "Adds stationary legacy-calibration dispatch and rejects timeless blocks in transient experiments. Existing Bayesian protein estimation does not use CalibrationProblem; existing timed calibration residuals remain unchanged."
+    },
+    "src/inference/differentiation.jl": {
+      "sha256": "e4c0bfc72cec679341be0f10e6f0d82b57c2458d475de43263a1cddcb258121a",
+      "baseline_sha256": "a71541938dfdb6eccd8dd0d0acba7f5057c2997bda953149a69a2410190fc369",
+      "review": "Adds only the default _is_stationary trait returning false. Existing transient problem lifting and automatic differentiation formulas are unchanged."
+    },
+    "src/inference/distribution_discrepancies.jl": {
+      "sha256": "ef2bb61c93e8ff521f7d4d70796bfe4ba65756ab540842cda43decf38970455d",
+      "baseline_sha256": "89134a1d5388474c8dbeb337b90d99d5341668c4236aae1bf68ea8cd157b3d03",
+      "review": "Adds timeless discrepancy constructors; original timed residual, conditional CDF/quantile calculations and Wasserstein diagnostics remain unchanged."
+    },
+    "src/stationary/problems.jl": {
+      "sha256": "f2908805dbae0ff354fc6783e0fbe59d497e8a87bc2a7a731c1f01b7686d6878",
+      "baseline_sha256": "cf3322d2a3ea44316d536c7b97a50f635f01c48375503814fd33b3da72cc5e8d",
+      "review": "Adds documentation of stationary estimation and converts only closure state-validation ArgumentError to NumericalFailure for invalid stationary trials. No transient path or protein model/likelihood uses this code."
+    },
+    "src/inference/stationary.jl": {
+      "sha256": "b0161c5772c18c6b08cc10d720124b6bc828e81a87e38b94623de85636916a8d",
+      "baseline_sha256": null,
+      "review": "New opt-in stationary inference and direct observation methods. Checked equilibrium roots and implicit derivatives dispatch exclusively on StationaryPBMProblem; no replacement of transient residuals, integration, priors or posterior definitions."
+    }
+  }
+}

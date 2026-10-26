@@ -21,6 +21,11 @@ Residual operators only: direct HOC/characteristic updates and moment boundary
 events are unsupported. Callback autonomy is a user declaration, not inferred
 from numerical probes. Callbacks must be pure. Nonlinear iterates must remain in
 the representation's admissible domain; no clipping or closure repair is applied.
+
+Use `observe(observable, solution)` to evaluate measurements at the root, and
+`InferenceExperiment` with timeless `Measurement(data, observable)` blocks for
+parameter estimation. `StationarySolver` supplies checked equilibrium solves
+and implicit sensitivities for smooth, isolated roots.
 """
 struct StationaryPBMProblem{O,U,P,T,S,C}
     operator::O
@@ -131,7 +136,15 @@ end
 function _stationary_check(op,u,tol)
     all(isfinite,u) && all(x->_primal(x)>=-tol,u) ||
         throw(NumericalFailure("stationary population is nonfinite or negative; supply an admissible guess, rescale the balances, use continuation or a different nonlinear algorithm"))
-    _check_admissible_state(op,u)
+    try
+        _check_admissible_state(op,u)
+    catch error
+        # Closure state validation precedes every physical rate callback. Its
+        # ArgumentError denotes an inadmissible numerical trial here; model
+        # construction and callback programming errors remain outside this catch.
+        error isa ArgumentError || rethrow()
+        throw(NumericalFailure("inadmissible stationary state: $(sprint(showerror,error))"))
+    end
     nothing
 end
 function _stationary_check(op::CompiledSystem,u,tol)

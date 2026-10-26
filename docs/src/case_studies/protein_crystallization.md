@@ -390,25 +390,25 @@ is not assumed to be equilibrium.
 
 The [model and likelihood source](../assets/source/examples/isothermal_protein_crystallization.jl)
 and [sampling-coordinate helper](../assets/source/examples/support/isothermal_protein_sampling.jl)
-are downloadable. The [paper driver and configuration](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/paper/case_studies/04_protein_crystallization)
+are downloadable. The [paper driver and configuration](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/paper/protein)
 handle complete reproduction and exports.
 
 From the repository root, using the checkout and the paper plotting environment:
 
 ```sh
-julia --project=paper paper/setup.jl
+julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
 python -m pip install -r paper/requirements.txt
 # Observations and data-only figure: no optimization or sampling needed.
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --data-only
-python paper/plot_all.py --case 4 --data-only
+julia --project=paper paper/protein/run.jl --data-only
+python paper/protein/plot.py --data-only
 # Short native forward checks, both models.
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --smoke
+julia --project=paper paper/protein/run.jl --smoke
 # MAP only, or full reproduction including BOTH posterior corners and bands.
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --map
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --full
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --verify
-python paper/plot_all.py --case 4
-python paper/check_protein.py
+julia --project=paper paper/protein/run.jl --map
+julia --project=paper paper/protein/run.jl --full
+julia --project=paper paper/protein/run.jl --verify
+python paper/protein/plot.py
+python test/protein_results.py
 julia --project=docs docs/make.jl
 ```
 
@@ -416,13 +416,13 @@ The figures can be restyled from the retained production exports without
 repeating the simulations or parameter estimation:
 
 ```sh
-python paper/plot_all.py --case 4 --figures-only
+python paper/protein/plot.py
 # New calculations, with separate outputs and no sampling/prediction propagation:
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --laplace
-python paper/plot_all.py --case 4 --laplace-comparison
+julia --project=paper paper/protein/run.jl --laplace
+python paper/protein/plot.py --laplace
 # Sensitivity-based covariance and retained-MCMC comparisons:
-julia --project=paper paper/case_studies/04_protein_crystallization/run.jl --gauss-newton
-python paper/plot_all.py --case 4 --gauss-newton-comparison
+julia --project=paper paper/protein/run.jl --gauss-newton
+python paper/protein/plot.py --gauss-newton
 python test/protein_publication.py
 ```
 
@@ -430,7 +430,7 @@ This plotting-only command validates the saved manifests and leaves numerical
 result tables unchanged. It exports matching 300-dpi PNGs and vector PDF/SVGs.
 `--compatibility-only` runs the reviewed retained-target checks without
 calculating curvature. Analysis files are separate from the immutable
-`production/` inputs, under `paper/results/04_protein_crystallization/analysis/`.
+`cnt/`, `cnt_grd/` and `shared/` inputs, under `paper/protein/data/analysis/`.
 The analysis modes never enter the production cache-invalidation branch.
 
 Use `--model=cnt` or `--model=cnt_grd` for one model. `--sample` is an alias for
@@ -479,7 +479,7 @@ discrete material balance and from a full continuum solution.
 
 Numerical settings, source/data hashes, producer revision/dirty state, seeds,
 actual steps, sampler diagnostics and individual residuals are in
-`paper/results/04_protein_crystallization/production/{cnt,cnt_grd}`.
+`paper/protein/data/{cnt,cnt_grd}`.
 CSV, Markdown and LaTeX tables are generated from those same draws and prior
 specifications. PDF/300-dpi PNG/SVG figures are shared by the paper and manual.
 Old inferred-noise results are archived as a historical target, not reused here.

@@ -536,11 +536,6 @@ visible; it does not alter a state. The raw histories, selected PSD snapshots, i
 [verification table](../assets/shin_case/verification.csv) accompany the plots.
 
 
-An earlier [20-ms synthetic illustration](../assets/illustrations/lnp/demonstration.png)
-and its inputs remain in `docs/benchmarks/diagnostics/lnp_demo/`. It uses simplified
-material functions and no DLVO barrier; it is separate from the reconstructed
-long-time calculation above.
-
 ## Minimal run and full reproduction
 
 Run this block from the repository root. It constructs and solves one problem;

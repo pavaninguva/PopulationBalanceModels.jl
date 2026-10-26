@@ -24,6 +24,8 @@ sys.path.insert(0, str(PAPER))
 from plotting_style import configure
 
 COLORS = dict(ink='#243548', muted='#5D6B78', line='#C7D0D8',
+              dependency_heading='#080808', dependency_category='#303030',
+              dependency_package='#555555',
               model='#366A9F', model_fill='#EFF5FB',
               numerics='#287D7E', numerics_fill='#EDF7F5',
               inference='#A4672E', inference_fill='#FCF5EC',
@@ -107,6 +109,7 @@ def workflow(ax):
     text(ax,155,183,'Observation operators',weight='bold')
     text(ax,155,175,'Moments, bins\nCDFs, quantiles',size=7)
     arrow(ax,[(71.5,78),(71.5,76),(130,76),(130,179),(136,179)],'numerics')
+    arrow(ax,[(110,78),(110,76),(130,76)],'numerics')
     text(ax,168,163,'Data',color='inference')
     arrow(ax,[(155,171),(155,153)],'inference')
     arrow(ax,[(173,160),(155,160)],'inference')
@@ -114,36 +117,37 @@ def workflow(ax):
     text(ax,155,147,'Bayesian MAP fitting',weight='bold')
     arrow(ax,[(155,141),(155,136)],'inference')
     text(ax,155,129,'Gauss--Newton / Laplace\nOptional MCMC / NUTS')
-    text(ax,155,118,'Eligible transient problems only',size=7,color='muted')
+    text(ax,155,118,'Transient and stationary\nforward problems',size=7,color='muted')
     arrow(ax,[(155,112),(155,72),(25.5,72),(25.5,78)],'inference',dashed=True)
     text(ax,78,73.5,'Update fitted parameters',size=7,color='inference')
-    text(ax,90,67,'Support depends on terms, representation and policy; no stationary inference adapter.',
+    text(ax,90,67,'Observation/solver restrictions apply; stationary sensitivities require a smooth isolated root.',
          size=7,color='muted')
 
 
 def dependencies(ax):
+    # Panel (b): dark headings, medium category labels, lighter package names.
     text(ax,3,60,'(b)',size=11,ha='left')
     for x,w in ((3,49),(56,76),(136,41)):
         rect(ax,x,3,w,50,fill='neutral')
-    text(ax,27.5,48,'Required dependencies',weight='bold',size=8)
-    text(ax,27.5,38,'Julia standard libraries',color='muted')
-    text(ax,27.5,32,'LinearAlgebra, Random')
-    text(ax,27.5,23,'External packages',color='muted')
-    text(ax,27.5,15,'Distributions, ForwardDiff\nSpecialFunctions')
-    text(ax,94,48,'Optional extensions',weight='bold',size=8)
+    text(ax,27.5,48,'Required dependencies',weight='bold',size=8,color='dependency_heading')
+    text(ax,27.5,38,'Julia standard libraries',color='dependency_category')
+    text(ax,27.5,32,'LinearAlgebra, Random',color='dependency_package')
+    text(ax,27.5,23,'External packages',color='dependency_category')
+    text(ax,27.5,15,'Distributions, ForwardDiff\nSpecialFunctions',color='dependency_package')
+    text(ax,94,48,'Optional extensions',weight='bold',size=8,color='dependency_heading')
     for x,y,title,body in (
         (59,39,'Optimization','Optim'),
         (97,39,'Stationary solving','NonlinearSolve'),
         (59,26,'External ODE integration','SciMLBase + solver'),
         (97,26,'Continuous sensitivities','SciMLBase,\nSciMLSensitivity,\nReverseDiff'),
         (59,12,'Posterior sampling','AdvancedHMC, MCMCDiagnosticTools')):
-        text(ax,x,y,title,size=7,weight='bold',ha='left')
-        text(ax,x,y-(8 if title=='Continuous sensitivities' else 5),body,size=7,ha='left')
-    text(ax,156.5,48,'Development tools',weight='bold',size=8)
-    text(ax,156.5,38,'Docs and verification',color='muted')
-    text(ax,156.5,30,'Documenter, Aqua, JET')
-    text(ax,156.5,21,'Figure generation',color='muted')
-    text(ax,156.5,12,'Python, NumPy, Matplotlib\nPillow, PyMuPDF')
+        text(ax,x,y,title,size=7,weight='bold',ha='left',color='dependency_category')
+        text(ax,x,y-(8 if title=='Continuous sensitivities' else 5),body,size=7,ha='left',color='dependency_package')
+    text(ax,156.5,48,'Development tools',weight='bold',size=8,color='dependency_heading')
+    text(ax,156.5,38,'Docs and verification',color='dependency_category')
+    text(ax,156.5,30,'Documenter, Aqua, JET',color='dependency_package')
+    text(ax,156.5,21,'Figure generation',color='dependency_category')
+    text(ax,156.5,12,'Python, NumPy, Matplotlib\nPillow, PyMuPDF',color='dependency_package')
 
 
 def check_architecture():
@@ -194,7 +198,7 @@ def main():
                  project_sha256=hashlib.sha256((ROOT/'Project.toml').read_bytes()).hexdigest(),
                  generator_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                  dirty_state=subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain=v1'],text=True),
-                 scope='Conceptual glyph; stationary inference and universal method compatibility are not implied')
+                 scope='Conceptual glyph; shared observation/statistical API for eligible transient and stationary problems; representation, root-branch and derivative restrictions apply')
     (out/(name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
     if not args.preview:
         docs=ROOT/'docs/src/assets/architecture';docs.mkdir(parents=True,exist_ok=True)

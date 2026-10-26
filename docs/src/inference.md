@@ -11,9 +11,52 @@ with Gaussian observations or used to manufacture confidence intervals.
 reports local sensitivity rank without a covariance estimate.
 
 When a probabilistic measurement model is available, Bayesian estimation needs
-a prediction at each measurement time, a measurement-error model and priors for
+predictions at the measured states, a measurement-error model and priors for
 the unknown parameters. The package uses those same definitions for MAP fitting,
 optional Laplace uncertainty and optional MCMC sampling.
+
+## Forward models and observations
+
+Transient and stationary problems share observation operators and the statistical
+model. `InferenceExperiment` dispatches to `simulate` or a checked stationary
+solve; parameter declarations, priors, likelihoods, nuisance parameters, MAP,
+uncertainty and sampling remain the same.
+
+| Forward model | Measurement declaration | Sensitivity path |
+|:--|:--|:--|
+| Transient sectional, exact-moment and differentiable coupled models | `Measurement(times, data, observable; likelihood)` | Native ForwardDiff; optional continuous ODE sensitivities for eligible residual solvers |
+| Transient tensor, axial and eligible complete transport updates | Same timed declaration; select the actual forward solver | ForwardDiff where supported, or explicitly selected finite differences |
+| Stationary sectional, exact-moment, tensor, coupled and axial residuals | `Measurement(data, observable; likelihood)` | Implicit equilibrium sensitivities for smooth isolated roots |
+| Quadrature/assumed-shape moments and other AD-incompatible residuals | Same declaration for the relevant problem | Explicit finite differences, with resolved perturbed solves and unchanged closure |
+
+This is support for fitting eligible forward models, not every combination of
+observable, closure, boundary policy and integrator. A moment model does not
+automatically predict a PSD; a complete HOC/characteristic time update does not
+define a stationary residual. Rank changes, branch changes and extinction events
+do not acquire differentiable sensitivities merely by entering estimation.
+
+`observe(observable, solution)` evaluates native transient or converged stationary
+results directly. `CellObservable(observable, cell)` selects a local axial state,
+including named populations and bulk variables. Global reactor inventories need
+an explicit `FunctionObservable` with the appropriate cell-volume weighting.
+
+For stationary measurements, a vector is one output column; matrix columns are
+repeat measurements of one equilibrium. Distinct operating points use separate
+experiments, which may share kinetic parameters. `StationarySolver` accepts the
+NonlinearSolve algorithm and solve tolerances and uses no artificial observation
+times or timesteps. Its implicit derivative solves the linearized equilibrium
+equations, including constraints and bulk exchange, rather than differentiating
+Newton's iterations. Singular/ill-conditioned state Jacobians reject that path;
+there is no automatic regularization. See
+[stationary estimation](steady_state.md#Observe-and-estimate-parameters) for a
+complete synthetic crystallizer example and the dense-factorization limitation.
+
+The legacy `CalibrationProblem` accepts `Observation(data, observable)` for
+stationary Gaussian calibration and timeless `ResidualObservation` or
+`WassersteinObservation(x, F, population; ...)` blocks for deterministic fitting.
+Their statistical meanings are unchanged. No solver failure is a valid fit.
+
+## Synthetic transient example
 
 The [growth example](case_studies/estimating_growth.md) fits
 ``G(a)=g_0+g_1a``. It evaluates the analytical density at 281 sizes and six times,

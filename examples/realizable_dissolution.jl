@@ -26,7 +26,7 @@ function dissolution_problem(kind;resolution=80,tspan=(0.0,2.2),rho_kv=0.7,c0=1.
         accounting=(CumulativeAccounting(:crystals;properties=(volume=3,)),))
     PBMProblem(system,(crystals=initial,),tspan;bulk0=(solute=c0,))
 end
-function run_dissolution(;output=joinpath(@__DIR__,"..","docs","src","assets","dissolution"))
+function run_dissolution(;output=joinpath(@__DIR__,"..",".cache","examples","dissolution"))
     mkpath(output);times=collect(range(0.0,2.2;length=111));rho_kv=.7
     open(joinpath(output,"dissolution.csv"),"w") do io
         println(io,"method,resolution,time,M0,M1,M2,M3,solute,removed_number,material_error")
