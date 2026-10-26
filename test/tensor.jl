@@ -1,4 +1,5 @@
-include(joinpath(@__DIR__,"..","examples","two_coordinate_transport.jl"))
+include("fixtures/example_modules.jl")
+_load_example(:PBM2DBenchmark, "two_coordinate_transport.jl")
 @testset "Two-coordinate transport" begin
     @testset "Tensor sources and directional fluxes" begin
         g=Grid2D(0:0.1:1,0:0.2:2)

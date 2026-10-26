@@ -14,6 +14,46 @@ drivers check `pathof(PopulationBalanceModels)` before doing any calculation.
 The workflow was tested on WSL/Linux with Julia 1.10.3 and Python 3.12.3.
 Use Python 3.12 for the pinned plotting environment (`tomllib` needs at least 3.11).
 
+## Directory map and retained results
+
+- `case_studies/`: one entry point and configuration for each of the four cases.
+- `results/<case>/production/`: indexed numerical data and provenance.
+- `figures/<case>/production/`: retained manuscript figures.
+- `verification/`: optional solver pilots and the caption compilation check.
+- `literature/` and `provenance/`: source-data attribution and producer records.
+
+Smoke results and figures are regenerable and ignored by Git. Only the protein
+smoke/pilot records that were already retained are kept with its other evidence.
+Superseded growth runs are in one [historical archive](results/01_growth_time_methods/historical/README.md).
+The active growth index and production figures are unchanged.
+
+Protein samples are intentional reproducibility assets. Keep `posterior_draws.csv`,
+sampler statistics, manifests, coordinate maps, priors, prediction exports and
+historical sample archives together. Binary worker checkpoints remain ignored
+local caches and are preserved by this cleanup. No posterior is regenerated.
+
+To inspect retained outputs after unrelated package development:
+
+```sh
+python paper/check_protein.py --retained
+python paper/check_data.py --case 1 --retained
+python paper/check_data.py --case 2 --retained
+```
+
+These verify stored file hashes and scientific/data contracts without asserting
+that the current source tree is the original producer. The default checks and
+production plot generation remain strict. The retained datasets predate the
+stationary extension, so their source-match gates already reject this checkout;
+do not rewrite their provenance to make that gate pass. Preserve the recorded
+producer state when reproducing or comparing historical timings.
+
+The tubular paper dataset is incomplete: its active index has no
+`time_refinement` run, and production precipitation figures have not been
+generated. `python paper/check_data.py --case 3 --retained` correctly rejects
+that incomplete dataset. The documentation's separate tubular figures are not
+substitutes. Existing partial data and solver-pilot evidence are preserved;
+completing that numerical study is separate from repository organization.
+
 ## Environment and execution
 
 ```sh
@@ -184,8 +224,8 @@ order two was costly during startup. A BDF2 continuation from 5 s differed from
 the completed 400 x 200 order-three calculation by at most 3.2e-7 in relative
 population L1 at 40, 80 and 200 s. Independent native-RK4 tests cover 1, 5 and
 10 s, including the restart. Same-mesh tighter-tolerance runs check production
-accuracy. `pilot_order.jl` and `pilot_continuation.jl` in the case directory
-reproduce these diagnostics. `provenance/solver_pilots.json` preserves the
+accuracy. The [solver pilots](verification/precipitation/) reproduce these diagnostics.
+`provenance/solver_pilots.json` preserves the
 interrupted and superseded evidence. Those costs and incomplete trajectories
 do not enter final figures; interruptions were for cost, not failed state checks.
 
@@ -273,8 +313,8 @@ their hashes, pinned URLs and upstream licence are retained.
 | Growth convergence | [PDF](figures/01_growth_time_methods/production/growth_convergence.pdf) | [PNG](figures/01_growth_time_methods/production/growth_convergence.png) |
 | Growth work--precision | [PDF](figures/01_growth_time_methods/production/growth_work_precision.pdf) | [PNG](figures/01_growth_time_methods/production/growth_work_precision.png) |
 | Moment methods | [PDF](figures/02_aggregation_fragmentation/production/moment_methods.pdf) | [PNG](figures/02_aggregation_fragmentation/production/moment_methods.png) |
-| Precipitation fields | [PDF](figures/03_tubular_precipitation/production/precipitation_fields.pdf) | [PNG](figures/03_tubular_precipitation/production/precipitation_fields.png) |
-| Precipitation outlet | [PDF](figures/03_tubular_precipitation/production/precipitation_outlet.pdf) | [PNG](figures/03_tubular_precipitation/production/precipitation_outlet.png) |
+| Precipitation fields | Incomplete dataset; not generated | Not generated |
+| Precipitation outlet | Incomplete dataset; not generated | Not generated |
 
 Each `results/<case>/<mode>/index.toml` identifies the active run directories.
 Within a run, `provenance.toml` lists checksummed numerical files and settings.

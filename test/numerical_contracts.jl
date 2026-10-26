@@ -1,3 +1,4 @@
+include("fixtures/example_modules.jl")
 @testset "Physical term declarations and integrated recipe source" begin
     g=Grid1D(0.0:0.1:2.0)
     G=(x,p,t,ctx)->0.2
@@ -75,7 +76,7 @@ include("fixtures/constant_growth_gaussian.jl")
     @test prob.operator.grid.x.edges[end]==2.0
 end
 
-include("../examples/shin_lnp_reproduction.jl")
+_load_example(:ShinLNPReproduction, "shin_lnp_reproduction.jl")
 @testset "LNP observation export conventions" begin
     grid=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
     prob=CEJ2025LNP.build(;grid,initial_distribution=[1e10,2e10,0.0],
@@ -96,7 +97,7 @@ include("../examples/shin_lnp_reproduction.jl")
     end
 end
 
-include("../examples/inguva_braatz_case2.jl")
+_load_example(:InguvaBraatzCase2, "inguva_braatz_case2.jl")
 @testset "Inguva–Braatz Case 2: affine growth and mapped bin numbers" begin
     case=InguvaBraatzCase2
     prob=case.problem(20)
@@ -193,7 +194,7 @@ end
     end
 end
 
-include("../examples/cooling_crystallization_benchmark.jl")
+_load_example(:CoolingCrystallizationBenchmark, "cooling_crystallization_benchmark.jl")
 @testset "Cooling initial conditions and numerical reference" begin
     @test CoolingCrystallizationBenchmark.Gunawan2004Case2.reported_seed_density(195.5)≈-0.012647 atol=1e-14
     @test_throws ArgumentError CoolingCrystallizationBenchmark.run_benchmark(;

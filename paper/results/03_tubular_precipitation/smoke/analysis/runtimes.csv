@@ -1,9 +1,0 @@
-configuration,nx,nz,seconds,setup_seconds,steps,completed_time,cpu,julia,julia_threads,blas_threads
-axial_refinement,12,4,0.474597669,0.000222321,5922,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1
-outlet_Nz2,8,2,0.233762031,0.000180603,5181,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1
-outlet_Nz3,8,3,0.299695779,0.000193783,5346,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1
-outlet_Nz8,8,8,0.66413473,0.000194226,5957,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1
-paper_field,8,6,0.558930591,0.003852908,5722,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1
-reference,12,8,0.819650655,0.000238628,6162,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1
-size_refinement,6,8,0.595476989,0.0001725,5521,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1
-time_refinement,12,8,1.711903455,0.000230371,12622,200.0,13th Gen Intel(R) Core(TM) i9-13900H,1.10.3,1,1

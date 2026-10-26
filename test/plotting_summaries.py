@@ -7,7 +7,7 @@ import sys
 import unittest
 import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'docs/benchmarks'))
-from plot_new_case_studies import pareto_mask
+from plot_population_studies import pareto_mask
 from plot_protein_posterior import probability_levels,joint_density,marginal_density
 from unittest.mock import patch
 import matplotlib.pyplot as plt

@@ -294,7 +294,7 @@ accuracy for arbitrary nonlinear kinetics.
 
 ```sh
 julia --project=. examples/quadrature_moment_methods.jl
-python docs/benchmarks/plot_new_case_studies.py moments --usetex
+python docs/benchmarks/plot_population_studies.py moments --usetex
 ```
 
 The [extension interface](development.md) supplies separate hooks for state

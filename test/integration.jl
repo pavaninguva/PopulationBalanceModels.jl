@@ -1,3 +1,4 @@
+include("fixtures/example_modules.jl")
 using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
 include("size_diffusion_integration.jl")
 include("isothermal_protein_optim.jl")
@@ -94,7 +95,7 @@ end
     @test result.converged
     @test exp(result.minimizer[1])≈0.3 rtol=1e-5
 
-    include("../examples/papers/gunawan2004_case2.jl")
+    _load_example(:Gunawan2004Case2, "papers/gunawan2004_case2.jl")
     seed=L->180.5<=L<=210.5 ? 0.08*(1-((L-195.5)/15)^2) : 0.0
     errors=Float64[]
     for bins in (400,800)
@@ -119,7 +120,7 @@ end
     println("Gunawan demo third-moment relative errors (400,800 bins): ",errors)
 end
 
-include("../examples/shin_lnp_reproduction.jl")
+_load_example(:ShinLNPReproduction, "shin_lnp_reproduction.jl")
 @testset "Shin Figure 4 exporter with a SciML output schedule" begin
     g=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
     prob=ShinLNPReproduction.figure4_problem(;grid=g,tspan=(0.0,0.001),

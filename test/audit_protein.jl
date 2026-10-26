@@ -1,9 +1,10 @@
+include("fixtures/example_modules.jl")
 # Revalidate intentional retained results without generating new chains or
 # changing observations, priors, likelihoods, or noise assumptions.
 # julia --project=/path/to/optional-env test/audit_protein.jl
 using Test, PopulationBalanceModels, ForwardDiff, MCMCDiagnosticTools
 using Random, Statistics, LinearAlgebra
-include(joinpath(@__DIR__,"..","examples","protein_crystallization.jl"))
+_load_example(:ProteinCrystallization, "protein_crystallization.jl")
 const PC=ProteinCrystallization
 const ASSETS=joinpath(@__DIR__,"..","docs","src","assets","protein_crystallization")
 const PBM=PopulationBalanceModels

@@ -1,5 +1,6 @@
-include("../examples/qamar_moment_benchmarks.jl")
-include("../examples/audit_lax_wendroff.jl")
+include("fixtures/example_modules.jl")
+_load_example(:QamarMomentBenchmarks, "qamar_moment_benchmarks.jl")
+_load_example(:LaxWendroffAudit, "verification/lax_wendroff.jl")
 
 @testset "Continuous daughters and Qamar moment balances" begin
     d=UniformVolumeDaughters(quadrature_order=8);y=.7

@@ -1,10 +1,11 @@
+include("fixtures/example_modules.jl")
 # Independent checks for the example's isolated-chain aggregation (no worker PBMs).
 using Test, PopulationBalanceModels, AdvancedHMC, MCMCDiagnosticTools, Serialization
 using Statistics, LinearAlgebra
 using Distributions: Normal
 import Distributions
 isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
-isdefined(@__MODULE__,:ProteinCrystallization) || include("../examples/protein_crystallization.jl")
+_load_example(:ProteinCrystallization, "protein_crystallization.jl")
 const PC=ProteinCrystallization
 @testset "Independent chains retain the statistical target" begin
     f=bayesian_linear_fixture();p=f.problem

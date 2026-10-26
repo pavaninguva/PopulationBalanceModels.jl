@@ -21,6 +21,10 @@ julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.in
 julia --project=docs docs/make.jl
 ```
 
+The [example catalogue](examples/README.md) separates short usage examples,
+case-study drivers and numerical verification. See [verification commands](test/README.md)
+and the separate [paper workflow](paper/README.md) for tests and manuscript assets.
+
 [Parameter estimation](docs/src/inference.md) uses one model for MAP, optional
 Laplace uncertainty and optional MCMC. The [growth-kinetics example](docs/src/case_studies/estimating_growth.md)
 fits analytical density curves with Gaussian noise and compares two prior choices.

@@ -1,7 +1,8 @@
+include("fixtures/example_modules.jl")
 # Short checks for the exported comparison protocols; no production benchmark runs.
 using Test, PopulationBalanceModels
-include("../examples/constant_growth_methods.jl")
-include("../examples/continuous_precipitation.jl")
+_load_example(:ConstantGrowthMethods, "constant_growth_methods.jl")
+_load_example(:ContinuousPrecipitation, "continuous_precipitation.jl")
 
 @testset "Gaussian constant-growth reference" begin
     C = ConstantGrowthMethods

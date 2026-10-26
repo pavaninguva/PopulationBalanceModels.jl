@@ -1,4 +1,5 @@
-include("../examples/audit_li2026_supplement.jl")
+include("fixtures/example_modules.jl")
+_load_example(:LiSupplementAudit, "verification/li2026_supplement.jl")
 using LinearAlgebra
 @testset "Literal S11 audit, representation and failure limits" begin
     # Independent analytical characteristics exercise G, G′ and G′′.

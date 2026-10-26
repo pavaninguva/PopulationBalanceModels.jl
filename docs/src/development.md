@@ -162,7 +162,7 @@ Core tests include [Aqua](https://juliatesting.github.io/Aqua.jl/stable/) checks
 for ambiguities, exports, dependency metadata, piracy and persistent tasks.
 Aqua is a test dependency. The separate JET job targets two concrete residuals
 on Julia 1.13 with JET 0.12; it does not certify every callback or extension.
-`test/profile_paths.jl` measures warmed residual allocations and work without
+`test/tools/profile_paths.jl` measures warmed residual allocations and work without
 adding a runtime profiling dependency.
 
 The sensitivity job uses normal compiled modules on maintained Julia 1.10 and

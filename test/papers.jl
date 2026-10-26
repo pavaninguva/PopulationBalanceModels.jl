@@ -1,6 +1,7 @@
+include("fixtures/example_modules.jl")
 using ForwardDiff, LinearAlgebra
-include("../examples/papers/gunawan2004_case2.jl")
-include("../examples/papers/cej2025_lnp.jl")
+_load_example(:Gunawan2004Case2, "papers/gunawan2004_case2.jl")
+_load_example(:CEJ2025LNP, "papers/cej2025_lnp.jl")
 
 @testset "Paper model recipes" begin
     @test Gunawan2004Case2.temperature(0.0)==32.0
@@ -70,8 +71,8 @@ end
     @test bulk(prob,d,:nucleated_lipid)>0
 end
 
-include("../examples/continuous_precipitation.jl")
-include("../examples/protein_crystallization.jl")
+_load_example(:ContinuousPrecipitation, "continuous_precipitation.jl")
+_load_example(:ProteinCrystallization, "protein_crystallization.jl")
 @testset "Paper case studies" begin
     p=ContinuousPrecipitation.build(nx=8,nz=8,tf=.5)
     s=ContinuousPrecipitation.advance(p,[.5]);@test minimum(last(s.u))>=-1e-8

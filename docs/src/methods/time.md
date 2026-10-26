@@ -202,7 +202,7 @@ in exact arithmetic. It is dispersive and does not preserve positivity.
 Narrow Gaussians and fronts can develop substantial negative undershoots even
 while the discrete L2 norm remains constant.
 
-`examples/audit_compact_adi.jl` checks every resolved Fourier mode over signed
+`examples/verification/compact_adi.jl` checks every resolved Fourier mode over signed
 Courant numbers 0.1–10 and evolves smooth/rectangular profiles for ten periods.
 The recorded norm changes are below ``5\times10^{-14}``; negative densities
 remain. Independent dense-matrix tests verify the cyclic solves for both time

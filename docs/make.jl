@@ -5,6 +5,8 @@ const ROOT = normpath(joinpath(@__DIR__, ".."))
 # Downloadable sources preserve the reproduction drivers without embedding them
 # in the walkthroughs. The generated copies are ignored by Git.
 source_assets = joinpath(@__DIR__, "src", "assets", "source")
+# This directory is generated entirely below; remove obsolete downloadable paths.
+isdir(source_assets) && rm(source_assets; recursive=true)
 mkpath(source_assets)
 for (directory, subdirectories, files) in walkdir(joinpath(ROOT, "examples"))
     filter!(!=("__pycache__"), subdirectories)

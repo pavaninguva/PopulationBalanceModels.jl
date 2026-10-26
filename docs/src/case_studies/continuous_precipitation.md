@@ -338,7 +338,7 @@ no full-horizon coupled analytical accuracy claim is made.
 # julia --project=. -e 'include("examples/continuous_precipitation.jl"); ContinuousPrecipitation.run_benchmark()'
 # Regenerate fine fields/outlets and rebase errors from retained comparison outlets:
 julia --project=. examples/continuous_precipitation.jl --size-resolution
-python docs/benchmarks/plot_new_case_studies.py precipitation --usetex
+python docs/benchmarks/plot_population_studies.py precipitation --usetex
 # Larger study; separate output, not executed for these figures:
 julia --project=. -e 'include("examples/continuous_precipitation.jl"); ContinuousPrecipitation.run_benchmark(full=true, output="/tmp/precipitation-full")'
 ```

@@ -1,5 +1,6 @@
 """Independent data, posterior, probability, balance and publication contracts."""
 import csv
+import argparse
 import hashlib
 import json
 import sys
@@ -19,6 +20,13 @@ def table(folder,name):
 def record(folder,name): return json.loads((folder/name).read_text())
 
 class ProteinResults(unittest.TestCase):
+    def test_producer_sources_match_checkout(self):
+        for name in ('cnt','cnt_grd'):
+            manifest=record(BASE/name,'manifest.json')
+            for path,digest in manifest['source_files'].items():
+                with self.subTest(model=name,path=path):
+                    self.assertEqual(hashlib.sha256((ROOT/path).read_bytes()).hexdigest(),digest,path)
+
     def test_original_data_split_and_fixed_uncertainties(self):
         folder=ROOT/'examples/data/protein_crystallization/tang2018_isothermal'
         origin=record(folder/'provenance','integration.json')
@@ -61,8 +69,6 @@ class ProteinResults(unittest.TestCase):
             self.assertTrue(m['complete']);self.assertEqual(m['mode'],'production')
             for path,digest in m['files'].items():
                 self.assertEqual(hashlib.sha256((folder/path).read_bytes()).hexdigest(),digest,path)
-            for path,digest in m['source_files'].items():
-                self.assertEqual(hashlib.sha256((ROOT/path).read_bytes()).hexdigest(),digest,path)
             prior=record(folder,'priors.json');common.append(prior[:4]);self.assertEqual(len(prior),n)
             raw=table(folder,'posterior_draws.csv');names=raw.dtype.names
             self.assertFalse('sigma_c' in names or 'sigma_F' in names)
@@ -209,4 +215,16 @@ class ProteinResults(unittest.TestCase):
                 self.assertEqual(hashlib.sha256((folder/f'{name}.{ext}').read_bytes()).hexdigest(),
                     hashlib.sha256((ROOT/f'docs/src/assets/protein_isothermal/{name}.{ext}').read_bytes()).hexdigest())
 
-if __name__=='__main__': unittest.main()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--retained',action='store_true',help=
+        'Check stored observations, outputs and posterior diagnostics without asserting that the current checkout is the producer.')
+    args,remaining=parser.parse_known_args()
+    if args.retained:
+        print('Retained-result check: producer/current-checkout equivalence is NOT asserted.',flush=True)
+        names=[name for name in unittest.defaultTestLoader.getTestCaseNames(ProteinResults)
+               if name!='test_producer_sources_match_checkout']
+        suite=unittest.TestSuite(ProteinResults(name) for name in names)
+        result=unittest.TextTestRunner(verbosity=2).run(suite)
+        raise SystemExit(not result.wasSuccessful())
+    unittest.main(argv=[sys.argv[0],*remaining])

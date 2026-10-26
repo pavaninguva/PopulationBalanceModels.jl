@@ -66,19 +66,24 @@ def analysis_table(number,base,name,data):
         writer.writerows(data)
     INPUTS[number][str(path.relative_to(PAPER))] = sha(path)
 
-def load_case(number):
+def load_case(number, *, check_checkout=True):
+    """Validate recorded inputs; current producer equivalence is required by default.
+
+    The independent checker may explicitly inspect retained historical data
+    without requiring current source equality. Plot generation keeps the default.
+    """
     name = CASES[number-1]
     base = PAPER/"results"/name/MODE
     index_path = base/"index.toml"
     info = tomllib.loads(index_path.read_text())
     if info["mode"] != MODE or info["case"] != name:
         raise ValueError("Incorrect result mode or case")
-    if info["source_digest"] != source_digest():
+    if check_checkout and info["source_digest"] != source_digest():
         raise ValueError("Numerical source differs from the production provenance; regenerate results")
     support = [PAPER/"common.jl",PAPER/"case_studies"/name/"run.jl",PAPER/"case_studies"/name/"config.toml"]
     if number == 3:
         support.append(PAPER/"precipitation_solver.jl")
-    if info["workflow_digest"] != digest(support):
+    if check_checkout and info["workflow_digest"] != digest(support):
         raise ValueError("Driver/configuration differs from the retained results")
     if number == 1:
         expected = {f"front_{m}_N{info['configuration']['profile_bins']}" for m in METHODS}

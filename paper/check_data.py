@@ -12,10 +12,12 @@ from unittest import mock
 import numpy as np
 import plot_all as plots
 
+CHECK_CHECKOUT=True
+
 class GrowthData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.base,cls.info,cls.runs = plots.load_case(1)
+        cls.base,cls.info,cls.runs = plots.load_case(1,check_checkout=CHECK_CHECKOUT)
 
     def test_bin_integrals_and_width_weighted_norms(self):
         for name,(folder,_) in self.runs.items():
@@ -69,6 +71,10 @@ class GrowthData(unittest.TestCase):
                 shutil.copy(self.base/item["path"],base/item["path"])
             with mock.patch.object(plots,"PAPER",paper),mock.patch.object(plots,"source_digest",return_value=self.info["source_digest"]),mock.patch.object(plots,"digest",return_value=self.info["workflow_digest"]):
                 plots.load_case(1)
+                with mock.patch.object(plots,"source_digest",return_value="different-checkout"):
+                    with self.assertRaisesRegex(ValueError,"Numerical source differs"):
+                        plots.load_case(1)
+                    plots.load_case(1,check_checkout=False)
                 index = base/"index.toml"
                 original = index.read_text()
                 wrong = "smoke" if plots.MODE=="production" else "production"
@@ -88,10 +94,12 @@ class GrowthData(unittest.TestCase):
                     stream.write("changed\n")
                 with self.assertRaisesRegex(ValueError,"Changed numerical data"):
                     plots.load_case(1)
+                with self.assertRaisesRegex(ValueError,"Changed numerical data"):
+                    plots.load_case(1,check_checkout=False)
 
 class MomentData(unittest.TestCase):
     def test_analytical_reference_layouts_and_shape_bias(self):
-        base,info,runs = plots.load_case(2)
+        base,info,runs = plots.load_case(2,check_checkout=CHECK_CHECKOUT)
         for method in plots.MOMENT_METHODS:
             data = plots.table(runs[method+"_dt1"][0]/"moments.csv")
             arrays = [data[data["order"]==k] for k in range(4)]
@@ -117,7 +125,7 @@ class MomentData(unittest.TestCase):
 
 class PrecipitationData(unittest.TestCase):
     def test_geometry_scaling_normalization_and_accounting(self):
-        base,info,runs = plots.load_case(3)
+        base,info,runs = plots.load_case(3,check_checkout=CHECK_CHECKOUT)
         for name,(folder,provenance) in runs.items():
             if provenance["summary"].get("role")=="verification":
                 continue
@@ -180,8 +188,12 @@ class PrecipitationData(unittest.TestCase):
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke",action="store_true")
+    parser.add_argument("--retained",action="store_true",help="Validate stored numerical data and internal provenance without claiming current-checkout equivalence")
     parser.add_argument("--case",choices=["all","1","2","3"],default="all")
     args = parser.parse_args()
+    CHECK_CHECKOUT=not args.retained
+    if args.retained:
+        print("Retained-result check: producer/current-checkout equivalence is NOT asserted.",flush=True)
     plots.MODE = "smoke" if args.smoke else "production"
     suite = unittest.TestSuite()
     for i,case in enumerate((GrowthData,MomentData,PrecipitationData),1):

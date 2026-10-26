@@ -1,10 +1,11 @@
+include("fixtures/example_modules.jl")
 # Targeted A13 reproducer. Core mode uses only package dependencies.
 # --adaptive needs SciMLBase, OrdinaryDiffEqTsit5 and direct SpecialFunctions
 # access in an isolated environment.
 # Private native hooks below are test instrumentation, not extension APIs.
 using PopulationBalanceModels, LinearAlgebra
 include("fixtures/qamar_reference.jl")
-include(joinpath(@__DIR__,"..","examples","qamar_moment_benchmarks.jl"))
+_load_example(:QamarMomentBenchmarks, "qamar_moment_benchmarks.jl")
 using .QamarReference
 const P=PopulationBalanceModels
 const Q=QamarMomentBenchmarks

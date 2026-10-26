@@ -35,7 +35,7 @@ For two coordinates, use
 and `SizeBC2D(x=bc_x,y=bc_y)`. Axis lengths, bin counts and spacings may differ.
 [Runnable examples](../assets/source/examples/compact_growth.jl) include smooth
 translations, incoming particles, variable growth and boundary nucleation.
-The [benchmark driver](../assets/source/examples/benchmark_compact_growth.jl)
+The [benchmark driver](../assets/source/examples/verification/compact_growth.jl)
 keeps reporting and timing outside those short model definitions.
 Save both Julia files in the same directory if downloading them separately.
 
@@ -369,7 +369,7 @@ number accounting agree within ``4.8\times10^{-16}`` per process volume.
 
 ```sh
 julia --project=. examples/compact_growth.jl
-julia --project=. examples/benchmark_compact_growth.jl
+julia --project=. examples/verification/compact_growth.jl
 python docs/benchmarks/plot_compact_growth.py --usetex
 julia --project=. -e 'using Test, PopulationBalanceModels; include("test/compact_finite_volume.jl")'
 ```
@@ -385,7 +385,7 @@ It does not implement the size-dependent algorithm in
 
 ## Check the supplement independently
 
-`examples/audit_li2026_supplement.jl` transcribes the five coefficients of the
+`examples/verification/li2026_supplement.jl` transcribes the five coefficients of the
 supplement's Eq. S11. For one size coordinate the physical equation is
 
 ```math
@@ -462,7 +462,7 @@ errors, negative minima, and coarse-grid oscillations in
 [errors.csv](../assets/li_supplement/errors.csv).
 
 ```sh
-julia --project=. examples/audit_li2026_supplement.jl
+julia --project=. examples/verification/li2026_supplement.jl
 python docs/benchmarks/plot_compact_audit.py --usetex
 ```
 

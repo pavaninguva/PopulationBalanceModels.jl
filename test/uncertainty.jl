@@ -1,3 +1,4 @@
+include("fixtures/example_modules.jl")
 @testset "Gaussian likelihood and local joint uncertainty" begin
     grid=Grid1D([0.0,0.5,1.0])
     problem=PBMProblem(compile(PBMModel(),grid),[1.0,0.0],(0.0,5.0))
@@ -54,7 +55,7 @@
     @test_throws ArgumentError residuals(bad_solver,z)
 end
 
-include("../examples/temperature_programmed_crystallization.jl")
+_load_example(:TemperatureProgrammedCrystallization, "temperature_programmed_crystallization.jl")
 @testset "Native crystallization moment recipe and DLVO material helpers" begin
     recipe=TemperatureProgrammedCrystallization
     p=recipe.parameters(density=1.293)

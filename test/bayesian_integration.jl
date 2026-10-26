@@ -1,3 +1,4 @@
+include("fixtures/example_modules.jl")
 using Test, LinearAlgebra, Random, Statistics, ForwardDiff
 using Distributions: Normal, Exponential
 using PopulationBalanceModels, Optim, AdvancedHMC, MCMCDiagnosticTools
@@ -75,7 +76,7 @@ isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_li
     @test refinement.comparisons.equivalent.max_prediction_change==0
 end
 
-include("../examples/estimate_size_dependent_growth.jl")
+_load_example(:EstimateSizeDependentGrowth, "estimate_size_dependent_growth.jl")
 @testset "Size-dependent growth: analytical and numerical inference" begin
     recipe=EstimateSizeDependentGrowth
     data=recipe.synthetic_measurements()

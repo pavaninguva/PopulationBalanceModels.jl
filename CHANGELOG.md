@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Removed tracked regenerable paper smoke outputs, archived superseded unindexed growth runs, and grouped numerical verification/reporting utilities. Added example/test catalogues and reused example modules across tests without removing numerical assertions. Retained protein posterior samples, data, figures, diagnostics and historical archives unchanged.
+- Separated explicit retained-result validation from current-producer verification; strict source matching remains the default. Documentation downloads now remove obsolete generated paths before copying current sources.
+
 - Added direct stationary PBM problems and an optional NonlinearSolve adapter using RobustMultiNewton by default. Reused physical residuals, same-state bulk exchange and named accessors; excluded historical ledgers from stationary unknowns and retained their instantaneous rates.
 - Added scaled balance acceptance, explicit inventory constraints, frozen-condition declarations and natural-parameter continuation with failure records. Added analytical well-mixed continuous-crystallizer verification and a runnable coupled example. Direct transport updates and moment boundary events remain unsupported for stationary solves.
 
