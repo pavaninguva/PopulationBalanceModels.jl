@@ -30,6 +30,10 @@ boundaries, and numerical choices used in its implementation.
 - [Calibrating an isothermal protein batch](protein_crystallization.md): original
   concentration and number distributions calibrate CNT and CNT with growth
   dispersion, followed by frozen predictions of later observations.
+- [Stem-cell self-renewal and differentiation](stem_cells.md): intracellular
+  marker production, binary division and exit from pluripotency reshape a cell
+  population. Synthetic examples distinguish cohort dynamics from distributions
+  sampled at division and differentiation events.
 
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition

@@ -1,5 +1,27 @@
 # Running the case studies
 
+## Stem-cell populations
+
+```sh
+julia --project=. examples/stem_cell_population.jl --smoke
+julia --project=. examples/stem_cell_population.jl
+python docs/benchmarks/plot_stem_cells.py --usetex
+julia --project=. test/stem_cells.jl
+python test/stem_cell_results.py
+```
+
+The small smoke calculation writes to the system temporary directory. The full
+0–200 synthetic study writes `docs/src/assets/stem_cells/`, including separate
+grid, timestep, daughter-quadrature and domain checks. The plotter requires
+Python 3.11+, NumPy and Matplotlib; `--usetex` additionally requires LaTeX and
+dvipng. It verifies the production data and numerical-source hashes before
+rendering PNG, SVG and PDF. The example uses the checkout and does not execute
+when included as a module. It does not run experimental fitting or touch the
+paper workflow. See the case page for the interpretation of event distributions
+and the additional balanced-growth assumption behind marker-rate recovery.
+
+## Crystallization and transport
+
 From the package root, use these calculation/plot pairs:
 
 ```sh

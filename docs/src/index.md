@@ -1,6 +1,6 @@
 # PopulationBalanceModels.jl
 
-PopulationBalanceModels solves population balances for particle distributions.
+PopulationBalanceModels solves population balances for particle and cell distributions.
 A model can describe growth in size, creation by nucleation, removal, aggregation,
 and breakage. Distributions can share concentrations or other process states,
 which are integrated with the population equations.
@@ -17,7 +17,8 @@ The [numerical guide](numerical_methods.md) explains the treatment of each term,
 including restrictions on grids, boundaries, and positivity.
 
 The [case studies](case_studies/index.md) develop cooling crystallization,
-lipid nanoparticle formation, and growth in two particle dimensions. For fitting
+lipid nanoparticle formation, growth in two particle dimensions, and
+[stem-cell marker dynamics](case_studies/stem_cells.md). For fitting
 models to data, see [Parameter estimation](inference.md). Signatures and
 extension hooks are collected in the [API reference](api.md) and
 [developer guide](development.md).
