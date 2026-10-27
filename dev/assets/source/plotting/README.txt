@@ -123,5 +123,5 @@ in the [example catalogue](../../examples/README.md).
 `plot_population_studies.py` replaces the vague `plot_new_case_studies.py` name;
 its numerical inputs and plotting routines are unchanged.
 `python test/plotting_summaries.py` checks probability contours, bounded densities,
-Pareto selection and numerical export conventions. Historical execution evidence
-and unresolved scientific issues remain in the [audit register](../src/audit.md).
+Pareto selection and numerical export conventions. The case-study pages describe
+numerical references and the limits of each comparison.
