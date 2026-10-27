@@ -47,6 +47,5 @@ adds a physical position coordinate to an intrinsic growth model.
 
 Each page ends with a minimal calculation and links to its full reproduction
 driver. Use the [common reproduction setup](../verification.md#Examples-and-figures)
-to keep recipes, data and plotting helpers together. Figure-specific
-assumptions stay on the case page; detailed correction history is in the
-[audit register](../audit.md).
+to keep recipes, data and plotting helpers together. Figure-specific assumptions,
+reference qualifications and numerical limits stay beside the results they affect.

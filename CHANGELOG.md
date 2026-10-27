@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Removed development-session reports, findings/disposition tables and internal review tracking from the public manual. Verification instructions and case-specific scientific qualifications remain beside the relevant methods/results; the existing audit URL is retained as a short entry point outside the navigation.
+
+- Clarified the distinct HOCADI and HOCFiniteVolume time updates, bin-integral interpretation, periodic CFL stability and dispersive undershoots. Removed unrelated literature planning notes from the compact verification notes; added independent Fourier-factor checks on unequal axes, including large Courant numbers and signed/zero velocities. Numerical algorithms are unchanged.
+
 - Revised the manual's diffusion, tensor coupling, stationary inference, dilution, moment-state and boundary contracts. Added a complete first Bayesian MAP example and focused GRD/compact guides, preserving legacy verification anchors. Clarified retained case-study limitations and measurement conventions; restyled seven figure sets from unchanged numerical exports and recorded D01–D26/G01–G03 resolutions.
 
 - Narrowed optional stationary-test imports to avoid the Distributions/PopulationBalanceModels `moment` name collision. Sensitivity CI now separates dependency preparation from test execution, rebuilds native package images and retains resolved environments for crash diagnosis; normal compiled modules and all derivative checks remain enabled.

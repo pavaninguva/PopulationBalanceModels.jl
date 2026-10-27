@@ -3,8 +3,8 @@
 Run commands from a checkout's root so examples, data and supporting files keep
 their relative paths. A successful build checks the manual's examples and links;
 it does not establish solver accuracy or the equivalence of retained results to
-new source code. Dated executions and unresolved investigations remain in the
-[audit history](audit.md).
+new source code. Method-specific accuracy and applicability limits are described
+alongside the algorithms and case-study results.
 
 ## Core and documentation
 
@@ -23,7 +23,6 @@ separate refinement checks. Statistics and Aqua are test dependencies, not
 simulation-core dependencies. JET is a separate, selected-residual check in CI.
 See the [test catalogue](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/test/README.md)
 for entry points and the [current Actions results](https://github.com/pavaninguva/PopulationBalanceModels.jl/actions).
-Historical pass counts apply only to their stated revision and environment.
 
 ## Optional integrations
 
@@ -96,7 +95,5 @@ Project weak-dependency/extension declarations before numerical assertions, alth
 numerical-file hashes match. Keep these failures visible: editing prose or
 redrawing figures cannot complete the missing verification.
 
-The [documentation resolution register](assets/audit/documentation_resolutions.csv)
-maps D01–D26 and G01–G03 to this revision's edits/checks. The parked collision
-EQMOM investigation and all original environment qualifications remain in the
-[audit history](audit.md).
+The [moment comparison](case_studies/moment_crystallization.md) explains the
+remaining collision-EQMOM limitation and links the supporting numerical checks.

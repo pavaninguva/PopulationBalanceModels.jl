@@ -570,8 +570,9 @@ sampler coordinates, including the map Jacobian. They are not relabelled as
 inference-coordinate energies or covariance estimates.
 The [protein tutorial](case_studies/protein_crystallization.md) records a
 nonlinear auxiliary map for its four-/five-parameter fixed-error targets.
-Archived recipes have different statistical targets and are documented in the
-[audit history](audit.md).
+Archived recipes have different statistical targets; their inputs and producing
+records are retained with the
+[historical fixtures](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/test/fixtures/archives/README.md).
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)

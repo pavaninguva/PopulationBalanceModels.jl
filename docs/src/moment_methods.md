@@ -219,9 +219,11 @@ and returned nodes/weights remain Float64. This arithmetic refinement does not
 change the kernel family, the requested reconstruction tolerance or the evolved
 moments. It cannot remove genuine family infeasibility or uncertain input moments.
 Some nonnegative moment vectors cannot be represented by this family; those
-inputs fail explicitly. The [audit diagnosis](audit.md)
-gives independent examples of ill-conditioning and failure of three-kernel
-Gamma feasibility.
+inputs fail explicitly. The [growth/nucleation comparison](case_studies/moment_crystallization.md#What-happens-when-the-narrow-population-arrives?)
+distinguishes an ill-conditioned but representable reference state from later
+reference moments that fail the three-kernel positivity conditions. A failed
+evolution must also be checked for integration error; it does not by itself
+establish failure of the closure family.
 
 The rates are integrated with a secondary Gauss–Laguerre rule within each
 kernel. `secondary_nodes` controls that integration accuracy independently of

@@ -56,6 +56,44 @@ _load_example(:PBM2DBenchmark, "two_coordinate_transport.jl")
         @test PopulationBalanceModels._observe(MomentObservable((0,0)),sol.u[end],prob.operator,prob.p,0.25)==[sum(sol.u[end])]
         @test_throws ArgumentError PopulationBalanceModels._observe(MomentObservable(0),sol.u[end],prob.operator,prob.p,0.25)
     end
+    @testset "HOCADI Fourier factors on unequal axes" begin
+        # Closed-form amplification, independent of the cyclic solve and its
+        # matrix assembly. Initial/reference values are exact bin integrals.
+        nx,ny=12,9
+        lengths=(2.0,3.0)
+        g=Grid2D(range(0,lengths[1];length=nx+1),range(0,lengths[2];length=ny+1))
+        area=g.x.widths*g.y.widths'
+        periodic=SizeBC(Periodic(),Periodic())
+        for velocity in ((0.7,-0.2),(0.0,0.4)),order in (2,4)
+            policy=HOCADI(time_order=order)
+            op=compile(PBMModel(Growth2D(velocity)),g;
+                evolution=policy,bc=SizeBC2D(x=periodic,y=periodic))
+            for (kx,ky) in ((0,0),(1,2),(5,4),(0,3)),cfl in (0.5,2.0,8.0)
+                dt=cfl/max(abs(velocity[1])/first(g.x.widths),abs(velocity[2])/first(g.y.widths))
+                phase=[2π*(kx*x/lengths[1]+ky*y/lengths[2]) for x in g.x.centers,y in g.y.centers]
+                amplitude=0.25sinc(kx/nx)*sinc(ky/ny)
+                initial=(2 .+ amplitude.*cos.(phase)).*area
+                gamma=1/(2-2^(1/3))
+                factors=order==2 ? (1.0,) : (gamma,1-2gamma,gamma)
+                gain=1.0+0im
+                for (k,n,h,v) in zip((kx,ky),(nx,ny),
+                                      (first(g.x.widths),first(g.y.widths)),velocity)
+                    theta=2π*k/n
+                    frequency=3sin(theta)/(2h*(1+0.5cos(theta)))
+                    for factor in factors
+                        z=0.5factor*dt*v*frequency
+                        gain*=(1-im*z)/(1+im*z)
+                    end
+                end
+                reference=(2 .+ amplitude.*real.(gain.*cis.(phase))).*area
+                solution=simulate(PBMProblem(op,initial,(0.0,dt));dt)
+                final=last(solution.u)
+                @test final≈reference rtol=3e-13 atol=3e-15
+                @test sum(final)≈sum(initial) rtol=3e-14
+                @test sqrt(sum(abs2,final.-2 .*area))≈sqrt(sum(abs2,initial.-2 .*area)) rtol=3e-13 atol=3e-14
+            end
+        end
+    end
     @testset "Independent temporal order of the compact method" begin
         n=64; g=Grid2D(range(0,1;length=n+1),range(0,1;length=n+1))
         periodic=SizeBC(Periodic(),Periodic()); velocity=(0.6,-0.2)

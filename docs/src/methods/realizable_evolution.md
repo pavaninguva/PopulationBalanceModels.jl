@@ -47,7 +47,8 @@ supported scope. Custom weak forms need their own admissible evolution rule.
 The existing residual-based integrators and closures remain available. Selecting
 this policy does not silently replace EQMOM or DQMOM with QMOM. The
 Gamma inversion's higher-precision arithmetic retry does not add MeasureEuler
-support or an external-ODE realizability guarantee; see the [audit](../audit.md). A fixed-rank
+support or an external-ODE realizability guarantee; see
+[Gamma reconstruction](../moment_methods.md#Reconstruct-a-density-with-Gamma-EQMOM). A fixed-rank
 closure can still fail on a singular state. Select rank adaptation when rank loss
 is part of the physical problem. Distributed raw-moment sources, user weak-form
 extensions and inter-population interactions are outside this policy's scope.

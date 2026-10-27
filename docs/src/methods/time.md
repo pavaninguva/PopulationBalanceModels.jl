@@ -144,10 +144,13 @@ as evidence of stability or positivity.
 [HOCFiniteVolume](compact.md) is a complete conservative midpoint/symmetric
 update: fourth-order interior space and second-order time, with its own
 coefficient, boundary and source contract. Do not attach another RK method.
-The earlier periodic `HOCADI` variant and its reversible fourth-order time
-composition are described in the [verification notes](compact_verification.md#Periodic-HOCADI-update-and-stability).
-Its negative composition stage excludes irreversible sources and physical
-inflow/outflow; bounded Fourier amplification does not imply positivity.
+The separate `HOCADI` policy uses second-order Cayley steps or their reversible
+fourth-order composition, restricted to constant-velocity periodic 2D transport.
+See its [derivation and support comparison](compact_verification.md#Periodic-HOCADI-update-and-stability).
+It admits Courant numbers above one for Fourier stability; accuracy still
+requires timestep refinement. Its negative fourth-order composition stage
+excludes irreversible sources and physical inflow/outflow. Neither compact
+policy guarantees positivity.
 
 ## Stability is different from positivity
 

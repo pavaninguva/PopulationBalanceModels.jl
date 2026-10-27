@@ -4,8 +4,11 @@
 one or two size coordinates. It is a conservative adaptation, with fourth-order
 interior spatial reconstruction and second-order time integration. It supports
 declared positive size-dependent or prescribed time-dependent growth and
-physical inflow/outflow. Earlier HOCADI and nodal paper transcriptions are kept in the
-[verification notes](compact_verification.md); they are different updates.
+physical inflow/outflow. The separate periodic `HOCADI(time_order=4)` policy
+has fourth-order time integration but only accepts constant-velocity 2D transport.
+It is not the method used by the current growth/time comparison. Its derivation
+and the nodal paper transcriptions are in the
+[verification notes](compact_verification.md#Periodic-HOCADI-update-and-stability).
 
 ## Start with a complete calculation
 

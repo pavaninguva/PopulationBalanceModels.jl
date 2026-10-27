@@ -191,53 +191,86 @@ julia --project=. -e 'using Test, PopulationBalanceModels; include("test/compact
 
 ## Earlier periodic compact policy and nodal audits
 
-The public `HOCADI` method is the periodic constant-velocity compact/Cayley
-variant specified on the [time-integration page](time.md). Its Fourier factors
-have unit modulus. The existing dense-matrix comparisons and long-period tests
-check that implementation. Negative lobes near a sharp front remain possible.
-It does not implement the size-dependent algorithm in
-[Li et al. (2026)](https://doi.org/10.1016/j.partic.2026.01.024).
+`HOCADI` is a separate periodic transport policy. The current
+[growth/time comparison](../case_studies/constant_growth.md) instead uses
+`HOCFiniteVolume`, whose midpoint time update is second order.
+
+| Policy | Supported transport | Spatial / temporal order for smooth solutions |
+|:--|:--|:--|
+| `HOCADI(time_order=2)` | Constant signed velocities; uniform periodic 2D grid | 4 / 2 |
+| `HOCADI(time_order=4)` (default) | The same periodic constant-velocity problem | 4 / 4 |
+| `HOCFiniteVolume()` | Declared positive 1D/2D growth, eligible prescribed sources and physical or periodic boundaries; see its [full contract](compact.md) | Fourth-order interior space / second-order complete time |
+
+The derivation and checks below describe the implemented `HOCADI` policy.
+They do not establish a reproduction of Li et al.'s size-dependent multilevel
+ADI method.
 
 ### Periodic HOCADI update and stability
 
-`HOCADI(time_order=2)` or `HOCADI(time_order=4)` advances homogeneous constant
-growth on uniform periodic 2D grids. It rejects sources, bulk coupling, and
-physical nonperiodic compact boundaries. Its spatial derivative is defined by
+The equation is
+
+```math
+\frac{\partial n(x,y,t)}{\partial t}
++g_x\frac{\partial n(x,y,t)}{\partial x}
++g_y\frac{\partial n(x,y,t)}{\partial y}=0,
+```
+
+with constant real ``g_x,g_y`` and periodic boundaries in both directions.
+Each uniform axis needs at least five bins; the two axes may have different
+lengths, spacings and bin counts. Supply `Growth2D((gx,gy))` and select
+`compile(model,grid;evolution=HOCADI(time_order=4),bc)` with paired-periodic
+`SizeBC2D`. Sources, collisions, removal, evolving bulk states and physical
+inflow/outflow are rejected. A spatially varying initial distribution is allowed.
+
+The stored state is the bin integral ``N_{ij}``, not a nodal density.
+Write ``U_{ij}=N_{ij}/(h_xh_y)`` for its bin-average density. Along either axis,
+the compact derivative of these averages is defined by
 
 ```math
 \frac14d_{i-1}+d_i+\frac14d_{i+1}
-=\frac{3}{4h}(f_{i+1}-f_{i-1}),\qquad M\mathbf d=D\mathbf f.
+=\frac{3}{4h}(U_{i+1}-U_{i-1}),\qquad M\mathbf d=D\mathbf U.
 ```
 
-Each coordinate uses a Cayley solve,
+For constant coefficients on a periodic uniform grid, bin integration commutes
+with translation and this stencil; its fourth-order smooth spatial consistency
+therefore applies to bin averages too. That argument does not extend this
+method to variable growth or nonuniform grids.
+Each coordinate uses a Cayley (implicit-midpoint) solve,
 
 ```math
-\left(M+\frac{g\Delta t}{2}D\right)\mathbf f^{\mathrm{new}}
-=\left(M-\frac{g\Delta t}{2}D\right)\mathbf f^{\mathrm{old}}.
+\left(M+\frac{g\Delta t}{2}D\right)\mathbf U^{\mathrm{new}}
+=\left(M-\frac{g\Delta t}{2}D\right)\mathbf U^{\mathrm{old}}.
 ```
 
-One x solve and one y solve define ``S_2``. The fourth-order time composition is
+One x solve and one y solve define ``S_2``. The fixed directional operators
+commute, so this product is reversible and second order in time; it does not
+introduce the first-order splitting error of a general noncommuting x/y product.
+The fourth-order time composition is
 
 ```math
 S_4(\Delta t)=S_2(\gamma\Delta t)S_2((1-2\gamma)\Delta t)S_2(\gamma\Delta t),
 \qquad \gamma=(2-2^{1/3})^{-1}.
 ```
 
-The negative middle step is restricted here to reversible autonomous transport.
-It must not be applied to irreversible nucleation, collision, or bulk processes.
+The coefficients satisfy ``2\gamma+(1-2\gamma)=1`` and
+``2\gamma^3+(1-2\gamma)^3=0``, cancelling the leading time error of the symmetric
+second-order step. This is the symmetric composition described by
+[Yoshida (1990), Eqs. 4.1–4.6](https://doi.org/10.1016/0375-9601(90)90092-3).
+Its negative middle step is compatible here with reversible autonomous
+transport. It is not applied to irreversible nucleation, collision, removal,
+bulk exchange or physical inflow/outflow.
 Cyclic tridiagonal factorization uses a rank-two correction; each directional
 sweep costs linear work in the number of tensor cells.
 
-This is a specified variant, not a verified transcription of Li et al.,
-[doi:10.1016/j.partic.2026.01.024](https://doi.org/10.1016/j.partic.2026.01.024).
-The supplement is now available. Its one-dimensional coefficients can be checked
-independently, as described in [Compact-method verification](compact_verification.md).
-Those coefficients define a different update from this periodic variant. The
-main paper's multilevel update and physical boundary closure still need reconciliation.
+Li et al.'s nodal multilevel update and its S11 coefficients define different
+algorithms from these Cayley solves. The [paper comparison above](#Relation-to-the-three-papers)
+identifies the unresolved stage recovery, initialization and physical-boundary
+questions. The literal and independently corrected S11 diagnostics below retain
+their own results; neither is the production `HOCADI` policy.
 
 ### Stability is different from positivity
 
-For a periodic Fourier mode with wave angle ``\theta``, the compact matrices
+For a periodic Fourier mode with wave angle ``\theta\in[-\pi,\pi]``, the compact matrices
 have symbols ``m=1+\frac12\cos\theta`` and
 ``d=\frac{3\mathrm i}{2h}\sin\theta``. A directional Cayley step has amplification
 
@@ -247,10 +280,22 @@ z=\frac{3g\Delta t}{4h}\sin\theta,\qquad |A(\theta)|=1.
 ```
 
 The fourth-order composition is also unit modulus, including its negative step.
-Thus this periodic constant-growth discretization has no growing Fourier mode
-in exact arithmetic. It is dispersive and does not preserve positivity.
-Narrow Gaussians and fronts can develop substantial negative undershoots even
-while the discrete L2 norm remains constant.
+The zero mode has amplification one, preserving total number. Parseval's identity
+also gives preservation of the discrete L2 norm in exact arithmetic; small
+roundoff drift remains in floating-point solves.
+
+There is **no Fourier-stability restriction ``|g|\Delta t/h\le1``** for this
+periodic constant-coefficient problem. That permits Courant numbers above one,
+but does not make the phase accurate at a large step. For a direction, the
+phase of the second-order factor is ``-2\arctan(z/m)``, rather than the exact
+transport phase ``-g\Delta t\theta/h``. Spatial and temporal phase errors
+still need refinement.
+
+Unit modulus provides no damping or positivity guarantee. Numerical waves near
+a sharp front can persist instead of decaying; their phases can produce negative
+lobes and overshoots while the norm stays bounded. The default nonnegativity
+check rejects a negative completed update. Diagnostic runs below explicitly
+disable that check to measure signed errors; no clipping is performed.
 
 `examples/verification/compact_adi.jl` checks every resolved Fourier mode over signed
 Courant numbers 0.1–10 and evolves smooth/rectangular profiles for ten periods.
@@ -258,6 +303,19 @@ The recorded norm changes are below ``5\times10^{-14}``; negative densities
 remain. Independent dense-matrix tests verify the cyclic solves for both time
 orders. These results support stability of the implemented periodic variant,
 not a positivity claim or physical-boundary/paper-fidelity claim.
+The tensor regression tests also compare complete updates against analytic
+Fourier factors on unequal axes, including mixed-coordinate modes, signed/zero
+velocities and Courant numbers above one.
+
+Run the focused checks from a checkout with the
+[standard test environment](../verification.md#Core-and-documentation).
+The long-period audit below writes temporary outputs, leaving retained assets intact:
+
+```sh
+julia --project=. -e 'using Test, PopulationBalanceModels; include("test/tensor.jl"); include("test/compact_finite_volume.jl")'
+julia --project=. -e 'include("examples/verification/compact_adi.jl"); CompactADIAudit.run_audit(output="/tmp/pbm-hocadi-followup")'
+```
+
 The figure below retains the smooth-profile and sharp-front evidence for this
 periodic constant-growth diagnostic. In particular, the front cut shows the
 negative lobes despite bounded norm. The
@@ -400,21 +458,3 @@ It does not resolve the main paper's multilevel interpretation, the singular
 large-step Dirichlet case, positivity, or a general physical boundary closure.
 Neither audit variant is exposed as a production `compile` method. The public
 periodic `HOCADI` behavior remains unchanged.
-
-## What the other supplied papers add
-
-The literature review also identifies schemes with distinct implementation
-requirements:
-
-| Source | Consequence for this package |
-|:--|:--|
-| [Zhang et al., CADET Part I (2024)](https://doi.org/10.1016/j.compchemeng.2024.108612) | Two-stencil third-order WENO and van Leer limiting motivate the new `WENO3` and `VanLeer` growth choices. Local cell geometry is used on nonuniform 1D meshes. These are not a CADET backend. |
-| [Ketcheson et al., PyClaw (2012)](https://doi.org/10.1137/110856976) and the supplied Clawpack paper | Wave-propagation methods are a separate solver family. The package's conservative face-flux methods do not implement Clawpack's Riemann-solver machinery. |
-| Kumar et al., Powder Technology 189 (2009), 218–229 | Cell-average and conservative finite-volume collision algorithms differ from the implemented fixed-pivot event deposition. They need their own number/volume and overflow tests before being exposed. |
-| Zhang et al., CADET Part II (2025), CCE 192, 108860 | Weighted finite-volume and moment-conserving collision methods are further candidates. A shared collision interface does not mean these algorithms are already implemented. |
-| Inguva et al., Biotechnology Advances 84 (2025), 108643 | Additional nanoparticle physics motivates explicit material closures. CFD and phase-field coupling remain outside the active package scope. |
-
-New growth choices are available through `TermMethods(growth=...)` and tested
-for signed velocities and number conservation. Their formal orders and boundary
-fallbacks are described on the [growth page](growth.md); whole-solve convergence
-is measured in the [constant-growth comparison](../case_studies/constant_growth.md).

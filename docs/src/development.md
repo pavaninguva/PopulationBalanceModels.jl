@@ -156,9 +156,8 @@ adapters use the method's moment mapping.
 
 ## Verification and documentation changes
 
-The [verification guide](verification.md) gives current core, optional-solver,
-tensor and documentation commands. The [audit history](audit.md) retains dated
-investigations, producer environments and unresolved scientific questions.
+The [verification guide](verification.md) gives core, optional-solver,
+tensor and documentation commands.
 Statistics and Aqua are test dependencies; JET is isolated from runtime loading.
 
 `docs/src/` is the authoritative manual. A documentation change should preserve

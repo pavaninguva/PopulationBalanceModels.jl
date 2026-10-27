@@ -359,15 +359,24 @@ the chosen shape, not its ability to describe a bimodal population. Its inferred
 third moment ``\mu_{3,\mathrm{LN}}=\mu_0\mu_2^3/\mu_1^3`` can therefore be
 inaccurate while all three tracked moments are accurate.
 
-Gamma EQMOM stops at the saved time 0.475 s in the growth/source limit: the
-reference moments cease to admit the selected three-kernel family near 0.48 s.
-That is distinct from physical nonrealizability. **Collision EQMOM evolution
+Gamma EQMOM's last saved time is 0.475 s in the growth/source limit.
+Independent characteristic reference moments through order six still admit
+a positive three-kernel reconstruction at 0.4788 s, although it is poorly
+conditioned. At 0.48, 0.49 and 0.50 s, all candidate widths in the admissible
+interval fail necessary positivity conditions for the primary measure in
+256/512-bit calculations. This is numerical feasibility evidence at the
+tested states, rather than loss of realizability of the physical distribution.
+
+**Collision EQMOM evolution
 remains unresolved and is not time converged**; its partial curve cannot support
 a validated full-horizon accuracy ranking. The lognormal collision equations
 instead develop broad-tail runaway near 0.09047 s, before the pulse maximum.
 Its last saved point is 0.09 s. These results retain the selected closures and
-state checks. Detailed failing stages, conditioning, quadrature checks and
-independent diagnoses are in the [audit register](../audit.md).
+state checks. The retained [reference and stage checks](../assets/audit/qamar_diagnosis.csv)
+and [independent integration comparison](../assets/audit/qamar_adaptive.csv)
+record reconstruction, conditioning and quadrature settings. Their
+[reproduction script](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/test/audit_qamar_diagnosis.jl)
+uses the same physical models and preserves failed trajectories.
 
 Crosses mark the last saved output of an incomplete run, not the first failing
 internal stage. Costs must be read alongside state count and completed horizon.

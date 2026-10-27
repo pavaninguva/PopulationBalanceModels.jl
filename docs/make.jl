@@ -85,10 +85,8 @@ makedocs(;
         "API reference" => "api.md",
         "Contributing and internals" => "development.md",
         "Verification and reproduction" => "verification.md",
-        "Verification notes" => [
-            "Audit history" => "audit.md",
-            "Compact literature and numerical evidence" => "methods/compact_verification.md",
-        ],
+        "Compact verification notes" => "methods/compact_verification.md",
+        hide("audit.md"), # Preserve existing /audit/ links without a navigation entry.
         "Publishing" => "publishing.md",
     ],
 )
