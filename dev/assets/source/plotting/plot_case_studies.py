@@ -9,21 +9,14 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from plot_style import configure
+from plot_style import configure, export_figure, panel_letters, relative_percent
 
 ASSETS=Path(__file__).resolve().parents[1]/"src"/"assets"
 configure()
 
 def save_figure(fig,folder,name,vector=True):
-    folder.mkdir(parents=True,exist_ok=True)
-    for axis in fig.axes:
-        axis.grid(False,which="both")
-    fig.savefig(folder/f"{name}.png",dpi=180)
-    if vector:
-        path=folder/f"{name}.svg"
-        fig.savefig(path,dpi=180,metadata={"Date":None})
-        path.write_text("\n".join(line.rstrip() for line in path.read_text().splitlines())+"\n")
-    plt.close(fig)
+    export_figure(fig,folder,name,vector=vector)
+
 
 def load(path):
     if not path.is_file():
@@ -72,35 +65,56 @@ def transport(folder):
     axes[1].text(.04,.08,r"Zero shown at $10^{-20}$",transform=axes[1].transAxes,fontsize=8)
     save_figure(fig,folder,"convergence")
 
-def cooling(folder,output=None):
-    output=folder if output is None else output
-    # Provenance is part of the exported result, rather than a figure label
-    # hard-coded to a previously substituted initial distribution.
-    provenance=(folder/"inputs.txt").read_text()
-    data=np.genfromtxt(folder/"moments.csv",delimiter=",",names=True,dtype=None,encoding="utf-8")
-    ref=load(folder/"reference.csv")
-    fig,axes=plt.subplots(2,2,figsize=(10,7),layout="constrained")
-    for method in np.unique(data["method"]):
-        label="MUSCL" if method=="muscl" else "Upwind"
-        subset=data[data["method"]==method];bins=max(subset["bins"]);subset=subset[subset["bins"]==bins]
-        axes[0,0].plot(subset["time"],subset["concentration"],label=f"{label}, {bins} bins")
-        for k in (0,3):
-            error=abs(subset[f"mu{k}"]-ref[f"mu{k}"])/np.maximum(abs(ref[f"mu{k}"]),1e-30)
-            axes[0,1].semilogy(subset["time"],np.maximum(error,1e-16),label=rf"{label}, $k={k}$")
-        axes[1,1].plot(subset["time"],subset["material_drift"],label=label)
-    axes[0,0].plot(ref["time"],ref["concentration"],"k--",label="Independent moment ODE")
-    for path in sorted(folder.glob("*_psd.csv")):
-        d=load(path);label="MUSCL" if path.stem.startswith("muscl") else "Upwind"
-        axes[1,0].plot(d["length"],d["density"],label=f"{label}, {len(d)} bins")
-    axes[0,0].set(xlabel=r"$t\;[\mathrm{s}]$",ylabel=r"$c\;[\mathrm{g}/\mathrm{g\ water}]$")
-    axes[0,1].set(xlabel=r"$t\;[\mathrm{s}]$",ylabel=r"$|\mu_k-\mu_{k,\mathrm{ref}}|/|\mu_{k,\mathrm{ref}}|$")
-    axes[1,0].set(xlabel=r"$L\;[\mu\mathrm{m}]$",ylabel=r"$f(L,t_{\mathrm{f}})$",title="Final distribution")
-    axes[1,1].set(xlabel=r"$t\;[\mathrm{s}]$",ylabel=r"$\Delta(c+\rho_c\mu_3)\;[\mathrm{g}/\mathrm{g\ water}]$")
-    for ax in axes.flat:ax.legend(fontsize=7)
-    fig.suptitle("Batch cooling crystallization (input provenance in inputs.txt)")
-    if "demonstration" in provenance.lower() or "synthetic" in provenance.lower():
-        fig.suptitle("Batch cooling crystallization: demonstration initial data")
-    save_figure(fig,output,"coupled_solution")
+def cooling(folder, output=None):
+    output = folder if output is None else output
+    data = np.genfromtxt(folder/"moments.csv", delimiter=",", names=True,
+                         dtype=None, encoding="utf-8")
+    ref = load(folder/"reference.csv")
+    methods = (("muscl", "MUSCL", "#0072B2", "-"),
+               ("upwind", "Upwind", "#D55E00", "--"),
+               ("reference", "MUSCL reference", "#222222", ":"))
+    fig, axes = plt.subplots(2, 2, figsize=(7, 5.2), layout="constrained")
+    panel_letters(axes)
+    for method, label, color, linestyle in methods:
+        subset = data[data["method"] == method]
+        bins = max(subset["bins"])
+        subset = subset[subset["bins"] == bins]
+        label = f"{label}, {bins} bins"
+        axes[0, 0].plot(subset["time"], subset["concentration"],
+                        color=color, ls=linestyle, label=label)
+        for k, opacity in ((0, 1), (3, .55)):
+            error = relative_percent(subset[f"mu{k}"], ref[f"mu{k}"], display_floor=True)/100
+            axes[0, 1].semilogy(subset["time"], error, color=color, ls=linestyle,
+                                alpha=opacity, label=rf"{label}, $k={k}$")
+        axes[1, 1].plot(subset["time"], subset["material_drift"],
+                        color=color, ls=linestyle, label=label)
+    axes[0, 0].plot(ref["time"], ref["concentration"], "k--", lw=.8,
+                    label="Independent moment ODE")
+    for method, label, color, linestyle in methods[:2]:
+        paths = sorted(folder.glob(f"{method}_*_psd.csv"))
+        largest = max(int(path.stem.split("_")[1]) for path in paths)
+        for path in paths:
+            d = load(path)
+            nominal_bins = int(path.stem.split("_")[1])
+            axes[1, 0].plot(d["length"], d["density"], color=color, ls=linestyle,
+                            lw=.8, alpha=.35+.65*nominal_bins/largest,
+                            label=f"{label}, {nominal_bins}")
+    # reference_12800_psd.csv is a duplicate export of this same reference.
+    d = load(folder/"reference_psd.csv")
+    reference_bins = max(data["bins"][data["method"] == "reference"])
+    axes[1, 0].plot(d["length"], d["density"], "k:", lw=1.1,
+                    label=f"MUSCL ref., {reference_bins}")
+    axes[0, 0].set(xlabel=r"$t\;[\mathrm{s}]$", ylabel=r"$c\;[\mathrm{g}/\mathrm{g\ water}]$")
+    axes[0, 1].set(xlabel=r"$t\;[\mathrm{s}]$",
+                    ylabel=r"$|\mu_k-\mu_{k,\mathrm{ref}}|/|\mu_{k,\mathrm{ref}}|$")
+    axes[1, 0].set(xlabel=r"$L\;[\mu\mathrm{m}]$",
+                    ylabel=r"$f(L,t_{\mathrm{f}})\;[(\mathrm{g}_{\mathrm{water}}\,\mu\mathrm{m})^{-1}]$")
+    axes[1, 1].set(xlabel=r"$t\;[\mathrm{s}]$",
+                    ylabel=r"$\Delta(c+\rho_c\mu_3)\;[\mathrm{g}/\mathrm{g\ water}]$")
+    for ax in axes.flat:
+        ax.legend(fontsize=6.5)
+    axes[1, 0].legend(fontsize=6.5, ncol=2, columnspacing=.6, handlelength=1.6)
+    save_figure(fig, output, "coupled_solution")
 
 def lnp(folder):
     history=load(folder/"history.csv");psd=load(folder/"psd.csv")
@@ -169,47 +183,64 @@ def temperature_moments(folder):
 
 
 def moments(folder):
-    data=load(folder/'aggregation_breakage.csv')
-    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout='constrained')
+    data = load(folder/"aggregation_breakage.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(7, 3.05))
+    fig.subplots_adjust(left=.1, right=.985, bottom=.2, top=.92, wspace=.4)
+    panel_letters(axes)
     for k in range(6):
-        q=data[(data['nodes']==3)&(data['order']==k)]
-        initial=q['exact'][0]
-        axes[0].plot(q['time'],q['exact']/initial,color=f'C{k}',lw=1.1)
-        axes[0].plot(q['time'][::5],q['moment'][::5]/initial,'o',color=f'C{k}',ms=3,mfc='none',label=rf'$\mu_{k}$')
-        if k!=3:axes[1].plot(q['time'],q['relative_error'],color=f'C{k}',label=rf'$\mu_{k}$')
-    axes[0].set(xlabel=r'$t\ (\mathrm{s})$',ylabel=r'$\mu_k(t)/\mu_k(0)$',title='Lines: analytical; markers: three-node QMOM')
-    axes[1].set(xlabel=r'$t\ (\mathrm{s})$',ylabel='Relative moment error',title='Three-node closure error')
-    for ax in axes:ax.legend(fontsize=8)
-    save_figure(fig,folder,'aggregation_breakage')
+        q = data[(data["nodes"] == 3) & (data["order"] == k)]
+        axes[0].plot(q["time"], q["exact"]/q["exact"][0], color=f"C{k}", lw=1.1)
+        axes[0].plot(q["time"][::5], q["moment"][::5]/q["exact"][0], "o",
+                     color=f"C{k}", ms=3, mfc="none", label=rf"$\mu_{k}$")
+        if k != 3:
+            error = relative_percent(q["moment"], q["exact"], display_floor=True)
+            axes[1].semilogy(q["time"][1:], error[1:], color=f"C{k}", label=rf"$\mu_{k}$")
+    axes[0].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"$\mu_k(t)/\mu_k(0)$")
+    axes[1].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"Relative moment error $(\%)$")
+    for ax in axes:
+        ax.legend(fontsize=7.5, ncol=2)
+    save_figure(fig, folder, "aggregation_breakage")
 
-    data=np.genfromtxt(folder/'pulse.csv',delimiter=',',names=True,dtype=None,encoding='utf-8');ref=load(folder/'sectional_reference.csv')
-    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout='constrained')
-    for ax,process,title in zip(axes,['growth_nucleation','all'],['Growth and nucleation','Growth, nucleation and collisions']):
+    data = np.genfromtxt(folder/"pulse.csv", delimiter=",", names=True, dtype=None, encoding="utf-8")
+    ref = load(folder/"sectional_reference.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(7, 3.05))
+    fig.subplots_adjust(left=.1, right=.985, bottom=.2, top=.92, wspace=.4)
+    panel_letters(axes)
+    for ax, process in zip(axes, ("growth_nucleation", "all")):
         for k in range(5):
-            q=data[(data['processes']==process)&(data['nodes']==3)&(data['order']==k)]
-            initial=q['moment'][0]
-            if process=='growth_nucleation':ax.semilogy(q['time'],q['reference']/initial,color=f'C{k}',lw=1.1)
+            q = data[(data["processes"] == process) & (data["nodes"] == 3) & (data["order"] == k)]
+            initial = q["moment"][0]
+            if process == "growth_nucleation":
+                ax.semilogy(q["time"], q["reference"]/initial, color=f"C{k}", lw=1.1)
             else:
-                rr=ref[(ref['bins']==max(ref['bins']))&(ref['order']==k)]
-                ax.semilogy(rr['time'],rr['moment']/initial,color=f'C{k}',lw=1.1)
-            ax.semilogy(q['time'][::3],q['moment'][::3]/initial,'o',color=f'C{k}',ms=3,mfc='none',label=rf'$\mu_{k}$')
-        ax.set(xlabel=r'$t\ (\mathrm{s})$',ylabel=r'$\mu_k(t)/\mu_k(0)$',title=title);ax.legend(fontsize=8)
-    save_figure(fig,folder,'nucleation_pulse')
+                r = ref[(ref["bins"] == max(ref["bins"])) & (ref["order"] == k)]
+                ax.semilogy(r["time"], r["moment"]/initial, color=f"C{k}", lw=1.1)
+            ax.semilogy(q["time"][::3], q["moment"][::3]/initial, "o", color=f"C{k}",
+                         ms=3, mfc="none", label=rf"$\mu_{k}$")
+        ax.set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"$\mu_k(t)/\mu_k(0)$")
+    axes[0].legend(fontsize=7.5, ncol=2)
+    save_figure(fig, folder, "nucleation_pulse")
 
-    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout='constrained')
-    for n in np.unique(ref['bins']):
-        for k in (0,3,4):
-            q=data[(data['processes']=='all')&(data['nodes']==3)&(data['order']==k)]
-            r=ref[(ref['bins']==n)&(ref['order']==k)]
-            relative=abs(r['moment']/q['moment']-1)
-            axes[0].semilogy(q['time'][1:],np.maximum(relative[1:],1e-16),color=f'C{k}',ls='-' if n==max(ref['bins']) else '--',label=rf'$\mu_{k}$, {int(n)} bins')
-    for n in np.unique(data['nodes']):
-        q=data[(data['processes']=='growth_nucleation')&(data['nodes']==n)&(data['order']==4)]
-        axes[1].semilogy(q['time'][1:],np.maximum(q['relative_difference'][1:],1e-16),label=rf'Growth/source, $\mu_4$, {int(n)} nodes')
-    axes[0].set(xlabel=r'$t\ (\mathrm{s})$',ylabel='Relative difference from three-node QMOM',title='Sectional-reference refinement')
-    axes[1].set(xlabel=r'$t\ (\mathrm{s})$',ylabel='Relative analytical error',title='Growth/source integration check')
-    for ax in axes:ax.legend(fontsize=7)
-    save_figure(fig,folder,'pulse_verification')
+    fig, axes = plt.subplots(1, 2, figsize=(7, 3.5))
+    fig.subplots_adjust(left=.12, right=.985, bottom=.34, top=.93, wspace=.45)
+    panel_letters(axes)
+    for n in np.unique(ref["bins"]):
+        for k in (0, 3, 4):
+            q = data[(data["processes"] == "all") & (data["nodes"] == 3) & (data["order"] == k)]
+            r = ref[(ref["bins"] == n) & (ref["order"] == k)]
+            error = relative_percent(r["moment"], q["moment"], display_floor=True)
+            axes[0].semilogy(q["time"][1:], error[1:], color=f"C{k}",
+                              ls="-" if n == max(ref["bins"]) else "--",
+                              label=rf"$\mu_{k}$, {int(n)} bins")
+    for n in np.unique(data["nodes"]):
+        q = data[(data["processes"] == "growth_nucleation") & (data["nodes"] == n) & (data["order"] == 4)]
+        error = relative_percent(q["moment"], q["reference"], display_floor=True)
+        axes[1].semilogy(q["time"][1:], error[1:], label=f"{int(n)} nodes")
+    axes[0].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"Difference from QMOM $(\%)$")
+    axes[1].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"Analytical $\mu_4$ error $(\%)$")
+    axes[0].legend(fontsize=7.5, ncol=2, loc="upper center", bbox_to_anchor=(.5, -.27))
+    axes[1].legend(fontsize=7.5)
+    save_figure(fig, folder, "pulse_verification")
 
 
 def estimation(folder):
