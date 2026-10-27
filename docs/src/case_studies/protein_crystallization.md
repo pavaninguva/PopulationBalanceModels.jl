@@ -26,7 +26,8 @@ retain the original readings and unrounded graph-read times.
 
 ![Original isothermal observations, without a model fit](../assets/protein_isothermal/protein_data.svg)
 
-Panel (a) shows concentration; its diamond fixes ``c(0)=19.965841161400512`` g/L.
+Panel (a) shows concentration; its diamond fixes ``c(0)\simeq19.97`` g/L.
+The exact graph-derived input is retained in the data file, not rounded for solving.
 Filled circles are the eleven training observations; open squares are the four
 later test observations. Panels (b) and (c) show the three training distributions
 at 74, 180 and 420 min and the held-out distribution at 660 min. Each density
@@ -84,7 +85,7 @@ than measuring either separately. This is an effective Brownian closure, not
 permanent fast/slow crystal classes. D is independent of size here, so its Ito
 operator reduces to ``D_G\,\partial^2 n/\partial L^2``. A better fit would not
 establish the microscopic origin of that dispersion. See the reusable
-[SizeDiffusion contract](../methods/growth.md#Random-fluctuation-growth-rate-dispersion).
+[SizeDiffusion contract](../methods/dispersion.md).
 
 For both models, the **total** left flux is J:
 
@@ -297,8 +298,9 @@ kinetic_covariance = marginal_covariance(estimation,local_gaussian)
 approximate_draws = parameter_draws(estimation,local_gaussian;n=1000,seed=23)
 ```
 
-Both sensitivity-based calculations pass the independent derivative and joint
-information checks. The table concerns the existing discrete likelihood; it
+The **Gauss–Newton calculations pass** the independent derivative and joint
+information checks for **both CNT and CNT + GRD**. Both full-Hessian Laplace
+attempts remain rejected, for the reasons below. The table concerns the existing discrete likelihood; it
 is not a grid-error estimate or evidence that every kinetic parameter is well
 identified. All nuisance/kinetic coordinates would enter the joint calculation;
 this particular fit has only its four/five kinetic coordinates.
@@ -376,7 +378,23 @@ Broadening alone does not resolve every shape or timing discrepancy.
 
 Concentration constrains transferred material; conditional PSDs constrain
 shape within the observation window and do not measure absolute particle
-number. Coefficients, exponents, the CNT barrier and GRD can compensate.
+number. Their normalization removes the population amplitude; combining them
+with material uptake does not turn them into an independent crystal count.
+
+The rate laws explain the compensation. For the numerical rates in the units
+defined above,
+
+```math
+\log J_{\mathrm{num}}=\log A_J-\frac{B(\gamma)}{(\log S)^2}+\log60,
+\qquad
+\log G_{\mathrm{num}}=\log A_G+g\log(S-1)-3\log10.
+```
+
+Over a limited supersaturation range, a larger nucleation prefactor can offset
+a larger interfacial barrier. Likewise, changes in ``A_G`` and g can preserve
+similar growth velocities along the observed trajectory. GRD adds another way
+to alter the distribution shape. This explains strong *practical* parameter
+correlations; it is not a proof of structural nonidentifiability.
 Successful chain diagnostics do not establish structural identifiability,
 numerical convergence or physical adequacy. The raw MAP posterior values have
 different dimensions and are **not** a Bayes factor or model evidence.

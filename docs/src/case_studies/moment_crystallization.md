@@ -135,10 +135,23 @@ checked by the number equation above and by ``\mu_3=V_0``.
 
 ![Analytical and three-node QMOM moments, with relative errors](../assets/qamar_moments/aggregation_breakage.png)
 
-In this figure the error panels show fractions ``|\mu_k/\mu_k^{\mathrm{exact}}-1|``.
+All relative-error panels on this page now use **percent**:
+
+```math
+E_k(t)=100\frac{|\mu_k(t)-\mu_k^{\mathrm{ref}}(t)|}{|\mu_k^{\mathrm{ref}}(t)|}\ \%.
+```
+
+Here the denominator is the analytical moment at the **same time**, not its
+initial value. Panel (a) instead shows ``\mu_k(t)/\mu_k(0)``. Lines are
+analytical and markers are three-node QMOM. The conserved third moment stays
+at one in (a) and is omitted from the error panel. Log-error plots display
+values below ``10^{-14}`` percent at that floor, including exact zeros; the
+signed numerical data remain unchanged.
 For QMOM with tracked third moment, the number equation is closed and material
-is conserved; their small errors mainly test the integrator. Higher unclosed moments test the quadrature
-closure as well. Three nodes give a maximum relative moment error of about 0.38% over this run.
+is conserved; their small errors mainly test time integration. Higher unclosed
+moments include reconstruction/closure error as well. The plotted total moment
+discrepancy is not an isolated closure-error measurement. Three nodes give a
+maximum relative moment error of about 0.38% over this run.
 Four nodes reduce it to about 0.027%. Halving the integration step changes the
 results by much less than either error: these differences mainly assess
 quadrature closure, rather than time integration. The material moment remains
@@ -202,16 +215,23 @@ bulk phase to conceal that difference.
 
 ![Moment-family errors, material predictions and one measured runtime](../assets/qamar_moments/method_aggregation.png)
 
-The upper error panels of the family comparison use **percent** (100 times the
-fraction above). Its lower-left panel is ``\mu_3/V_0``, not an error: departures
+The upper panels use the same analytical denominator and **percent** convention.
+The lower-left panel is ``\mu_3/V_0``, not an error: departures
 from one show the material prediction, including the lognormal reconstruction's
 initial mismatch. On this smooth aggregation/fragmentation calculation, fixed and rank-adaptive
 QMOM agree: the active rank stays three, so adaptation adds no accuracy here.
-Their maximum relative errors in the first and second moments are about
-`3.25e-4` and `3.27e-4`. Gamma EQMOM reduces these to about `3.0e-6` and `1.0e-5`,
+Their maximum first-/second-moment errors are about 0.0325% and 0.0327%.
+Gamma EQMOM reduces these to about 0.00030% and 0.0010%,
 while using seven evolved moments and substantially more quadrature and
 inversion work.
 That result does not establish that it is better for every population shape.
+
+Several sharp minima are **cancellation dips**. Independent subtraction of the
+saved moments and analytical values shows Gamma EQMOM's signed first-moment
+error crossing zero between 9.5–10 s and 39.5–40 s; QMOM's second-moment error
+crosses between 5–5.5 s and 28–28.5 s. Taking an absolute value and a log axis
+makes these crossings prominent. They do not show a sudden, uniformly accurate
+reconstruction or a general improvement in closure accuracy.
 
 DQMOM approaches the same three-node weak equations as QMOM. Their small finite
 step differences come from evolving different state coordinates and solving
@@ -230,7 +250,8 @@ can cost more than three QMOM atoms despite the smaller state vector.
 
 All these curves use SSPRK33 with the same maximum timestep, `0.02 s`, and a
 separate `0.01 s` run. The lower-moment timestep differences in this calculation
-are about `6e-8`, much smaller than the visible closure errors. Runtime bars are
+are about `6e-8` as dimensionless fractions, much smaller than the visible
+moment discrepancies. Runtime bars are
 one measured solve after a short compilation warmup, including state checks;
 they are not timing medians or a general performance ranking. These histories
 and timings are retained from the audited runs; this revision redraws their
@@ -312,12 +333,14 @@ Aggregation and fragmentation alter the full-process histories.
 
 ![Moment-family differences for the pulse, with incomplete trajectories marked](../assets/qamar_moments/method_pulse.png)
 
-Every panel shows the dimensionless fraction
-``|\mu_k/\mu_k^{\mathrm{ref}}-1|``, **not percent**; 0.0038 means 0.38%.
+Every panel uses the same percent convention as the aggregation comparison:
+a dimensionless difference of 0.0038 is displayed as 0.38%.
 The upper row uses analytical growth/source moments; the lower row uses the
-1200-bin numerical sectional reference. Values below ``10^{-16}`` are displayed
-at that floor, including exact zeros. The axis now includes these small values;
-the exported moments are unchanged.
+1200-bin numerical sectional reference, interpolated at the saved method times.
+Each denominator is that reference moment at the same time. Values below
+``10^{-14}`` percent are displayed at the stated floor, including exact zeros.
+Each panel includes its complete finite trajectory and uses its own vertical
+range; the exported moments are unchanged.
 
 The upper row compares growth and nucleation with the analytical moments. All
 raw-moment methods have the same closed equations for this limit. This tests
@@ -379,10 +402,14 @@ physical interpretation.
 
 ![Analytical growth/source errors and refinement of the sectional comparison](../assets/qamar_moments/pulse_verification.png)
 
-The left verification panel plots ``|\mu_k^{\mathrm{sectional}}/\mu_k^{\mathrm{QMOM}}-1|``
-for 600 and 1200 bins. Its denominator is QMOM, whereas the family-comparison
-figure uses the sectional reference. The right panel uses analytical growth/source
-moments and shows fractional ``\mu_4`` error. Neither panel uses percent.
+The left verification panel plots
+``100|\mu_k^{\mathrm{sectional}}-\mu_k^{\mathrm{QMOM}}|/|\mu_k^{\mathrm{QMOM}}|``
+percent for 600 and 1200 bins. Its denominator is **QMOM**, whereas the family
+comparison uses the sectional reference. The right panel shows percent
+``\mu_4`` error against the **analytical growth/source** moments. Both use the
+same ``10^{-14}``-percent log-display floor. These comparisons diagnose reference
+and time/reconstruction effects separately; neither is an isolated collision
+closure-error estimate.
 
 The runner compares three and four nodes, and halves the native integration
 step. A separate resolved reference uses 600 and 1200 uniform length bins on
@@ -437,8 +464,7 @@ M1 = [moment(problem.operator.grid, vec(u), 1) for u in solution.u]
 reference = [benchmark.exact4(t)[2] for t in solution.t]
 ```
 
-The figure-generation drivers and supporting sources are available below. Keep
-the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
-lists plotting commands and optional environments.
+Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
+to retain their directory layout and plotting environment.
 
 - [qamar_moment_benchmarks.jl](../assets/source/examples/qamar_moment_benchmarks.jl)

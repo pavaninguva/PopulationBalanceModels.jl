@@ -21,7 +21,9 @@ concentrations its units are process volume/time. Same-bin event rates contain
 ``K_{ii}N_i^2/2`` and remove two particles. Distinct-bin events occur at
 ``K_{ij}N_iN_j`` and remove one particle from each parent bin.
 
-FixedPivot is the implemented sectional algorithm. Products are interpolated
+FixedPivot is the implemented sectional algorithm, following the event/deposition
+framework of [Kumar and Ramkrishna (1996)](https://doi.org/10.1016/0009-2509(96)88489-2).
+The package permits an explicitly declared additive-property map. Products are interpolated
 between pivots in an additive property ``q(x)``. The weights satisfy
 
 ```math

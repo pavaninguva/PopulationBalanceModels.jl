@@ -1,8 +1,92 @@
 # Repository audit
 
+This page is a **dated investigation history**. For current commands, supported
+test environments and retained-result semantics, use
+[Verification and reproduction](verification.md). Later entries do not erase
+the producing revisions, old targets or unresolved A13 evidence below.
+
 This register records demonstrated defects, corrections and limits of the
 verification. Passing a test establishes its stated configuration; it does not
 certify every closure, callback, numerical resolution or physical model.
+
+## Documentation revision, 26 October 2026
+
+Started at `708e1d84bd73ee0f026c255a62039a12d4632d28`, preserving existing
+uncommitted CI/test corrections in `.github/workflows/CI.yml`, `CHANGELOG.md`,
+this register, `test/README.md` and `test/stationary_inference.jl`.
+The [resolution table](assets/audit/documentation_resolutions.csv) maps all
+D01–D26 and G01–G03 findings to edited pages and verification. The new
+[current verification guide](verification.md) separates runnable instructions
+from this history. Existing compact/time/growth page URLs and compatibility
+headings remain available; the GRD and HOCFiniteVolume contracts have focused guides.
+
+These are documentation and **plot-only** changes, not numerical corrections.
+All 630 tracked numerical/provenance files inventoried at the start, including
+protein uncertainty receipts and original producer manifests, remain byte-identical.
+Seven figure sets were redrawn from retained exports: five Qamar moment figures,
+the cooling comparison and the historical compact-ADI comparison. Exports use
+LaTeX, 300-dpi PNG, embedded-font vector PDF and SVG. Signed cancellation checks
+support the new moment-error explanations. The cooling numerical reference is
+now correctly labelled MUSCL, and its duplicate export is plotted only once.
+No production solve, fit, posterior sampling or refinement campaign was run.
+
+Verification used Julia 1.10.12, Documenter 1.19.0, Optim 2.3.2, Python 3.12.15,
+NumPy 1.26.4 and Matplotlib 3.8.4. Optim was added to the **documentation**
+environment to execute the first MAP walkthrough, not to runtime dependencies.
+
+| Executed check | Result |
+|:--|:--|
+| `include("test/tensor_diffusion.jl")` with Test/PopulationBalanceModels | 120 assertions pass; independent spatial/time references and current-stage coupling |
+| `julia --project=/tmp/pbm-ci-latest-extensions-1.10.12 test/tensor_integration.jl` | 12 optional solver/estimation assertions pass; the portable setup is in the verification guide |
+| `julia --project=. examples/random_fluctuation_grd.jl --two-coordinate` | Completes; discrete material error about ``2.2\times10^{-16}`` |
+| `julia --project=docs docs/make.jl` with the checkout developed into docs | Strict build passes, including new MAP, HOC and tensor-observation examples; only HTML/search-size warnings |
+| `python test/docs_links.py docs/build` | 34 pages; no broken local links/assets |
+| `python test/protein_results.py`; `python test/protein_publication.py` | 7 + 7 pass; both full-Hessian Laplace rejections remain explicit |
+| `python test/plotting_summaries.py` | 10 pass, including percent/unit scaling and four retained signed-error crossings |
+| `python test/paper_data.py --case 1 --retained`; `--case 2 --retained` | 4 + 1 pass; retained contracts do not assert current-source equivalence |
+
+The unchanged case-3 retained checker still rejects missing `time_refinement`.
+The stem-cell checker still rejects Project metadata before numerical assertions:
+this run reports `extensions`, while the review reported `weakdeps`; both
+declarations differ and their set iteration determines which is reported first.
+All eight retained stem numerical-file hashes match independently. Neither
+failure is relaxed or described as successful current-source verification.
+LNP full-horizon replay and the parked collision-EQMOM investigation remain open.
+
+The latest public CI run was rechecked separately: all six core jobs, static
+analysis and Julia 1.10 sensitivities passed; both optional jobs and current-Julia
+sensitivities failed. The local corrections and unconfirmed CI mitigation below
+have not been pushed or remotely reverified. No full core rerun was needed for
+this documentation-only round; the focused tensor checks were executed locally.
+
+## CI follow-up, 26 October 2026
+
+Started from clean `708e1d84bd73ee0f026c255a62039a12d4632d28` with no
+applicable AGENTS.md. The completed [CI run](https://github.com/pavaninguva/PopulationBalanceModels.jl/actions/runs/40403157125)
+passed all six core OS/version jobs, static analysis and Julia 1.10
+sensitivities. Both optional-integration jobs failed; current-Julia
+sensitivities exited with code 139.
+
+| Finding | Evidence and correction | Disposition |
+|:--|:--|:--|
+| High: optional tests depended on import order | The complete CI sequence reproduced `UndefVarError: moment not defined` in `test/size_diffusion_integration.jl:12`. The preceding stationary-inference tests imported all of Distributions, whose exported `moment` conflicts with the PBM accessor. Import only `Normal` and `logpdf`; retain every conservation assertion. | Corrected. The complete sequence passes 388 checks each on Julia 1.10.12 and 1.13.2, including stationary inference, tensor coupling, external solvers and mapped sampling. |
+| High: current-Julia sensitivity job terminates without a test report | GitHub reports exit 139; unauthenticated log download returns HTTP 403. Cached and completely fresh-cache local runs pass all 21 analytical derivative/MAP/Laplace checks. Newest-dependency runs also pass 21 checks each on Julia 1.10.12 and 1.13.2, using separate preparation and test processes. No failing sensitivity assertion or package numerical defect was reproduced. | CI mitigation implemented: isolate preparation and test processes, use a new source/artifact cache without restored native images, precompile normally with strict errors, print versions and retain resolved manifests. The original segfault's cause remains unconfirmed; a new GitHub run must verify the mitigation. |
+
+The fresh-stack environments resolve SciMLSensitivity 7.119.13, SciMLBase
+3.58.0, ForwardDiff 1.4.6, ReverseDiff 1.18.7, Enzyme 0.13.216, EnzymeCore
+0.8.26 and GPUCompiler 2.10.0. Strict precompilation passes on Julia 1.10.12
+and 1.13.2. An independent empty compiled-cache run on 1.13.2 also passed
+21 checks with `JULIA_CPU_TARGET=generic`; it did not disable compiled modules
+or package images. The earlier pinned 1.10.3 Enzyme failure recorded below
+remains historical evidence about that older environment.
+
+Verification entry points are the complete optional sequence in
+`.github/workflows/CI.yml` and `test/sensitivity_integration.jl`, using the
+two-process commands in [the test guide](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/test/README.md).
+No package equations, solver tolerances, priors, observations or retained
+protein results changed. Workflow validation with actionlint 1.7.12 passes.
+Documenter builds with only its existing HTML/search-size warnings; no limits
+were relaxed. No commit, push or deployment was performed.
 
 ## Isolated core tests and tensor GRD, 26 October 2026
 
@@ -403,7 +487,7 @@ that distinction. No collision completion is claimed.
 
 The API build checks exports. Source separates physical declarations,
 representations, per-term policies, compilation, coupling, native integration
-and inference. Four extensions implement Optim, SciMLBase,
+and inference. At the original 9e2c6fa audit baseline, four extensions implemented Optim, SciMLBase,
 SciMLSensitivity/ReverseDiff and AdvancedHMC/MCMCDiagnosticTools. Distributions,
 ForwardDiff and SpecialFunctions are runtime dependencies; Aqua and JET remain
 development tools. `fit` and `loglikelihood` share upstream generic bindings.

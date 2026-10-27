@@ -14,6 +14,15 @@ case's stated density normalization; they do not create missing numerical data.
 The [case pages](../src/case_studies/index.md) supply model assumptions,
 interpretation, parameters and numerical restrictions.
 
+The moment, cooling and historical compact-comparison plotters export 300-dpi
+PNG plus vector PDF/SVG using the shared style. Their presentation updates
+leave the original CSVs, timings and producer records unchanged. Moment
+relative-error panels use percent; their ``1e-16`` fractional display floor is
+``1e-14`` percent, and signed differences remain in the numerical exports.
+An absolute-error minimum can mark a signed zero crossing, not a more accurate
+closure. The historical compact plot retains its recorded minimum-of-three
+warmed timing protocol; other cases keep their own stated timing protocols.
+
 ## Calculation and plotting entry points
 
 | Calculation | Numerical driver under `examples/` | Plot command under `docs/benchmarks/` |

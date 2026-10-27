@@ -59,12 +59,13 @@ makedocs(;
         "Numerical methods" => [
             "Overview and method selection" => "numerical_methods.md",
             "Growth and dissolution" => "methods/growth.md",
+            "Internal-coordinate diffusion and GRD" => "methods/dispersion.md",
             "Transport along growth trajectories" => "methods/characteristics.md",
             "Nucleation" => "methods/nucleation.md",
             "Birth, death, and dilution" => "methods/sources.md",
             "Aggregation and breakage" => "methods/collisions.md",
             "Time integration" => "methods/time.md",
-            "Compact-method verification" => "methods/compact_verification.md",
+            "Compact finite-volume growth" => "methods/compact.md",
             "Moment methods" => "moment_methods.md",
             "Realizable evolution and particle removal" => "methods/realizable_evolution.md",
         ],
@@ -83,7 +84,11 @@ makedocs(;
         ],
         "API reference" => "api.md",
         "Contributing and internals" => "development.md",
-        "Audit and verification" => "audit.md",
+        "Verification and reproduction" => "verification.md",
+        "Verification notes" => [
+            "Audit history" => "audit.md",
+            "Compact literature and numerical evidence" => "methods/compact_verification.md",
+        ],
         "Publishing" => "publishing.md",
     ],
 )

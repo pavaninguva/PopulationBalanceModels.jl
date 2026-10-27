@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullLocator
-from plot_style import configure
+from plot_style import configure, export_figure, panel_letters
 configure(usetex=True)
 
 root = Path(__file__).resolve().parents[1] / "src" / "assets"
@@ -16,9 +16,9 @@ methods = [
     ("HOCADI4_variant", "Compact–ADI variant", "#d26b15", "s"),
     ("InguvaBraatz_constant_shift", "Inguva–Braatz: constant growth", "#21845b", "^"),
 ]
-plt.rcParams.update({"font.size": 10,
-                     "axes.spines.top": False, "axes.spines.right": False})
-fig, axes = plt.subplots(2, 2, figsize=(11.6, 8.2), layout="constrained")
+fig, axes = plt.subplots(2, 2, figsize=(7, 5.4))
+fig.subplots_adjust(left=.11,right=.985,bottom=.20,top=.94,hspace=.5,wspace=.38)
+panel_letters(axes)
 for key, label, color, marker in methods:
     smooth = [r for r in rows if r["method"] == key and r["profile"] == "smooth"]
     sharp = [r for r in rows if r["method"] == key and r["profile"] == "rectangle"]
@@ -41,27 +41,19 @@ for key, label, color, marker in methods:
                     drawstyle="steps-mid" if key.startswith("Inguva") else "default",
                     label=label)
 axes[1, 0].axhline(0, color="#9aa3aa", linewidth=.8)
-axes[1, 0].set(xlim=(0, 0.8), ylim=(-.3,1.65), xlabel="Internal coordinate x", ylabel=r"$f$",
-               title="C   Rectangle: cut through the final pulse (128 × 128)")
-axes[1, 0].legend(fontsize=8, loc="upper left")
-axes[0, 0].set(xlabel="Bins per axis", ylabel=r"$L^1$ density error",
-               title="A   Smooth transport: analytical error")
-axes[0, 1].set(xlabel="Warmed solve time (ms; minimum of 3)", ylabel=r"$L^1$ density error",
-               title="B   Smooth transport: accuracy versus cost")
+axes[1, 0].set(xlim=(0, 0.8), ylim=(-.3,1.28), xlabel="Internal coordinate x", ylabel=r"$f$")
+
+axes[0, 0].set(xlabel="Bins per axis", ylabel=r"$L^1$ density error")
+axes[0, 1].set(xlabel="Warmed solve time (ms)", ylabel=r"$L^1$ density error")
 axes[0, 1].grid(False,which="both")
-axes[1, 1].set(xlabel="Bins per axis", ylabel="Negative particle number",
-               title="D   Rectangle: undershoots, without clipping")
+axes[1, 1].set(xlabel="Bins per axis", ylabel="Negative particle number")
 for ax in (axes[0, 0], axes[1, 1]):
     ax.set_xticks([32, 64, 128], labels=["32", "64", "128"])
     ax.xaxis.set_minor_locator(NullLocator())
     ax.grid(False,which="both")
-axes[0, 0].legend(fontsize=8, loc="center right")
-axes[1, 1].text(.03, .14, r"Zero values shown at $10^{-18}$ for log display.",
+
+axes[1, 1].text(.03, .14, r"Zero displayed at $10^{-18}$.",
                 transform=axes[1, 1].transAxes, fontsize=8, color="#555e66")
-fig.suptitle("2D population-balance transport: accuracy, cost and positivity", fontsize=16)
-fig.supxlabel("Periodic constant-growth diagnostic; compact–ADI is a specified variant, not a reproduction of Li et al. (2026).",
-              fontsize=9, color="#555e66")
-fig.savefig(root / "benchmark_2d.png", dpi=190, bbox_inches="tight", pad_inches=.18)
-fig.savefig(root / "benchmark_2d.svg", bbox_inches="tight", pad_inches=.18, metadata={"Date":None})
-svg=root / "benchmark_2d.svg"
-svg.write_text("\n".join(line.rstrip() for line in svg.read_text().splitlines())+"\n")
+handles, labels = axes[1, 0].get_legend_handles_labels()
+fig.legend(handles, labels, loc="lower center", ncol=2, bbox_to_anchor=(.52,.005), fontsize=7.5)
+export_figure(fig, root, "benchmark_2d")

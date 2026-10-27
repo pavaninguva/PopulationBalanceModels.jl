@@ -43,6 +43,26 @@ The inference tests use small analytical targets; they do not regenerate the
 long protein posterior. Minimum/current Julia jobs, normal compiled-module
 sensitivity checks, and selective JET analysis remain in CI.
 
+Sensitivity CI resolves and precompiles its dependencies in one process, then
+runs the tests in a fresh process with the same project. Its cache keeps package
+sources and artifacts, but excludes compiled images; normal Julia precompilation
+remains enabled. Each job prints Julia/dependency versions and retains its
+`Project.toml` and `Manifest.toml`, including on failure. This distinguishes
+environment/precompilation failures from failed sensitivity assertions.
+
+To reproduce that separation from the repository root:
+
+```sh
+PBM_SENSITIVITY_ENV=/tmp/pbm-sensitivity-env
+JULIA_NUM_PRECOMPILE_TASKS=1 julia --project="$PBM_SENSITIVITY_ENV" -e 'import Pkg; Pkg.develop(path=pwd()); Pkg.add(["Optim", "SciMLBase", "SciMLSensitivity", "ReverseDiff", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff"]); Pkg.status(;mode=Pkg.PKGMODE_MANIFEST); Pkg.precompile(;strict=true)'
+julia --project="$PBM_SENSITIVITY_ENV" test/sensitivity_integration.jl
+```
+
+Use selective imports in shared test processes. For example, importing all of
+Distributions also exports `moment`, which conflicts with the package's
+population-moment function. The complete optional-CI sequence is checked together,
+as well as through its standalone entry points.
+
 ## Retained results and utilities
 
 ```sh

@@ -70,7 +70,7 @@ coordinate Courant numbers matters.
 For a packed sectional PBMSystem, `suggest_dt(problem.operator,u,p,t)` uses
 the current bulk context but does not bound bulk depletion or interactions.
 Neither interface automatically recomputes or enforces a step during `simulate`.
-See [size diffusion](growth.md#Random-fluctuation-growth-rate-dispersion) for
+See [size diffusion](dispersion.md) for
 boundary, nonuniform geometry and RK-stage restrictions.
 
 Load SciMLBase to use `odeproblem(problem)` with an external ODE solver. This
@@ -141,80 +141,20 @@ as evidence of stability or positivity.
 
 ## Compact/ADI variant
 
-`HOCFiniteVolume()` adds a distinct conservative compact policy for 1D/2D
-bin integrals, positive separable growth, prescribed time dependence, point
-births and physical inflow/outflow. Its complete midpoint/symmetric update is
-**second order in time**, with fourth-order interior space. Select it during
-`compile(...; evolution=HOCFiniteVolume(),bc,p)`. The
-[compact specification](compact_verification.md) derives its cell-average face
-reconstruction, source treatment, number accounting and compatibility checks.
-The older periodic `HOCADI` construction described next remains unchanged.
-
-`HOCADI(time_order=2)` or `HOCADI(time_order=4)` advances homogeneous constant
-growth on uniform periodic 2D grids. It rejects sources, bulk coupling, and
-physical nonperiodic compact boundaries. Its spatial derivative is defined by
-
-```math
-\frac14d_{i-1}+d_i+\frac14d_{i+1}
-=\frac{3}{4h}(f_{i+1}-f_{i-1}),\qquad M\mathbf d=D\mathbf f.
-```
-
-Each coordinate uses a Cayley solve,
-
-```math
-\left(M+\frac{g\Delta t}{2}D\right)\mathbf f^{\mathrm{new}}
-=\left(M-\frac{g\Delta t}{2}D\right)\mathbf f^{\mathrm{old}}.
-```
-
-One x solve and one y solve define ``S_2``. The fourth-order time composition is
-
-```math
-S_4(\Delta t)=S_2(\gamma\Delta t)S_2((1-2\gamma)\Delta t)S_2(\gamma\Delta t),
-\qquad \gamma=(2-2^{1/3})^{-1}.
-```
-
-The negative middle step is restricted here to reversible autonomous transport.
-It must not be applied to irreversible nucleation, collision, or bulk processes.
-Cyclic tridiagonal factorization uses a rank-two correction; each directional
-sweep costs linear work in the number of tensor cells.
-
-This is a specified variant, not a verified transcription of Li et al.,
-[doi:10.1016/j.partic.2026.01.024](https://doi.org/10.1016/j.partic.2026.01.024).
-The supplement is now available. Its one-dimensional coefficients can be checked
-independently, as described in [Compact-method verification](compact_verification.md).
-Those coefficients define a different update from this periodic variant. The
-main paper's multilevel update and physical boundary closure still need reconciliation.
+[HOCFiniteVolume](compact.md) is a complete conservative midpoint/symmetric
+update: fourth-order interior space and second-order time, with its own
+coefficient, boundary and source contract. Do not attach another RK method.
+The earlier periodic `HOCADI` variant and its reversible fourth-order time
+composition are described in the [verification notes](compact_verification.md#Periodic-HOCADI-update-and-stability).
+Its negative composition stage excludes irreversible sources and physical
+inflow/outflow; bounded Fourier amplification does not imply positivity.
 
 ## Stability is different from positivity
 
-For a periodic Fourier mode with wave angle ``\theta``, the compact matrices
-have symbols ``m=1+\frac12\cos\theta`` and
-``d=\frac{3\mathrm i}{2h}\sin\theta``. A directional Cayley step has amplification
-
-```math
-A(\theta)=\frac{m-\mathrm i z}{m+\mathrm i z},\qquad
-z=\frac{3g\Delta t}{4h}\sin\theta,\qquad |A(\theta)|=1.
-```
-
-The fourth-order composition is also unit modulus, including its negative step.
-Thus this periodic constant-growth discretization has no growing Fourier mode
-in exact arithmetic. It is dispersive and does not preserve positivity.
-Narrow Gaussians and fronts can develop substantial negative undershoots even
-while the discrete L2 norm remains constant.
-
-`examples/verification/compact_adi.jl` checks every resolved Fourier mode over signed
-Courant numbers 0.1–10 and evolves smooth/rectangular profiles for ten periods.
-The recorded norm changes are below ``5\times10^{-14}``; negative densities
-remain. Independent dense-matrix tests verify the cyclic solves for both time
-orders. These results support stability of the implemented periodic variant,
-not a positivity claim or physical-boundary/paper-fidelity claim.
-The figure below retains the smooth-profile and sharp-front evidence for this
-periodic constant-growth diagnostic. In particular, the front cut shows the
-negative lobes despite bounded norm. The
-[two-coordinate growth case](../case_studies/transport.md) is a separate,
-coordinate-dependent physical problem.
-
-![Periodic transport: smooth accuracy, sharp fronts, and negative undershoots](../assets/benchmark_2d.png)
+A stable transport update may retain negative dispersive lobes. The
+[periodic compact evidence](compact_verification.md#Stability-is-different-from-positivity)
+and [constant-growth comparison](../case_studies/constant_growth.md) make that
+distinction explicit. Native stage checks remain a separate admissibility test.
 
 ## Exact integer shifts
 

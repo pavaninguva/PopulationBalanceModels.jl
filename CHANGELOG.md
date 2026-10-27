@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Revised the manual's diffusion, tensor coupling, stationary inference, dilution, moment-state and boundary contracts. Added a complete first Bayesian MAP example and focused GRD/compact guides, preserving legacy verification anchors. Clarified retained case-study limitations and measurement conventions; restyled seven figure sets from unchanged numerical exports and recorded D01–D26/G01–G03 resolutions.
+
+- Narrowed optional stationary-test imports to avoid the Distributions/PopulationBalanceModels `moment` name collision. Sensitivity CI now separates dependency preparation from test execution, rebuilds native package images and retains resolved environments for crash diagnosis; normal compiled modules and all derivative checks remain enabled.
 - Declared Statistics as a test dependency and in the optional CI test environment, fixing isolated core-test failures; updated the example loader for current Julia world-age rules.
 - Added diagonal Ito size diffusion on Grid2D, including nonuniform rectangular meshes, per-axis closed/periodic boundaries, current-stage bulk coefficients and combined explicit step recommendations. Tensor populations now participate in PBMSystem with shaped population/derivative views, conservative bulk exchange, observations and stationary estimation. Tensor axial coupling is available without intrinsic diffusion; mixed diffusion, tensor escape ledgers and tensor collision/transfer methods remain unsupported.
 

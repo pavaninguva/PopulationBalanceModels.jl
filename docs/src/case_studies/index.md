@@ -17,6 +17,8 @@ boundaries, and numerical choices used in its implementation.
 - [Lipid nanoparticle formation](nanoparticles.md): an initially particle-free
   solution nucleates, grows, and coalesces after solvent mixing. Scattering
   observations weight the resulting distribution strongly toward larger particles.
+  Historical full-horizon curves are diagnostic: the current strict stiff driver
+  fails at startup, while a short native startup is checked.
 - [Growth in two particle dimensions](transport.md): coordinate-dependent growth
   moves and stretches a joint distribution. An analytical solution exposes
   numerical broadening, oscillations, and errors under grid refinement.
@@ -38,13 +40,13 @@ boundaries, and numerical choices used in its implementation.
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition
 and a finer sectional reference, with an independent moment check. The
-nanoparticle reconstruction includes full-horizon runs and mechanism profiles,
-with material assumptions and explicit failed domain/convergence checks. These assumptions
-are stated beside the relevant inputs. The [axial reactor tutorial](../axial_reactors.md)
+nanoparticle reconstruction retains historical profiles with unresolved
+full-horizon replay and measurement conventions. These qualifications stay
+beside the relevant inputs and figures. The [axial reactor tutorial](../axial_reactors.md)
 adds a physical position coordinate to an intrinsic growth model.
 
 Each page ends with a minimal calculation and links to its full reproduction
-driver. Downloads preserve the source layout; a repository checkout is the
-easiest way to keep recipes, data and plotting helpers together. Figure-specific
+driver. Use the [common reproduction setup](../verification.md#Examples-and-figures)
+to keep recipes, data and plotting helpers together. Figure-specific
 assumptions stay on the case page; detailed correction history is in the
 [audit register](../audit.md).

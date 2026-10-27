@@ -53,23 +53,52 @@ jobs:
         version: ['1.10', '1']
     runs-on: ubuntu-latest
     env:
+      JULIA_LOAD_PATH: '@:@stdlib'
       JULIA_PKG_PRECOMPILE_AUTO: '0'
+      JULIA_NUM_PRECOMPILE_TASKS: '1'
+      OPENBLAS_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
-      - name: Continuous forward and adjoint inference tests
-        shell: julia --color=yes {0}
+        with:
+          # New prefix also prevents restoring older archives containing images.
+          cache-name: julia-sensitivities-source-v1
+          cache-compiled: 'false'
+      - name: Prepare sensitivity environment
+        env:
+          JULIA_PROJECT: ${{ runner.temp }}/pbm-sensitivities
+        shell: julia --startup-file=no --color=yes {0}
         run: |
           import Pkg
+          using InteractiveUtils
+          versioninfo()
           root = pwd()
-          Pkg.activate(mktempdir())
+          Pkg.activate(ENV["JULIA_PROJECT"])
           Pkg.develop(path=root)
           Pkg.add(["Optim", "SciMLBase", "SciMLSensitivity", "ReverseDiff",
                    "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff"])
-          include(joinpath(root,"test","sensitivity_integration.jl"))
+          Pkg.status(;mode=Pkg.PKGMODE_MANIFEST)
+          Pkg.precompile(;strict=true)
+      - name: Continuous forward and adjoint inference tests
+        env:
+          JULIA_PROJECT: ${{ runner.temp }}/pbm-sensitivities
+        shell: julia --startup-file=no --color=yes {0}
+        run: |
+          using InteractiveUtils
+          versioninfo()
+          include(joinpath(pwd(),"test","sensitivity_integration.jl"))
+      - name: Retain resolved sensitivity environment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sensitivity-environment-${{ matrix.version }}
+          path: |
+            ${{ runner.temp }}/pbm-sensitivities/Project.toml
+            ${{ runner.temp }}/pbm-sensitivities/Manifest.toml
+          if-no-files-found: ignore
   static-analysis:
     runs-on: ubuntu-latest
     steps:

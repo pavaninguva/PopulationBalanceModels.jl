@@ -1,5 +1,8 @@
 # API reference
 
+Use the [first model](getting_started.md) and [first MAP fit](inference.md#A-complete-first-fit)
+for complete programs. Calls below summarize public signatures and their scope.
+
 Conditional sectional-number measurements use
 `conditional_cdf(grid,N,points;window)` and
 `conditional_quantiles(grid,N,probabilities;window)`. They integrate actual
@@ -64,8 +67,10 @@ Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`,
 `VanLeer` and geometry-aware `WENO3` support nonuniform 1D grids.
 `SizeDiffusion` supports uniform/nonuniform batch Grid1D and diagonal Grid2D residuals, including
 shared-bulk systems, with closed or paired periodic boundaries. See the
-[diffusion contract](methods/growth.md#Random-fluctuation-growth-rate-dispersion)
-for total-flux injection, exchange and timestep restrictions.
+[diffusion contract](methods/dispersion.md)
+for dimensional callback/boundary scope, exchange and timestep restrictions.
+In particular, `BoundaryInjection` is 1D; tensor diffusion uses `SizeBC2D` and
+does not provide tensor boundary-point injection or escape ledgers.
 `WENO5` supports fixed nonuniform 1D meshes, rectangular `Grid2D` axes and
 the coupled adapter's axial mesh; at least six bins are required per WENO5 axis.
 Geometry is prepared at compilation. See [Growth](methods/growth.md) for the
@@ -77,7 +82,7 @@ they require an eligible model compiled with `evolution`.
 growth with `AffineGrowth`, `ExponentialGrowth`, `TimeScaledGrowth`, or an
 explicit `HOCGrowthLaw` contract. Two-dimensional directional laws use
 `SeparableGrowth2D`; prescribed source/inflow callbacks use `PrescribedRate`.
-See [Compact-method verification](methods/compact_verification.md) for exact
+See [Compact finite-volume growth](methods/compact.md) for exact
 signatures, boundary units, restrictions and cumulative number diagnostics.
 For axial states, `axial_population(operator,u,cell)` restores a local intrinsic
 view and `axial_fluxes(operator,u,p,t)` returns physical face fluxes. See
@@ -95,6 +100,11 @@ initialize it with `quadrature_state(method,nodes,weights)`. Read
 `PBMSystem(populations; bulk_rhs, interactions, exchanges, fields, nonnegative_bulk, accounting)`
 accepts a named tuple of compiled populations. Its problem adds named initial
 populations and `bulk0`; use `stateview(problem,u)` to obtain named views.
+Grid1D, Grid2D and eligible moment populations may share bulk states.
+Tensor populations and derivative views are matrices; the packed batch system
+state remains a vector. `PopulationMoment(:name,(kx,ky))` selects a joint moment.
+Use an explicit SystemObservable for a tensor marginal, as in the
+[coupled example](coupled_systems.md#Two-internal-coordinates-and-growth-dispersion).
 Use `population(problem,u,name)`, `bulk(problem,u,name)` and
 `cumulative(problem,u,population,mechanism,property=:number)` for packed states.
 `accounting_rates(problem,u,p,t)` returns a named tree of instantaneous rates.

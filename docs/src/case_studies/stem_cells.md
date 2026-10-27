@@ -5,12 +5,19 @@ marker between its daughters, or leave the pluripotent population. These events
 change both the number of cells and the distribution of marker content. A
 population balance connects the single-cell rates to the evolving culture.
 
-This example uses the **synthetic OCT4-cargo model** in Figure 1A–B of
+This example adapts the **synthetic OCT4-cargo model** in Figure 1A–B of
 [Brown, Stoukides and Tzanakakis (2025)](https://doi.org/10.1186/s13287-025-04668-w).
 We prescribe their functions and compare self-renewal with differentiation.
 Cargo is in arbitrary units (a.u.) and time is **model time**; these synthetic
 axes do not specify hours or measured molecule counts. There are no experimental
 observations, fitted parameters or claims of experimental validation here.
+
+The figures are retained outputs from the recorded producing environment.
+All eight numerical-file hashes match their manifest. The current strict
+checker stops at a `Project.toml` **dependency/extension metadata** guard before
+numerical assertions; current-source equivalence has not been established.
+File integrity, replay in the original environment and verified equivalence
+to a later checkout are separate checks. The producer records are preserved.
 
 ## From single cells to a population
 
@@ -249,10 +256,12 @@ julia --project=docs docs/make.jl
 ```
 
 Plotting requires Python 3.11+, NumPy, Matplotlib and, for `--usetex`, LaTeX with
-dvipng. Omitting that flag uses MathText previews. The plotter verifies the
-production configuration and numerical-source/data hashes; smoke exports cannot
-replace full-horizon results. Including the example module does not execute the
-benchmark. No experimental data or paper-figure workflow is involved.
+dvipng. Omitting that flag uses MathText previews. The plotter checks the production configuration and numerical-source/data
+hashes. At this checkout that strict guard needs a separately justified
+compatibility review before a current-source redraw/replay can be certified;
+the retained figures above do not imply it has passed. Smoke exports cannot
+replace full-horizon results. See the [verification guide](../verification.md)
+for setup and the distinction between retained integrity and replay.
 
 The [model and minimal solver](../assets/source/examples/stem_cell_population.jl),
 [reporting driver](../assets/source/examples/support/stem_cell_study.jl) and

@@ -1,19 +1,60 @@
 # Parameter estimation
 
-A deterministic comparison is available when no probabilistic observation
-model is declared. `ResidualObservation` contributes
-`weight * mean(((prediction-data)/scale).^2)`; `WassersteinObservation`
-integrates squared differences between conditional number quantiles. The
-comparison scales are not sensor standard deviations. These blocks use
-`CalibrationProblem` and the optional Optim extension, but cannot be mixed
-with Gaussian observations or used to manufacture confidence intervals.
-`loss_contributions` separates their contributions; `sensitivity_report`
-reports local sensitivity rank without a covariance estimate.
+An estimation problem combines a forward PBM, observations, a measurement
+likelihood and parameter priors. `fit` computes a maximum a posteriori (MAP)
+point using those definitions. Optional local uncertainty and posterior sampling
+reuse the same posterior; neither runs automatically with a basic fit.
 
-When a probabilistic measurement model is available, Bayesian estimation needs
-predictions at the measured states, a measurement-error model and priors for
-the unknown parameters. The package uses those same definitions for MAP fitting,
-optional Laplace uncertainty and optional MCMC sampling.
+## A complete first fit
+
+This small **synthetic** experiment observes total population number during
+constant-rate removal. Initially the integrated number is 1.5 per unit process
+volume, and the independent solution is ``M_0(t)=1.5\exp(-kt)``. Only k is
+unknown. Work in the [optional environment](verification.md#Optional-integrations)
+with Optim and Distributions available:
+
+```@example first_map
+using PopulationBalanceModels, Optim
+using Distributions: LogNormal
+
+grid = Grid1D([0.0,0.5,1.0])
+model = PBMModel(removal=Death((x,p,t,ctx)->p.k))
+operator = compile(model,grid)
+forward_problem = PBMProblem(operator,[1.0,0.5],(0.0,2.0);p=(k=0.3,))
+
+times = [0.5,1.0,2.0]
+data = [1.24,1.00,0.68] # synthetic number measurements
+measurement = Measurement(times,data,MomentObservable(0);
+    likelihood=GaussianLikelihood(sigma=0.03))
+parameter = ParameterSpec(:k;initial=0.3,transform=LogTransform(),
+    prior=Prior(LogNormal(log(0.4),0.5);coordinates=:physical))
+experiment = InferenceExperiment(:batch,forward_problem,measurement;dt=0.02)
+estimation = EstimationProblem((parameter,),(experiment,))
+
+fitted = fit(estimation;nstarts=2,seed=17)
+@assert fitted.converged
+estimate = physical_parameters(estimation,fitted.minimizer,:batch)
+predicted = vec(only(only(predictions(estimation,fitted.minimizer))))
+@assert isapprox(predicted,1.5exp.(-estimate.k .* times);rtol=1e-7)
+(removal_rate=estimate.k, predictions=predicted,
+ posterior=posterior_components(estimation,fitted.minimizer))
+```
+
+The Gaussian standard deviation is a declared synthetic observation assumption.
+`LogTransform` keeps k positive; the physical-coordinate LogNormal prior is
+converted to the inference density with its Jacobian **once**. The returned
+physical value is the transformed MAP in ``z=\log k`` coordinates, not necessarily
+the mode of the physical-coordinate density. Inspect convergence and derivative
+diagnostics before reporting the estimate. Multistart searches do not prove a
+global optimum.
+
+For a distribution-based physical example, continue with
+[estimating size-dependent growth](case_studies/estimating_growth.md). The sections
+below extend the same assembly to shared/local and nuisance parameters,
+likelihood choices, derivatives, [Gauss–Newton](#Request-sensitivity-based-uncertainty),
+[Laplace](#Request-full-Hessian-Laplace-uncertainty) and
+[MCMC](#Sample-the-same-posterior). Deterministic discrepancy and legacy Gaussian
+calibration are described [separately](#Existing-Gaussian-calibration-interface).
 
 ## Forward models and observations
 
@@ -56,32 +97,12 @@ stationary Gaussian calibration and timeless `ResidualObservation` or
 `WassersteinObservation(x, F, population; ...)` blocks for deterministic fitting.
 Their statistical meanings are unchanged. No solver failure is a valid fit.
 
-## Synthetic transient example
-
-The [growth example](case_studies/estimating_growth.md) fits
-``G(a)=g_0+g_1a``. It evaluates the analytical density at 281 sizes and six times,
-then samples independent Gaussian measurements conditioned to be nonnegative.
-The likelihood includes that truncation. The initial density and noise level are
-known; only the two growth coefficients are fitted. The points below are these
-synthetic measurements, and the continuous curves show the fitted densities.
-
-![Nonnegative noisy density measurements at six times and continuous MAP curves](assets/bayesian_growth/distributions.png)
-
 ## Describe the measurements
 
-An observation operator maps a solved PBM state to a predicted measurement.
-MomentObservable, BulkObservable, FunctionObservable and SystemObservable can
-all be used in a Measurement. For the analytical growth example, evaluate point
-densities directly and use the known truncated-Gaussian error:
+An observation operator maps a solved PBM state to predicted measurements.
+MomentObservable, BulkObservable, FunctionObservable and SystemObservable
+can all be used in a Measurement.
 
-```julia
-profile = FunctionObservable((N,operator,p,t)->
-    recipe.exact_density.(data.sizes,t,Ref(p)))
-measurement = Measurement(data.times,data.values,profile;
-    likelihood=TruncatedGaussianLikelihood(sigma=data.noise))
-```
-
-The case-study builder supplies `recipe`, `data` and the physical problem.
 Other instruments produce histograms or bulk measurements. For a sectional
 distribution, DistributionObservable integrates over the **measurement** bins:
 
@@ -205,7 +226,7 @@ tags. Untagged dependence cannot be inferred automatically.
 Each scalar declaration states its physical initial value, transform and prior:
 
 ```julia
-using Distributions
+using Distributions: LogNormal, Normal
 g0 = ParameterSpec(:g0; initial=0.4, transform=LogTransform(),
     prior=Prior(LogNormal(log(0.4),0.4); coordinates=:physical))
 noise = ParameterSpec(:noise; initial=0.003, transform=LogTransform(),
@@ -547,14 +568,10 @@ AdvancedHMC's `DenseEuclideanMetric` takes the inverse mass matrix: a supplied
 Hamiltonian energies, BFMI and transition statistics remain those of the
 sampler coordinates, including the map Jacobian. They are not relabelled as
 inference-coordinate energies or covariance estimates.
-The historical `examples/protein_crystallization.jl` Bayesian recipe uses a
-unit-determinant reference-rate map; its retained sampling checks are described
-in the [audit](audit.md). The current
-[isothermal protein tutorial](case_studies/protein_crystallization.md) uses
-original number distributions to compare CNT with CNT plus native GRD. Its
-concentration errors and correlated-CDF covariance are fixed assumptions;
-neither model estimates noise parameters. The four-/five-parameter targets are
-separate from the historical recipes and their archived draws.
+The [protein tutorial](case_studies/protein_crystallization.md) records a
+nonlinear auxiliary map for its four-/five-parameter fixed-error targets.
+Archived recipes have different statistical targets and are documented in the
+[audit history](audit.md).
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
@@ -645,6 +662,17 @@ measurements adds a separate observation-reconstruction error.
 ![Growth-parameter shifts and prediction changes under grid, time-step, and size-domain refinement](assets/bayesian_growth/refinement.png)
 
 ## Existing Gaussian calibration interface
+
+A deterministic comparison is available when no probabilistic observation
+model is declared. `ResidualObservation` contributes
+`weight * mean(((prediction-data)/scale).^2)`; `WassersteinObservation`
+integrates squared differences between conditional number quantiles. The
+comparison scales are not sensor standard deviations. These blocks use
+`CalibrationProblem` and the optional Optim extension, but cannot be mixed
+with Gaussian observations or used to manufacture confidence intervals.
+`loss_contributions` separates their contributions; `sensitivity_report`
+reports local sensitivity rank without a covariance estimate.
+
 
 CalibrationProblem, Observation, Experiment and fit(calibration,z0) remain
 available for existing code. With `Observation` blocks they implement the

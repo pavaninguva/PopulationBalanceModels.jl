@@ -15,7 +15,9 @@ constructed from the particle calculation.
 
 ## Write the two balances
 
-Let ``f(L,t)`` denote the number density at crystal length ``L``. For ``L>0``,
+Let ``f(L,t)`` denote number per **gram of water** per unit crystal length.
+This solvent-mass concentration basis is shared by the population and solute
+balances. For ``L>0``,
 growth transports crystals through size space:
 
 ```math
@@ -45,8 +47,12 @@ L^2G(L,c(t),T(t))f(L,t)\,dL.
 ```
 
 Length is in µm, time in seconds, and ``c`` in grams of solute per gram of
-water. The volume convention is ``\int L^3f\,dL``; no spherical shape factor is
-inserted. At zero length a nucleus has zero continuum volume. The model sets
+water. Thus ``M_k=\int L^kf\,dL`` has units µmᵏ per gram of water,
+``B_0`` has units number/(gram of water second), and ``\rho_c M_3`` has the
+same g-solute/g-water units as c. The volume convention is ``\int L^3f\,dL``;
+the code inserts no additional shape or process-volume conversion factor.
+With fixed water mass and no escape, ``c+\rho_c M_3`` is the material invariant.
+At zero length a nucleus has zero continuum volume. The model sets
 growth and nucleation to zero below saturation: it does not describe dissolution.
 
 ## Supply parameters and the cooling trajectory
@@ -256,6 +262,16 @@ toward larger lengths. Upwind broadens these features; MUSCL resolves them
 more sharply. The panels use the same stated initial conditions and the same
 rate callbacks on every grid.
 
+Panel (a) compares concentration on the finest retained grid for each method
+with the independent moment ODE. Panel (b) shows fractional moment errors
+against that ODE at the same times; its display floor is ``10^{-16}``.
+The 12800-bin curve is the **MUSCL numerical reference**, not an Upwind run.
+Panel (c) shows final densities per gram of water per micrometre, with darker
+lines for finer grids. Its bin labels are nominal: the grid builder also inserts
+the initial support edges when they are absent. Panel (d) shows the signed change
+in the discrete material invariant, in grams of solute per gram of water.
+No additional particle-volume shape factor is inserted in this model.
+
 The final relative L1 distribution errors against the 12800-bin reference are:
 
 | Nominal bins | Upwind | MUSCL |
@@ -325,6 +341,5 @@ solution = simulate(problem; method=SSPRK33(), dt=0.1, saveat=0.0:100.0:1000.0)
 concentration = [bulk(problem, u, :c) for u in solution.u]
 ```
 
-The figure-generation drivers and supporting sources are available below. Keep
-the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
-lists plotting commands and optional environments.
+Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
+to retain their directory layout and plotting environment.

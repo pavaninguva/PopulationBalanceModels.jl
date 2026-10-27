@@ -219,7 +219,7 @@ stability analysis and enumeration of all roots are not implemented.
 |:--|:--|
 | Grid1D sectional residuals | Growth, sources, removal, diffusion and collision residuals with their existing restrictions |
 | Moment residuals | Existing weak forms and closure acceptance; no new realizability guarantee for Newton iterates |
-| Grid2D residual transport | Existing Upwind/WENO5 and source restrictions |
+| Grid2D residuals, standalone or in PBMSystem | Upwind/WENO5 growth, eligible interior sources/removal, diagonal Ito SizeDiffusion and shared bulk balances; closed/paired-periodic diffusion boundaries. No tensor escape ledger or supplied collision/transfer algorithm. |
 | Axial residuals and coupled axial systems | Existing physical fluxes and local balances; no new boundary interpretation |
 | HOC, characteristic and other complete direct updates | Rejected: these do not define a spatial residual |
 | Moment extinction/escape events | Rejected: these require native MeasureEuler events |
@@ -233,14 +233,6 @@ constraints and continuation failure. A small residual is a statement about
 the discretized equations; check size/domain refinement separately. It does not
 establish uniqueness or dynamical stability. Estimation additionally requires a
 compatible observation model and a resolved, consistent solution branch.
-
-Run the complete verification example after installing NonlinearSolve in your
-working environment:
-
-```sh
-julia --project=. -e 'using Pkg; Pkg.add("NonlinearSolve")'
-julia --project=. examples/steady_state_crystallizer.jl
-```
 
 The [full runnable source](assets/source/examples/steady_state_crystallizer.jl)
 prints spatial errors and number-balance residuals, solves the coupled moment

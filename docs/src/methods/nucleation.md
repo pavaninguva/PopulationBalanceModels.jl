@@ -7,6 +7,8 @@ number rate alone does not specify which one is intended.
 
 ## Boundary creation
 
+This section concerns `Grid1D` and `SizeBC`.
+
 Zero-size nuclei can enter through the left boundary rather than an interior
 source:
 
@@ -17,8 +19,11 @@ source:
 ```
 
 ``J`` has units number/(process volume time), whereas ``G`` has coordinate/time
-units. Specifying number flux avoids dividing by a vanishing growth rate.
-The bulk model must still explain how particles move away from the boundary.
+units. With inward ``G(a,t)>0``, the classical finite-density trace is
+``n(a,t)=J/G(a,t)``. If ``G(a,t)=0`` and ``J>0``, no finite ordinary density
+satisfies that trace equation: the continuous model may require a boundary
+atom. The numerical source below remains defined and accumulates births in
+the first bin. It does not establish a finite continuum boundary density.
 
 ```@example nucleation
 using PopulationBalanceModels
@@ -40,7 +45,7 @@ sum(solution.u[end])
 
 The source location must equal the selected edge. With Growth alone, active
 injection requires inward or zero velocity. With
-[SizeDiffusion](growth.md#Random-fluctuation-growth-rate-dispersion), injection
+[SizeDiffusion](dispersion.md), injection
 prescribes the total flux ``G n-\partial_L(D n)=J`` at the left edge, including
 without Growth; no boundary density is imposed in addition. The alternative
 `SizeBC(InflowFlux(nucleation_rate),NoFlux())` places the influx in the boundary
@@ -143,10 +148,13 @@ normalization; coarse pivot moments still approximate physical mass.
 point declaration. Unlike changing a quadrature rule, a finite width changes
 higher source moments. Prefer `GaussianNucleation` when the spread is physical.
 
-For two internal coordinates, `Nucleation2D` uses bilinear point deposition or
-`GaussianInjection` with tensor-integrated weights. Boundary influx in 2D is a
-number flux per unit tangential internal coordinate, multiplied by its face
-width. The physical `GaussianNucleation` constructor is 1D.
+For two internal coordinates, `Nucleation2D` uses bilinear interior point
+deposition or `GaussianInjection` with tensor-integrated weights. The residual
+backend has no tensor `BoundaryInjection` point policy. Advection's separate
+`SizeBC2D`/`InflowFlux` interface prescribes a flux density per tangential
+coordinate, integrated over each face width; it is not a corner birth source.
+Tensor SizeDiffusion requires closed/paired-periodic base boundaries instead.
+The physical `GaussianNucleation` constructor is 1D.
 
 The preparation and residual hooks are in `src/numerics/sectional/term_dispatch.jl`
 and `integrated_sources.jl`. `examples/nucleation_sources.jl` compares the

@@ -1,6 +1,6 @@
 # Axially dispersed reactors
 
-Particles in a tubular reactor change both their position and their intrinsic
+Populations in a tubular reactor change both their position and their intrinsic
 properties. A crystal may grow while travelling downstream; axial mixing also
 spreads the time spent in the reactor. Treating position as another particle
 size would confuse these two processes and their boundary conditions.
@@ -166,7 +166,9 @@ moments with residual-based local methods. It rejects DQMOM states: linearly
 advecting weights and weighted abscissas does not implement the spatial direct
 moment equations. `axial_stateview(problem,u,cell).populations.name` restores
 each tensor's intrinsic matrix; the axial solver still stores flattened local
-states in columns. Intrinsic `SizeDiffusion` remains batch-only. Direct evolution methods,
+states in columns. Both axial adapters reject intrinsic
+[`SizeDiffusion`](methods/dispersion.md), including tensor diffusion; axial
+dispersion is a separate physical mechanism. Direct evolution methods,
 negative flow, state-dependent dispersion and a solved flow field are outside
 both adapters. Limited reconstruction of individual raw moments can still lose
 joint realizability; check moment stage validity and refine rather than

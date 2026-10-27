@@ -1,5 +1,6 @@
 using Test, PopulationBalanceModels, NonlinearSolve, Optim, ForwardDiff
-using Distributions, LinearAlgebra, Statistics
+using Distributions: Normal, logpdf
+using LinearAlgebra, Statistics
 using AdvancedHMC, MCMCDiagnosticTools
 
 function stationary_normal_fixture(;bins=2)

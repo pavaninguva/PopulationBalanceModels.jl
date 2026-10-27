@@ -70,8 +70,9 @@ to reconstruction and event tolerances.
 Point nucleation adds positive weights at ages given by Gauss–Legendre
 quadrature on `[0,h]`. A newborn of age `s` has size `Lc+s*G(Lc,p,t,ctx)`. The rate
 and velocity use the current admissible physical state, frozen for this source
-substep. For constant `J` and `G`, `N` age nodes integrate the startup moments
-through order `2N-1` exactly:
+substep. For an **initially empty** population, births at **Lc = 0**, constant
+`J` and constant positive `G`, `N` age nodes integrate the startup moments
+through order `2N-1` exactly, before any boundary escape:
 
 ```math
 M_k(t)=\frac{JG^kt^{k+1}}{k+1}.

@@ -8,7 +8,7 @@ compared without uncertainty about the physical kinetics.
 We use the constant-growth equation from Case 1 of
 [Inguva, Schickel and Braatz (2022)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2022.pdf),
 replacing its exponential initial condition with a localized Gaussian. We then
-repeat the comparison with the same smooth periodic distribution to measure
+use a separate smooth periodic distribution to measure
 convergence. The Gaussian makes numerical spreading and distortion easy to see;
 the periodic input separates refinement behaviour from physical boundaries.
 
@@ -98,7 +98,8 @@ This is the conservative compact finite-volume method, with fourth-order
 interior space reconstruction and second-order midpoint time integration.
 It is not the legacy two-dimensional `HOCADI` update. At fixed Courant number,
 second-order time error eventually dominates.
-The [compact verification](../methods/compact_verification.md) separates spatial
+The [compact guide](../methods/compact.md) explains the complete update;
+its [verification notes](../methods/compact_verification.md) separate spatial
 and temporal refinements. Signed undershoots, if present, are retained;
 this scheme has no positivity guarantee even for a smooth input.
 
@@ -191,32 +192,16 @@ Raw results are in [errors.csv](../assets/constant_growth/errors.csv) and
 [smooth_errors.csv](../assets/constant_growth/smooth_errors.csv). They also retain
 negative number, total-number drift and actual step counts.
 
+## Minimal run and full reproduction
+
+The first calculation above is a complete minimal run. To reproduce the full
+comparison, use a checkout with the [standard environment](../verification.md):
+
 ```sh
 julia --project=. examples/constant_growth_methods.jl
 python docs/benchmarks/plot_transport_comparisons.py constant --usetex
 julia --project=docs docs/make.jl
 ```
-
-## Minimal run and full reproduction
-
-Run this block from the repository root. It constructs and solves one problem;
-including a driver does not run its CSV exports.
-
-```julia
-using PopulationBalanceModels
-include("examples/constant_growth_methods.jl")
-grid = Grid1D(range(0.0, 1.0; length=201))
-initial = ConstantGrowthMethods.gaussian_counts(grid, 0.0)
-bc = SizeBC(OpenBoundary(), OpenBoundary())
-problem = ConstantGrowthMethods.make_problem(grid, initial, WENO3(), SSPRK33(), 4.0, bc)
-solution = simulate(problem; method=SSPRK33(), dt=0.025, check_nonnegative=false)
-```
-
-The figure-generation drivers and supporting sources are available below. Keep
-the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
-lists plotting commands and optional environments.
-
-
 
 - [Complete comparison driver](../assets/source/examples/constant_growth_methods.jl).
 - [Benchmark/export helpers](../assets/source/examples/support/constant_growth_benchmark.jl).

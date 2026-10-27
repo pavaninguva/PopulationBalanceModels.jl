@@ -12,8 +12,27 @@ from plot_protein_posterior import probability_levels,joint_density,marginal_den
 from unittest.mock import patch
 import matplotlib.pyplot as plt
 import plot_transport_comparisons
+from plot_style import relative_percent
 
 class Summaries(unittest.TestCase):
+    def test_relative_percent_and_zero_reference(self):
+        # A 0.0038 fractional difference is 0.38%, regardless of physical scale.
+        np.testing.assert_allclose(relative_percent([1.0038,1003.8],[1.,1000.]),[.38,.38])
+        self.assertTrue(np.isnan(relative_percent([1.],[0.]))[0])
+        self.assertEqual(relative_percent([1.],[1.],display_floor=True)[0],1e-14)
+
+    def test_retained_aggregation_cancellation(self):
+        path=Path(__file__).resolve().parents[1]/'docs/src/assets/qamar_moments/method_comparison.csv'
+        data=np.genfromtxt(path,delimiter=',',names=True,dtype=None,encoding='utf8')
+        for method,k,intervals in (('GammaEQMOM',1,((9.5,10.),(39.5,40.))),
+                                   ('QMOM',2,((5.,5.5),(28.,28.5)))):
+            q=data[(data['scenario']=='aggregation_breakage')&(data['method']==method)&(data['order']==k)]
+            for a,b in intervals:
+                pair=q[(q['time']==a)|(q['time']==b)]
+                self.assertEqual(len(pair),2)
+                signed=pair['moment']-pair['reference']
+                self.assertLess(signed[0]*signed[1],0.)
+
     def test_dominated_points(self):
         np.testing.assert_array_equal(pareto_mask([1,2,3,4,2],[4,3,3,1,5]),[True,True,False,True,False])
 

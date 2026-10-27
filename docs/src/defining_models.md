@@ -1,7 +1,8 @@
 # Defining models
 
-A population balance starts with a choice of particle coordinate and a statement
-of what changes a particle's size or number. The numerical grid comes later.
+A population balance starts with an internal coordinate and a statement
+of what changes the entities in the population. The coordinate might be crystal
+size, cell-marker content, age or another modeled property. The numerical grid comes later.
 This page explains how those choices enter PBMModel and how parameters and
 boundary conditions reach the rate callbacks.
 
@@ -17,7 +18,8 @@ labels are `:volume`, `:mass`, and `:diameter`. A label performs no unit convers
 Changing a model from diameter to volume requires transforming the density,
 growth law, and collision products, not just relabelling an axis.
 
-A sectional representation stores
+A direct PDE discretization on `Grid1D` stores integrated bin populations,
+also called the *sectional* representation:
 
 ```math
 N_i(t)=\int_{x_{i-1/2}}^{x_{i+1/2}}n(x,t)\,dx.
@@ -29,9 +31,11 @@ peaks more carefully. `density(grid,N)` divides by widths, while
 `moment(grid,N,k)` computes ``\sum_i x_i^kN_i`` using centre pivots. Nonlinear
 moments can therefore have quadrature error even when bin numbers are exact.
 
-A [MomentSet](moment_methods.md) stores selected moments instead of bins.
-[Grid2D](case_studies/transport.md) stores integrated numbers over two internal
-coordinates. These representations have different supported numerical methods.
+A [MomentSet](moment_methods.md) declares the tracked moment basis. Raw-moment
+methods evolve those moments; DQMOM evolves weights and weighted abscissas and
+recovers the moments through `moment_value`. The basis alone does not prescribe
+the solver-state layout. [Grid2D](case_studies/transport.md) instead stores
+integrated numbers over rectangular cells in two internal coordinates.
 
 ## Translate a physical term into a callback
 
@@ -62,19 +66,23 @@ nothing # hide
 
 The callback returns a physical rate; it does not assemble a face flux or
 modify a derivative vector. Growth may be negative for dissolution. Death is
-a nonnegative hazard. The argument lists distinguish other mechanisms:
+a nonnegative hazard. Representative callback contracts are:
 
 | Declaration | Callback result |
 |:--|:--|
 | `Growth(rate=G)` | `G(x,p,t,ctx)`: coordinate/time |
+| `Growth2D(rate=G)` | `G(x,y,p,t,ctx)`: pair of coordinate velocities |
+| `SizeDiffusion(D)` | `D(x,p,t,ctx)` in 1D, or `D(xy,p,t,ctx)` returning `(Dx,Dy)` in 2D: coordinate²/time |
 | `Nucleation(rate=J,size=xc)` | `J(p,t,ctx)`: number/(process volume time) at a fixed size |
 | `Birth(source=B)` | `B(x,p,t,ctx)`: number/(process volume coordinate time) |
 | `Death(rate=d)` or `Dilution(rate=d)` | `d(x,p,t,ctx)`: inverse-time hazard |
 | `Aggregation(K)` | `K(x,y,p,t,ctx)`: process volume/time for number concentrations |
 | `Breakage(a,daughters)` | parent hazard and expected daughter counts, including quadrature weights |
 
-The [term-specific numerical pages](numerical_methods.md) explain how each
-callback becomes a discrete contribution.
+Distributed/integrated source constructors and moment sources have their own
+contracts in the [term-specific numerical pages](numerical_methods.md).
+Keywords such as `rate`, `source` and `size` belong to those constructors;
+PBMModel's outer keyword names are user-selected labels, not a fixed catalogue.
 
 ## Keep parameters and changing states distinct
 
@@ -129,7 +137,7 @@ names automatically. Explicit names make individual method choices easier to rea
 
 ## Decide what crosses a size boundary
 
-`SizeBC(left,right)` specifies the two exterior transport faces. Its default is
+For one coordinate, `SizeBC(left,right)` specifies the two exterior transport faces. Its default is
 NoFlux at both ends.
 
 | Boundary | Meaning |
@@ -140,6 +148,10 @@ NoFlux at both ends.
 | `InflowFlux(J)` | Prescribe inward number flux `J(p,t,ctx)`, independently of velocity |
 | `Periodic()` | Wrap transport between paired endpoints; use at both ends |
 
+These are advection boundary meanings. At positive-growth outflow,
+`OpenBoundary()` uses the outgoing numerical trace; it imposes no additional
+zero-gradient condition on the density or on `G*n`. For growth plus diffusion,
+the [GRD contract](methods/dispersion.md) defines the **total** exterior flux.
 For positive growth, a closed upper edge retains particles in the last bin.
 An open edge lets them leave the represented population. Set the range and
 material accounting accordingly. Periodic boundaries are useful for numerical
@@ -149,15 +161,18 @@ combined with sectional collisions.
 A bare `InflowFlux` boundary needs Growth in the model. A zero-size nucleation
 term can instead select BoundaryInjection at the matching edge; without size
 diffusion, active injection requires inward or zero growth velocity.
-With [`SizeDiffusion`](methods/growth.md#Random-fluctuation-growth-rate-dispersion),
+With [`SizeDiffusion`](methods/dispersion.md),
 BoundaryInjection specifies the total incoming number flux even without Growth.
 SizeDiffusion currently requires closed or paired periodic base boundaries.
 Choose one declaration for the same source. These flux forms
 avoid dividing a prescribed flux by a possibly vanishing growth velocity.
 The first positive pivot still assigns incoming particles a finite discrete size.
 
-For two coordinates, `SizeBC2D(x=...,y=...)` specifies each axis. Its influx is
-per tangential coordinate, integrated over the corresponding face width.
+For two coordinates, `SizeBC2D(x=...,y=...)` specifies each axis. Advection's
+`InflowFlux` is per tangential coordinate, integrated over the corresponding
+face width. This is distinct from point nucleation: tensor boundary-point
+injection is unavailable. Tensor diffusion accepts closed or paired-periodic
+conditions independently per axis, with no prescribed inflow diffusion closure.
 `BatchDomain()` describes a well-mixed population. A separate
 [AxialDispersion domain](axial_reactors.md) adds a physical axial mesh, inlet,
 and outlet to a one- or two-coordinate sectional population. Intrinsic size

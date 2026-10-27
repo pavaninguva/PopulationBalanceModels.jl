@@ -7,9 +7,14 @@
 Physical terms and numerical preparation are shared by transient and stationary
 forward problems. Their inputs differ: a transient problem needs an initial
 state and time span; a stationary problem needs a numerical guess. The inference
-connection in this schematic applies to eligible transient models. It does not
-imply a stationary sensitivity or estimation adapter, or support for every
-combination of terms and methods. DQMOM evolves weights and weighted abscissas;
+connection applies to eligible **transient and stationary** models. Both use
+observation operators, likelihoods, priors and the shared MAP/uncertainty/sampling
+interfaces. `StationarySolver` uses checked equilibria and implicit derivatives
+at smooth isolated roots; singular roots, branch/rank changes and incompatible
+residual AD require explicit restrictions or a verified finite-difference path.
+Transient ODE sensitivities do not supply stationary or event jump rules.
+The diagram does not promise every combination of terms and methods.
+DQMOM evolves weights and weighted abscissas;
 the other displayed moment route need not have the same state layout.
 
 The [vector figure](assets/architecture/section2_architecture_revised.pdf) and
@@ -17,6 +22,8 @@ The [vector figure](assets/architecture/section2_architecture_revised.pdf) and
 use the current dependency declarations. Regenerate without simulations using
 `python paper/architecture/generate_pbm_architecture.py --usetex` from the
 repository root with the paper Python environment and LaTeX available.
+Statistics belongs to the **test** dependencies; it is not part of the
+simulation core shown in panel (b).
 
 The module is assembled in `src/PopulationBalanceModels.jl`. `modeling/` holds
 physical terms, laws, sources, and boundaries; `representations/` defines grids
@@ -149,44 +156,16 @@ adapters use the method's moment mapping.
 
 ## Verification and documentation changes
 
-Run the core scientific suite with `julia --project=. -e 'using Pkg; Pkg.test()'`.
-The suite checks event factors, additive-property conservation, source integrals,
-boundaries, signed growth, moment weak forms, coupling, inference, and restricted
-2D refinement. The external method tests exercise dispatch and direct-state
-moment chain rules. Passing these tests establishes those configurations,
-not universal positivity or physical validation.
+The [verification guide](verification.md) gives current core, optional-solver,
+tensor and documentation commands. The [audit history](audit.md) retains dated
+investigations, producer environments and unresolved scientific questions.
+Statistics and Aqua are test dependencies; JET is isolated from runtime loading.
 
-Use a separate working environment for optional integrations:
-
-```julia
-using Pkg
-root = pwd() # package directory
-Pkg.activate(mktempdir())
-Pkg.develop(path=root)
-Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff", "AdvancedHMC", "MCMCDiagnosticTools"])
-include(joinpath(root,"test","integration.jl"))
-include(joinpath(root,"test","bayesian_integration.jl"))
-```
-
-`docs/src/` is the authoritative manual; `docs/make.jl` never copies development
-reports into it. Add focused explanations with equations, units, assumptions,
-restrictions, and a runnable implementation. Update the relevant case study
-when modifying an example. Keep benchmark inputs, raw CSV data, and environment
-metadata with any new figures. Label historical evidence and synthetic inputs.
-
-Core tests include [Aqua](https://juliatesting.github.io/Aqua.jl/stable/) checks
-for ambiguities, exports, dependency metadata, piracy and persistent tasks.
-Aqua is a test dependency. The separate JET job targets two concrete residuals
-on Julia 1.13 with JET 0.12; it does not certify every callback or extension.
-`test/tools/profile_paths.jl` measures warmed residual allocations and work without
-adding a runtime profiling dependency.
-
-The sensitivity job uses normal compiled modules on maintained Julia 1.10 and
-current Julia. The audited older Julia 1.10.3 sensitivity stack failed upstream
-Enzyme/GPUCompiler precompilation. Its core package checks pass; optional
-continuous sensitivities were verified with normal loading on 1.10.12. Use a
-maintained Julia patch for that stack rather than relying on disabled compiled
-modules. See the [audit register](audit.md) for exact environments and outcomes.
+`docs/src/` is the authoritative manual. A documentation change should preserve
+equations, units, restrictions and the data provenance behind each claim.
+Use short runnable calculations and links to full drivers; keep reporting code
+out of the walkthrough. New figures need numerical inputs and settings, while
+plot-only revisions must preserve their original producer records.
 
 Both Distributions and this package export `moment`. Use selective imports
 (`using Distributions: Normal, logpdf`, for example), or explicitly qualify
@@ -200,23 +179,6 @@ checks references, and treats warnings as failures. The [publishing guide](publi
 
 ## Updating this checkout
 
-Edits made in this working directory are ordinary local Git changes. Review
-`git status --short` and `git diff` before committing. Run the package tests and
-build the manual, then commit the source, tests, documentation, and benchmark
-evidence together. No archive extraction or replacement of the `.git` directory
-is needed.
-
-```sh
-git diff --stat
-julia --project=. -e 'using Pkg; Pkg.test()'
-julia --project=docs docs/make.jl
-git add src examples test docs CHANGELOG.md
-git diff --cached --stat
-git commit -m "Clarify model tutorials and numerical interfaces"
-git push origin main
-```
-
-Use the appropriate branch instead of `main` when working through a pull request.
-A normal push to `main` triggers the existing documentation workflow and updates
-`/dev/`. Builds and manifests remain ignored. Keep downloaded PDFs and temporary
-research environments outside the tracked tree unless redistribution is intended.
+See [CONTRIBUTING.md](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/CONTRIBUTING.md)
+for the review/verification workflow and [Publishing](publishing.md) for releases
+and versioned documentation deployment.

@@ -1,17 +1,20 @@
 # Moment methods
 
 Sometimes the quantities of interest are total number, mean size, or total
-particle material rather than every bin of a distribution. A moment model
-advances integrals directly:
+population material rather than every bin of a distribution. Moment methods
+describe evolution through a finite set of integrals:
 
 ```math
 \mu_k(t)=\int_0^\infty x^kn(x,t)\,dx.
 ```
 
 This differs from calling `moment(grid,N,k)` on a sectional solution. In a
-moment model the moments are the dynamical variables. We need equations for
-their rates, and often an assumption to express those rates using finitely many
-tracked moments.
+raw-moment model these integrals are the dynamical variables. DQMOM instead
+advances weights and weighted abscissas, recovering moments from those states.
+`MomentSet(0:K)` defines the tracked basis, not every method's storage layout.
+Use `moment_value` or `moment(ctx,k)` to read moments without assuming a layout.
+In either route we need equations for their rates, often with a closure for
+integrals not determined by the tracked moments.
 
 ## Integrate the balance against a particle property
 
@@ -81,7 +84,10 @@ This supplies a useful check independent of the sectional discretization.
 ## Approximate an unclosed hierarchy
 
 General size-dependent rates can require integrals that the tracked moments do
-not determine. The implemented approximation families make different assumptions:
+not determine. The quadrature approach originates with
+[McGraw (1997)](https://doi.org/10.1080/02786829708965471). The package's scaled
+inversion and all-moment acceptance checks are implementation choices described below.
+The implemented approximation families make different assumptions:
 
 - `QMOM(n)` (also `QuadratureClosure(n)`) reconstructs positive quadrature nodes
   and weights from moments 0:2n−1. The rate callbacks are evaluated through their
@@ -244,7 +250,10 @@ This is a kernel observation model, not a uniquely recovered PSD. Only the
 Gamma kernel is supplied; lognormal EQMOM, CQMOM and multivariate moment
 closures remain unimplemented. The eigenvalue/root inversion requires explicit
 finite-difference inference. The construction follows the Gamma extended
-quadrature framework reviewed by [Dürr and Bück](https://doi.org/10.3390/pr8040414).
+quadrature framework of [Yuan, Laurent and Fox (2012)](https://doi.org/10.1016/j.jaerosci.2012.04.003).
+The package's checked inversion and precision retry are implementation choices;
+the citation does not establish support for other EQMOM kernels or every test
+case in that paper. [Dürr and Bück](https://doi.org/10.3390/pr8040414) give a later review.
 
 ## Evolve nodes and weights with DQMOM
 

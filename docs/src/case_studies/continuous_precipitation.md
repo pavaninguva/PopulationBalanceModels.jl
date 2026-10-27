@@ -152,16 +152,23 @@ A [logarithmic view](../assets/continuous_precipitation/fields_log.png) shows
 the same cell averages up to 300 µm. The simulation, outlet curves and all
 inventory calculations retain the full 1–900 µm size domain.
 
-The previous 144-bin field had only three size bins below 20 µm, close to the
-number-density peak. Its first bin spanned 1–7.24 µm. Displaying those bin
-averages on a logarithmic axis made the missing resolution conspicuous.
-The new spacing is 0.780 µm, with 24 bin centres below 20 µm. These are finer
-simulations, plotted with their actual cell edges; no spline or image smoothing
-is used. The log view still enlarges the first few uniform cells; those visible
-bands are cell averages. Zhang's Figure 9 uses **logarithmic** size meshes (100 bins for the
+The 144-bin comparison mesh has only three size bins below 20 µm, near the
+number-density peak, and its first bin spans 1–7.24 µm. The displayed 1,152-bin
+field has 0.780-µm spacing and 24 centres below 20 µm. Actual cell edges are
+plotted, with no spline or image smoothing. The log view enlarges the first few
+uniform cells; visible bands are cell averages. Zhang's Figure 9 uses **logarithmic** size meshes (100 bins for the
 field and 200 for Case 7A's outlet), which concentrate cells near this peak.
-Our uniform mesh is required by the current WENO5 implementation and needs many
-more bins across the 1–900 µm domain to give comparable local resolution.
+These retained documentation runs used uniform size meshes and need many more
+bins across 1–900 µm for comparable local resolution. Current
+[geometry-aware WENO5](../methods/growth.md#WENO-on-a-nonuniform-mesh) also supports
+eligible fixed nonuniform and logarithmic meshes. That capability does not
+change the meshes, timings or provenance of the retained uniform-grid runs.
+
+The **1,152 × 128 reference is numerical**. Its matched time/axial checks were
+performed on **144 × 128**, not on this field mesh. The separate paper workflow
+uses a logarithmic **400 × 400** reference with an implicit BDF adapter; its
+required `time_refinement` dataset is missing. Neither study supplies the
+other's missing verification. The strict paper checker remains rejecting.
 
 ![Outlet size refinement with WENO5 in size and MUSCL axially, at 200 seconds](../assets/continuous_precipitation/outlets.png)
 
@@ -223,15 +230,15 @@ difference as well as evolution error; it is not a test of fifth-order face
 reconstruction in isolation.
 
 The reference uses **WENO5 in size, MUSCL axially and RK4 in time** on 1,152 × 128
-cells. WENO5 requires uniform size spacing. On the checked startup meshes, WENO5 in *both* directions fails
+cells, with a uniform size mesh for these retained calculations. On the checked startup meshes, WENO5 in *both* directions fails
 the negative-bulk check during empty-reactor startup, including after a tenfold
 step reduction; those [failed checks](../assets/continuous_precipitation/failures.csv)
 remain visible. We therefore do not call this a WENO5/WENO5 reference or infer
 high accuracy from the scheme name alone. The size and axial checks below
 quantify its remaining resolution dependence.
 
-The earlier comparison trajectories are retained, with their errors recomputed
-against the finer reference. Their timings are unchanged. All use RK4 and axial MUSCL, varying only size reconstruction
+The retained comparisons use this common numerical reference and their original
+single-run timings. All use RK4 and axial MUSCL, varying only size reconstruction
 among Upwind, MUSCL and WENO5. The primary study has two four-point paths:
 
 - Size refinement: ``N_x=12,24,48,72``, with ``N_z=96`` fixed.
@@ -239,7 +246,8 @@ among Upwind, MUSCL and WENO5. The primary study has two four-point paths:
 
 The shared endpoint is solved once. Four logarithmic-size MUSCL runs at
 ``N_x=12,24,36,48`` and ``N_z=64`` remain in the downloadable results as a
-mesh-family sensitivity check. WENO5 is not applied to that nonuniform mesh.
+mesh-family sensitivity check. Those particular runs used MUSCL; they do not
+test the subsequently implemented nonuniform WENO5.
 
 ![Independent size and axial refinement](../assets/continuous_precipitation/coordinate_refinement.png)
 
@@ -369,9 +377,8 @@ outlet = population(problem, last(solution.u), :crystals)[:, end]
 concentration = bulk(problem, last(solution.u), :c)
 ```
 
-The figure-generation drivers and supporting sources are available below. Keep
-the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
-lists plotting commands and optional environments.
+Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
+to retain their directory layout and plotting environment.
 
 - [continuous_precipitation.jl](../assets/source/examples/continuous_precipitation.jl)
 

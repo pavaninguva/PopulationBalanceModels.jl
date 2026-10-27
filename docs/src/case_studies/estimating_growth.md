@@ -349,8 +349,7 @@ fitted = fit(problem; maxiters=200)
 parameters = physical_parameters(problem, fitted.minimizer)
 ```
 
-The figure-generation drivers and supporting sources are available below. Keep
-the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
-lists plotting commands and optional environments.
+Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
+to retain their directory layout and plotting environment.
 
 - [estimate_size_dependent_growth.jl](../assets/source/examples/estimate_size_dependent_growth.jl)

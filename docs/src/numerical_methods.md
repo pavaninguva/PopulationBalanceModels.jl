@@ -1,7 +1,8 @@
 # Numerical methods
 
-Writing a kinetic law does not determine how it should be discretized. Growth
-moves particles through size-bin faces, nucleation creates particles, and a
+Writing a kinetic law does not determine how it should be discretized. On a
+grid, growth transports the population through internal-coordinate faces,
+nucleation creates entities, and a
 collision removes parents and deposits products. Their rates have different
 units and their numerical contributions must preserve different quantities.
 Time integration then advances the sum of those contributions.
@@ -11,7 +12,7 @@ The manual treats these operations separately:
 | Part of the calculation | Numerical treatment |
 |:--|:--|
 | [Growth and dissolution](methods/growth.md) | Signed face fluxes with Upwind, MUSCL, van Leer, WENO3, WENO5, Centered, or LinearUpwind, subject to grid restrictions |
-| [Random-fluctuation GRD](methods/growth.md#Random-fluctuation-growth-rate-dispersion) | `SizeDiffusion` differences D times density, using conservative centred fluxes |
+| [Random-fluctuation GRD](methods/dispersion.md) | `SizeDiffusion` differences D times density, using conservative centred fluxes |
 | [Transport along growth trajectories](methods/characteristics.md) | Inguva2022 and InguvaBraatz2023 for eligible autonomous growth, with matched meshes and time steps |
 | [Nucleation](methods/nucleation.md) | Boundary influx, point deposition, or an integrated size distribution |
 | [Birth, death, and dilution](methods/sources.md) | Bin source integration and nonnegative removal hazards |
@@ -33,8 +34,8 @@ named term with `by_term`; this does not select a time integrator.
 | Physical term | Supplied methods | Conditions |
 |:--|:--|:--|
 | `Growth` | `Upwind`, `MUSCL`, `VanLeer`, `WENO3`, `WENO5`, `Centered`, `LinearUpwind` | The first five support fixed nonuniform 1D meshes, including logarithmic meshes. WENO5 needs at least six bins and numerically resolved reconstruction weights. Centered and LinearUpwind need uniform meshes. WENO and unlimited schemes have no positivity guarantee. |
-| `SizeDiffusion` | `FiniteVolumeDiffusion` | Batch Grid1D or diagonal Grid2D diffusion, standalone/coupled; uniform/nonuniform rectangular meshes, closed or paired periodic boundaries per axis. Ito/Fokker–Planck convention, current-stage coefficients. Residual integrators only. |
-| `Nucleation` at one size | `FixedPivot`, `BoundaryInjection`, `GaussianInjection` | Fixed pivot deposits between pivots. Boundary injection needs Growth (inward/zero velocity) or SizeDiffusion (prescribed total flux). Gaussian width is specified in coordinate units, independently of mesh spacing. |
+| `SizeDiffusion` | `FiniteVolumeDiffusion` | This table's Grid1D case uses closed or paired-periodic SizeBC. For diagonal Grid2D diffusion, callback and boundary scope see the [GRD contract](methods/dispersion.md). |
+| `Nucleation` at one size | `FixedPivot`, `BoundaryInjection`, `GaussianInjection` | 1D: fixed pivot deposits between pivots; boundary injection needs Growth (inward/zero velocity) or SizeDiffusion (total flux). Gaussian width is in coordinate units, independently of mesh spacing. |
 | `Birth`, `DistributedNucleation` | `MidpointRule`, `GaussLegendre(n)` | Callbacks return source density per coordinate; quadrature integrates over each bin. |
 | `IntegratedBirth`, `IntegratedNucleation` | `BinIntegral` | Callback supplies the bin integral directly, including its physical normalization. |
 | `Death`, `Dilution` | `PointwiseLoss`, `CellAverageLoss(quadrature=GaussLegendre(n))` | Nonnegative removal hazard, evaluated at pivots or averaged in each cell. |
@@ -49,10 +50,12 @@ meshes with uniform or nonuniform axes (at least six bins per axis).
 Other 1D reconstruction policies, sectional collisions and boundary point
 injection are not general 2D implementations.
 Tensor populations can share bulk balances with other populations in `PBMSystem`.
-`SizeDiffusion((Dx,Dy))` adds independent coordinate diffusion; mixed derivative
-terms and tensor boundary-escape ledgers remain unavailable.
+`SizeDiffusion((Dx,Dy))` adds diagonal Ito diffusion. Independent Wiener
+increments do not imply an independent joint population; see the
+[coefficient, boundary and coupling contract](methods/dispersion.md).
 
-MomentSet selects a closure separately from each term's weak-form rule.
+MomentSet declares the tracked moment basis. Compilation selects a moment
+method separately from each term's weak-form rule.
 ExactClosure uses ExactMomentRule for supported polynomial/closed terms.
 QMOM (QuadratureClosure), RankAdaptiveQMOM, Gamma EQMOM, DQMOM and LogNormalClosure use QuadratureMomentRule by
 default, with exact rules available for eligible named terms. A closure must
@@ -77,15 +80,17 @@ eligible residual reconstructions. Dispersion uses centered gradient fluxes.
 | `HOCFiniteVolume` | Conservative compact 1D/2D bin-integral update | Positive declared separable growth, including prescribed time dependence; uniform axes, periodic or physical inflow/outflow, prescribed point births. Fourth-order interior space, second-order time. No evolving bulk/axial coupling. |
 
 The Li supplementary-coefficient audit is a diagnostic implementation, not
-the new conservative `HOCFiniteVolume` adaptation. See [Compact-method verification](methods/compact_verification.md) for its derivation, compilation contracts and measured orders. The method pages
+the new conservative `HOCFiniteVolume` adaptation. See [Compact finite-volume growth](methods/compact.md) for the implemented contract and [verification notes](methods/compact_verification.md) for measured orders and literal literature audits. The method pages
 explain these restrictions beside their equations and boundary treatments.
 
 ## Select a representation first
 
 Grid1D stores ``N_i(t)=\int_{x_{i-1/2}}^{x_{i+1/2}}n(x,t)\,dx``. Grid2D stores
 numbers over rectangular internal-coordinate bins. Neither stores a pointwise
-density. MomentSet instead stores integrals weighted by powers of the coordinate;
-its closure and weak-form choices are described in [Moment methods](moment_methods.md).
+density. MomentSet declares integrals weighted by powers of the coordinate.
+Raw-moment methods evolve them directly; DQMOM uses weights and weighted
+abscissas. Their state-to-moment mappings and weak-form choices are described
+in [Moment methods](moment_methods.md).
 The compiler checks that a requested treatment exists for the chosen representation.
 
 ## Select a method for each term

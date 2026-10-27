@@ -1,222 +1,37 @@
 # Compact-method verification
 
-A compact stencil obtains a derivative or a new time level by solving a banded
-linear system. This can give high accuracy with few neighboring points, but it
-does not by itself guarantee stable boundaries, positivity, or the advertised
-order for variable coefficients. We check those properties separately.
+Use [Compact finite-volume growth](compact.md) for the implemented
+`HOCFiniteVolume` formulation and a complete calculation. This page retains
+its numerical evidence and the separate HOCADI/published-coefficient audits.
+Claims below keep the original dataset and formulation qualifications.
 
 ## Conservative compact growth
 
-The new `HOCFiniteVolume()` policy advances **bin-integrated populations** in
-one or two size coordinates. It is a conservative adaptation, with fourth-order
-interior spatial reconstruction and second-order time integration. It supports
-declared positive size-dependent or prescribed time-dependent growth and
-physical inflow/outflow. The older `HOCADI` policy below remains available for
-periodic constant growth, including its verified fourth-order time composition.
+The current [equation, state, boundary and source contract](compact.md) is
+self-contained. Download paths must retain `examples/compact_growth.jl` and
+`examples/verification/compact_growth.jl`; the latter includes its parent file.
 
 ### Start with a complete calculation
 
-```julia
-using PopulationBalanceModels
-grid = Grid1D(range(0, 2; length=81); coordinate=:length)
-growth = AffineGrowth(0.4, 0.15)
-model = PBMModel(growth=Growth(growth))
-bc = SizeBC(InflowFlux(1.0), OpenBoundary())
-operator = compile(model, grid; evolution=HOCFiniteVolume(), bc)
-# Integral of the positive stationary background 1/G(x).
-initial = diff(log.(0.4 .+ 0.15 .* grid.edges)) ./ 0.15
-problem = PBMProblem(operator, initial, (0.0, 0.4))
-solution = simulate(problem; dt=0.0002)
-diagnostics(solution).number_accounting[end]
-```
-
-For two coordinates, use
-`Growth2D(SeparableGrowth2D(AffineGrowth(0.4,0.1), ExponentialGrowth(0.3,0.12)))`
-and `SizeBC2D(x=bc_x,y=bc_y)`. Axis lengths, bin counts and spacings may differ.
-[Runnable examples](../assets/source/examples/compact_growth.jl) include smooth
-translations, incoming particles, variable growth and boundary nucleation.
-The [benchmark driver](../assets/source/examples/verification/compact_growth.jl)
-keeps reporting and timing outside those short model definitions.
-Save both Julia files in the same directory if downloading them separately.
+See [the executable first calculation](compact.md#Start-with-a-complete-calculation).
 
 ### Equation, states and compact faces
 
-The supported physical equation is
-
-```math
-\frac{\partial f(x,t)}{\partial t}
-+\frac{\partial [G(x,t)f(x,t)]}{\partial x}=S(x,t),
-```
-
-or its separable two-coordinate counterpart,
-
-```math
-\frac{\partial f(x,y,t)}{\partial t}
-+\frac{\partial [G_1(x,t)f(x,y,t)]}{\partial x}
-+\frac{\partial [G_2(y,t)f(x,y,t)]}{\partial y}=S(x,y,t).
-```
-
-States remain ``N_i=\int_{x_{i-1/2}}^{x_{i+1/2}} f\,dx`` and
-``N_{ij}=\int\!\int_{C_{ij}} f\,dx\,dy`` per process volume. Thus
-``U_i=N_i/h`` is a cell average. The independently derived face relation is
-
-```math
-\frac14\widehat f_{j-1}+\widehat f_j+\frac14\widehat f_{j+1}
-=\frac34(U_j+U_{j+1}).
-```
-
-Here face ``j`` lies between cells ``j`` and ``j+1``. Expanding the **cell
-integrals** about that face gives the same terms through ``h^2`` on both
-sides; their difference is ``h^4 f^{(4)}/120+O(h^6)``. Consequently the smooth
-face error is ``-h^4 f^{(4)}/180+O(h^6)`` and its interior flux difference is
-fourth order. This is not an assumption that cell averages are nodal values.
-For constant periodic growth, eliminating these faces gives
-``M\dot{\mathbf N}=-gD\mathbf N``, with diagonal/off-diagonal mass weights
-``1,1/4`` and ``D=3(E_+-E_-)/(4h)``. This is exactly the normalized
-``\Delta t\to0`` spatial limit of Zhang2025 Eq. 15. Uniform bin integration
-commutes with that constant-coefficient stencil. The new midpoint update does
-not retain the paper's ``(g\Delta t/h)^2`` corrections or claim its fourth-order
-time formula.
-For variable growth, multiply the reconstructed density by the **face** rate:
-``F_j=G(x_{j+1/2},t)\widehat f_j``. Applying a nodal stencil to ``G_iU_i``
-would define a different discretization.
-
-Periodic faces wrap. A physical left boundary prescribes number flux directly:
-`OpenBoundary` and `NoFlux` give zero incoming flux; `InflowFlux` gives the
-specified flux. Positive growth requires right `OpenBoundary`. Its trace is
-the degree-four polynomial reconstruction from the last five cell averages:
-
-```math
-\widehat f_n=\frac{137}{60}U_n-\frac{163}{60}U_{n-1}
-+\frac{137}{60}U_{n-2}-\frac{21}{20}U_{n-3}+\frac15U_{n-4}.
-```
-
-This outflow trace has fifth-order truncation error. Smooth whole-solve
-physical-boundary convergence is measured separately below; periodic Fourier
-stability alone is not a proof for this boundary closure.
-In 2D each line contains populations integrated over its transverse bin.
-Incoming `InflowFlux` values are uniform face-flux densities per transverse
-size, multiplied by that bin's width. Nonuniform face profiles are not supported.
+See [the bin-integral derivation](compact.md#Equation,-states-and-compact-faces).
 
 ### Complete time update and number balance
 
-At each directional step, freeze prescribed coefficients at the full step's
-midpoint. Solve for a midpoint number flux using
-
-```math
-N_i^{\mathrm{new}}=N_i^{\mathrm{old}}+\Delta t(F_{i-1}-F_i),\qquad
-\mathbf N^{\mathrm{mid}}=\mathbf N^{\mathrm{old}}
--\frac{\Delta t}{2}D\mathbf F^{\mathrm{mid}}.
-```
-
-Writing the compact relation as ``P\widehat{\mathbf f}=Q\mathbf N/h`` gives
-
-```math
-\left[P\,\operatorname{diag}(1/G^{\mathrm{mid}})
-+\frac{\Delta t}{2h}QD\right]\mathbf F^{\mathrm{mid}}
-=Q\mathbf N^{\mathrm{old}}/h,
-```
-
-with known inflow terms moved to the right. ``D\mathbf F`` means right minus
-left flux. The interior system is tridiagonal. Periodic corners and the
-one-sided outflow row use bounded-rank corrections to a tridiagonal LU:
-setup, storage and each line solve cost ``O(n)``. Factors are reused only when
-the directional step and **all** face rates are unchanged. Caches are local
-to a simulation; `remake` rechecks parameters and builds fresh factors.
-
-In 2D the composition is half x, full y, half x. Homogeneous separable
-directional operators commute; the symmetric composition also handles the
-supported inhomogeneous boundary data to second order. Interior point sources
-use source/transport/source splitting, with midpoint quadrature at the quarter
-and three-quarter times. The **complete method is second order in time**,
-including prescribed time dependence and this source splitting. No negative
-substep is used. No transformation ``u=Gf`` is used, so time dependence does
-not lose a ``G_t`` contribution.
-The order statement requires smooth solutions and sufficiently smooth
-coefficient, source and incoming-flux histories. A discontinuity or singular
-birth front does not satisfy the smooth spatial-error assumptions.
-
-`Nucleation(J,lower_edge)` on a physical 1D domain supplies one incoming flux
-``J(t)`` at the step midpoint. Interior point births contribute their cell
-integral. A `Nucleation2D` corner contributes **once** to the containing cell,
-not independently through two faces. That singular-source deposition preserves
-injected number; it does not have smooth-density fourth-order accuracy or an
-exact subcell size moment. Positive-growth outflow-face births are rejected.
-Use `PrescribedRate((p,t,ctx)->...)` for prescribed source/inflow callbacks.
-Do not specify the same boundary birth again as `InflowFlux`.
-
-Every actual substep accumulates incoming number, births and the computed
-signed outflow. At saved times, `diagnostics(solution).number_accounting` holds
-`inflow` and `outflow` tuples by axis, `births`, `inventory`, and
-
-```math
-\mathrm{defect}=\sum N(t)-\sum N(0)
--\mathrm{inflow}-\mathrm{births}+\mathrm{outflow}.
-```
-
-These are integrated during the solves, not reconstructed from output samples.
-They are historical number accounting, not an escaped-particle reservoir with
-ongoing growth. Sectional state lengths are unchanged. Material moments
-generally **change** under growth. Existing `moment` observations retain their
-center-weighted bin convention; their quadrature error is separate from the
-transport order. No population–bulk exchange is implemented for this policy.
+See [the midpoint update and number accounting](compact.md#Complete-time-update-and-number-balance).
 
 ### Compilation contracts and supported combinations
 
-| Feature | `HOCFiniteVolume` | Older `HOCADI` |
-|:--|:--|:--|
-| Representation | Bin integrals, 1D/2D; uniform rectangular axes, at least six cells each | Bin integrals, 2D periodic uniform axes, at least five cells |
-| Growth | Strictly positive `AffineGrowth`, `ExponentialGrowth`, `TimeScaledGrowth`; declared `HOCGrowthLaw` | Constant finite velocity tuple, including signed/zero components |
-| Time dependence | Prescribed, evaluated at the midpoint; order 2 | Autonomous only |
-| Boundaries | Paired periodic, or left zero/prescribed inflow and right open outflow | Periodic only |
-| Source | Prescribed point nucleation as described above; order 2 in time | None |
-| Temporal order | 2 | 2 or 4; fourth order only in this reversible scope |
-| Bulk/axial/collisions/removal | Rejected; use residual methods | Rejected |
-| Positivity | Not guaranteed; default checks reject negative bin populations | Not guaranteed |
-| External ODE/AD sensitivities | Not supported | Fully discrete update, no ODE residual |
-
-Compilation checks the **assembled model**, not just the growth term. Ordinary
-unclassified callbacks are rejected, even if diagnostic samples match an affine
-law. Existing callbacks continue to work for residual methods. For a general
-law, explicitly declare its assumptions:
-
-```julia
-law = HOCGrowthLaw((x,p,t,ctx) -> 0.4 + 0.1sin(2pi*x);
-    lower_bound=0.3, dependencies=(:coordinate,), periodic=true)
-```
-
-This declares a positive C⁶ law on the entire compiled axis and, here, a smooth
-periodic extension. It is a user contract, not a mathematical proof obtained
-from probes. Allowed dependencies are the own `:coordinate`, `:time`,
-`:parameters`, and prescribed `:fields`. `:bulk`, population feedback and the
-other direction's coordinate are rejected. The lower-bound callback has
-signature `(p,t,ctx)` and must bound the full spatial domain. All numerical
-face values and the bound are checked when constructing/remaking a problem,
-at coefficient evaluations and at accepted endpoints. The contract must also
-hold between sampled times; arbitrary callbacks cannot be certified there.
-Simulation entry repeats the numerical checks, including requests that save
-only the initial time, so changed parameter containers or fields cannot reuse
-an earlier problem-construction check.
-Nonconstant affine/exponential laws require physical boundaries. Unknown
-periodic laws need `periodic=true`, including matching derivatives.
-For this policy, `TimeScaledGrowth` uses an affine or exponential autonomous
-spatial law; other prescribed smooth laws use `HOCGrowthLaw` directly.
-
-For physical boundaries or spatially variable laws, the verified envelope
-requires ``\max(G^{\mathrm{mid}})\Delta t/h\le1`` on each axis, using the numerical
-face rates. The solver rejects violations
-and suggests a smaller step. This restriction is **not** a positivity theorem.
-Spatially constant periodic growth has unit-modulus midpoint factors for any
-Courant number, but accuracy still requires time refinement. Resolve narrow
-source pulses independently of this transport restriction. Dispersive negative
-lobes remain possible; `check_nonnegative=false` explicitly retains them for
-diagnostics without clipping. Even a positive cell state can have a signed
-reconstructed outflow trace, so outflow accounting uses the actual signed flux.
+See [the compilation contract](compact.md#Compilation-contracts-and-supported-combinations).
 
 ### Relation to the three papers
 
-All three local full papers and the available two-page Li supplement were
-reviewed. No other supporting information for these papers was present locally.
+The comparison below uses the published papers and the available two-page
+Li supplement. Source-specific ambiguity is retained rather than resolved by
+assigning the package adaptation to a paper.
 
 | Primary source | Published construction and implementation consequence |
 |:--|:--|
@@ -382,6 +197,83 @@ have unit modulus. The existing dense-matrix comparisons and long-period tests
 check that implementation. Negative lobes near a sharp front remain possible.
 It does not implement the size-dependent algorithm in
 [Li et al. (2026)](https://doi.org/10.1016/j.partic.2026.01.024).
+
+### Periodic HOCADI update and stability
+
+`HOCADI(time_order=2)` or `HOCADI(time_order=4)` advances homogeneous constant
+growth on uniform periodic 2D grids. It rejects sources, bulk coupling, and
+physical nonperiodic compact boundaries. Its spatial derivative is defined by
+
+```math
+\frac14d_{i-1}+d_i+\frac14d_{i+1}
+=\frac{3}{4h}(f_{i+1}-f_{i-1}),\qquad M\mathbf d=D\mathbf f.
+```
+
+Each coordinate uses a Cayley solve,
+
+```math
+\left(M+\frac{g\Delta t}{2}D\right)\mathbf f^{\mathrm{new}}
+=\left(M-\frac{g\Delta t}{2}D\right)\mathbf f^{\mathrm{old}}.
+```
+
+One x solve and one y solve define ``S_2``. The fourth-order time composition is
+
+```math
+S_4(\Delta t)=S_2(\gamma\Delta t)S_2((1-2\gamma)\Delta t)S_2(\gamma\Delta t),
+\qquad \gamma=(2-2^{1/3})^{-1}.
+```
+
+The negative middle step is restricted here to reversible autonomous transport.
+It must not be applied to irreversible nucleation, collision, or bulk processes.
+Cyclic tridiagonal factorization uses a rank-two correction; each directional
+sweep costs linear work in the number of tensor cells.
+
+This is a specified variant, not a verified transcription of Li et al.,
+[doi:10.1016/j.partic.2026.01.024](https://doi.org/10.1016/j.partic.2026.01.024).
+The supplement is now available. Its one-dimensional coefficients can be checked
+independently, as described in [Compact-method verification](compact_verification.md).
+Those coefficients define a different update from this periodic variant. The
+main paper's multilevel update and physical boundary closure still need reconciliation.
+
+### Stability is different from positivity
+
+For a periodic Fourier mode with wave angle ``\theta``, the compact matrices
+have symbols ``m=1+\frac12\cos\theta`` and
+``d=\frac{3\mathrm i}{2h}\sin\theta``. A directional Cayley step has amplification
+
+```math
+A(\theta)=\frac{m-\mathrm i z}{m+\mathrm i z},\qquad
+z=\frac{3g\Delta t}{4h}\sin\theta,\qquad |A(\theta)|=1.
+```
+
+The fourth-order composition is also unit modulus, including its negative step.
+Thus this periodic constant-growth discretization has no growing Fourier mode
+in exact arithmetic. It is dispersive and does not preserve positivity.
+Narrow Gaussians and fronts can develop substantial negative undershoots even
+while the discrete L2 norm remains constant.
+
+`examples/verification/compact_adi.jl` checks every resolved Fourier mode over signed
+Courant numbers 0.1–10 and evolves smooth/rectangular profiles for ten periods.
+The recorded norm changes are below ``5\times10^{-14}``; negative densities
+remain. Independent dense-matrix tests verify the cyclic solves for both time
+orders. These results support stability of the implemented periodic variant,
+not a positivity claim or physical-boundary/paper-fidelity claim.
+The figure below retains the smooth-profile and sharp-front evidence for this
+periodic constant-growth diagnostic. In particular, the front cut shows the
+negative lobes despite bounded norm. The
+[two-coordinate growth case](../case_studies/transport.md) is a separate,
+coordinate-dependent physical problem.
+
+![Periodic transport: smooth accuracy, sharp fronts, and negative undershoots](../assets/benchmark_2d.png)
+
+Panels (a,b) show smooth-translation L¹ error versus mesh and the recorded
+solve cost; (c) is the 128 × 128 sharp-front cut, and (d) integrates the negative
+population. Exact zeros in log plots are displayed at ``10^{-18}``. This
+historical timing column is the **minimum of three warmed runs**, not a new
+single-run measurement or the current constant-growth benchmark's protocol.
+The negative compact lobes remain visible. The constant integer shift and
+analytical bin averages overlap where the shift is eligible.
+
 
 ## Check the supplement independently
 

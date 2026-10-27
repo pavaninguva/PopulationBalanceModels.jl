@@ -10,10 +10,12 @@ We model these processes with a diameter population balance coupled to free
 lipid. The formulation is based on
 [Shin et al. (2025)](https://web.mit.edu/braatzgroup/Shin_ChemEngJ_2025.pdf).
 The comparison of interest is the calculated distributions and mean-diameter
-history in Figure 4. We start with no particles and integrate formation and incubation to
-4320 minutes. The paper and SI leave some material inputs and conventions
-unspecified. The runnable reconstruction below makes those assumptions explicit;
-its current results do not establish reproduction of the published curves.
+history in Figure 4. **Status:** the figures retain historical diagnostic
+formation/incubation outputs through 4320 min. The current optional stiff driver
+fails a strict collision-rate check during startup; only the short native
+10-µs startup below is checked with the current safeguards. These are not
+verified full-horizon reproductions. The recipe exposes the material inputs
+and conventions left unresolved by the paper and SI.
 
 ## Start with dissolved lipid
 
@@ -445,8 +447,10 @@ unbounded size calculation even when the corrected numerical mass balance closes
 
 ## Calculate the observation
 
-Large particles contribute disproportionately to scattering. The reported
-intensity weighting and mean diameter are
+Large particles contribute disproportionately to scattering. The saved
+statistic follows **Eq. (3) of the final Shin paper**, which calls it a
+“z-average diameter”. Mathematically it is the **arithmetic mean under the
+assumed L⁶ intensity weighting**:
 
 ```math
 I(L,t)=L^6f(L,t),\qquad
@@ -461,6 +465,20 @@ N = population(problem,solution.u[end],:lnp)
 grid = problem.operator.system.populations.lnp.grid
 mean_diameter = moment(grid,N,7) / moment(grid,N,6)
 ```
+
+This is a measurement-equivalence qualification, not a transcription error.
+The instrument cumulants DLS z-average is a **harmonic intensity mean**
+([Malvern Panalytical](https://www.malvernpanalytical.com/en/learn/knowledge-center/technical-notes/tn210413-zetasizer-terminology)).
+With Rayleigh intensity proportional to L⁶ and Stokes–Einstein diffusivity
+proportional to 1/L, that mean is
+
+```math
+L_z=\frac{\int L^6f(L)\,dL}{\int L^5f(L)\,dL}=\frac{M_6}{M_5}.
+```
+
+The optical and hydrodynamic assumptions must therefore be matched before
+quantitative comparison with an instrument z-average. The exports and plots
+retain the paper's M₇/M₆ convention; no saved values have been substituted.
 
 It is undefined for the empty initial state. The exporter omits that point from
 the mean-time plot and writes both area-normalized and unit-peak intensity
@@ -555,9 +573,8 @@ This 10-µs native run does not regenerate the historical long-time figures.
 Their reproduction limit is stated above; no clipping or relaxed deposition
 checks are applied.
 
-The figure-generation drivers and supporting sources are available below. Keep
-the repository's relative paths; the [benchmark guide](../assets/source/plotting/README.txt)
-lists plotting commands and optional environments.
+Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
+to retain their directory layout and plotting environment.
 
 - [shin_lnp_long_time.jl](../assets/source/examples/shin_lnp_long_time.jl)
 - [shin_lnp_reproduction.jl](../assets/source/examples/shin_lnp_reproduction.jl)
