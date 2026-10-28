@@ -13,6 +13,11 @@ const BOLTZMANN = 1.380649e-23             # J K⁻¹
 const WINDOW = (2.5,25.0)
 const SIGMA_F = 0.03
 const CORRELATION_LENGTH = 2.0
+const FIXED_GAMMA = 0.64                  # mJ/m²; fixed Mitchell prior centre
+const RHO = 1.24e-12                      # g/μm³ (= 1240 kg/m³)
+const LOG_AJ_SHIFT = log(60/1000)          # old m⁻³ s⁻¹ -> L⁻¹ min⁻¹
+const AJ_BOUNDS = (LOG_AJ_SHIFT,100+LOG_AJ_SHIFT)
+const D0_PRIOR_MEAN = 0.01                # μm²/min; declared regularization
 const MOLECULAR_VOLUME = 2.97e-26          # m³ molecule⁻¹; Lin et al. (2017)
 
 function table(path)
@@ -33,9 +38,9 @@ function select_psds(data, split=:calibration; window="isothermal_core")
      for t in sort(unique(r.time_min for r in rows))]
 end
 
-parameters(; logAJ=41., gamma=.76, AG=1., g=2.4, cstar=2.16,
+parameters(; logAJ=30.5, gamma=FIXED_GAMMA, AG=.0002, g=3.3, cstar=2.16,
            grd_strength=0.) =
-    (; logAJ, gamma, AG, g, cstar, grd_strength, c0=C0, rho=1240., kv=.81)
+    (; logAJ, gamma, AG, g, cstar, grd_strength, c0=C0, rho=RHO, kv=.81)
 
 function model_name(model)
     model = Symbol(model)
@@ -48,16 +53,16 @@ barrier(gamma) = 16pi * (1e-3gamma)^3 * MOLECULAR_VOLUME^2 /
                  (3 * BOLTZMANN^3 * TEMPERATURE^3)
 function growth_rate(p, c)
     c <= p.cstar && return zero(c)
-    1e-3 * p.AG * (c/p.cstar - 1)^p.g   # nm/min -> μm/min
+    p.AG * (c/p.cstar - 1)^p.g          # μm/min
 end
 function nucleation_rate(p, c)
     c <= p.cstar && return zero(c)
-    logJ = log(60) + p.logAJ - barrier(p.gamma)/log(c/p.cstar)^2
+    logJ = p.logAJ - barrier(p.gamma)/log(c/p.cstar)^2
     # Avoid underflowed Dual values with nonzero subnormal partials. This is
     # machine underflow, not a physical nucleation cutoff or a seed population.
     logJ < log(floatmin(Float64)) && return zero(c)
     logJ < log(floatmax(Float64)) || throw(NumericalFailure("CNT nucleation overflow"))
-    exp(logJ) # #/(m³ s) -> #/(m³ min)
+    exp(logJ) # particles/(L min)
 end
 rates(p, t, c) = (nucleation_rate(p,c), growth_rate(p,c))
 # Every rate is checked against the concentration cap used by the interval
@@ -70,10 +75,10 @@ function stage_concentration(p,ctx)
     end
     c
 end
-nucleation(p,t,ctx) = nucleation_rate(p,stage_concentration(p,ctx))/1e12
+nucleation(p,t,ctx) = nucleation_rate(p,stage_concentration(p,ctx))
 
 """Unseeded batch, using native growth, boundary nucleation and optional Ito GRD.
-N is in 10¹² particles/m³, length in μm and time in min. Both mechanisms use
+N is in particles/L, length in μm, time in min, and rho in g/μm³. Both mechanisms use
 current-stage c; the entire discrete population derivative drives the solute.
 """
 function build(; bins=200, Lmax=50., p=parameters(), tf=660., model=:cnt)
@@ -86,7 +91,7 @@ function build(; bins=200, Lmax=50., p=parameters(), tf=660., model=:cnt)
            primary=Nucleation(rate=nucleation,size=0.))
     if model===:cnt_grd
         diffusion=SizeDiffusion(PolynomialRate(((p,t,ctx)->
-            p.grd_strength*growth_rate(p,stage_concentration(p,ctx))^2,)))
+            p.grd_strength,)))
         terms=merge(terms,(dispersion=diffusion,))
     end
     op = compile(PBMModel(;terms...), grid; bc=SizeBC(),
@@ -94,7 +99,7 @@ function build(; bins=200, Lmax=50., p=parameters(), tf=660., model=:cnt)
     function solute_balance(ctx,p,t)
         dN = ctx.derivatives.crystals
         dM3 = sum(grid.centers[i]^3*dN[i] for i in eachindex(dN))
-        (c=-1e-6*p.rho*p.kv*dM3,)
+        (c=-p.rho*p.kv*dM3,)
     end
     system = PBMSystem((crystals=op,); nonnegative_bulk=(:c,),bulk_rhs=solute_balance)
     PBMProblem(system,(crystals=zeros(bins),),(0.,tf);bulk0=(c=C0,),p)
@@ -145,31 +150,29 @@ forward(p=parameters();bins=200,Lmax=50.,dt=2.,cfl=.35,model=:cnt,
     cfl_solve(build(;bins,Lmax,p,tf=maximum(times),model),times;
         maximum_dt=dt,cfl,coefficient_interval)
 
-"""Common kinetic priors are declared modeling choices; GRD has mean 10 min.
-No observation-noise parameter is inferred. Priors explicitly declare density
-coordinates; the shared posterior retains each required Jacobian exactly once.
+"""Three common kinetic parameters with fixed gamma=0.64 mJ/m².
+No fitted noise. D0 is a constant diffusivity with Exponential mean 0.01 μm²/min.
+AJ and AG priors are the previous priors converted into L, μm and min units;
+g uses Uniform(1,5). Prior coordinates and Jacobians remain explicit.
 """
 function parameter_specs(; p=parameters(),model=:cnt)
     model=model_name(model)
-    common=(ParameterSpec(:logAJ;initial=p.logAJ,transform=LogitTransform(0.,100.),
-         prior=Prior(Uniform(0.,100.);coordinates=:physical)),
-     ParameterSpec(:gamma;initial=p.gamma,transform=LogTransform(),
-         prior=Prior(LogNormal(log(.64),.7);coordinates=:physical)),
+    common=(ParameterSpec(:logAJ;initial=p.logAJ,transform=LogitTransform(AJ_BOUNDS...),
+         prior=Prior(Uniform(AJ_BOUNDS...);coordinates=:physical)),
      ParameterSpec(:AG;initial=p.AG,transform=LogTransform(),
-         prior=Prior(Uniform(log(.01),log(1500.));coordinates=:inference)),
-     ParameterSpec(:g;initial=p.g,transform=LogitTransform(1.,3.),
-         prior=Prior(Uniform(1.,3.);coordinates=:physical)))
+         prior=Prior(Uniform(log(1e-5),log(1.5));coordinates=:inference)),
+     ParameterSpec(:g;initial=p.g,transform=LogitTransform(1.,5.),
+         prior=Prior(Uniform(1.,5.);coordinates=:physical)))
     model===:cnt ? common : (common...,ParameterSpec(:grd_strength;
-        initial=p.grd_strength>0 ? p.grd_strength : 10.,transform=LogTransform(),
-        prior=Prior(Exponential(10.);coordinates=:physical)))
+        initial=p.grd_strength>0 ? p.grd_strength : D0_PRIOR_MEAN,transform=LogTransform(),
+        prior=Prior(Exponential(D0_PRIOR_MEAN);coordinates=:physical)))
 end
 
 const PARAMETER_INFO=(
-    logAJ=(meaning="Natural log nucleation prefactor AJ in particles/(m³ s)",units="dimensionless",label="log A_J"),
-    gamma=(meaning="Effective interfacial energy",units="mJ/m²",label="gamma"),
-    AG=(meaning="Mean-growth prefactor",units="nm/min",label="A_G"),
+    logAJ=(meaning="Natural log of the numerical nucleation prefactor in particles/(L min)",units="dimensionless",label="ln A_J"),
+    AG=(meaning="Mean-growth prefactor",units="μm/min",label="A_G"),
     g=(meaning="Supersaturation growth exponent",units="dimensionless",label="g"),
-    grd_strength=(meaning="Random-fluctuation growth dispersion strength",units="min",label="theta_GRD"))
+    grd_strength=(meaning="Constant internal-coordinate diffusivity D0",units="μm²/min",label="D_0"))
 
 """Machine-readable prior definitions, derived from active ParameterSpecs."""
 function prior_metadata(problem)
@@ -203,7 +206,7 @@ Held-out data, initial concentration and diagnostic quantiles are never fitted.
 """
 function estimation_problem(;data=load_data(),bins=200,Lmax=50.,dt=2.,cfl=.35,
         coefficient_interval=5.,cstar=2.16,window="isothermal_core",model=:cnt,
-        p=parameters(;cstar,grd_strength=Symbol(model)===:cnt ? 0. : 10.))
+        p=parameters(;cstar,grd_strength=Symbol(model)===:cnt ? 0. : D0_PRIOR_MEAN))
     model=model_name(model)
     window=="isothermal_core" || throw(ArgumentError("this comparison uses isothermal_core only"))
     cr=select_concentration(data)
@@ -225,17 +228,17 @@ function estimation_problem(;data=load_data(),bins=200,Lmax=50.,dt=2.,cfl=.35,
     pb=build(;bins,Lmax,p,tf=420.,model)
     ex=InferenceExperiment(:batch,pb,concentration,distributions...;
         solver=(pb,ts)->cfl_solve(pb,ts;maximum_dt=dt,cfl,coefficient_interval))
-    fixed=model===:cnt ? (cstar=cstar,grd_strength=0.) : (cstar=cstar,)
+    fixed=model===:cnt ? (cstar=cstar,gamma=FIXED_GAMMA,grd_strength=0.) : (cstar=cstar,gamma=FIXED_GAMMA,)
     EstimationProblem(parameter_specs(;p,model),(ex,);fixed)
 end
 
 """Three calibration-only starts, identical common priors and optimizer budget."""
 function fit_model(problem;maxiters=500,initial=nothing)
-    model=length(problem.parameters)==5 ? :cnt_grd : :cnt
+    model=any(s->s.name===:grd_strength,problem.parameters) ? :cnt_grd : :cnt
     S0=C0/problem.fixed.cstar
-    starts=map(((.76,2.4,3.),(.5,1.5,10.),(1.,2.8,30.))) do (gamma,g,theta)
-        values=(logAJ=log(1e11/60)+barrier(gamma)/log(S0)^2,
-            gamma=gamma,AG=150/(S0-1)^g,g=g,grd_strength=model===:cnt ? 0. : theta)
+    starts=map(((1.5,.001),(2.5,.01),(4.,.05))) do (g,D0)
+        values=(logAJ=log(1e8)+barrier(FIXED_GAMMA)/log(S0)^2,
+            AG=.15/(S0-1)^g,g=g,grd_strength=model===:cnt ? 0. : D0)
         specs=parameter_specs(;p=parameters(;values...),model)
         initial_coordinates(EstimationProblem(specs,problem.experiments;fixed=problem.fixed))
     end
@@ -244,51 +247,38 @@ function fit_model(problem;maxiters=500,initial=nothing)
     fit(problem;starts,maxiters,gradient_tolerance=1e-3)
 end
 
-"""Auxiliary initial-rate sampling map. Only active coordinates are included;
-the inverse-map Jacobian preserves the declared four/five-dimensional target.
+"""Unit-determinant growth-rate shear for sampler tuning, not a new parameter.
+Keep logit(logAJ) and logit(g). Sample log G at supersaturation 6 instead of log AG.
+Returned draws and the MAP remain in their declared inference coordinates.
 """
 function sampling_coordinates(problem)
-    n=length(problem.parameters)
-    S0=C0/problem.fixed.cstar
-    logS2=log(S0)^2;logexcess=log(S0-1)
-    sigmoid(x)=x>=0 ? inv(1+exp(-x)) : exp(x)/(1+exp(x))
+    logexcess=log(5.)
+    gspec=only(filter(s->s.name===:g,problem.parameters))
+    physicalg(v)=gspec.transform.lower+(gspec.transform.upper-gspec.transform.lower)/
+        (1+exp(-v))
     function to_sampler(z)
-        p=physical_parameters(problem,z,:batch)
-        vcat([log(60)+p.logAJ-barrier(p.gamma)/logS2,
-              z[2],log(.001)+z[3]+p.g*logexcess,z[4]],z[5:n])
-    end
-    function inverse_A(y)
-        A=y[1]-log(60)+barrier(exp(y[2]))/logS2
-        0<A<100 || throw(NumericalFailure("CNT sampler map outside 0 < logAJ < 100"))
-        A
+        y=copy(z);y[2]+=physicalg(z[3])*logexcess;y
     end
     function from_sampler(y)
-        A=inverse_A(y);g=1+2sigmoid(y[4])
-        vcat([log(A/(100-A)),y[2],y[3]-log(.001)-g*logexcess,y[4]],y[5:n])
+        z=copy(y);z[2]-=physicalg(y[3])*logexcess;z
     end
-    logabsdetjac(y)=let A=inverse_A(y)
-        log(100)-log(A)-log(100-A)
-    end
-    (;to_sampler,from_sampler,logabsdetjac,label=:CNT_initial_rates)
+    (;to_sampler,from_sampler,logabsdetjac=y->zero(eltype(y)),label=:CNT_fixed_gamma_rates)
 end
 
-"""Expected Gaussian information for tuning, not Laplace/posterior covariance."""
-function sampler_tuning(problem,z,map=sampling_coordinates(problem))
-    y=map.to_sampler(z);n=length(z)
-    flatten(y)=vcat(vec.(only(predictions(problem,map.from_sampler(y))))...)
+"""Expected Gaussian information plus actual prior curvature: tuning only."""
+function sampler_tuning(problem,z,mapping=sampling_coordinates(problem))
+    y=mapping.to_sampler(z);n=length(z)
+    flatten(y)=vcat(vec.(only(predictions(problem,mapping.from_sampler(y))))...)
     J=ForwardDiff.jacobian(flatten,y)
-    blocks=only(problem.experiments).measurements
     W=copy(J);offset=0
-    for m in blocks
+    for m in only(problem.experiments).measurements
         rows=offset+1:offset+length(m.data)
         sigma=m.likelihood.sigma
         W[rows,:]./=sigma isa Number ? sigma : vec(sigma)
         offset+=length(m.data)
     end
-    theta=physical_parameters(problem,z,:batch);s=(theta.g-1)/2
-    diagonal=[0.,1/.7^2,0.,2s*(1-s)]
-    n==5 && push!(diagonal,theta.grd_strength/10)
-    info=Symmetric(W'*W+Diagonal(diagonal))
+    prior=-ForwardDiff.hessian(v->logprior(problem,mapping.from_sampler(v)),y)
+    info=Symmetric(W'*W+prior)
     factor=cholesky(info)
     covariance=Matrix(Symmetric(factor\Matrix{Float64}(I,n,n)))
     (;covariance,information=Matrix(info),condition_number=cond(info),

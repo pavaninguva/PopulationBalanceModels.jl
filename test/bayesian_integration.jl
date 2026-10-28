@@ -4,6 +4,7 @@ using Distributions: Normal, Exponential
 using PopulationBalanceModels, Optim, AdvancedHMC, MCMCDiagnosticTools
 include("gauss_newton_optim.jl")
 isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
+include("sampling_control.jl")
 
 @testset "MAP, full Laplace and shared sampler density" begin
     f=bayesian_linear_fixture();p=f.problem

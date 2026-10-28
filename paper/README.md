@@ -13,7 +13,7 @@ receipts remain alongside the figures and data.
 | [growth/](growth/) | Growth and time schemes | Available |
 | [moments/](moments/) | Aggregation–fragmentation | Available |
 | [precipitation/](precipitation/) | Tubular precipitation | Logarithmic WENO5 / axial MUSCL refinement study |
-| [protein/](protein/) | CNT versus CNT + GRD | MAPs, MCMC draws and latent predictions available |
+| [protein/](protein/) | Fixed-γ CNT versus CNT + constant D0 | MAPs, MCMC draws and latent predictions available |
 
 Run from the repository root. Set up the Julia checkout and Python 3.12 plotting
 environment once; final figures require LaTeX:
@@ -56,8 +56,26 @@ For protein, redraw the retained results without fitting or sampling:
 python paper/protein/plot.py
 ```
 
-A deliberate full recalculation uses `julia --project=paper paper/protein/run.jl --full`;
-it includes both expensive MCMC runs. `--map` fits only the MAPs. The same plot
+A deliberate full recalculation uses a fresh output directory:
+
+```sh
+julia --project=paper paper/protein/run.jl --full --output=/tmp/protein-controlled
+python paper/protein/plot.py --input=/tmp/protein-controlled --tables
+```
+
+This fits both MAPs, continues four chains per model until joint diagnostics pass
+or a finite budget is reached, then propagates verified draws. The controller
+keeps one warmup per chain; `--min-samples=500 --batch-samples=250
+--max-samples=10000 --consecutive-passes=2` are the defaults. Its chains currently
+advance serially. `--stopping=fixed` instead uses the configured fixed draw
+budgets and isolated workers; an explicit `--samples=N` also selects fixed mode.
+`--map` fits only the MAPs. Existing posterior outputs cannot be replaced
+implicitly: use `--output` for a new run or deliberately select `--force`.
+The current three-/four-parameter models fix γ = 0.64 mJ/m², use g ~ Uniform(1,5),
+and use constant D0 in the GRD model. Rates are expressed in L, μm and min units.
+The former four-/five-parameter posterior results and uncertainty receipts are
+preserved in `test/fixtures/archives/paper_history/protein_variable_gamma_theta_20261028.zip`;
+they are not samples from the revised target. The same plot
 script accepts `--data-only`, `--gauss-newton` or `--laplace` for those figures;
 the corresponding Julia `--gauss-newton`/`--laplace` modes calculate uncertainty
 separately. The [manual](../docs/src/case_studies/protein_crystallization.md)

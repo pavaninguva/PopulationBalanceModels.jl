@@ -469,18 +469,57 @@ struct MAPResult{P,C,L}
     uncertainty::L
 end
 
-"""Load AdvancedHMC and MCMCDiagnosticTools to enable explicit `sample_posterior(problem;...)`.
-Sampling is never automatic in fit. `initial_covariance=C` optionally initializes
+"""
+    sample_posterior(problem; stopping=:auto, samples=nothing, warmup=500,
+        chains=4, min_samples=500, batch_samples=250, max_samples=10_000,
+        consecutive_passes=2, min_ess=400, rhat_limit=1.01, bfmi_limit=0.3, ...)
+
+Load AdvancedHMC and MCMCDiagnosticTools for optional NUTS. Sampling is never
+automatic in `fit`. With no `samples` count, the default runs warmup once per
+chain, freezes adaptation and continues the same chains in batches. At least
+two chains are required. Once the minimum retained length is reached, the
+rank-normalized R-hat, bulk/tail ESS, energy BFMI and finite-MCSE screen must
+pass at `consecutive_passes` successive checkpoints. Draw counts are per chain.
+The budget is `max_samples`; this is not a wall-time or forward-solve budget.
+
+An explicit `samples=N` preserves fixed-length behavior. Equivalently select
+`stopping=:fixed, samples=N`; single-chain runs remain available in that mode.
+`stopping=:diagnostics` explicitly selects the controller and rejects `samples`;
+use `min_samples`/`max_samples` instead. A fixed run still reports failed checks.
+
+`diagnostics(result)` records `stopping_policy`, `stopping_reason`, actual
+`samples`, and `check_history`. Reasons are `:diagnostics_passed`, `:max_samples`,
+`:sampler_pathology` or `:fixed_length`. Diagnostic mode stops unsuccessfully
+when a retained divergence/depth hit makes its zero-tolerance screen impossible
+to pass by appending draws. No bad draw is discarded and no kernel is silently
+retuned. A final single-check `screen_passed` does not satisfy an unfinished
+consecutive-pass rule: `diagnostics_passed` is false on budget exhaustion.
+
+Optional `diagnostic_quantities=(rate=theta -> theta.shared.rate,...)` supplies
+deterministic finite scalar functions of the physical `(shared,experiments)`
+parameter tuple, without additional PBM solves. These quantities also enter the
+R-hat/ESS screen. Absolute precision requirements can be supplied as
+`mcse_limits=(rate=(mean=0.01,quantiles=(0.025=>0.03,0.975=>0.03)),)`;
+a scalar limit means mean MCSE only. Limits have the quantity's physical units.
+Quantile MCSE concerns uncertainty in an estimated interval endpoint, not the
+posterior interval width. Constant/unresolved diagnostics cannot pass. These
+sequential checks are a computational stopping policy, not proof of global
+mixing, a model-validation test or a rigorous sequential-coverage guarantee.
+
+`initial_covariance=C` optionally initializes
 the HMC inverse mass matrix in sampling coordinates (inference coordinates by default); C must be finite,
 symmetric positive definite and is used only for tuning, not returned as a
-posterior uncertainty estimate. It cannot be combined with `laplace` initialization.
+posterior uncertainty estimate. A tuple/vector of one such matrix per chain
+allows different initial tuning, with independent adaptation. Neither form can
+be combined with `laplace` initialization.
 An optional `sampling_map=(to_sampler,from_sampler,logabsdetjac,label)` changes
 only auxiliary sampler coordinates; logabsdetjac is the log absolute determinant
 of the Jacobian of from_sampler.
 Inverses and Jacobians are checked at every mapped target evaluation; transformed
 gradients are independently checked at chain starts. Use check_sampling_map at
 additional representative inference-coordinate points, including tails. Returned
-z values and statistics.log_density stay in declared inference coordinates.
+z values and statistics.log_density stay in declared inference coordinates;
+statistics.sampler_log_density and Hamiltonian energies retain sampler coordinates.
 """
 function sample_posterior end
 """Load Optim for nuisance-reoptimized `estimation_profile(...;target=:likelihood|:posterior)`; posterior profiles have no ordinary likelihood confidence cutoff."""

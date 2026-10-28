@@ -2,7 +2,7 @@
     "schema": 1,
     "passed": true,
     "model": "cnt_grd",
-    "checked_at": "2026-10-26T20:07:01.439",
+    "checked_at": "2026-10-28T13:19:34.365",
     "original_target_hash": "7dcce8c1a8562cc8507fc17f2d5bc3823cffd77da614922a0442c0d88193e002",
     "inputs": {
         "sampler_statistics.csv": "a4410b21240ec8f053868bbf8b774f08ce6ca45d234c4d0c81d9f91495740601",
@@ -19,8 +19,8 @@
         "paper/Project.toml": "89fc8495e33b184a1c4dcdbbeab7d3d8d9e4c68f0c13fdc1778aed1195b1e6d5"
     },
     "original_producer_revision": "8abcd0f1988a703818df7829cdd0964f5628c9b2",
-    "current_revision": "ebf5f7fca0dea1195b8ece7ef3823e12d07a4bd2",
-    "working_tree": " M .github/workflows/CI.yml\n M CHANGELOG.md\n M Project.toml\n M docs/src/api.md\n M docs/src/axial_reactors.md\n M docs/src/coupled_systems.md\n M docs/src/methods/growth.md\n M docs/src/numerical_methods.md\n M examples/README.md\n M examples/random_fluctuation_grd.jl\n M paper/_support/protein_analysis.jl\n M paper/_support/protein_provenance.py\n M paper/_support/uncertainty_compatibility.json\n M paper/protein/data/analysis/cnt/compatibility.json\n M src/PopulationBalanceModels.jl\n M src/compilation/axial_system.jl\n M src/compilation/tensor.jl\n M src/coupling/systems.jl\n M src/inference/observations.jl\n M src/modeling/terms.jl\n M src/numerics/policies.jl\n M src/numerics/sectional/size_diffusion.jl\n M test/README.md\n M test/fixtures/example_modules.jl\n M test/protein_publication.py\n M test/runtests.jl\n M test/size_diffusion.jl\n?? paper/protein/data/analysis/cnt/history/compatibility_bf109aa75f544706275c9eed6f780a87cf6b2c7bfaa193dc4ccc0f7131ea6fc5.json\n?? src/numerics/tensor/size_diffusion.jl\n?? test/tensor_diffusion.jl\n?? test/tensor_integration.jl\n",
+    "current_revision": "991deb3b1298dc090bd05ecad51c5eb37da7172d",
+    "working_tree": " M CHANGELOG.md\n M docs/src/case_studies/protein_crystallization.md\n M docs/src/inference.md\n M examples/support/posterior_chain_aggregation.jl\n M ext/PopulationBalanceModelsAdvancedHMCExt.jl\n M paper/README.md\n M paper/_support/protein_report.jl\n M paper/_support/uncertainty_compatibility.json\n M paper/protein/data/analysis/cnt/compatibility.json\n M paper/protein/run.jl\n M src/inference/bayesian_diagnostics.jl\n M src/inference/statistical_model.jl\n M test/README.md\n M test/bayesian_integration.jl\n M test/protein_parallel.jl\n?? paper/_support/protein_sampling_policy.jl\n?? paper/protein/data/analysis/cnt/history/compatibility_e6fa24970582dee5c44b7e5dac14874eba0a47b0660d0e8ce2b1f7542c896dd2.json\n?? test/sampling_control.jl\n",
     "source_review": {
         "original_sources": {
             "src/numerics/sectional/transport.jl": "5760e2ec9fcfccd44ba408b63cc849997ad09714d15ac25b7e1da3cfa9d1dcdf",
@@ -89,14 +89,16 @@
             "src/numerics/moments/weak_forms.jl": "d61b546e63a4f7e8a95b1bcc05a75d16db91ad08a9cd2cae50fed54a4b97b7d9"
         },
         "current_sources": {
+            "src/uq/polynomial_chaos.jl": "42689162fa179f32aef597d8e77c73277edeebacc335d37e5ac7ed863c8b7227",
             "src/numerics/sectional/transport.jl": "5760e2ec9fcfccd44ba408b63cc849997ad09714d15ac25b7e1da3cfa9d1dcdf",
-            "src/PopulationBalanceModels.jl": "a687b48f13c23a793bc7d4904c9be0a86d451d1b2df6b5280555a40b309478c7",
+            "src/uq/propagation.jl": "5e6e17b79d59b19c4131b4bdcd4729c79f5d35b3f66fe928165507d80ca684cd",
+            "src/PopulationBalanceModels.jl": "d73763ef97f7d382db22f76cf8d85ce8129012aff05e8ffa8a145326a1a1a9eb",
             "src/inference/sampling_coordinates.jl": "4ff04707c6400e874bb675e8113f0b692007b52b833b16c0ebe15b1d4c33a401",
             "src/numerics/policies.jl": "206e7a8288929fb10ad91afa32e0eca85e6b34693a0e49317c11b0be20c60780",
             "src/compilation/axial.jl": "8c7bf44ba7fc55a7cd7143dfe76881a5351d146b66877a8e32e074cfb27bf3ef",
             "src/stationary/continuation.jl": "0dcae8be69d26421fa9274c4af6fb45264dbc9be2133c8b6950ba701814e4c5e",
             "examples/isothermal_protein_crystallization.jl": "203b38318ae8f11f2a09642f2c25e576be1fe008b317690ac5de088a99d208ff",
-            "ext/PopulationBalanceModelsAdvancedHMCExt.jl": "56547a90827eecf31b8c67f689d8bd32579c521f8b44f72d15b46462cefa7217",
+            "ext/PopulationBalanceModelsAdvancedHMCExt.jl": "1b7413b6b9c64d7dc5bfc0684dafcbe26478ed30a74f3cd1d666fb11017473fe",
             "src/inference/differentiation.jl": "e4c0bfc72cec679341be0f10e6f0d82b57c2458d475de43263a1cddcb258121a",
             "src/compilation/axial_system.jl": "55e4bea300392b431443d0c424d7b24a43ebd3e7d5508ebfac4b79c286cf058a",
             "src/inference/gauss_newton.jl": "dc618fffeedd4933ef6ea86309b0d1fa4f34240fe33a20bb9d8104e174614952",
@@ -129,6 +131,7 @@
             "src/coupling/accounting_types.jl": "174819688f9a3a193905d55e73f950a6b194f1e7802f81c04295b0d5e98a2623",
             "src/numerics/tensor/term_dispatch.jl": "d47d73032d91a3d441ae2e353af7599d318dd0bd0c1df94807d3acf7d657867b",
             "src/numerics/sectional/integrated_sources.jl": "02e0fa0b0f628514421d2c6540f21048c21a2a62e8e8a28d2a0902ac4fbd2420",
+            "src/uq/inputs.jl": "789b05eedae835810b19c50efe5f54564b3981e73d803009e1084f4f3d5fcfaa",
             "src/numerics/moments/adaptive_extended.jl": "3592d9a61361ddd32a5ca1fcdf06670920c5233c4d84b2f56f8f3222de2db53e",
             "src/time_integration/measure_euler.jl": "d580c84e8f8785958f79a907036214e9fb253282d6aed37e563ae73f5dbd9515",
             "src/core/domains.jl": "09a97965c9386f85d88e917d1a4f732599f29651ddfee66e096d300187cf08dd",
@@ -148,13 +151,13 @@
             "src/modeling/laws.jl": "dc2f0d6eccba268a3f05f21d487ed7634a07c9483c36cdf190568c259d213b8c",
             "src/time_integration/compact_adi.jl": "2ee20d1c343652e7ffb5040fea4b1a200447bf7299f0d2d5a6f7c5185ccfa1ea",
             "src/representations/moment_sets.jl": "348fec56dc21ae02910100e478d46a384b839698ef3b1791caad14a8dfb99c7b",
-            "src/inference/bayesian_diagnostics.jl": "3c2bf56516403428717251d0d74318224b68bc566bcd64833d5719f6ca24788b",
+            "src/inference/bayesian_diagnostics.jl": "f66b03413be5b7c05a3c3875439360ada27ca532ff116ffcd887b64516f83ce6",
             "src/numerics/sectional/local_sources.jl": "d5b9038b6c9a59cb5f16eb5480e39b1465a989e661d5d673dfe7f26fbef8b60d",
             "src/time_integration/exact_shift.jl": "ddce01932881a011ed444e304e93548f69acb206dac2920483ea097d3404195c",
             "src/compilation/moments.jl": "db8a33f6aa9631b239229f14315e58f0fc0bcc2b43449827fef8d7318aadf746",
             "src/compilation/compact.jl": "8ce84ff73d48b3f520d60ecae1f8d73b737f4494600a8d84c1237ee74314d917",
             "src/inference/distribution_discrepancies.jl": "ef2bb61c93e8ff521f7d4d70796bfe4ba65756ab540842cda43decf38970455d",
-            "src/inference/statistical_model.jl": "fa9db7f56e36efbb60b31d40fed3cd9dbbbcdb1b55bafc223d93cb27456176a9",
+            "src/inference/statistical_model.jl": "ea0ff8fc5c4b3fdfd22986ae54ced7ece8221ba591c737e53f24b8d5c35cd692",
             "src/numerics/moments/methods.jl": "96c5bb4ef0fb129a9c61ec2e61ffa90b0167bc0d152764d56782acda5ce2b9fc",
             "src/coupling/accounting.jl": "78ec0273a3ad65e495e0f2368af721ffcaa1d79ee88bb34f8fa5f5a86a4e4d67",
             "ext/PopulationBalanceModelsOptimExt.jl": "1645b24aa6f7d03567743c02937ea2de698b49b64028beec9a87cd29504e6f8e",
@@ -166,6 +169,12 @@
                 "original_sha256": "c0b9845663d54bcd15b3bc5b86d25f992e4be17e6b8ea2593483f1449ed8f836",
                 "current_sha256": "206e7a8288929fb10ad91afa32e0eca85e6b34693a0e49317c11b0be20c60780",
                 "review": "Documents transverse-width scaling in Grid2D FiniteVolumeDiffusion. Method types and the one-coordinate numerical contract are unchanged."
+            },
+            {
+                "path": "ext/PopulationBalanceModelsAdvancedHMCExt.jl",
+                "original_sha256": "56547a90827eecf31b8c67f689d8bd32579c521f8b44f72d15b46462cefa7217",
+                "current_sha256": "1b7413b6b9c64d7dc5bfc0684dafcbe26478ed30a74f3cd1d666fb11017473fe",
+                "review": "Adds a default joint diagnostic stopping controller, optional model-free monitored summaries and per-chain tuning. Explicit samples=N retains fixed-length behavior. Exact seeded trajectory, warmup, energy and batch-prefix comparisons against upstream AdvancedHMC 0.8 sample() pass in test/sampling_control.jl. The retained protein runs had explicit fixed counts. Their log-density, posterior-gradient, sampling-map Jacobian and support callbacks are unchanged; stored inference-coordinate density and sampler-coordinate energies keep their meanings. Target compatibility is additionally checked at the retained MAP and posterior tail/chain points; original draws and producer manifests are not replaced. This is not a retroactive claim that the retained chains used diagnostic stopping."
             },
             {
                 "path": "src/inference/differentiation.jl",
@@ -212,8 +221,8 @@
             {
                 "path": "src/PopulationBalanceModels.jl",
                 "original_sha256": "abee979f7ab3f466564d6d9b4a688f73089c73995a81d994c62c8e7a5916738c",
-                "current_sha256": "a687b48f13c23a793bc7d4904c9be0a86d451d1b2df6b5280555a40b309478c7",
-                "review": "Preserves the previous stationary/Gauss–Newton additions; includes the new tensor-only diagonal diffusion methods. No replacement of one-coordinate transport, likelihood, priors or posterior definitions."
+                "current_sha256": "d73763ef97f7d382db22f76cf8d85ce8129012aff05e8ffa8a145326a1a1a9eb",
+                "review": "Preserves the previous stationary/Gauss–Newton additions; includes the new tensor-only diagonal diffusion methods. No replacement of one-coordinate transport, likelihood, priors or posterior definitions. Subsequent forward-UQ work adds only exports and includes for the three separately reviewed opt-in UQ files; existing inference/model include order and definitions remain unchanged."
             },
             {
                 "path": "src/coupling/systems.jl",
@@ -230,8 +239,8 @@
             {
                 "path": "src/inference/bayesian_diagnostics.jl",
                 "original_sha256": "59d926140dfc18d36e34963382c3b776b701abfc5b904f1fd2b86556cdea5d70",
-                "current_sha256": "3c2bf56516403428717251d0d74318224b68bc566bcd64833d5719f6ca24788b",
-                "review": "Retains opt-in Gauss–Newton support and adds stationary/mixed backend labels only after existing explicit finite-difference, callback and SciML choices. Transient gradient, Hessian, likelihood and posterior definitions unchanged."
+                "current_sha256": "f66b03413be5b7c05a3c3875439360ada27ca532ff116ffcd887b64516f83ce6",
+                "review": "Retains opt-in Gauss–Newton support and adds stationary/mixed backend labels only after existing explicit finite-difference, callback and SciML choices. Transient gradient, Hessian, likelihood and posterior definitions unchanged. Also adds a public optional retained-chain diagnostic screen fallback; the posterior, gradients, local-uncertainty and predictive implementations are unchanged."
             },
             {
                 "path": "src/inference/distribution_discrepancies.jl",
@@ -242,8 +251,8 @@
             {
                 "path": "src/inference/statistical_model.jl",
                 "original_sha256": "99e49716ee2242cbd5bbde0832a5166b7bad9d0ba651d94bc2ad690ab4b5d1fe",
-                "current_sha256": "fa9db7f56e36efbb60b31d40fed3cd9dbbbcdb1b55bafc223d93cb27456176a9",
-                "review": "Timed measurements delegate their unchanged validation/likelihood setup to a shared helper. Adds timeless measurements and stationary family dispatch; existing transient solution body is unchanged. Adds eligible one-dimensional HOC histogram support; the retained sectional protein calculation uses its unchanged path."
+                "current_sha256": "ea0ff8fc5c4b3fdfd22986ae54ced7ece8221ba591c737e53f24b8d5c35cd692",
+                "review": "Timed measurements delegate their unchanged validation/likelihood setup to a shared helper. Adds timeless measurements and stationary family dispatch; existing transient solution body is unchanged. Adds eligible one-dimensional HOC histogram support; the retained sectional protein calculation uses its unchanged path. Also documents diagnostic-controlled sampling and its explicit fixed-length override; this follow-up changes only the sampler docstring in this file."
             },
             {
                 "path": "ext/PopulationBalanceModelsOptimExt.jl",
@@ -258,7 +267,10 @@
             "src/inference/stationary.jl",
             "src/numerics/tensor/size_diffusion.jl",
             "src/stationary/continuation.jl",
-            "src/stationary/problems.jl"
+            "src/stationary/problems.jl",
+            "src/uq/inputs.jl",
+            "src/uq/polynomial_chaos.jl",
+            "src/uq/propagation.jl"
         ],
         "reviewed_source_revision": "80a7d7658a8e3babacdd57e7a1375d36e0622e79",
         "reviewed_current_revision": "a38d582bfe2e7cca7eb6f40b57ecfb00a4957633",
@@ -267,7 +279,7 @@
             "current_sha256": "45027810ea5e976bd31b1b411cb446ad199f91e2b046a21cf0658b9eef1ba473",
             "change": "Statistics added to test extras/target and test compatibility only; complete remaining project unchanged"
         },
-        "uncertainty_review_sha256": "8fe8dbfe834ae754f410970387facfe567d5238f8277c4547b1b288db90d640d"
+        "uncertainty_review_sha256": "34f3e52e1140cce4ed6ada3739f0120b372147954208b075fb36bcf4a48a4534"
     },
     "settings": {
         "model": "cnt_grd",
@@ -422,7 +434,7 @@
             "gradient_error": 5.138122180694149e-7
         }
     ],
-    "julia": "1.10.3",
+    "julia": "1.10.12",
     "dependencies": {
         "SuiteSparse32_jll": "5.10.1+0",
         "Pkg": "1.10.0",

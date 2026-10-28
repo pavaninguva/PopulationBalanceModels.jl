@@ -19,3 +19,11 @@ writes into `docs/src` or changes current production outputs.
 producer records. They are preserved separately from the four current case
 folders. Current samples and all recorded observation/likelihood inputs remain
 together in `paper/protein/data/`.
+
+`paper_history/protein_variable_gamma_theta_20261028.zip` preserves the previous
+protein target with inferred gamma and D = theta G²: the complete model/shared
+outputs, original manifests, posterior draws, uncertainty receipts/history, source recipe
+and figures. Its internal manifest and adjacent SHA256 record the original
+bytes. The active protein case instead fixes gamma and fits constant D0 with
+three/four inferred coordinates. Historical covariance/coordinate tests replay
+this archive explicitly; they do not claim equivalence to the new target.

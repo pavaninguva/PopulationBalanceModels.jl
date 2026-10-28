@@ -46,7 +46,12 @@ julia --project=/path/to/sensitivity-env test/sensitivity_integration.jl
 ```
 
 The inference tests use small analytical targets; they do not regenerate the
-long protein posterior. Minimum/current Julia jobs, normal compiled-module
+long protein posterior. `sampling_control.jl`, included by
+`bayesian_integration.jl`, checks diagnostic stopping against conjugate Gaussian
+and transformed lognormal posteriors, exact continuation against upstream
+AdvancedHMC, independent batch sizes, MCSE requirements, budgets and failure
+propagation. `protein_parallel.jl` checks joint reassessment and retained-output
+protection without running protein calibration or sampling. Minimum/current Julia jobs, normal compiled-module
 sensitivity checks, and selective JET analysis remain in CI.
 
 Sensitivity CI resolves and precompiles its dependencies in one process, then
@@ -111,6 +116,16 @@ julia --project=paper test/protein_analysis_modes.jl
 python test/protein_publication.py
 python test/protein_results.py
 ```
+
+The active protein case has fixed gamma and constant D0 (three/four inferred
+coordinates). Its fresh producer and posterior checks are separate from the
+archived four/five-coordinate targets. `protein_publication.py` verifies and
+extracts the historical uncertainty receipts into a temporary directory for
+its Laplace/Gauss–Newton artifact tests; this does not assert equivalence of
+those targets to the active model. Analytical legacy-coordinate tests use a
+small parameter-observation fixture, not a second case-specific PBM engine.
+`protein_analysis_modes.jl` also rebuilds the saved draw arrays by chain/draw
+identity and independently reassesses rank R-hat, bulk/tail ESS and BFMI.
 
 The protein check can accept a separately recorded compatibility receipt after
 an explicit source review and new posterior/gradient evaluations. It still

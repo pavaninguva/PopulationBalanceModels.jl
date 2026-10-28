@@ -61,12 +61,12 @@ class ProteinResults(unittest.TestCase):
 
     def test_targets_manifests_and_sampling(self):
         common=[]
-        for name,n in (('cnt',4),('cnt_grd',5)):
+        for name,n in (('cnt',3),('cnt_grd',4)):
             folder=BASE/name;m=record(folder,'manifest.json')
             self.assertTrue(m['complete']);self.assertEqual(m['mode'],'production')
             for path,digest in m['files'].items():
                 self.assertEqual(hashlib.sha256((folder/path).read_bytes()).hexdigest(),digest,path)
-            prior=record(folder,'priors.json');common.append(prior[:4]);self.assertEqual(len(prior),n)
+            prior=record(folder,'priors.json');common.append(prior[:3]);self.assertEqual(len(prior),n)
             raw=table(folder,'posterior_draws.csv');names=raw.dtype.names
             self.assertFalse('sigma_c' in names or 'sigma_F' in names)
             self.assertEqual(sum(k.startswith('z') and k[1:].isdigit() for k in names),n)
@@ -81,9 +81,11 @@ class ProteinResults(unittest.TestCase):
             self.assertAlmostEqual(mode['logposterior'],mode['logprior']+mode['loglikelihood_whitened_CDF'],places=10)
             frozen=record(folder,'frozen_model.json');self.assertFalse(frozen['validation_used'])
             metrics=record(folder,'validation_metrics.json');self.assertLessEqual(frozen['frozen_at'],metrics['evaluated_at'])
+            self.assertTrue(np.all(raw['gamma']==.64))
+            self.assertNotIn('gamma',[p['name'] for p in prior])
             if name=='cnt': self.assertTrue(np.all(raw['grd_strength']==0))
             else: self.assertTrue(np.all(raw['grd_strength']>0))
-            self.assertTrue(np.all((raw['logAJ']>0)&(raw['logAJ']<100)&(raw['g']>1)&(raw['g']<3)))
+            self.assertTrue(np.all((raw['logAJ']>np.log(.06))&(raw['logAJ']<100+np.log(.06))&(raw['g']>1)&(raw['g']<5)))
         self.assertEqual(common[0],common[1])
 
     def test_physical_invariants_and_distribution_diagnostics(self):
@@ -92,11 +94,11 @@ class ProteinResults(unittest.TestCase):
             self.assertLess(np.max(np.abs(trajectory['material_error_g_L'])),1e-9)
             np.testing.assert_allclose(trajectory['concentration_g_L']+trajectory['solid_concentration_g_L']-19.965841161400512,
                 trajectory['material_error_g_L'],atol=1e-12)
-            self.assertGreaterEqual(np.min(trajectory['minimum_scaled_count']),0.)
+            self.assertGreaterEqual(np.min(trajectory['minimum_count_per_L']),0.)
             self.assertEqual(trajectory['number_per_m3'][0],0.)
             self.assertLess(np.max(trajectory['upper_bin_fraction']),1e-8)
             theta=record(folder,'map.json')['parameters']['grd_strength']
-            np.testing.assert_allclose(trajectory['D_G_um2_min'],theta*trajectory['G_um_min']**2,rtol=1e-13,atol=0)
+            np.testing.assert_allclose(trajectory['D_G_um2_min'],np.full(len(trajectory),theta),rtol=1e-13,atol=0)
             curves=table(folder,'distribution_curves.csv');observed=table(folder,'psd_predictions.csv')
             metrics=table(folder,'distribution_metrics.csv');quantiles=table(folder,'quantile_predictions.csv')
             for t in (74.,180.,420.,660.):
@@ -134,12 +136,12 @@ class ProteinResults(unittest.TestCase):
             fine=moment_rates[moment_rates['bins']==meshes[1]]
             self.assertTrue(np.all(np.abs(fine['relative_rate_difference'])<np.abs(coarse['relative_rate_difference'])))
             np.testing.assert_allclose(moment_rates['bulk_rate_g_L_min']+
-                1e-6*1240*.81*moment_rates['discrete_M3_rate'],0.,atol=2e-13)
+                1.24e-12*.81*moment_rates['discrete_M3_rate'],0.,atol=2e-13)
             # The early empty conditioning window is not assigned fake quantiles.
             self.assertTrue(np.isnan(trajectory['D50_um'][0]))
 
     def test_latent_draws_summaries_and_refinement(self):
-        estimates=table(BASE,'parameter_estimates.csv')
+        estimates=table(BASE/'analysis/tables','parameter_estimates.csv')
         for name in ('cnt','cnt_grd'):
             folder=BASE/name;raw=table(folder,'posterior_draws.csv');meta=record(folder,'priors.json')
             for p in meta:
@@ -153,7 +155,7 @@ class ProteinResults(unittest.TestCase):
             diagnostics=table(folder,'latent_draw_diagnostics.csv')
             self.assertEqual(len(diagnostics),len(ids))
             self.assertLess(np.max(diagnostics['maximum_material_error_g_L']),1e-9)
-            self.assertGreaterEqual(np.min(diagnostics['minimum_scaled_count']),0.)
+            self.assertGreaterEqual(np.min(diagnostics['minimum_count_per_L']),0.)
             self.assertLess(np.max(diagnostics['maximum_upper_bin_fraction']),1e-8)
             verified=record(folder,'target_verification.json')
             self.assertTrue(verified['passed'])
@@ -172,11 +174,10 @@ class ProteinResults(unittest.TestCase):
             self.assertLess(checks[checks['check']=='domain']['maximum_CDF_change'][0],.003)
             self.assertLess(checks[checks['check']=='size']['maximum_CDF_change'][0],.006)
             self.assertLess(checks[checks['check']=='size']['maximum_concentration_change_g_L'][0],.03)
-            if name=='cnt_grd':
-                finer=table(folder,'additional_size_refinement.csv')
-                self.assertEqual(finer['coarse_bins'][0],200)
-                self.assertEqual(finer['fine_bins'][0],400)
-                self.assertLess(finer['maximum_CDF_change'][0],.001)
+            refit=record(folder,'refined_map.json')
+            self.assertTrue(refit['converged'])
+            self.assertLessEqual(refit['gradient_norm'],.001)
+            self.assertEqual(refit['bins'],2*record(folder,'run_settings.json')['bins'])
             posterior=table(folder,'posterior_refinement.csv')
             self.assertTrue(np.all(np.isfinite(posterior['maximum_CDF_change'])))
             self.assertLess(np.max(posterior['maximum_CDF_change']),.01)
@@ -187,20 +188,38 @@ class ProteinResults(unittest.TestCase):
         metas=record(BASE/'shared','priors.json')
         for m in metas:
             if m['name']=='AG':
-                x=np.linspace(np.log(.01),np.log(1500),10001)
+                x=np.linspace(np.log(1e-5),np.log(1.5),10001)
                 np.testing.assert_allclose(prior_density(m,x),1/np.log(150000),rtol=1e-13)
             elif m['name']=='grd_strength':
-                x=np.linspace(-25,np.log(400),20001)
-                np.testing.assert_allclose(prior_density(m,np.array([np.log(10.)])),[np.exp(-1)],rtol=1e-13)
+                x=np.linspace(-25,np.log(4),20001)
+                np.testing.assert_allclose(prior_density(m,np.array([np.log(.01)])),[np.exp(-1)],rtol=1e-13)
             elif m['family']=='uniform': x=np.linspace(*m['arguments'],10001)
             else: x=np.geomspace(np.exp(m['arguments'][0]-8*m['arguments'][1]),np.exp(m['arguments'][0]+8*m['arguments'][1]),20001)
             self.assertAlmostEqual(np.trapz(prior_density(m,x),x),1.,delta=2e-6)
         # A cropped broad prior must retain its original density/normalizer.
         logAJ=metas[0];self.assertAlmostEqual(np.trapz(prior_density(logAJ,np.linspace(25,35,101)),np.linspace(25,35,101)),.1,places=12)
 
+    def test_density_guides_are_display_only_and_normalized(self):
+        from protein_plot import density_guide
+        original=table(BASE/'shared','psd.csv')
+        before=hashlib.sha256((BASE/'shared/psd.csv').read_bytes()).hexdigest()
+        for t in (74.,180.,420.,660.):
+            q=original[original['time_min']==t]
+            x,y=density_guide(q['size_um'],q['conditional_density_per_um'])
+            self.assertTrue(np.all(y>=0))
+            self.assertAlmostEqual(np.trapz(y,x),1.,places=12)
+            # Smooth positive densities do not acquire a sawtooth from drawing.
+            slope=np.diff(y)/np.diff(x)
+            self.assertLess(np.max(np.abs(np.diff(slope))),.003)
+        self.assertEqual(hashlib.sha256((BASE/'shared/psd.csv').read_bytes()).hexdigest(),before)
+
     def test_five_publication_figures(self):
         from PIL import Image
         folder=ROOT/'paper/protein/figures'
+        receipt=record(folder,'plot_provenance.json')
+        self.assertEqual(receipt['renderer'],'actual LaTeX')
+        for name,digest in receipt['retained_inputs'].items():
+            self.assertEqual(hashlib.sha256((BASE/name).read_bytes()).hexdigest(),digest,name)
         for name in ('protein_data','protein_fit_cnt','protein_fit_cnt_grd','protein_corner_cnt','protein_corner_cnt_grd'):
             with Image.open(folder/f'{name}.png') as image:
                 self.assertEqual(image.width,2100);np.testing.assert_allclose(image.info['dpi'],[300,300],atol=.01)
@@ -208,12 +227,15 @@ class ProteinResults(unittest.TestCase):
                 self.assertFalse((folder/f'{name}.{ext}').exists())
             self.assertEqual(hashlib.sha256((folder/f'{name}.png').read_bytes()).hexdigest(),
                 hashlib.sha256((ROOT/f'docs/src/assets/protein_isothermal/{name}.png').read_bytes()).hexdigest())
+            self.assertEqual(hashlib.sha256((folder/f'{name}.png').read_bytes()).hexdigest(),receipt['files'][f'{name}.png'])
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--input',type=Path,default=BASE,help='Result root containing shared/, cnt/ and cnt_grd/')
     parser.add_argument('--retained',action='store_true',help=
         'Check stored observations, outputs and posterior diagnostics without asserting that the current checkout is the producer.')
     args,remaining=parser.parse_known_args()
+    BASE=args.input.resolve()
     if args.retained:
         print('Retained-result check: producer/current-checkout equivalence is NOT asserted.',flush=True)
         names=[name for name in unittest.defaultTestLoader.getTestCaseNames(ProteinResults)

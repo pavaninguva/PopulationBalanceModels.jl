@@ -2,7 +2,9 @@
 import copy
 import importlib.util
 import json
+import hashlib
 import tempfile
+import zipfile
 from pathlib import Path
 import sys
 import unittest
@@ -18,6 +20,28 @@ from protein_uncertainty import physical, display, gaussian_marginal, gaussian_d
 
 
 class PublicationContracts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # These uncertainty reports describe the superseded 4/5-parameter
+        # targets. Verify and replay their retained files, without pretending
+        # they are uncertainty calculations for the new fixed-gamma models.
+        cls._archive=tempfile.TemporaryDirectory()
+        archive=ROOT/'test/fixtures/archives/paper_history/protein_variable_gamma_theta_20261028.zip'
+        with zipfile.ZipFile(archive) as z:
+            manifest=json.loads(z.read('archive_manifest.json'))
+            for name,digest in manifest.items():
+                if name.startswith('paper/protein/data/'):
+                    data=z.read(name)
+                    if hashlib.sha256(data).hexdigest()!=digest:
+                        raise AssertionError('Changed historical protein file: '+name)
+                    dest=Path(cls._archive.name)/name;dest.parent.mkdir(parents=True,exist_ok=True)
+                    dest.write_bytes(data)
+        cls.history=Path(cls._archive.name)/'paper/protein/data'
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._archive.cleanup()
+
     def test_png_export_keeps_no_vector_derivatives(self):
         from PIL import Image
         import matplotlib.pyplot as plt
@@ -110,27 +134,31 @@ class PublicationContracts(unittest.TestCase):
         self.assertAlmostEqual(float(np.trapz(prior_density(meta,x),x)),.5)
 
     def test_compatibility_guard_rejects_stale_sources_and_inputs(self):
-        folder=BASE/'cnt'
+        folder=self.history/'cnt'
         manifest=json.loads((folder/'manifest.json').read_text())
-        receipt=provenance.verify_compatibility(folder,manifest)
-        with patch.object(provenance,'numerical_sources',return_value={}):
-            with self.assertRaisesRegex(ValueError,'Sources changed'):
-                provenance.verify_compatibility(folder,manifest)
-        changed=copy.deepcopy(manifest)
-        changed['target_hash']='changed'
-        with self.assertRaisesRegex(ValueError,'another target'):
-            provenance.verify_compatibility(folder,changed)
-        original_sha=provenance.sha
-        def changed_manifest(path):
-            return 'changed' if Path(path)==folder/'manifest.json' else original_sha(path)
-        with patch.object(provenance,'sha',side_effect=changed_manifest):
-            with self.assertRaisesRegex(ValueError,'Changed compatibility input'):
-                provenance.verify_compatibility(folder,manifest)
-        self.assertGreaterEqual(len(receipt['checks']),9)
+        saved=json.loads((self.history/'analysis/cnt/compatibility.json').read_text())
+        with patch.object(provenance,'ANALYSIS',self.history/'analysis'), \
+             patch.object(provenance,'numerical_sources',return_value=saved['source_review']['current_sources']):
+            receipt=provenance.verify_compatibility(folder,manifest)
+            with patch.object(provenance,'numerical_sources',return_value={}):
+                with self.assertRaisesRegex(ValueError,'Sources changed'):
+                    provenance.verify_compatibility(folder,manifest)
+            changed=copy.deepcopy(manifest)
+            changed['target_hash']='changed'
+            with self.assertRaisesRegex(ValueError,'another target'):
+                provenance.verify_compatibility(folder,changed)
+            original_sha=provenance.sha
+            def changed_manifest(path):
+                return 'changed' if Path(path)==folder/'manifest.json' else original_sha(path)
+            with patch.object(provenance,'sha',side_effect=changed_manifest):
+                with self.assertRaisesRegex(ValueError,'Changed compatibility input'):
+                    provenance.verify_compatibility(folder,manifest)
+            self.assertGreaterEqual(len(receipt['checks']),9)
+
 
     def test_laplace_outputs_keep_rejections_explicit(self):
         for model,n in (('cnt',4),('cnt_grd',5)):
-            report=json.loads((provenance.ANALYSIS/model/'laplace.json').read_text())
+            report=json.loads((self.history/'analysis'/model/'laplace.json').read_text())
             self.assertEqual(len(report['center']),n)
             self.assertTrue(report['no_sampling_or_latent_propagation'])
             self.assertIn(report['status'],('accepted','rejected'))
@@ -144,11 +172,11 @@ class PublicationContracts(unittest.TestCase):
 
     def test_gauss_newton_outputs_are_joint_and_distinct_from_laplace(self):
         for model,n in (('cnt',4),('cnt_grd',5)):
-            folder=provenance.ANALYSIS/model
+            folder=self.history/'analysis'/model
             report=json.loads((folder/'gauss_newton.json').read_text())
             receipt=json.loads((folder/'gauss_newton_comparison_plot.json').read_text())
             self.assertEqual(receipt['approximation_sha256'],provenance.sha(folder/'gauss_newton.json'))
-            self.assertEqual(receipt['posterior_sha256'],provenance.sha(BASE/model/'posterior_draws.csv'))
+            self.assertEqual(receipt['posterior_sha256'],provenance.sha(self.history/model/'posterior_draws.csv'))
             self.assertEqual(report['approximation'],'gauss_newton')
             self.assertEqual(len(report['center']),n)
             self.assertTrue(report['no_sampling_or_latent_propagation'])
@@ -164,7 +192,7 @@ class PublicationContracts(unittest.TestCase):
                 self.assertLessEqual(d['information_error'],d['information_tolerance'])
                 self.assertLessEqual(d['gradient_verification'],d['derivative_tolerance'])
                 table=np.genfromtxt(folder/'gauss_newton_marginal_comparison.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
-                draws=np.genfromtxt(BASE/model/'posterior_draws.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
+                draws=np.genfromtxt(self.history/model/'posterior_draws.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
                 from statistics import NormalDist
                 for i,meta in enumerate(report['priors']):
                     z=np.asarray(report['center'][i])+np.sqrt(covariance[i,i])*np.array([NormalDist().inv_cdf(.025),0,NormalDist().inv_cdf(.975)])

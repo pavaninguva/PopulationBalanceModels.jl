@@ -93,7 +93,10 @@ function compatible_target(root,model,config)
     folder=joinpath(root,string(model));out=joinpath(ANALYSIS_ROOT,string(model));mkpath(out)
     manifest=readjson(joinpath(folder,"manifest.json"))
     manifest.complete && check_manifest(folder,manifest.target_hash) || error("Retained posterior/file hashes failed")
-    review=source_review(manifest)
+    current=numerical_sources()
+    original=Dict(string(k)=>string(v) for (k,v) in pairs(manifest.source_files))
+    review=original==current ? (original_sources=original,current_sources=current,
+        changes=NamedTuple[],additions=String[],interpretation="exact current-source producer match") : source_review(manifest)
     settings=model_settings(config,model)
     plain(settings)==JSON3.read(read(joinpath(folder,"run_settings.json"),String),Dict{String,Any}) ||
         error("Numerical/physical settings differ from the retained target")
@@ -208,7 +211,7 @@ function analyze_uncertainty(root,model,config;compatibility_only=false,method=:
         json(joinpath(out,"map_analysis.json"),(original=saved,refined,
             selected_z=result.minimizer,selected_parameters=physical_parameters(problem,result.minimizer,:batch),
             converged=result.converged,gradient=posterior_gradient(problem,result.minimizer),
-            inference_coordinates="logit(logAJ), log(gamma), log(AG), logit(g), optional log(theta)",
+            inference_coordinates="logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
             evidence=refined ? "new local Optim MAP run from retained coordinates" : "original optimizer evidence plus independently re-evaluated stationarity"))
         attempts=Any[];approximation=nothing
         initial_step=method===:laplace ? eps(Float64)^(1/4) : cbrt(eps(Float64))

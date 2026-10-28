@@ -1,21 +1,21 @@
 {
   "reviewed_baseline": "a38d582bfe2e7cca7eb6f40b57ecfb00a4957633",
-  "purpose": "Explicit source review for tensor bulk/diffusion support and test-only dependency correction, followed by current posterior/gradient checks; original producer manifests, draws and uncertainty calculations are retained.",
+  "purpose": "Explicit source review for tensor bulk/diffusion support and test-only dependency correction, followed by current posterior/gradient checks; original producer manifests, draws and uncertainty calculations are retained. Also reviews the diagnostic-stopping adapter change with exact upstream-transition tests and fresh retained-target/gradient checks; old fixed-length results are not resampled. The pre-existing forward-UQ additions are reviewed here solely to check that their opt-in methods do not replace the protein target; the UQ code and numerical data are unchanged.",
   "sources": {
     "src/PopulationBalanceModels.jl": {
-      "sha256": "a687b48f13c23a793bc7d4904c9be0a86d451d1b2df6b5280555a40b309478c7",
+      "sha256": "d73763ef97f7d382db22f76cf8d85ce8129012aff05e8ffa8a145326a1a1a9eb",
       "baseline_sha256": "4b3d9878ff439308bfe1a83e81eb72e11359ee52e080b4be7abb9c87b52316b4",
-      "review": "Preserves the previous stationary/Gauss–Newton additions; includes the new tensor-only diagonal diffusion methods. No replacement of one-coordinate transport, likelihood, priors or posterior definitions."
+      "review": "Preserves the previous stationary/Gauss\u2013Newton additions; includes the new tensor-only diagonal diffusion methods. No replacement of one-coordinate transport, likelihood, priors or posterior definitions. Subsequent forward-UQ work adds only exports and includes for the three separately reviewed opt-in UQ files; existing inference/model include order and definitions remain unchanged."
     },
     "src/inference/bayesian_diagnostics.jl": {
-      "sha256": "3c2bf56516403428717251d0d74318224b68bc566bcd64833d5719f6ca24788b",
+      "sha256": "f66b03413be5b7c05a3c3875439360ada27ca532ff116ffcd887b64516f83ce6",
       "baseline_sha256": "59d926140dfc18d36e34963382c3b776b701abfc5b904f1fd2b86556cdea5d70",
-      "review": "Retains opt-in Gauss–Newton support and adds stationary/mixed backend labels only after existing explicit finite-difference, callback and SciML choices. Transient gradient, Hessian, likelihood and posterior definitions unchanged."
+      "review": "Retains opt-in Gauss\u2013Newton support and adds stationary/mixed backend labels only after existing explicit finite-difference, callback and SciML choices. Transient gradient, Hessian, likelihood and posterior definitions unchanged. Also adds a public optional retained-chain diagnostic screen fallback; the posterior, gradients, local-uncertainty and predictive implementations are unchanged."
     },
     "src/inference/statistical_model.jl": {
-      "sha256": "fa9db7f56e36efbb60b31d40fed3cd9dbbbcdb1b55bafc223d93cb27456176a9",
+      "sha256": "ea0ff8fc5c4b3fdfd22986ae54ced7ece8221ba591c737e53f24b8d5c35cd692",
       "baseline_sha256": "99e49716ee2242cbd5bbde0832a5166b7bad9d0ba651d94bc2ad690ab4b5d1fe",
-      "review": "Timed measurements delegate their unchanged validation/likelihood setup to a shared helper. Adds timeless measurements and stationary family dispatch; existing transient solution body is unchanged. Adds eligible one-dimensional HOC histogram support; the retained sectional protein calculation uses its unchanged path."
+      "review": "Timed measurements delegate their unchanged validation/likelihood setup to a shared helper. Adds timeless measurements and stationary family dispatch; existing transient solution body is unchanged. Adds eligible one-dimensional HOC histogram support; the retained sectional protein calculation uses its unchanged path. Also documents diagnostic-controlled sampling and its explicit fixed-length override; this follow-up changes only the sampler docstring in this file."
     },
     "ext/PopulationBalanceModelsOptimExt.jl": {
       "sha256": "1645b24aa6f7d03567743c02937ea2de698b49b64028beec9a87cd29504e6f8e",
@@ -91,6 +91,26 @@
       "sha256": "c4f29318127e856ca932b33f42c835bef3cf517025031dd48a42b94240fe2878",
       "baseline_sha256": null,
       "review": "New Grid2D-only diagonal Ito finite-volume methods, with nonnegative coefficients and conservative face fluxes. No one-coordinate dispatch, posterior or observation formula is overridden."
+    },
+    "ext/PopulationBalanceModelsAdvancedHMCExt.jl": {
+      "sha256": "1b7413b6b9c64d7dc5bfc0684dafcbe26478ed30a74f3cd1d666fb11017473fe",
+      "baseline_sha256": "56547a90827eecf31b8c67f689d8bd32579c521f8b44f72d15b46462cefa7217",
+      "review": "Adds a default joint diagnostic stopping controller, optional model-free monitored summaries and per-chain tuning. Explicit samples=N retains fixed-length behavior. Exact seeded trajectory, warmup, energy and batch-prefix comparisons against upstream AdvancedHMC 0.8 sample() pass in test/sampling_control.jl. The retained protein runs had explicit fixed counts. Their log-density, posterior-gradient, sampling-map Jacobian and support callbacks are unchanged; stored inference-coordinate density and sampler-coordinate energies keep their meanings. Target compatibility is additionally checked at the retained MAP and posterior tail/chain points; original draws and producer manifests are not replaced. This is not a retroactive claim that the retained chains used diagnostic stopping."
+    },
+    "src/uq/inputs.jl": {
+      "sha256": "789b05eedae835810b19c50efe5f54564b3981e73d803009e1084f4f3d5fcfaa",
+      "baseline_sha256": null,
+      "review": "Pre-existing opt-in forward-UQ input types and constructors. The posterior adapter calls parameter_draws; it does not redefine that function, a likelihood, an observation, a prior, a transform or a PBM residual. No initialization runs a model or changes RNG state."
+    },
+    "src/uq/propagation.jl": {
+      "sha256": "5e6e17b79d59b19c4131b4bdcd4729c79f5d35b3f66fe928165507d80ca684cd",
+      "baseline_sha256": null,
+      "review": "Pre-existing opt-in forward-UQ types, serial propagation and summary functions. Uses existing observe/simulate/StationarySolver methods only when propagate is called. Its diagnostics overload dispatches solely on UQResult. No replacement of any protein forward/inference path or statistical target."
+    },
+    "src/uq/polynomial_chaos.jl": {
+      "sha256": "42689162fa179f32aef597d8e77c73277edeebacc335d37e5ac7ed863c8b7227",
+      "baseline_sha256": null,
+      "review": "Pre-existing opt-in polynomial-basis, design, regression and surrogate evaluation functions. The diagnostics and uq_summary overloads dispatch on PCESurrogate; other helpers use distinct _pce names. No replacement of likelihoods, priors, observations, gradients or PBM solves. No surrogate is used by protein inference."
     }
   }
 }

@@ -4,6 +4,34 @@ using Test, PopulationBalanceModels, AdvancedHMC, MCMCDiagnosticTools, Serializa
 using Statistics, LinearAlgebra
 using Distributions: Normal
 import Distributions
+include("../paper/_support/protein_sampling_policy.jl")
+@testset "Protein sampling policies protect retained results" begin
+    base=Dict{String,Any}("warmup"=>50,"samples"=>100,"chains"=>4,"seed"=>92,
+        "target_acceptance"=>.9,"max_depth"=>10)
+    legacy=protein_sampling_settings(base)
+    @test legacy["stopping"]=="fixed" && legacy["samples"]==100
+    automatic=protein_sampling_settings(merge(base,Dict("stopping"=>"diagnostics")))
+    @test automatic["min_samples"]==500 && automatic["max_samples"]==10000
+    @test !haskey(automatic,"samples")
+    @test automatic["diagnostic_quantities"]==["log_J_at_S6","log_G_at_S6"]
+    @test protein_sampling_matches(legacy,legacy)
+    old=copy(legacy);delete!(old,"stopping")
+    @test protein_sampling_matches(old,legacy) # historical fixed-length runs
+    @test protein_sampling_matches(Dict(Symbol(k)=>v for (k,v) in old),legacy)
+    @test !protein_sampling_matches(old,automatic)
+    @test !protein_sampling_matches(nothing,automatic)
+    @test_throws ErrorException protein_sampling_settings(merge(base,Dict("stopping"=>"unknown")))
+    mktempdir() do folder
+        posterior=joinpath(folder,"posterior_draws.csv")
+        write(posterior,"retained posterior bytes\n")
+        before=read(posterior)
+        @test_throws ArgumentError protect_protein_posterior(folder;valid=false)
+        @test_throws ArgumentError protect_protein_posterior(folder;valid=true,requested=automatic,stored=old)
+        @test protect_protein_posterior(folder;valid=true,requested=legacy,stored=old)===nothing
+        @test protect_protein_posterior(folder;valid=false,force=true)===nothing
+        @test read(posterior)==before
+    end
+end
 isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
 _load_example(:ProteinCrystallization, "protein_crystallization.jl")
 const PC=ProteinCrystallization
@@ -46,7 +74,7 @@ isdefined(@__MODULE__,:IsothermalProteinSampling) ||
 isdefined(@__MODULE__,:protein_transport_fixture) || include("fixtures/protein_transport.jl")
 using ForwardDiff
 @testset "Nonlinear transport sampling has an independent Gaussian reference" begin
-    C=IsothermalProteinCrystallization;S=IsothermalProteinSampling
+    C=LegacyProteinCoordinates;S=IsothermalProteinSampling
     template=C.estimation_problem(model=:cnt_grd,bins=20)
     mapping=S.transported_rate_coordinates(C,template,initial_coordinates(template),protein_transport_fixture();
         growth_reference_supersaturation=6.)

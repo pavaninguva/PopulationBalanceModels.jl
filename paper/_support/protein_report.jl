@@ -1,4 +1,5 @@
 # Reporting support, included only by run.jl. No alternative PBM or posterior.
+include("protein_sampling_policy.jl")
 # JSON null records undefined diagnostics explicitly (e.g. an 8-draw smoke
 # chain); failed screens remain false and cannot produce credible bands.
 json_safe(x::AbstractFloat)=isfinite(x) ? x : nothing
@@ -49,12 +50,16 @@ function export_data(root)
         uncertainties="fixed modeling assumptions, not measured analytical errors",
         data_hashes=Dict(f=>hashfile(joinpath(C.DATA,f)) for f in ("concentration.csv","psd_cdf.csv","psd_summary.csv"))))
     json(joinpath(folder,"priors.json"),C.prior_metadata(estimation_problem(model=:cnt_grd)))
+    json(joinpath(folder,"fixed_parameters.json"),(gamma=C.FIXED_GAMMA,gamma_units="mJ/m²",
+        rho=C.RHO,rho_units="g/μm³",population_units="particles/L",time_units="min",
+        length_units="μm",D0_prior_mean=C.D0_PRIOR_MEAN,D0_units="μm²/min"))
 end
 function model_settings(config,model)
-    (;model=string(model),bins=config["bins"],Lmax_um=config["Lmax"],maximum_dt_min=config["maximum_dt"],
+    (;model=string(model),formulation="fixed_gamma_constant_D0",population_units="particles/L",
+      bins=config["bins"],Lmax_um=config["Lmax"],maximum_dt_min=config["maximum_dt"],
       coefficient_interval_min=config["coefficient_interval"],cfl=config["cfl"],
       time_method="SSPRK33",growth_reconstruction="MUSCL",diffusion_method=model===:cnt_grd ? "FiniteVolumeDiffusion (Ito)" : "none",
-      constants=(c0=C.C0,cstar=2.16,T=C.TEMPERATURE,nu=C.MOLECULAR_VOLUME,kB=C.BOLTZMANN,rho=1240.,kv=.81),
+      constants=(c0=C.C0,cstar=2.16,T=C.TEMPERATURE,nu=C.MOLECULAR_VOLUME,kB=C.BOLTZMANN,rho_g_um3=C.RHO,gamma_mJ_m2=C.FIXED_GAMMA,kv=.81),
       observation_model=(concentration_relative_sd=.05,CDF_absolute_sd=C.SIGMA_F,CDF_correlation_length_um=C.CORRELATION_LENGTH))
 end
 function make_estimation(config,model;bins=config["bins"],Lmax=config["Lmax"],dt=config["maximum_dt"],cfl=config["cfl"])
@@ -70,7 +75,7 @@ function map_export(problem,fitted)
     (;z=fitted.minimizer,parameters=physical_from_z(problem,fitted.minimizer),converged=fitted.converged,
       loglikelihood_whitened_CDF=fitted.loglikelihood,logprior=fitted.logprior,logposterior=fitted.logposterior,
       original_CDF_loglikelihood_offset=-sum(sum(log,diag(C.cdf_factor(m.observable.points))) for m in only(problem.experiments).measurements[2:end]),
-      MAP_coordinates="z: logit(logAJ), log(gamma), log(AG), logit(g), optional log(theta_GRD)",
+      MAP_coordinates="z: logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
       gradient_norm=fitted.diagnostics.gradient_norm,gradient=fitted.diagnostics.gradient,
       elapsed_seconds=fitted.diagnostics.elapsed_seconds,forward_solves=fitted.diagnostics.forward_solves,
       failures=fitted.diagnostics.failed_evaluations,failure_messages=fitted.diagnostics.failure_messages,
@@ -110,11 +115,11 @@ end
 function state_diagnostics(sol,u,p,t)
     pb=sol.problem;g=pb.operator.system.populations.crystals.grid
     N=population(pb,u,:crystals);c=bulk(pb,u,:c);q=quantiles_at(sol,u)
-    J,G=rates(p,t,c);solid=1e-6*p.rho*p.kv*moment(g,N,3)
-    (;concentration_g_L=c,number_per_m3=1e12sum(N),
-      J_per_m3_min=J,G_um_min=G,D_G_um2_min=p.grd_strength*G^2,
+    J,G=rates(p,t,c);solid=p.rho*p.kv*moment(g,N,3)
+    (;concentration_g_L=c,number_per_L=sum(N),number_per_m3=1000sum(N),
+      J_per_L_min=J,G_um_min=G,D_G_um2_min=p.grd_strength,
       solid_concentration_g_L=solid,material_error_g_L=c+solid-p.c0,
-      minimum_scaled_count=minimum(N),upper_bin_fraction=sum(N)>0 ? N[end]/sum(N) : 0.,
+      minimum_count_per_L=minimum(N),upper_bin_fraction=sum(N)>0 ? N[end]/sum(N) : 0.,
       D10_um=q[1],D50_um=q[2],D90_um=q[3])
 end
 function compare_forward(a,b)
@@ -196,12 +201,12 @@ function moment_rate_checks(sol,p)
     map(zip(sol.t,sol.u)) do (t,u)
         du=zero(u);rhs!(du,u,pb.operator,p,t)
         N=population(pb,u,:crystals);dN=population(pb,du,:crystals)
-        c=bulk(pb,u,:c);J,G=rates(p,t,c);D=p.grd_strength*G^2
+        c=bulk(pb,u,:c);J,G=rates(p,t,c);D=p.grd_strength
         discrete=moment(g,dN,3)
         continuum=3G*moment(g,N,2)+6D*moment(g,N,1)
         (bins=length(g),time_min=t,discrete_M3_rate=discrete,continuum_M3_rate=continuum,
             relative_rate_difference=iszero(continuum) ? NaN : (discrete-continuum)/continuum,
-            first_bin_birth_M3_rate=J/1e12*first(g.centers)^3,
+            first_bin_birth_M3_rate=J*first(g.centers)^3,
             bulk_rate_g_L_min=bulk(pb,du,:c))
     end
 end
@@ -260,7 +265,7 @@ function sample_chain(model,config,z,start,covariance,chain)
         max_depth=config["max_depth"],verbose=true)
 end
 function sample_model(folder,problem,z,config)
-    started=time_ns();model=length(z)==5 ? :cnt_grd : :cnt
+    started=time_ns();model=any(s->s.name===:grd_strength,problem.parameters) ? :cnt_grd : :cnt
     n=length(z);map=sampling_map(problem,z,config)
     policy=get(config,"metric_initialization","expected_information")
     policy in ("expected_information","local_curvature","transport_empirical") || error("unknown sampler metric initialization: $policy")
@@ -297,44 +302,68 @@ function sample_model(folder,problem,z,config)
         (matrix_shape=(n,n),matrix_storage="column-major flat arrays",coordinates="sampler, not inference or physical",
          covariance_coordinates="sampler",information_coordinates=policy=="local_curvature" ? "inference" : "sampler",
          policy,chain_centers=centers,chain_tunings=tunings)))
-    packets=Vector{Any}(undef,config["chains"]);pending=Int[]
-    key=bytes2hex(sha256(JSON3.write((model_settings(config,model),string(VERSION),
-        hashfile(joinpath(ROOT,"paper","Manifest.toml")),config["warmup"],config["samples"],config["chains"],config["seed"],
-        config["target_acceptance"],config["max_depth"],map.label,
-        get(config,"growth_reference_supersaturation",nothing),
-        COORDINATE_SOURCE_HASH,get(config,"sampling_coordinates","")=="transport_rates" ? hashfile(transport_path(config)) : nothing,
-        policy,covariances,starts,z,sort(collect(numerical_sources());by=first)))))[1:16]
-    cache=joinpath(folder,"chains");mkpath(cache)
-    paths=[joinpath(cache,"$(key)_$(c).bin") for c in 1:config["chains"]]
-    for c in 1:config["chains"]
-        stamp=joinpath(cache,"$(key)_$(c).json")
-        if isfile(paths[c]) && isfile(stamp) && readjson(stamp).sha256==hashfile(paths[c])
-            packets[c]=deserialize(paths[c])
-        else
-            push!(pending,c)
-        end
-    end
-    input=joinpath(cache,"$(key)_input.bin")
-    serialize(input,(model=model,config=config,z=z,starts=starts,covariances=covariances,paths=paths))
-    # The established process-isolation protocol uses files, not local TCP
-    # listeners. Every worker loads this same entry point and the same example.
-    @sync for c in pending
-        @async begin
-            command=`$(Base.julia_cmd()) --threads=1 --project=$(joinpath(ROOT,"paper")) $(joinpath(CASE,"run.jl")) --chain-worker $input $c`
-            logfile=joinpath(cache,"$(key)_$(c).log")
-            println("Launching ",model," chain ",c,": warmup=",config["warmup"],
-                ", samples=",config["samples"],", target acceptance=",config["target_acceptance"]);flush(stdout)
-            open(logfile,"w") do io
-                run(pipeline(command;stdout=io,stderr=io))
+    stopping_policy=get(config,"stopping","fixed")
+    key=nothing
+    chain_files=String[]
+    post=if stopping_policy=="diagnostics"
+        # Continue one set of chains jointly. No independent worker can decide
+        # multi-chain convergence, and each chain keeps its adapted state/RNG.
+        quantities=(
+            log_J_at_S6=theta->theta.shared.logAJ-C.barrier(C.FIXED_GAMMA)/log(6.)^2,
+            log_G_at_S6=theta->log(theta.shared.AG)+theta.shared.g*log(5.))
+        sampled=sample_posterior(problem;initial=z,starts,chains=config["chains"],
+            warmup=config["warmup"],seed=config["seed"],target_acceptance=config["target_acceptance"],
+            max_depth=config["max_depth"],metric=:dense,initial_covariance=Tuple(covariances),
+            sampling_map=map,stopping=:diagnostics,
+            min_samples=config["min_samples"],batch_samples=config["batch_samples"],
+            max_samples=config["max_samples"],consecutive_passes=config["consecutive_passes"],
+            diagnostic_quantities=quantities,verbose=true)
+        d=diagnostics(sampled)
+        PosteriorSamples(sampled.z,sampled.physical,
+            merge(d,(sum_chain_elapsed_seconds=d.elapsed_seconds,)),sampled.coordinates)
+    elseif stopping_policy=="fixed"
+        packets=Vector{Any}(undef,config["chains"]);pending=Int[]
+        key=bytes2hex(sha256(JSON3.write((model_settings(config,model),string(VERSION),
+            hashfile(joinpath(ROOT,"paper","Manifest.toml")),config["warmup"],config["samples"],config["chains"],config["seed"],
+            config["target_acceptance"],config["max_depth"],map.label,
+            get(config,"growth_reference_supersaturation",nothing),
+            COORDINATE_SOURCE_HASH,get(config,"sampling_coordinates","")=="transport_rates" ? hashfile(transport_path(config)) : nothing,
+            policy,covariances,starts,z,sort(collect(numerical_sources());by=first)))))[1:16]
+        cache=joinpath(folder,"chains");mkpath(cache)
+        paths=[joinpath(cache,"$(key)_$(c).bin") for c in 1:config["chains"]]
+        for c in 1:config["chains"]
+            stamp=joinpath(cache,"$(key)_$(c).json")
+            if isfile(paths[c]) && isfile(stamp) && readjson(stamp).sha256==hashfile(paths[c])
+                packets[c]=deserialize(paths[c])
+            else
+                push!(pending,c)
             end
-            packets[c]=deserialize(paths[c])
-            json(joinpath(cache,"$(key)_$(c).json"),(sha256=hashfile(paths[c]),chain=c,seed=config["seed"]+100c,
-                warmup=config["warmup"],samples=config["samples"],completed=true))
-            println("Completed posterior chain ",model," ",c,"/",config["chains"]);flush(stdout)
         end
+        input=joinpath(cache,"$(key)_input.bin")
+        serialize(input,(model=model,config=config,z=z,starts=starts,covariances=covariances,paths=paths))
+        # The established process-isolation protocol uses files, not local TCP
+        # listeners. Every worker loads this same entry point and the same example.
+        @sync for c in pending
+            @async begin
+                command=`$(Base.julia_cmd()) --threads=1 --project=$(joinpath(ROOT,"paper")) $(joinpath(CASE,"run.jl")) --chain-worker $input $c`
+                logfile=joinpath(cache,"$(key)_$(c).log")
+                println("Launching ",model," chain ",c,": warmup=",config["warmup"],
+                    ", samples=",config["samples"],", target acceptance=",config["target_acceptance"]);flush(stdout)
+                open(logfile,"w") do io
+                    run(pipeline(command;stdout=io,stderr=io))
+                end
+                packets[c]=deserialize(paths[c])
+                json(joinpath(cache,"$(key)_$(c).json"),(sha256=hashfile(paths[c]),chain=c,seed=config["seed"]+100c,
+                    warmup=config["warmup"],samples=config["samples"],completed=true))
+                println("Completed posterior chain ",model," ",c,"/",config["chains"]);flush(stdout)
+            end
+        end
+        chain_files=["chains/$(key)_$(c).json" for c in 1:config["chains"]]
+        _combine_protein_chains(problem,packets;elapsed_seconds=(time_ns()-started)/1e9,
+            allow_distinct_tuning=true)
+    else
+        error("stopping must be fixed or diagnostics")
     end
-    post=_combine_protein_chains(problem,packets;elapsed_seconds=(time_ns()-started)/1e9,
-        allow_distinct_tuning=true)
     d=diagnostics(post)
     json(joinpath(folder,"sampling_diagnostics.json"),(passed=d.diagnostics_passed,ess_bulk=d.ess_bulk,
         ess_tail=d.ess_tail,rhat=d.rhat,mcse_mean=d.mcse_mean,mcse_coordinates="inference",ebfmi=d.ebfmi,divergences=d.divergences,max_depth_hits=d.max_depth_hits,
@@ -343,7 +372,11 @@ function sample_model(folder,problem,z,config)
         chain_seeds=d.chain_seeds,target_acceptance=d.target_acceptance,max_depth=d.max_depth,
         forward_solves=d.forward_solves,elapsed_seconds=(time_ns()-started)/1e9,summed_chain_seconds=d.sum_chain_elapsed_seconds,
         gradient_checks=d.gradient_checks,map_checks=d.map_checks,
-        failed_evaluations=d.failed_evaluations,failure_messages=d.failure_messages))
+        failed_evaluations=d.failed_evaluations,failure_messages=d.failure_messages,
+        stopping_policy=d.stopping_policy,stopping_reason=d.stopping_reason,
+        check_history=d.check_history,consecutive_passes_required=d.consecutive_passes_required,
+        min_samples=d.min_samples,max_samples=d.max_samples,batch_samples=d.batch_samples,
+        quantity_diagnostics=Base.map(q->Base.structdiff(q,(values=q.values,)),d.quantity_diagnostics)))
     csv(joinpath(folder,"posterior_draws.csv"),[merge((chain=c,draw=i),physical_parameters(problem,post.z[:,i,c],:batch),
         NamedTuple{Tuple(Symbol("z",k) for k in 1:n)}(Tuple(post.z[:,i,c]))) for c in 1:d.chains for i in 1:d.samples])
     csv(joinpath(folder,"sampler_statistics.csv"),[(chain=c,draw=i,logdensity_z=d.statistics[c][i].log_density,
@@ -352,7 +385,9 @@ function sample_model(folder,problem,z,config)
     json(joinpath(folder,"sampling_provenance.json"),(producer_sha256=DRIVER_HASHES["report.jl"],recorded_at=string(now(UTC)),
         coordinate_source_sha256=COORDINATE_SOURCE_HASH,
         transport_configuration_sha256=get(config,"sampling_coordinates","")=="transport_rates" ? hashfile(transport_path(config)) : nothing,
-        process_isolation=true,diagnostic_source_sha256=DIAGNOSTIC_SOURCE_HASH,chain_key=key,chain_files=["chains/$(key)_$(c).json" for c in 1:d.chains]))
+        process_isolation=stopping_policy=="fixed",execution=stopping_policy=="fixed" ? "isolated fixed-length workers" : "serial joint diagnostic controller",
+        stopping_policy,stopping_reason=d.stopping_reason,chain_seeds=d.chain_seeds,
+        diagnostic_source_sha256=DIAGNOSTIC_SOURCE_HASH,chain_key=key,chain_files))
     post
 end
 function load_posterior(folder,problem)
@@ -418,7 +453,7 @@ function predict_draws(folder,problem,posterior,config,model)
         series=[state_diagnostics(sol,u,p,t) for (t,u) in zip(sol.t,sol.u)]
         push!(draw_diagnostics,(draw=i,steps=sol.steps,seconds=timing.time,
             maximum_material_error_g_L=maximum(abs(r.material_error_g_L) for r in series),
-            minimum_scaled_count=minimum(r.minimum_scaled_count for r in series),
+            minimum_count_per_L=minimum(r.minimum_count_per_L for r in series),
             maximum_upper_bin_fraction=maximum(r.upper_bin_fraction for r in series)))
         for (t,u,values) in zip(sol.t,sol.u,series)
             push!(predictions,merge((draw=i,time_min=t),values))
@@ -453,17 +488,27 @@ function execute_model(root,model,config;smoke=false,sample=false,force=false)
     folder=joinpath(root,string(model));mkpath(folder)
     settings=model_settings(config,model);sources=numerical_sources()
     target_hash=bytes2hex(sha256(JSON3.write((settings,sort(collect(sources);by=first)))))
+    valid=check_manifest(folder,target_hash) && same_environment(folder)
+    sampling_settings=sample && !smoke ? protein_sampling_settings(config) : nothing
+    if sampling_settings!==nothing
+        sampling_settings["transport_sha256"]=get(config,"sampling_coordinates","")=="transport_rates" ? hashfile(transport_path(config)) : nothing
+    end
+    stored_path=joinpath(folder,"sampling_settings.json")
+    stored_sampling=isfile(stored_path) ? readjson(stored_path) : nothing
+    # This check precedes all writes and MAP/sampling work. Historical runs
+    # require a fresh output directory or an explicit replacement request.
+    protect_protein_posterior(folder;valid=valid && isfile(joinpath(folder,"map.json")),force,
+        requested=sampling_settings,stored=stored_sampling)
     problem=make_estimation(config,model)
     json(joinpath(folder,"priors.json"),C.prior_metadata(problem))
     if smoke
-        sol=solve_physical(parameters(grd_strength=model===:cnt ? 0. : 10.),config,model,[0.,74.])
+        sol=solve_physical(parameters(grd_strength=model===:cnt ? 0. : C.D0_PRIOR_MEAN),config,model,[0.,74.])
         json(joinpath(folder,"smoke.json"),(model=model,calibrated=false,steps=sol.steps,minimum=minimum(sol.u[end])))
         return
     end
-    valid=check_manifest(folder,target_hash) && same_environment(folder)
     if !valid || force || !isfile(joinpath(folder,"map.json"))
         println("MAP ",model," bins=",config["bins"]);flush(stdout)
-        startp=parameters(logAJ=30.85,gamma=.587,AG=.48,g=2.89,grd_strength=model===:cnt ? 0. : 10.)
+        startp=parameters(logAJ=30.85+C.LOG_AJ_SHIFT,AG=.00048,g=2.89,grd_strength=model===:cnt ? 0. : C.D0_PRIOR_MEAN)
         start=initial_coordinates(EstimationProblem(C.parameter_specs(p=startp,model=model),problem.experiments;fixed=problem.fixed))
         fitted=C.fit_model(problem;maxiters=config["maxiters"],initial=start)
         json(joinpath(folder,"map.json"),map_export(problem,fitted))
@@ -497,15 +542,8 @@ function execute_model(root,model,config;smoke=false,sample=false,force=false)
     end
     write_manifest(folder,target_hash,sources)
     if sample
-        sampling_settings=Dict{String,Any}(k=>config[k] for k in ("warmup","samples","chains","seed","target_acceptance","max_depth"))
-        sampling_settings["sampling_coordinates"]=get(config,"sampling_coordinates","initial_rates")
-        sampling_settings["secondary_start_inference"]=get(config,"secondary_start_inference",nothing)
-        sampling_settings["metric_initialization"]=get(config,"metric_initialization","expected_information")
-        sampling_settings["growth_reference_supersaturation"]=get(config,"growth_reference_supersaturation",nothing)
-        sampling_settings["transport_sha256"]=get(config,"sampling_coordinates","")=="transport_rates" ? hashfile(transport_path(config)) : nothing
         reuse=valid && isfile(joinpath(folder,"sampling_settings.json")) &&
-            all(get(readjson(joinpath(folder,"sampling_settings.json")),Symbol(k),
-                k=="sampling_coordinates" ? "initial_rates" : k=="metric_initialization" ? "expected_information" : nothing)==v for (k,v) in sampling_settings) &&
+            protein_sampling_matches(stored_sampling,sampling_settings) &&
             (get(config,"sampling_coordinates","initial_rates")=="initial_rates" ||
                 (isfile(joinpath(folder,"sampling_provenance.json")) &&
                  readjson(joinpath(folder,"sampling_provenance.json")).coordinate_source_sha256==
@@ -540,5 +578,6 @@ function execute_model(root,model,config;smoke=false,sample=false,force=false)
     end
     complete=isfile(joinpath(folder,"latent_predictions.csv")) && readjson(joinpath(folder,"sampling_diagnostics.json")).passed
     write_manifest(folder,target_hash,sources;complete)
+    complete && verify_saved_target(root,model,config)
     println("Finished ",model," posterior_complete=",complete);flush(stdout)
 end

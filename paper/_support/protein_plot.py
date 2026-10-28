@@ -27,9 +27,30 @@ TIMES=(74.,180.,420.,660.)
 DENSITY_YMAX=.16 # common declared display bound, checked against every curve/band
 COLORS={74.:'#0072B2',180.:'#D55E00',420.:'#009E73',660.:'#6A3D9A'}
 QUANTILES={.1:('D10_um',r'$d_{10}$','#0072B2','-'),.5:('D50_um',r'$d_{50}$','#D55E00','--'),.9:('D90_um',r'$d_{90}$','#009E73','-.')}
-LABELS={'logAJ':r'$\ln(A_J/A_J^\circ)$','gamma':r'$\gamma$ (mJ m$^{-2}$)',
-        'AG':r'$\ln(A_G/A_G^\circ)$','g':r'$g$',
-        'grd_strength':r'$\ln(\theta_{\mathrm{GRD}}/t^\circ)$'}
+LABELS={'logAJ':r'$\ln A_J$', 'AG':r'$\ln A_G$', 'g':r'$g$',
+        'grd_strength':r'$\ln D_0$'}
+SYMBOLS={'logAJ':r'\ln A_J','gamma':r'\gamma','AG':r'A_G','g':'g','grd_strength':r'D_0'}
+GUIDE_BANDWIDTH_UM=0.6
+
+
+def density_guide(x,y,*,bandwidth=GUIDE_BANDWIDTH_UM):
+    """Display-only reflected Gaussian guide; never an input to calibration.
+
+    Original sampled ordinates remain visible as markers. Reflection avoids
+    treating the finite conditional window as a zero-density exterior. The
+    displayed guide is renormalized on that same window, not used as a CDF.
+    """
+    x=np.asarray(x,float);y=np.asarray(y,float)
+    if np.any(np.diff(x)<=0) or np.any(y<0) or not bandwidth>0:
+        raise ValueError('Density guide requires ordered sizes and nonnegative readings')
+    grid=np.linspace(x[0],x[-1],901)
+    step=grid[1]-grid[0];raw=np.interp(grid,x,y)
+    half=int(np.ceil(4*bandwidth/step));u=np.arange(-half,half+1)*step
+    kernel=np.exp(-.5*(u/bandwidth)**2);kernel/=kernel.sum()
+    smooth=np.convolve(np.pad(raw,half,mode='reflect'),kernel,mode='valid')
+    smooth/=np.trapz(smooth,grid)
+    return grid,smooth
+
 
 def read(folder,name):
     return np.atleast_1d(np.genfromtxt(folder/name,delimiter=',',names=True,dtype=None,encoding='utf8'))
@@ -98,22 +119,25 @@ def prior_description(m):
         value=f'Uniform({a[0]:.5g}, {a[1]:.5g})'
         return f"log-uniform AG on [{np.exp(a[0]):g}, {np.exp(a[1]):g}]" if m['name']=='AG' else value
     if m['family']=='lognormal': return f"LogNormal(log({np.exp(a[0]):g}), {a[1]:g})"
-    return f'Exponential(scale/mean {a[0]:g} min)'
+    return f'Exponential(scale/mean {a[0]:g} μm²/min)'
 
 def prior_tables(metadata):
     rows=[dict(parameter=m['name'],meaning=m['meaning'],units=m['units'],prior=prior_description(m),
         prior_coordinates=m['density_coordinates'],transform=m['transform'],model='CNT + GRD only' if m['name']=='grd_strength' else 'Both') for m in metadata]
+    fixed=json.loads((BASE/'shared/fixed_parameters.json').read_text())
+    rows.insert(0,dict(parameter='gamma',meaning='Effective interfacial energy',units=fixed['gamma_units'],
+        prior=f"{fixed['gamma']:g} (fixed)",prior_coordinates='fixed',transform='none',model='Both'))
     write_csv(TABLES/'prior_table.csv',rows)
     md='| Parameter | Meaning and units | Prior | Model |\n|:--|:--|:--|:--|\n'
-    for r in rows: md+=f"| `{r['parameter']}` | {r['meaning']} ({r['units']}) | {r['prior']} | {r['model']} |\n"
+    for r in rows: md+=f"| ``{SYMBOLS[r['parameter']]}`` | {r['meaning']} ({r['units']}) | {r['prior']} | {r['model']} |\n"
     (TABLES/'prior_table.md').write_text(md);DOCS.mkdir(parents=True,exist_ok=True)
     (DOCS/'prior_table.txt').write_text(md)
     tex='\\begin{tabular}{llll}\n\\hline\nParameter & Units & Prior & Model \\\\\n\\hline\n'
     for r in rows:
-        parameter=r["parameter"].replace("_",r"\_")
-        units=r["units"].replace("²",r"$^2$")
+        parameter="$"+SYMBOLS[r["parameter"]]+"$"
+        units=r["units"].replace("μ",r"$\mu$").replace("²",r"$^2$")
         tex+=f"{parameter} & {units} & {r['prior']} & {r['model']} \\\\\n"
-    (TABLES/'prior_table.tex').write_text(tex+'\\hline\n\\end{tabular}\n')
+    (TABLES/'prior_table.tex').write_text((tex+'\\hline\n\\end{tabular}\n').replace('μ',r'$\mu$').replace('²',r'$^2$'))
 
 def verify_model(folder):
     m=json.loads((folder/'manifest.json').read_text())
@@ -168,7 +192,7 @@ def figure_legend(fig,*,fitted):
     if fitted:
         handles.extend([
             Line2D([],[],color='.15',lw=1.3,label='MAP prediction'),
-            Line2D([],[],color='.35',ls='--',lw=1.,marker='o',ms=3,label='Digitized PSD'),
+            Line2D([],[],color='.35',ls='--',lw=1.,marker='o',ms=3,label='Digitized PSD / guide'),
             Patch(facecolor='.55',alpha=.2,edgecolor='none',label=r'95\% latent interval'),
         ])
     handles.extend([
@@ -189,9 +213,10 @@ def observation_panels(axes,data,psds,quantiles,*,guide=False,fitted=False):
     for t in TIMES:
         q=psds[psds['time_min']==t];ax=axes[0,1] if t<660 else axes[1,0]
         marker='o' if t<660 else 's'
-        ax.plot(q['size_um'],q['conditional_density_per_um'],ls='--',marker=marker,
-            markevery=6,ms=2.7,mfc=COLORS[t] if t<660 else 'white',mew=.7,
-            lw=.9,color=COLORS[t],zorder=3)
+        x,y=density_guide(q['size_um'],q['conditional_density_per_um'])
+        ax.plot(x,y,ls='--',lw=1.,color=COLORS[t],zorder=3)
+        ax.plot(q['size_um'][::6],q['conditional_density_per_um'][::6],ls='none',marker=marker,
+            ms=2.7,mfc=COLORS[t] if t<660 else 'white',mew=.7,color=COLORS[t],zorder=4)
     ax=axes[1,1]
     for p,(key,label,color,ls) in QUANTILES.items():
         q=quantiles[quantiles['probability']==p]
@@ -254,7 +279,7 @@ def corner(name,metadata,*,write_tables=True):
     samples=np.column_stack([np.log(draws[m['name']]) if m['plotting_coordinate']=='log' else draws[m['name']] for m in metas])
     point=[np.log(mode[m['name']]) if m['plotting_coordinate']=='log' else mode[m['name']] for m in metas]
     bounds=[support(m) for m in metas]
-    fig,axes=plt.subplots(n,n,figsize=(DOUBLE,5.9 if n==4 else 6.8))
+    fig,axes=plt.subplots(n,n,figsize=(DOUBLE,5.2 if n==3 else 6.2))
     fig.subplots_adjust(left=.12,right=.98,bottom=.12,top=.96,wspace=.13,hspace=.13)
     limits=[]
     for i in range(n):
@@ -304,9 +329,6 @@ def corner(name,metadata,*,write_tables=True):
              Patch(facecolor='#e7f0f7',edgecolor='#86b2cc',lw=.6,label=r'95\% joint region')]
     fig.legend(handles=handles,loc='upper right',bbox_to_anchor=(.965,.96),fontsize=7.5,
                handlelength=2.,labelspacing=.5)
-    reference=(r'$A_J^\circ=1\ \mathrm{m}^{-3}\mathrm{s}^{-1}$'+'\n'+r'$A_G^\circ=1\ \mathrm{nm\,min}^{-1}$')
-    if n==5: reference+='\n'+r'$t^\circ=1\ \mathrm{min}$'
-    fig.text(.68,.72 if n==5 else .68,reference,fontsize=8,va='top',linespacing=1.6)
     export(fig,'protein_corner_'+name)
     coordinates=[('log_'+m['name']) if m['plotting_coordinate']=='log' else m['name'] for m in metas]
     if write_tables:
@@ -315,14 +337,16 @@ def corner(name,metadata,*,write_tables=True):
             for i,row in enumerate(np.corrcoef(samples.T))])
 
 def result_tables(metadata):
+    fixed=json.loads((BASE/'shared/fixed_parameters.json').read_text())
+    metadata=[dict(name='gamma',units=fixed['gamma_units']),*metadata]
     rows=[];comp=[];numerical=[]
     for name in ('cnt','cnt_grd'):
         folder=BASE/name;draws=read(folder,'posterior_draws.csv');mode=json.loads((folder/'map.json').read_text())['parameters']
         for m in metadata:
-            key=m['name'];fixed=name=='cnt' and key=='grd_strength'
-            q=[np.nan]*3 if fixed else np.quantile(draws[key],[.025,.5,.975])
-            rows.append(dict(model=name,parameter=key,units=m['units'],MAP=0. if fixed else mode[key],
-                median=q[1],q025=q[0],q975=q[2],fixed=fixed))
+            key=m['name'];is_fixed=key=='gamma' or (name=='cnt' and key=='grd_strength')
+            q=[np.nan]*3 if is_fixed else np.quantile(draws[key],[.025,.5,.975])
+            rows.append(dict(model=name,parameter=key,units=m['units'],MAP=mode[key],
+                median=q[1],q025=q[0],q975=q[2],fixed=is_fixed))
         v=json.loads((folder/'validation_metrics.json').read_text());diag=json.loads((folder/'sampling_diagnostics.json').read_text())
         comp.append(dict(model=name,training_concentration_RMSE=v['calibration_concentration_RMSE_g_L'],
             test_concentration_RMSE=v['validation_concentration_RMSE_g_L'],maximum_Rhat=max(diag['rhat']),
@@ -341,6 +365,10 @@ def result_tables(metadata):
     for r in numerical:
         changes=' / '.join(f"{r[k+'_CDF_change']:.2g}" for k in ('time','size','domain'))
         text+=f"| {r['model']} | {r['bins']} | {r['steps']} | {changes} | {r['maximum_material_error_g_L']:.2g} |\n"
+    text+='\nThe refinements above hold parameters fixed. A separate calibration-only refit on twice as many bins gives:\n\n'
+    text+='| Model | Max calibration CDF change after refit | Max concentration change (g/L) |\n|:--|--:|--:|\n'
+    for r in numerical:
+        text+=f"| {r['model']} | {r['finer_refit_CDF_change']:.3g} | {r['finer_refit_concentration_change_g_L']:.3g} |\n"
     (TABLES/'numerical_verification.md').write_text(text);(DOCS/'numerical_verification.txt').write_text(text)
     distributions=[];contacts=[]
     for name in ('cnt','cnt_grd'):
@@ -361,13 +389,17 @@ def result_tables(metadata):
         pair=[next(r for r in rows if r['model']==name and r['parameter']==m['name']) for name in ('cnt','cnt_grd')]
         fields=[]
         for r in pair:
-            fields+=['0 (fixed)','—'] if r['fixed'] else [f"{r['MAP']:.4g}",f"{r['median']:.4g} [{r['q025']:.4g}, {r['q975']:.4g}]"]
-        md+=f"| `{m['name']}` ({m['units']}) | "+' | '.join(fields)+' |\n'
+            fields+=[f"{r['MAP']:g} (fixed)",'—'] if r['fixed'] else [f"{r['MAP']:.4g}",f"{r['median']:.4g} [{r['q025']:.4g}, {r['q975']:.4g}]"]
+        md+=f"| ``{SYMBOLS[m['name']]}`` ({m['units']}) | "+' | '.join(fields)+' |\n'
     (TABLES/'parameter_estimates.md').write_text(md);(DOCS/'parameter_estimates.txt').write_text(md)
     tex='\\begin{tabular}{lllll}\n\\hline\nParameter & CNT MAP & CNT median [95\\%] & GRD MAP & GRD median [95\\%] \\\\\n\\hline\n'
-    for line in md.splitlines()[2:]:
-        fields=[a.strip().replace('`','').replace('_',r'\_').replace('—','--').replace('²',r'$^2$') for a in line.split('|')[1:-1]]
-        tex+=' & '.join(fields)+' \\\\\n'
+    for m in metadata:
+        pair=[next(r for r in rows if r['model']==name and r['parameter']==m['name']) for name in ('cnt','cnt_grd')]
+        units=m['units'].replace('μ',r'$\mu$').replace('²',r'$^2$')
+        fields=['$'+SYMBOLS[m['name']]+'$ ('+units+')']
+        for r in pair:
+            fields+=[f"{r['MAP']:g} (fixed)",'--'] if r['fixed'] else [f"{r['MAP']:.4g}",f"{r['median']:.4g} [{r['q025']:.4g}, {r['q975']:.4g}]"]
+        tex+=' & '.join(fields)+r' \\'+'\n'
     (TABLES/'parameter_estimates.tex').write_text(tex+'\\hline\n\\end{tabular}\n')
     text='| Model | Training concentration RMSE (g/L) | Test concentration RMSE (g/L) | Max Rhat | Min bulk/tail ESS |\n|:--|--:|--:|--:|:--|\n'
     for r in comp: text+=f"| {r['model']} | {r['training_concentration_RMSE']:.3g} | {r['test_concentration_RMSE']:.3g} | {r['maximum_Rhat']:.4f} | {r['minimum_bulk_ESS']:.0f}/{r['minimum_tail_ESS']:.0f} |\n"
@@ -378,20 +410,27 @@ def result_tables(metadata):
 
 def captions(data_only=False):
     text=r'''\newcommand{\ProteinDataCaption}{Original graph-digitized Tang et al. (2018) 100 mL isothermal lysozyme observations at 20 degrees C. (a) Dissolved concentration with assumed 5\% standard deviations; the diamond fixes the initial condition, filled circles train and open squares test. (b) Training conditional number densities at 74, 180 and 420 min. (c) Held-out 660-min density. (d) Conditional number $d_{10},d_{50},d_{90}$; connecting dotted lines are guides only. All sizes and quantiles condition on 2.5--25 $\mu$m. No model prediction or invented PSD uncertainty is shown.}
-\newcommand{\ProteinFitCaption}{CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview. Solid curves/stairs show the inference-coordinate MAP; observations are dashed density reconstructions and markers. Shading is the pointwise 95\% latent interval from screened NUTS draws, conditional on fixed observation errors and physical constants; it excludes additional measurement noise. The vertical dotted line marks the end of training at 420 min. The 660-min PSD and later concentrations are predicted without refitting. Quantile segments are omitted when the conditioning window is empty; quantiles derived from PSDs are not independent likelihood data. Numerical densities use actual bin edges without smoothing.}
-\newcommand{\ProteinCornerCaption}{Four-parameter CNT or five-parameter CNT+GRD NUTS posterior, identified by filename. Diagonals show normalized posterior KDEs and dashed analytical priors generated from the active specifications; positive wide-scale parameters use labelled natural-log plotting coordinates, including the correct prior Jacobian. Broad priors are not renormalized to the displayed posterior window; full support is in the prior table. Where shown, joint KDE contours enclose approximately 68\% and 95\% probability. The thin, curved nucleation-prefactor/interfacial-energy relation is shown directly with retained draws. Orange markers denote the transformed inference-coordinate MAP. Sampling convergence does not establish numerical convergence, identifiability or physical model adequacy.}
+\newcommand{\ProteinFitCaption}{CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview. Solid curves/stairs show the inference-coordinate MAP; markers retain the graph readings and dashed density guides have a fixed 0.6 micrometre display bandwidth, without changing likelihood observations. Shading is the pointwise 95\% latent interval from screened NUTS draws, conditional on fixed observation errors and physical constants; it excludes additional measurement noise. The vertical dotted line marks the end of training at 420 min. The 660-min PSD and later concentrations are predicted without refitting. Quantile segments are omitted when the conditioning window is empty; quantiles derived from PSDs are not independent likelihood data. Numerical densities use actual bin edges without smoothing.}
+\newcommand{\ProteinCornerCaption}{Three-parameter CNT or four-parameter CNT+GRD NUTS posterior, identified by filename. Diagonals show normalized posterior KDEs and dashed analytical priors generated from the active specifications; positive wide-scale parameters use labelled natural-log plotting coordinates, including the correct prior Jacobian. Broad priors are not renormalized to the displayed posterior window; full support is in the prior table. In each two-parameter marginal, KDE contours enclose approximately 68\% and 95\% probability. Interfacial energy is fixed at 0.64 mJ per squared metre and is absent from these inferred coordinates. Orange markers denote the transformed inference-coordinate MAP. Sampling convergence does not establish numerical convergence, identifiability or physical model adequacy.}
 '''
     text=text.replace('Solid curves/stairs show','Solid curves show')
     text=text.replace('Numerical densities use actual bin edges without smoothing.',
         'Numerical density curves and bands connect the stored bin averages at their bin centers; no smoothing or extra forward solves are used.')
     text=text.replace('Orange markers denote the transformed inference-coordinate MAP.',
-        r'Orange markers denote the transformed inference-coordinate MAP. The reference units are $A_G^\circ=1\,\mathrm{nm\,min}^{-1}$ and $t^\circ=1\,\mathrm{min}$.')
+        'Orange markers denote the transformed inference-coordinate MAP. Logarithmic plotting coordinates use numerical values of AJ in particles/(L min), AG in micrometres/min, and D0 in squared micrometres/min; no reference-rate parameters are introduced.')
+    text=text.replace('No model prediction or invented PSD uncertainty is shown.',
+        'Dashed density guides use a fixed 0.6 micrometre Gaussian display bandwidth, reflected at the conditioning window and unit-area normalized. Symbols retain the original readings; the likelihood and supplied CDFs are unchanged. No model prediction or invented PSD uncertainty is shown.')
     text=text.replace(r'\ProteinFitCaption',r'\ProteinFitDetails').replace(r'\ProteinCornerCaption',r'\ProteinCornerDetails')
     text=text.replace('CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview.',
         '(a) Concentration; (b) training conditional number densities at 74, 180 and 420 min; (c) held-out 660-min density; (d) conditional number quantiles. All densities and quantiles condition on 2.5--25 $\\mu$m.')
-    text=text.replace('Four-parameter CNT or five-parameter CNT+GRD NUTS posterior, identified by filename. ','')
+    text=text.replace('Three-parameter CNT or four-parameter CNT+GRD NUTS posterior, identified by filename. ','')
+    if data_only:
+        # A data-only redraw must not replace captions or provenance belonging
+        # to completed fit/corner figures.
+        (OUT/'data_caption.tex').write_text(text.splitlines()[0]+'\n')
+        return
     for name,prefix,identity in (('cnt','CNT','CNT nucleation and size-independent mean growth'),
-        ('cnt_grd','GRD',r'CNT nucleation and mean growth with random-fluctuation dispersion $D_G=\theta_{\mathrm{GRD}}G^2$')):
+        ('cnt_grd','GRD',r'CNT nucleation and mean growth with constant random-fluctuation diffusivity $D_0$')):
         extra='';folder=BASE/name
         if not data_only and (folder/'sampling_diagnostics.json').exists() and json.loads((folder/'sampling_diagnostics.json').read_text())['passed']:
             settings=json.loads((folder/'run_settings.json').read_text())
@@ -403,9 +442,9 @@ def captions(data_only=False):
                 f" The posterior retains {diag['chains']} chains of {diag['samples']} draws each.")
         text+='\\newcommand{\\Protein'+prefix+'FitCaption}{'+identity+'. \\ProteinFitDetails'+extra+'}\n'
         text+='\\newcommand{\\Protein'+prefix+'CornerCaption}{'+identity+': NUTS posterior. \\ProteinCornerDetails}\n'
-    text+=r'\newcommand{\ProteinPriorTableCaption}{Implemented priors, physical units and applicable models. Inference transformations are separate from prior-density coordinates; the dispersion Exponential prior has mean/scale 10 min.}'+'\n'
+    text+=r'\newcommand{\ProteinPriorTableCaption}{Implemented priors, physical units and applicable models. Inference transformations are separate from prior-density coordinates; the dispersion Exponential prior has mean/scale 0.01 μm²/min.}'+'\n'
     text+=r'\newcommand{\ProteinParameterTableCaption}{Inference-coordinate MAP estimates transformed to physical units, posterior medians and equal-tailed 95\% credible intervals. Model 1 fixes dispersion to zero. Intervals condition on the model, fixed observation errors and physical constants.}'+'\n'
-    (OUT/'captions.tex').write_text(text)
+    (OUT/'captions.tex').write_text(text.replace('μm²/min',r'$\mu{\rm m}^2/{\rm min}$'))
 
 def plot(data_only=False,figures_only=True):
     configure(require_dvipng=False)
@@ -442,8 +481,9 @@ def plot(data_only=False,figures_only=True):
         for name in (('shared',) if data_only else ('shared','cnt','cnt_grd'))
         for file in (('concentration.csv','psd.csv','quantiles.csv') if name=='shared' else
                      ('manifest.json','posterior_draws.csv','map.json','latent_predictions.csv','latent_distribution_curves.csv'))}
-    (OUT/'plot_provenance.json').write_text(json.dumps(dict(renderer='actual LaTeX',dpi=300,files=files,
-        retained_inputs=inputs,figures_only=figures_only,
+    receipt='data_plot_provenance.json' if data_only else 'plot_provenance.json'
+    (OUT/receipt).write_text(json.dumps(dict(renderer='actual LaTeX',dpi=300,files=files,
+        retained_inputs=inputs,figures_only=figures_only,display_only_density_bandwidth_um=GUIDE_BANDWIDTH_UM,
         python=platform.python_version(),numpy=np.__version__,matplotlib=plt.matplotlib.__version__,
         driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         density_helpers_sha256=hashlib.sha256((PAPER/'_support/posterior_density.py').read_bytes()).hexdigest()),indent=2)+'\n')

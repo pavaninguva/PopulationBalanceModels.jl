@@ -1,7 +1,29 @@
 using Distributions: Normal, LogNormal, Exponential, Uniform, MvNormal, logpdf
 using Random
+using Distributions: Gamma, Beta, truncated
 
 isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
+
+@testset "General continuous prior families and analytical AD" begin
+    f=bayesian_linear_fixture()
+    cases=(
+        (Gamma(2.,.3),LogTransform(),(.1,.4,.8),
+            x->2log(x)-x/.3-2log(.3),x->2-x/.3),
+        (Beta(2.,3.),LogitTransform(0.,1.),(.1,.4,.8),
+            x->log(12.)+2log(x)+3log1p(-x),x->2-5x),
+        (truncated(Normal(0.,.3),0.,Inf),LogTransform(),(.1,.4,.8),
+            x->log(2.)-log(.3sqrt(2pi))+log(x)-x^2/(2*.3^2),x->1-x^2/.3^2))
+    for (distribution,transform,points,value,derivative) in cases
+        spec=ParameterSpec(:x;initial=.4,transform,
+            prior=Prior(distribution;coordinates=:physical))
+        p=EstimationProblem((spec,),f.problem.experiments;fixed=(a=0.,b=0.))
+        for x in points
+            z=transform isa LogTransform ? log(x) : log(x/(1-x))
+            @test logprior(p,[z])≈value(x) atol=2e-13
+            @test ForwardDiff.derivative(v->logprior(p,[v]),z)≈derivative(x) atol=2e-13
+        end
+    end
+end
 
 @testset "One Bayesian density and coordinate conventions" begin
     f=bayesian_linear_fixture();p=f.problem;z=f.mode

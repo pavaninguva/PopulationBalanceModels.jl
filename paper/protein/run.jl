@@ -17,7 +17,8 @@ function main(args=ARGS)
         serialize(input.paths[chain],post)
         return
     end
-    allowed=("--model","--bins","--warmup","--samples","--chains","--seed","--predictive-draws","--maxiters","--target-acceptance")
+    allowed=("--model","--bins","--warmup","--samples","--chains","--seed","--predictive-draws","--maxiters","--target-acceptance",
+        "--stopping","--min-samples","--batch-samples","--max-samples","--consecutive-passes","--output")
     flags=("--smoke","--map","--full","--sample","--data-only","--verify","--force","--laplace","--gauss-newton","--compatibility-only")
     all(a->a in flags || first(split(a,'=')) in allowed,args) || error("Unknown flag; see README.md")
     option(name,default)=let found=filter(a->startswith(a,name*"="),args)
@@ -36,10 +37,23 @@ function main(args=ARGS)
     end
     haskey(config,"target_acceptance") &&
         (config["target_acceptance"]=parse(Float64,option("--target-acceptance",string(config["target_acceptance"]))))
+    explicit_samples=any(a->startswith(a,"--samples="),args)
+    config["stopping"]=option("--stopping",explicit_samples ? "fixed" : "diagnostics")
+    config["stopping"] in ("fixed","diagnostics") || error("--stopping=fixed or diagnostics")
+    config["stopping"]=="diagnostics" && explicit_samples &&
+        error("diagnostic stopping uses --min-samples/--max-samples; omit --samples or select --stopping=fixed")
+    for (flag,key,default) in (("--min-samples","min_samples",500),
+            ("--batch-samples","batch_samples",250),("--max-samples","max_samples",10000),
+            ("--consecutive-passes","consecutive_passes",2))
+        config[key]=parse(Int,option(flag,string(default)))
+    end
     model=option("--model","both")
     model in ("cnt","cnt_grd","both") || error("--model=cnt, cnt_grd or both")
     mode=smoke ? "smoke" : "production"
-    root=smoke ? joinpath(ROOT,".cache","paper","checks","protein") : joinpath(CASE,"data")
+    default_root=smoke ? joinpath(ROOT,".cache","paper","checks","protein") : joinpath(CASE,"data")
+    output=option("--output",nothing)
+    analysis && output!==nothing && error("--output is for new calculations, not retained-result analyses")
+    root=output===nothing ? default_root : abspath(output)
     normpath(dirname(dirname(pathof(PopulationBalanceModels))))==ROOT || error("develop this checkout in the paper environment; see paper/README.md")
     analysis || export_data(root)
     "--data-only" in args && return
@@ -59,7 +73,12 @@ function main(args=ARGS)
                 method="--gauss-newton" in args ? :gauss_newton : :laplace)
         elseif "--verify" in args
             smoke && error("--verify checks completed production posteriors; use --smoke for forward checks")
-            analyze_uncertainty(root,name,active;compatibility_only=true)
+            manifest=readjson(joinpath(root,string(name),"manifest.json"))
+            if Dict(string(k)=>string(v) for (k,v) in pairs(manifest.source_files))==numerical_sources()
+                verify_saved_target(root,name,active)
+            else
+                analyze_uncertainty(root,name,active;compatibility_only=true)
+            end
         else
             execute_model(root,name,active;smoke,
                 sample=("--full" in args || "--sample" in args),force="--force" in args)

@@ -22,7 +22,7 @@ function _combine_protein_chains(problem,runs;elapsed_seconds,allow_distinct_tun
             report.initial_covariance==base.initial_covariance ||
                 throw(ArgumentError("isolated chain setting differs: initial_covariance; explicitly allow distinct sampler tuning to combine these chains"))
         elseif report.initial_covariance!==nothing
-            C=report.initial_covariance
+            C=report.initial_covariance isa Tuple ? only(report.initial_covariance) : report.initial_covariance
             size(C)==(length(problem.parameters),length(problem.parameters)) &&
                 all(isfinite,C) && issymmetric(C) && isposdef(Symmetric(C)) ||
                 throw(ArgumentError("each initial sampler tuning matrix must be finite symmetric positive definite"))
@@ -31,29 +31,33 @@ function _combine_protein_chains(problem,runs;elapsed_seconds,allow_distinct_tun
     chain_seeds=Tuple(diagnostics(r).seed for r in runs)
     length(unique(chain_seeds))==length(runs) || throw(ArgumentError("isolated chains require distinct random seeds"))
     Z=cat((r.z for r in runs)...;dims=3)
-    diagnostic_array=permutedims(Z,(2,3,1))
-    MCD=Base.get_extension(PopulationBalanceModels,:PopulationBalanceModelsAdvancedHMCExt).MCD
-    bulk=MCD.ess(diagnostic_array;kind=:bulk)
-    tail=MCD.ess(diagnostic_array;kind=:tail)
-    rhat=MCD.rhat(diagnostic_array;kind=:rank)
-    mcse=MCD.mcse(diagnostic_array)
-    energy=hcat((diagnostics(r).energy for r in runs)...)
-    bfmi=MCD.bfmi(energy)
     joined(key)=vcat((getproperty(diagnostics(r),key) for r in runs)...)
     total(key)=sum(getproperty(diagnostics(r),key) for r in runs)
-    divergences=total(:divergences)
-    depth_hits=total(:max_depth_hits)
-    passed=length(runs)>=2 && all(isfinite,vcat(bulk,tail,rhat,mcse,bfmi)) &&
-        minimum(bfmi)>=base.bfmi_limit && minimum(bulk)>=base.min_ess &&
-        minimum(tail)>=base.min_ess && maximum(rhat)<=base.rhat_limit &&
-        divergences==0 && depth_hits==0
-    report=merge(base,(;chains=length(runs),chain_seeds,elapsed_seconds,
+    statistics=joined(:statistics)
+    names=hasproperty(base,:quantity_diagnostics) ? keys(base.quantity_diagnostics) : ()
+    all(r->(hasproperty(diagnostics(r),:quantity_diagnostics) ? keys(diagnostics(r).quantity_diagnostics) : ())==names,runs) ||
+        throw(ArgumentError("isolated chains have different monitored quantities"))
+    quantity_values=NamedTuple{names}(Tuple(hcat((diagnostics(r).quantity_diagnostics[name].values for r in runs)...) for name in names))
+    limits=get(base,:mcse_limits,NamedTuple())
+    all(r->get(diagnostics(r),:mcse_limits,NamedTuple())==limits,runs) ||
+        throw(ArgumentError("isolated chains have different MCSE limits"))
+    # Reuse the package's joint screen; per-chain R-hat cannot decide whether a
+    # collection of independent chains has mixed.
+    joint=diagnostics(Z,statistics;min_ess=base.min_ess,rhat_limit=base.rhat_limit,
+        bfmi_limit=base.bfmi_limit,max_depth=base.max_depth,quantity_values,mcse_limits=limits)
+    passed=joint.diagnostics_passed
+    report=merge(base,joint,(;chains=length(runs),chain_seeds,elapsed_seconds,
         initial_covariances=[diagnostics(r).initial_covariance for r in runs],
         distinct_initial_tuning=allow_distinct_tuning,
-        sum_chain_elapsed_seconds=total(:elapsed_seconds),ess_bulk=bulk,ess_tail=tail,
-        rhat,mcse_mean=mcse,energy,ebfmi=bfmi,divergences,max_depth_hits=depth_hits,
+        sum_chain_elapsed_seconds=total(:elapsed_seconds),
+        stopping_policy=:fixed,stopping_reason=:fixed_length,
+        requested_samples=base.samples,min_samples=base.samples,
+        max_samples=base.samples,batch_samples=base.samples,
+        check_history=[(;samples=base.samples,eligible=true,screen_passed=passed,
+            diagnostics_passed=passed,consecutive_passes=passed ? 1 : 0)],
+        consecutive_passes_required=1,
         warmup_divergences=total(:warmup_divergences),diagnostics_passed=passed,
-        statistics=joined(:statistics),warmup_statistics=joined(:warmup_statistics),
+        statistics=statistics,warmup_statistics=joined(:warmup_statistics),
         per_chain=joined(:per_chain),gradient_checks=joined(:gradient_checks),map_checks=joined(:map_checks),
         forward_solves=total(:forward_solves),posterior_evaluations=total(:posterior_evaluations),
         gradient_evaluations=total(:gradient_evaluations),adjoint_solves=total(:adjoint_solves),

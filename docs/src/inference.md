@@ -268,6 +268,14 @@ The default setup merges physical parameters into a NamedTuple p.
 
 ## Keep the density coordinates explicit
 
+`Prior(distribution; coordinates=...)` accepts continuous univariate
+Distributions.jl densities, including Normal, LogNormal, Uniform, Exponential,
+Gamma, Beta and truncated distributions such as a half-Normal. It is not a
+two-family prior interface. Choose a transform compatible with the parameter's
+support. NUTS also requires a differentiable `logpdf` under the selected backend;
+it does not sample discrete parameter choices. Case-specific metadata/figure
+exporters may support fewer distribution families than the inference engine.
+
 The inference vector is ``z``, with physical parameters ``\theta=T(z)``.
 For each physical-coordinate prior the package evaluates
 
@@ -514,37 +522,84 @@ and their fitted posteriors are compared below.
 ## Sample the same posterior
 
 Sampling is requested separately and requires AdvancedHMC and
-MCMCDiagnosticTools in the working environment:
+MCMCDiagnosticTools in the working environment. Continuing the first fit above:
 
 ```julia
 using AdvancedHMC, MCMCDiagnosticTools
-samples = sample_posterior(problem; initial=result, laplace,
-    warmup=500, samples=1000, chains=4, seed=24)
+samples = sample_posterior(estimation; initial=fitted,
+    chains=4, warmup=500, seed=24, verbose=true)
 report = diagnostics(samples)
-report.rhat
-report.ess_bulk
-report.ess_tail
-report.mcse_mean
-report.per_chain
-report.diagnostics_passed
+(report.stopping_reason, report.samples, report.diagnostics_passed)
+report.check_history
 ```
 
-The adapter uses NUTS and explicit posterior gradients. With a supplied Laplace
-approximation it adapts a dense metric initialized from its covariance;
-otherwise the default metric is diagonal. An explicit positive-definite
-`initial_covariance` also selects dense adaptation by default. This matrix is
-sampler tuning; supplying it does not establish a Laplace approximation.
-Laplace can inform dispersed chain starts
-and initial scale; explicit
-starts are also accepted. Warmup draws are excluded from the retained sample.
-Diagnostics include rank-normalized split R-hat, bulk and tail effective sample
-sizes, Monte Carlo standard errors of log-coordinate means, per-chain BFMI,
-acceptance rates, step sizes, divergences, warmup divergences, maximum-depth
-hits, gradient checks, evaluation counts and time. The result retains both
-warmup and post-warmup statistics. diagnostics_passed requires the reported
-R-hat/ESS thresholds, BFMI at least 0.3, no retained divergences or depth hits,
-and at least two chains. It is a screen, not proof of convergence. Inspect the
-traces and posterior shape before interpreting intervals.
+The default warms up each of four chains once, freezes adaptation, then continues
+those same chains in batches of 250 retained draws. Checks use **all retained
+chains jointly**. After at least 500 draws per chain, two successive checkpoints
+must pass rank-normalized split R-hat ≤ 1.01, bulk and tail ESS ≥ 400, BFMI ≥ 0.3,
+finite mean MCSE, and zero retained divergences or maximum-depth hits. There is
+a finite budget of 10,000 draws per chain. Set `min_samples`, `batch_samples`,
+`max_samples` and `consecutive_passes` to change this policy. These are draw
+budgets, not limits on elapsed time or PBM evaluations.
+
+`stopping_reason` records `:diagnostics_passed`, `:max_samples` or
+`:sampler_pathology`. Exhausting the budget without the required consecutive
+passes returns `diagnostics_passed=false`. A retained divergence or depth hit
+ends diagnostic mode unsuccessfully: appending draws cannot undo that event.
+The draws and failed checks remain available; the adapter does not discard them
+or restart adaptation. Inspect the diagnostics and change tuning deliberately
+before starting a new run. Warmup divergences are reported separately.
+
+For an explicitly fixed run, supply a count:
+
+```julia
+samples = sample_posterior(estimation; initial=fitted,
+    stopping=:fixed, samples=1000, chains=4, warmup=500, seed=24)
+```
+
+Existing calls with `samples=N` also select fixed mode and keep their previous
+transition sequence. They report diagnostics but do not stop early. Fixed mode
+allows one chain; diagnostic stopping requires at least two. Four dispersed
+chains are a useful default, especially when different plausible modes need to
+be explored. Joint chains are currently advanced serially. Batching preserves
+the adapted kernel, phase point and private RNG; it is not a persistent
+checkpoint/restart format.
+
+R-hat and ESS assess mixing, not a specified accuracy for every reported
+quantity. Optionally monitor cheap scalar functions of physical parameters and
+require absolute Monte Carlo precision:
+
+```julia
+samples = sample_posterior(estimation; initial=fitted, seed=24,
+    diagnostic_quantities=(rate=theta -> theta.shared.k,),
+    mcse_limits=(rate=(mean=0.005, quantiles=(0.025=>0.01, 0.975=>0.01)),))
+diagnostics(samples).quantity_diagnostics.rate
+```
+
+These functions receive `(shared, experiments)` and must return deterministic,
+finite real scalars without additional PBM solves. Every monitored quantity
+also enters the R-hat/ESS screen. MCSE limits have the quantity's units;
+quantile MCSE measures uncertainty in an estimated interval endpoint, **not**
+the posterior interval width. Constant or unresolved diagnostics cannot pass.
+Repeated checks are a computational stopping rule, not proof of global mixing,
+a rigorous sequential-coverage guarantee, identifiability or model adequacy.
+Inspect traces and posterior shape before interpreting intervals.
+
+NUTS uses explicit posterior gradients. A supplied `laplace` approximation
+initializes a dense metric; otherwise adaptation is diagonal by default.
+An explicit positive-definite `initial_covariance` also selects dense adaptation.
+It is tuning, not a verified uncertainty estimate. Supply one matrix or a
+tuple/vector of matrices for different chain starts. A Laplace approximation can
+also inform dispersed starts; explicit inference-coordinate `starts` are
+accepted. Warmup draws are excluded from retained diagnostics.
+
+The report retains warmup and post-warmup statistics, acceptance rates, adapted
+inverse masses, step sizes, divergences, depth hits, gradient checks, seeds,
+backend versions, evaluation counts and elapsed time. `mcse_mean` concerns
+inference-coordinate means. Use `diagnostic_quantities` for physical-coordinate
+precision. `diagnostics(z, statistics; ...)` can reassess existing draws with
+the same joint screen; it does not apply the controller's minimum-length or
+consecutive-pass rules.
 
 Strongly correlated parameters can benefit from a bijective `sampling_map`
 with `to_sampler`, `from_sampler`, `logabsdetjac` and `label` fields. Here
@@ -568,8 +623,10 @@ AdvancedHMC's `DenseEuclideanMetric` takes the inverse mass matrix: a supplied
 Hamiltonian energies, BFMI and transition statistics remain those of the
 sampler coordinates, including the map Jacobian. They are not relabelled as
 inference-coordinate energies or covariance estimates.
-The [protein tutorial](case_studies/protein_crystallization.md) records a
-nonlinear auxiliary map for its four-/five-parameter fixed-error targets.
+The [protein tutorial](case_studies/protein_crystallization.md) uses a
+unit-determinant growth-rate shear for its three-/four-parameter targets with
+fixed interfacial energy. Earlier four-/five-parameter targets used different
+nonlinear maps and are preserved as historical results.
 Archived recipes have different statistical targets; their inputs and producing
 records are retained with the
 [historical fixtures](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/test/fixtures/archives/README.md).

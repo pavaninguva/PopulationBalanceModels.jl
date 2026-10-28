@@ -164,6 +164,30 @@ end
 """Return the sampler report, including rank R-hat, bulk/tail ESS, MCSE, per-chain energy/BFMI and adaptation statistics. A passed screen is evidence to assess, not a proof of convergence."""
 diagnostics(samples::PosteriorSamples)=samples.diagnostics
 
+"""
+    diagnostics(z, statistics; min_ess=400, rhat_limit=1.01, bfmi_limit=0.3,
+                max_depth=8, quantity_values=NamedTuple(), mcse_limits=NamedTuple())
+
+Reassess retained MCMC draws with the same screen used by `sample_posterior`.
+Requires AdvancedHMC and MCMCDiagnosticTools. `z` has dimensions
+`(parameters, draws, chains)` in inference coordinates; `statistics` contains
+one matching post-warmup AdvancedHMC statistics vector per chain. At least two
+chains, finite rank-normalized R-hat/ESS/MCSE, the declared thresholds, adequate
+energy BFMI, zero divergences and zero depth hits are required to pass.
+
+Optional named `quantity_values` are finite `draws × chains` scalar summaries.
+Each is also screened for R-hat and bulk/tail ESS. `mcse_limits` can additionally
+specify absolute mean/quantile Monte Carlo errors in that quantity's units,
+e.g. `(rate=(mean=0.01,quantiles=(0.025=>0.03,0.975=>0.03)),)`.
+A scalar limit means a mean-MCSE limit. Constant or unresolved quantities have
+undefined diagnostics and do not pass. These errors concern estimation of a
+posterior summary, not posterior width or observation noise. This standalone
+screen does not apply the sampler's minimum length or consecutive-pass rule.
+"""
+function diagnostics(z::AbstractArray{<:Real,3},statistics;kwargs...)
+    throw(ArgumentError("load AdvancedHMC and MCMCDiagnosticTools for retained-chain diagnostics"))
+end
+
 """Draw from an explicitly labelled Laplace or Gauss–Newton approximation and transform every draw to physical coordinates. This performs no forward PBM solves; support violations are flagged, not filtered."""
 function parameter_draws(problem::EstimationProblem,approximation::Union{LaplaceApproximation,GaussNewtonApproximation};n=1000,seed=2022)
     n isa Integer && n>0 || throw(ArgumentError("positive draw count required"))
