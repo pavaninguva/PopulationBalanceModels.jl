@@ -19,6 +19,11 @@ Files are grouped by behaviour, rather than by development milestone:
 | Data-free forward UQ and milling physics | `forward_uq.jl`, `milling_model.jl`; optional BDF adapter: `milling_integration.jl` |
 | Scientific regression cases | `audit_regressions.jl`, `numerical_contracts.jl`, `stem_cells.jl`, `li_supplement.jl` |
 
+Documentation CI runs `julia --project=docs test/docs_reference.jl`, the strict
+Documenter build and `python test/docs_links.py docs/build`. Source-routing tests
+cover new subsystem files, overlap precedence, unknown sources and empty groups;
+new API documentation belongs in topic reference pages, not in walkthroughs.
+
 `fixtures/` holds independent references and reusable setup.
 `fixtures/example_modules.jl` loads each example module once per enclosing test
 module, so the same builders can be used in several files without replacing

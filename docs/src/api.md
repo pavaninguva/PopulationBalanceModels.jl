@@ -1,205 +1,53 @@
 # API reference
 
-Use the [first model](getting_started.md) and [first MAP fit](inference.md#A-complete-first-fit)
-for complete programs. Calls below summarize public signatures and their scope.
-
-Conditional sectional-number measurements use
-`conditional_cdf(grid,N,points;window)` and
-`conditional_quantiles(grid,N,probabilities;window)`. They integrate actual
-partial cells of bin-integrated populations and reject an empty window.
-`PopulationCDF(:name,points;window)` and
-`PopulationQuantiles(:name,probabilities;window)` provide coupled-system
-observables. No moment-family density reconstruction is implied.
-
-`ResidualObservation(times,data,observable;scale,weight,name)` and
-`WassersteinObservation(time,x,F,:population;window,points=256,scale,weight)`
-are deterministic group-mean comparison blocks. `x,F` must describe a
-nondecreasing conditional number CDF with endpoints exactly zero and one at
-the declared window boundaries. `cdf_quantiles(x,F,u)` inverts that tabulation
-without smoothing. `loss_contributions(cal,z)` reports each block separately.
-`objective` remains a normalized Gaussian negative log likelihood when the
-calibration uses the original `Observation` type. The two interpretations
-cannot be mixed in one calibration.
-
-The constructors and lifecycle below connect the manual to the public interface.
-Arguments in callback signatures are physical parameters `p`, time `t`, and
-current stage context `ctx`. Read each method's restrictions in the linked manual.
+Choose a topic below, or use the symbol index. Reference pages
+contain constructor and operation docstrings; the manual chapters explain how
+to assemble a complete calculation. Start with the
+[first model](getting_started.md), [first MAP fit](inference.md#A-complete-first-fit)
+or [first UQ calculation](uncertainty_quantification.md#A-first-calculation).
 
 ## Model and solve
 
-```julia
-Grid1D(edges; coordinate=:volume)
-PBMModel(; named_terms...)
-TermMethods(; by_term=NamedTuple(), mechanism_methods...)
-SizeDiffusion(D)  # constant or D(L,p,t,ctx), coordinate²/time, Ito convention
-SizeDiffusion((Dx,Dy)) # diagonal Grid2D diffusion; callback D(xy,p,t,ctx) also supported
-TermMethods(size_diffusion=FiniteVolumeDiffusion())
-compile(model, grid; methods=TermMethods(), bc=SizeBC(), growth_scheme=Upwind())
-compile(model, MomentSet(0:K); method=ExactClosure(), methods=TermMethods(),
-        boundary=MomentBoundary())
-characteristic_grid(AffineGrowth(:g0,:g1),(0.0,1.4);dt,p)
-compile(model, grid; evolution=Inguva2022(),p,bc)
-PBMProblem(operator, initial, (t0,tf); p=NamedTuple())
-simulate(problem; dt, saveat=[t0,tf], method=SSPRK33())
-StationaryPBMProblem(operator, guess; p=NamedTuple(), autonomous=true)
-StationaryPBMProblem(system, population_guesses; bulk=NamedTuple(), p, autonomous=true)
-solve_stationary(problem) # load NonlinearSolve; RobustMultiNewton by default
-continue_stationary(problem, lambda -> parameters, (0.0,1.0))
-compile(model, grid; evolution=LaxWendroff(),bc)
-compile(model, grid; evolution=HOCFiniteVolume(),bc,p)
-compile(model, grid; domain=AxialDispersion(AxialGrid(z_edges);
-    velocity=u,dispersion=D,inlet=(p,t)->feed_bins))
-```
-
-The displayed calls summarize valid argument shapes, rather than forming one
-standalone program. A [complete first model](getting_started.md) is executed
-in the documentation build. `solution.t` and `solution.u` hold saved times and
-states; standalone 1D sectional and moment states have one column. Use
-`density(grid,N)`, `moment(grid,N,k)`, and `term_methods(operator)` to interpret
-what was stored and how it was computed.
-
-Stationary problems have no time span. `solution.u` holds one physical state;
-`solution.converged`, `diagnostics(solution)` and `solution.balance_residual`
-report independently checked balances. See [Stationary population balances](steady_state.md)
-for optional solver setup, scaling, constraints, accounting rates and continuation.
-
-Residual-based time methods are `ForwardEuler`, `SSPRK22`, `SSPRK33`, `SSPRK54`, and `RK4`.
-`VanLeer` and geometry-aware `WENO3` support nonuniform 1D grids.
-`SizeDiffusion` supports uniform/nonuniform batch Grid1D and diagonal Grid2D residuals, including
-shared-bulk systems, with closed or paired periodic boundaries. See the
-[diffusion contract](methods/dispersion.md)
-for dimensional callback/boundary scope, exchange and timestep restrictions.
-In particular, `BoundaryInjection` is 1D; tensor diffusion uses `SizeBC2D` and
-does not provide tensor boundary-point injection or escape ledgers.
-`WENO5` supports fixed nonuniform 1D meshes, rectangular `Grid2D` axes and
-the coupled adapter's axial mesh; at least six bins are required per WENO5 axis.
-Geometry is prepared at compilation. See [Growth](methods/growth.md) for the
-boundary fallback, mesh-conditioning checks and accuracy restrictions.
-`Centered` and `LinearUpwind` add unlimited uniform-grid 1D reconstructions.
-`LaxWendroff` and `BeamWarming` are complete constant-growth space–time updates;
-they require an eligible model compiled with `evolution`.
-`HOCFiniteVolume()` selects the complete conservative compact update. Declare
-growth with `AffineGrowth`, `ExponentialGrowth`, `TimeScaledGrowth`, or an
-explicit `HOCGrowthLaw` contract. Two-dimensional directional laws use
-`SeparableGrowth2D`; prescribed source/inflow callbacks use `PrescribedRate`.
-See [Compact finite-volume growth](methods/compact.md) for exact
-signatures, boundary units, restrictions and cumulative number diagnostics.
-For axial states, `axial_population(operator,u,cell)` restores a local intrinsic
-view and `axial_fluxes(operator,u,p,t)` returns physical face fluxes. See
-[Axially dispersed reactors](axial_reactors.md) for units and boundary contracts.
-
-`RankAdaptiveQMOM(N)` evolves 2N raw moments with a checked variable-rank
-quadrature. `EQMOM(N)` evolves 2N+1 raw moments with a Gamma-kernel
-reconstruction; `reconstructed_density` and `reconstructed_bins` make that
-assumption explicit. `DQMOM(N)` evolves positive weights and weighted abscissas;
-initialize it with `quadrature_state(method,nodes,weights)`. Read
-[Moment methods](moment_methods.md) for rank, conditioning and boundary limits.
+- [Models and representations](api/models.md): physical terms, rate laws,
+  grids, moment bases, boundary conditions and model declarations.
+- [Numerical methods and compilation](api/numerics.md): term discretization,
+  reconstructions, moment methods, compatibility checks and prepared operators.
+- [Problems, solvers and integrations](api/problems.md): transient and stationary
+  problems, time integration, root solving, continuation and solver entry points.
 
 ## Couple and observe
 
-`PBMSystem(populations; bulk_rhs, interactions, exchanges, fields, nonnegative_bulk, accounting)`
-accepts a named tuple of compiled populations. Its problem adds named initial
-populations and `bulk0`; use `stateview(problem,u)` to obtain named views.
-Grid1D, Grid2D and eligible moment populations may share bulk states.
-Tensor populations and derivative views are matrices; the packed batch system
-state remains a vector. `PopulationMoment(:name,(kx,ky))` selects a joint moment.
-Use an explicit SystemObservable for a tensor marginal, as in the
-[coupled example](coupled_systems.md#Two-internal-coordinates-and-growth-dispersion).
-Use `population(problem,u,name)`, `bulk(problem,u,name)` and
-`cumulative(problem,u,population,mechanism,property=:number)` for packed states.
-`accounting_rates(problem,u,p,t)` returns a named tree of instantaneous rates.
-See [Coupled systems](coupled_systems.md) for callback and exchange contracts.
-`axial_problem(local_problem,reactor;axial_scheme=...)` adds axial transport to
-local sectional/raw-moment systems, including every scalar bulk state.
-`axial_stateview(problem,u,cell)` exposes a named local state; population and
-bulk accessors return axial arrays. Direct moment states are rejected.
+- [Coupling and accounting](api/coupling.md): named populations, bulk balances,
+  interactions, state accessors and cumulative accounting.
+- [Observations and discrepancies](api/observations.md): measurement operators,
+  conditional CDFs/quantiles and deterministic comparison blocks.
 
-`observe(observable, solution)` evaluates a converged stationary solution or the
-last saved native transient state (`index` selects another saved transient state).
-`observe(observable, problem, state; time=t)` evaluates an explicit transient
-state; stationary problems use their declared evaluation time instead.
-`CellObservable(observable, cell)` selects a local axial population/bulk state.
-Moment, histogram and reconstruction restrictions are the same in both workflows.
+## Parameter estimation
 
-`Observation(times,data,observable; sigma)` or a fixed `covariance` block becomes part of
-`Experiment(problem,observations...)` and then
-`CalibrationProblem(experiments; parameters,dt,solver)`. `residuals`, `objective`,
-and `sensitivity_report` use this shared forward model.
-`fit(calibration,z0; ...)` needs Optim; `odeproblem(problem; ...)` needs SciMLBase.
-`predictions` returns the observation matrices. `fit_diagnostics` assesses rank,
-residuals, and numerical sensitivity; `confidence_ellipsoid` and `ellipse_points`
-construct local joint regions. `fit_multistart` and `profile_likelihood` use the
-fitting backend for multiple starts and nuisance-parameter refits.
-See [Parameter estimation](inference.md) for assumptions and examples.
-
-For stationary data use `Measurement(data, observable; likelihood=...)` and
-`InferenceExperiment(:name, stationary_problem, measurements...;
-solver=StationarySolver())`. Vectors are output columns; matrix columns are
-replicates at one equilibrium. Shared parameters, priors, MAP, uncertainty and
-sampling use `EstimationProblem` unchanged. `StationarySolver` requires
-NonlinearSolve and differentiates isolated equilibria implicitly; eigen-based
-closures may require explicit finite differences. The legacy analogue is
-`Observation(data, observable)` with `Experiment(stationary_problem, ...)`.
-See [stationary estimation](steady_state.md#Observe-and-estimate-parameters).
-
-New Bayesian calculations use `ParameterSpec`, explicitly coordinated `Prior`
-declarations, `Measurement`, `InferenceExperiment`, and `EstimationProblem`.
-`fit(problem)` performs MAP using Optim. `loglikelihood`, `logprior`, and
-`logposterior` share the density used by `laplace_approximation` and
-`sample_posterior`. Sampling requires both AdvancedHMC and MCMCDiagnosticTools.
-`gauss_newton_approximation(problem,map)` supplies a distinct, sensitivity-based
-local Gaussian for fixed-error Gaussian measurements. It combines the joint
-whitened residual Jacobian with actual prior curvature in inference coordinates.
-`fit(problem;uncertainty=:gauss_newton)` requests it after MAP optimization;
-the default `uncertainty=:none` keeps fitting and uncertainty separate.
-`GaussNewtonFailure.report` retains failed numerical checks. Noise callbacks,
-count likelihoods and truncated Gaussians are explicitly outside its initial
-support. `marginal_covariance` and `parameter_draws` accept both approximation
-types while preserving their labels; neither a tuning matrix nor a full
-posterior covariance is inferred from a sampler metric.
-`parameter_draws` transforms draws, and `posterior_predictive` requires an explicit
-forward-solve budget. The Bayesian and legacy frequentist uncertainty APIs have
-different interpretations; see the estimation chapter.
-`diagnostics(samples)` exposes per-chain sampling reports, including BFMI,
-acceptance, step sizes, warmup statistics and Monte Carlo errors, alongside
-rank R-hat and bulk/tail ESS.
-
-`posterior_gradient` and `likelihood_gradient` default to ForwardDiff.
-`check_gradient` compares against independent finite differences. Both inference
-problem constructors accept `derivatives=:finite_difference` when explicitly
-needed. `SciMLSensitivitySolver(algorithm;sensitivity=:auto)` enables optional
-continuous forward/adjoint ODE sensitivities; see the estimation chapter for
-dependencies and compatibility. `TruncatedGaussianLikelihood(sigma=...)`
-provides normalized independent nonnegative measurements.
+[Estimation interfaces](api/estimation.md) cover parameters, priors, likelihoods,
+MAP diagnostics, uncertainty, derivatives, profiles and posterior sampling.
+Bayesian and legacy frequentist/discrepancy interfaces retain their distinct
+statistical meanings; see the [estimation guide](inference.md).
 
 ## Forward uncertainty quantification
 
-Data-free forward uncertainty uses `UncertainInputs`, `UQProblem` and
-`propagate(...,MonteCarlo(...); max_solves=...)`. Named existing observables
-retain their transient/stationary and representation contracts. `fit_pce`,
-`PolynomialChaos`, `pce_design` and `evaluate_pce` add non-intrusive Hermite/Legendre
-regression; `uq_summary` and `diagnostics` distinguish propagated variability,
-numerical failures and iid sampling error. See
-[Forward uncertainty quantification](uncertainty_quantification.md) for a complete
-first calculation, budgets, joint-input semantics and validation. Its
-[constructors and operations](@ref Forward-UQ-reference) are documented there.
+[UQ interfaces](api/uncertainty.md) cover uncertain inputs, forward scenarios,
+MC propagation, PCE construction/evaluation and summaries. The
+[UQ guide](uncertainty_quantification.md) develops a complete data-free calculation.
 
 ## Numerical extensions
 
-A sectional policy supplies `prepare_term(term,method,representation; kwargs...)`
-and `add_term!(du,u,term,method,cache,operator,p,t,ctx)`.
-A moment family additionally supplies state mapping, stage validation,
-reconstruction, and weak-form accumulation. See [Development](development.md)
-for full contracts and a working delegation example.
+Public extension hooks are documented with their
+[representations](api/models.md), [numerical methods](api/numerics.md) and
+[coupling interfaces](api/coupling.md). The
+[developer guide](development.md) explains their dispatch and validation contracts.
 
 ## Exported docstrings
 
-```@autodocs
-Modules = [PopulationBalanceModels]
-Public = true
-Private = false
+This index links to each canonical reference entry, including documented
+signatures of operations shared by several subsystems.
+
+```@index
+Pages = Main.APIReference.pages()
 Order = [:constant, :type, :function, :macro]
-Filter = t -> !(t in (UncertainInputs, UQProblem, UQResult, MonteCarlo,
-    PolynomialChaos, PCESurrogate, PCEFailure, propagate, pce_design,
-    fit_pce, evaluate_pce, validate_pce, uq_summary))
 ```

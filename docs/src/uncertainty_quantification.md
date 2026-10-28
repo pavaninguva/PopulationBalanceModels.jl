@@ -6,6 +6,14 @@ input law through a PBM; it needs no observations, likelihood or fitting step.
 This differs from the size distribution *within* a population. A broad PSD and
 uncertainty in its predicted median describe different kinds of variability.
 
+Constructor signatures and keyword contracts are in the separate
+[UQ API reference](api/uncertainty.md).
+
+```@raw html
+<!-- Preserve the former guide-section URL after moving its reference entries. -->
+<span id="Forward-UQ-reference"></span>
+```
+
 ## A first calculation
 
 Consider removal at an uncertain, constant rate. Each realization solves
@@ -181,21 +189,3 @@ provides the physical UQ example; Makrygiorgos, Maggioni and Mesbah (2020),
 [DOI 10.1016/j.compchemeng.2020.106814](https://doi.org/10.1016/j.compchemeng.2020.106814),
 provides context for non-intrusive surrogates of two-coordinate PBMs. This change
 does not reproduce the latter study or add its sparse/Kriging methods.
-
-## [API reference](@id Forward-UQ-reference)
-
-```@docs
-UncertainInputs
-UQProblem
-UQResult
-MonteCarlo
-PolynomialChaos
-PCESurrogate
-PCEFailure
-propagate
-pce_design
-fit_pce
-evaluate_pce
-validate_pce
-uq_summary
-```

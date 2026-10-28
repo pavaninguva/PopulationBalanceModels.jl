@@ -13,6 +13,7 @@ Use Julia 1.10 or later. The package in these commands is the checkout:
 ```sh
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
 julia --project=docs -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
+julia --project=docs test/docs_reference.jl
 julia --project=docs docs/make.jl
 python test/docs_links.py docs/build
 git diff --check

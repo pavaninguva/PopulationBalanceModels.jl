@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Split the API reference into source-routed topic pages with a shared symbol index, automatic inclusion of new subsystem files and strict coverage/size checks. Moved UQ docstrings out of the walkthrough and documented the extension workflow for future API additions.
+
 - Reordered the milling case around its UQ question, shared Barrasso/Bhonsale model, a reproducible Figure 7 forward comparison, then MC/PCE. Added source-labelled graph readings and separate conservative forward/refinement checks; retained the partial-reproduction qualification and unchanged UQ producer records.
 
 - Split the forward-UQ docstrings into the UQ guide so GitHub-linked documentation builds stay within Documenter's page-size limit; retained strict documentation checks.

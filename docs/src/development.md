@@ -172,8 +172,27 @@ Both Distributions and this package export `moment`. Use selective imports
 integrates raw powers of particle size; StatsBase's array operation computes a
 sample central moment. Their statistical meanings remain distinct.
 
-Build with the commands in the README. The build executes the model tutorials and selected case-study code blocks,
-checks references, and treats warnings as failures. The [publishing guide](publishing.md) describes deployment.
+Keep walkthroughs and reference material separate. Put constructor, keyword and
+callback contracts in source docstrings; link those entries from guides using
+Documenter's `@ref`. The [API index](api.md) leads to topic-based reference pages.
+`docs/api_reference.jl` owns their navigation and source-file routing. A new file
+under an existing subsystem is included automatically; a new subsystem needs an
+explicit routing rule and, when appropriate, a short page under `docs/src/api/`.
+The longest matching source rule wins, so observation files can have their own
+page within the broader inference subsystem. No per-symbol exclusion list is
+needed.
+
+Run `julia --project=docs test/docs_reference.jl` to check routing. The build
+rejects unassigned/ambiguous sources and empty reference groups before rendering.
+Documenter's strict exported-docstring coverage, duplicate and cross-reference
+checks remain active. Rendered pages warn at 100 KiB and fail at 200 KiB; split
+an overgrown topic rather than raising or bypassing those limits. Add a guide
+example for new behavior without embedding a generated API catalogue there.
+
+Build with the commands in the README. The build executes model tutorials and
+selected case-study blocks; the local checker validates links and assets. HTML
+size/search advisories are distinct from fatal document-check errors. The
+[publishing guide](publishing.md) describes deployment.
 
 
 ## Updating this checkout

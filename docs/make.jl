@@ -2,6 +2,8 @@ using Documenter
 using PopulationBalanceModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
+include("api_reference.jl")
+const API_REFERENCE_SOURCES = APIReference.source_index(ROOT)
 # Downloadable sources preserve the reproduction drivers without embedding them
 # in the walkthroughs. The generated copies are ignored by Git.
 source_assets = joinpath(@__DIR__, "src", "assets", "source")
@@ -46,6 +48,8 @@ makedocs(;
         prettyurls = get(ENV, "CI", "false") == "true",
         edit_link = isempty(slug) ? nothing : "main",
         repolink = isempty(slug) ? nothing : "https://github.com/$(slug)",
+        size_threshold_warn = 100 * 2^10,
+        size_threshold = 200 * 2^10,
     ),
     checkdocs = :exports,
     warnonly = false,
@@ -85,7 +89,7 @@ makedocs(;
             "Estimating size-dependent growth" => "case_studies/estimating_growth.md",
             "Uncertainty in continuous milling" => "case_studies/milling_uncertainty.md",
         ],
-        "API reference" => "api.md",
+        "API reference" => APIReference.navigation(),
         "Contributing and internals" => "development.md",
         "Verification and reproduction" => "verification.md",
         "Compact verification notes" => "methods/compact_verification.md",
