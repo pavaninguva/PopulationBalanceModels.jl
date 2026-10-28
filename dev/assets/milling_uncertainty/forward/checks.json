@@ -1,0 +1,116 @@
+{
+    "solves": [
+        {
+            "bins": 100,
+            "rpm": 3350,
+            "setup_seconds": 0.038415729,
+            "solve_seconds": 0.049087173,
+            "steps": 907,
+            "initial_mass_kg": 0.007400000000000002,
+            "maximum_material_error_kg": 3.453071162340393e-13,
+            "minimum_inventory": 0,
+            "daughter_defect": 6.267854888740871e-16
+        },
+        {
+            "bins": 100,
+            "rpm": 4923,
+            "setup_seconds": 0.030994324,
+            "solve_seconds": 0.069197208,
+            "steps": 849,
+            "initial_mass_kg": 0.007400000000000002,
+            "maximum_material_error_kg": 8.713918475677929e-12,
+            "minimum_inventory": 0,
+            "daughter_defect": 6.267854888740871e-16
+        },
+        {
+            "bins": 200,
+            "rpm": 3350,
+            "setup_seconds": 0.055288137,
+            "solve_seconds": 0.274618318,
+            "steps": 827,
+            "initial_mass_kg": 0.0074,
+            "maximum_material_error_kg": 2.5368596112684827e-13,
+            "minimum_inventory": 0,
+            "daughter_defect": 7.519810219871066e-16
+        },
+        {
+            "bins": 200,
+            "rpm": 4923,
+            "setup_seconds": 0.054964451,
+            "solve_seconds": 0.242775891,
+            "steps": 870,
+            "initial_mass_kg": 0.0074,
+            "maximum_material_error_kg": 2.793321129956894e-13,
+            "minimum_inventory": 0,
+            "daughter_defect": 7.519810219871066e-16
+        },
+        {
+            "bins": 400,
+            "rpm": 3350,
+            "setup_seconds": 0.135953689,
+            "solve_seconds": 1.909727613,
+            "steps": 858,
+            "initial_mass_kg": 0.0073999999999999995,
+            "maximum_material_error_kg": 1.389999226830696e-13,
+            "minimum_inventory": 0,
+            "daughter_defect": 9.591024397012488e-16
+        },
+        {
+            "bins": 400,
+            "rpm": 4923,
+            "setup_seconds": 0.153930004,
+            "solve_seconds": 1.861943992,
+            "steps": 889,
+            "initial_mass_kg": 0.0073999999999999995,
+            "maximum_material_error_kg": 3.4575953211657406e-12,
+            "minimum_inventory": 0,
+            "daughter_defect": 9.591024397012488e-16
+        },
+        {
+            "bins": 800,
+            "rpm": 3350,
+            "setup_seconds": 0.4330685,
+            "solve_seconds": 13.175378648,
+            "steps": 826,
+            "initial_mass_kg": 0.007400000000000004,
+            "maximum_material_error_kg": 4.727035429752391e-11,
+            "minimum_inventory": 0,
+            "daughter_defect": 1.697185053480545e-15
+        },
+        {
+            "bins": 800,
+            "rpm": 4923,
+            "setup_seconds": 0.406411497,
+            "solve_seconds": 13.090588995,
+            "steps": 870,
+            "initial_mass_kg": 0.007400000000000004,
+            "maximum_material_error_kg": 4.256039964900538e-12,
+            "minimum_inventory": 0,
+            "daughter_defect": 1.697185053480545e-15
+        }
+    ],
+    "time_refinement": [
+        {
+            "rpm": 3350,
+            "maximum_d50_change_um": 4.831604030641756e-6
+        },
+        {
+            "rpm": 4923,
+            "maximum_d50_change_um": 3.5162278209099895e-6
+        }
+    ],
+    "matrix_exponential": [
+        {
+            "rpm": 3350,
+            "maximum_d50_difference_um": 1.7587857428225107e-6,
+            "maximum_holdup_difference_g": 1.1549018963386004e-6,
+            "relative_daughter_material_defect": 4.753738053300803e-16
+        },
+        {
+            "rpm": 4923,
+            "maximum_d50_difference_um": 3.766628765333735e-6,
+            "maximum_holdup_difference_g": 5.021331961341247e-7,
+            "relative_daughter_material_defect": 4.753738053300803e-16
+        }
+    ]
+}

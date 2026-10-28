@@ -6,6 +6,9 @@ Numerical production and plotting are separate:
 
 ```sh
 julia --project=examples/environments/milling -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
+julia --project=examples/environments/milling examples/verification/milling_forward.jl
+python test/milling_results.py --forward
+python docs/benchmarks/plot_milling_uncertainty.py --forward --usetex
 julia --project=examples/environments/milling examples/milling_uncertainty.jl --smoke
 python docs/benchmarks/plot_milling_uncertainty.py --smoke
 julia --project=examples/environments/milling examples/milling_uncertainty.jl --full
@@ -19,6 +22,14 @@ Final PNG/PDF/SVG figures read only completed production exports under
 requires real LaTeX for final output; it never runs a forward solve. See the
 [case study](../src/case_studies/milling_uncertainty.md) for source assumptions,
 interval definitions and numerical/validation checks.
+
+`--forward` selects a separate constant-speed comparison with Barrasso (2013),
+Figure 7. Its graph readings and extraction record are under
+`examples/data/milling_uncertainty/barrasso_figure7.*`; its newly calculated
+trajectories, errors and producer record are under the assets' `forward/`
+directory. This is a partial reproduction, not a validated replacement for the
+retained geometric-grid, empty-start UQ ensemble. Plotting it neither solves nor
+changes either numerical dataset.
 
 ## Existing figure workflows
 

@@ -1,0 +1,39 @@
+title = "Forward-model comparison with Barrasso et al. (2013), Figure 7"
+doi = "10.1007/s12247-013-9155-0"
+pdf_sha256 = "00cd51185dc82df2520b8e49c38ee96baaf286c422a9ed0f80527375bc819c3a"
+reference_file = "barrasso_figure7.csv"
+reference_sha256 = "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb"
+reference_page = "Printed page 157, PDF page 11; Figure 7(a,b) simulation markers, not experimental observations"
+extraction = "Original vector PDF: blue triangular marker centroids (3350 RPM), green square centres (4923 RPM). Legend boxes excluded geometrically. All 23 markers per speed and quantity retained without adjustment; original PDF coordinates are in the CSV."
+axis_time_s = [0.0, 180.0]
+axis_diameter_um = [0.0, 1000.0]
+axis_holdup_g = [0.0, 250.0]
+diameter_frame_pdf_pt = [258.5379943847656, 378.73797607421875, 64.77202606201172, 163.155029296875]
+holdup_frame_pdf_pt = [416.2560119628906, 542.467041015625, 64.77202606201172, 163.155029296875]
+graphical_resolution_pdf_pt = 0.25
+graphical_resolution_diameter_um = 2.5410893323025667
+graphical_resolution_holdup_g = 0.6352723330756417
+resolution_meaning = "Illustrative graph-reading resolution, not a statistical uncertainty estimate"
+
+[calculation]
+speeds_rpm = [3350.0, 4923.0]
+bins = [100, 200, 400, 800]
+first_pivot_m3 = 6.54e-17
+last_grid_index = 100.0
+grid_power = 6
+initial_feed_duration_s = 1.0
+final_time_s = 180.0
+quadrature_order = 24
+reltol = 1e-9
+abstol_kg = 1e-14
+check_reltol = 1e-10
+check_abstol_kg = 1e-15
+
+[interpretation]
+equations = "Barrasso Eqs. (3)-(4): feed; Eq. (13): representative volumes; Eqs. (14)-(17): adjacent-volume birth allocation. Selection, daughter normalization and screen algebra are shared with the Bhonsale reconstruction."
+grid = "Published 100 representative volumes v_i=v_1*i^6; refinements keep both endpoint volumes fixed. Auxiliary edges give these arithmetic bin centres; they are not specified by the article."
+feed = "Point weights proportional to exp(-(log(v_i)-log(v_m))^2/(2*sigma_feed^2)), normalized by their discrete sum as printed; not bin-integrated lognormal probabilities on this grid."
+initial_condition = "Figure 7 begins at approximately 7.4 g. One second of the stated feed gives that inventory; its shape is an explicit reconstruction because the complete initial distribution is unavailable. No kinetic parameter was fitted to Figure 7."
+deposition = "Positive linear hats for the same continuous daughter density and parent-pivot evaluation. The printed adjacent-pivot cell-average allocation reduces to these hats under that interpretation; this is not a verified copy of the original gPROMS implementation."
+median = "Two declared observations of each state: linear interpolation of the cumulative pivot-volume weights in diameter; or the exact volume-weighted CDF of piecewise-constant number density within the auxiliary volume bins. Both include unresolved fines."
+scope = "Separate constant-speed forward check. This does not replace or retrospectively validate the retained empty-mill, geometric-grid Bhonsale MC/PCE dataset."

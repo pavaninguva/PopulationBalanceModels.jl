@@ -1,6 +1,7 @@
 """Plot retained milling UQ outputs; this command never runs Julia.
 
 Final: python docs/benchmarks/plot_milling_uncertainty.py --usetex
+Forward check: add --forward to plot the separate Barrasso Figure 7 comparison.
 Preview: add --smoke (writes only .cache/milling_uncertainty/preview).
 """
 from __future__ import annotations
@@ -63,13 +64,116 @@ def draw(axis, name, data, nominal):
     axis.tick_params(direction="out")
 
 
+def plot_forward(*, usetex, preview=False):
+    """Read only the separately produced constant-speed comparison, never MC data."""
+    folder = ASSETS / "forward"
+    manifest = json.loads((folder / "provenance.json").read_text())
+    if not manifest["complete"] or manifest["mode"] != "forward_comparison":
+        raise ValueError("Expected completed Barrasso forward-comparison results")
+    for name, digest in manifest["numerical_files"].items():
+        if hashlib.sha256((folder / name).read_bytes()).hexdigest() != digest:
+            raise ValueError(f"Changed forward export: {name}")
+    for name, digest in manifest["source_hashes"].items():
+        if hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != digest:
+            raise ValueError(f"Changed forward producer: {name}; rerun the forward check")
+    data = table(folder, "trajectories.csv")
+    points = np.genfromtxt(folder / "reference_comparison.csv", delimiter=",",
+                           names=True, dtype=None, encoding="utf-8")
+    output = ROOT / ".cache/milling_uncertainty/preview" if preview else ASSETS
+    configure(usetex=usetex)
+    fig, axes = plt.subplots(2, 2, figsize=(7, 4.7), sharex=True)
+    fig.subplots_adjust(left=.10, right=.985, top=.95, bottom=.23,
+                        hspace=.29, wspace=.26)
+    settings = [(100, "pivot_CDF_d50_um", "pivot_CDF", "--"),
+                (100, "finite_bin_d50_um", "finite_bin_CDF", ":"),
+                (800, "finite_bin_d50_um", "finite_bin_CDF", "-")]
+    speed_colors = {3350: "#24679a", 4923: "#26816b"}
+    # genfromtxt's default dtype is numeric: use explicit string fields for the
+    # source labels while retaining their original, unrounded coordinates.
+    reference = np.genfromtxt(ROOT / "examples/data/milling_uncertainty/barrasso_figure7.csv",
+                             delimiter=",", names=True, dtype=None, encoding="utf-8")
+    for rpm, color in speed_colors.items():
+        for bins, field, statistic, linestyle in settings:
+            d = data[(data["rpm"] == rpm) & (data["bins"] == bins)]
+            axes[0, 0].plot(d["time_s"], d[field], color=color, ls=linestyle, lw=1.0)
+            e = points[(points["rpm"] == rpm) & (points["bins"] == bins) &
+                       (points["quantity"] == "d50_um") & (points["statistic"] == statistic)]
+            axes[1, 0].plot(e["time_s"], e["signed_difference"], color=color,
+                            ls=linestyle, lw=.9)
+            # Both median observations use exactly the same inventory state.
+            if statistic == "pivot_CDF" or bins == 800:
+                axes[0, 1].plot(d["time_s"], d["holdup_g"], color=color, ls=linestyle, lw=1.)
+                e = points[(points["rpm"] == rpm) & (points["bins"] == bins) &
+                           (points["quantity"] == "holdup_g")]
+                axes[1, 1].plot(e["time_s"], e["signed_difference"], color=color,
+                                ls=linestyle, lw=.9)
+        marker = "^" if rpm == 3350 else "s"
+        for axis, quantity in zip(axes[0], ("d50_um", "holdup_g")):
+            r = reference[(reference["rpm"] == rpm) & (reference["quantity"] == quantity)]
+            axis.plot(r["time_s"], r["value"], ls="none", marker=marker,
+                      ms=3.2, mfc="white", mec=color, mew=.7)
+    axes[0, 0].set_ylabel(r"Outlet $d_{50}$ ($\mu$m)")
+    axes[0, 1].set_ylabel(r"Mill hold-up (g)")
+    axes[1, 0].set_ylabel(r"$d_{50}$ difference ($\mu$m)")
+    axes[1, 1].set_ylabel(r"Hold-up difference (g)")
+    axes[0, 0].set_ylim(0, 1000)
+    axes[0, 1].set_ylim(0, 250)
+    for axis in axes[1]:
+        axis.axhline(0, color=".5", lw=.6)
+        axis.set_xlabel(r"Time, $t$ (s)")
+    for axis in axes.flat:
+        axis.set_xlim(0, 180)
+    panel_letters(axes)
+    handles = [Line2D([], [], color=c, lw=1.2, label=f"{rpm} RPM")
+               for rpm, c in speed_colors.items()]
+    handles += [Line2D([], [], color=".2", ls="none", marker="s", mfc="white", ms=3.2,
+                       label="Barrasso Figure 7"),
+                Line2D([], [], color=".2", ls="--", label="100 pivots; pivot CDF"),
+                Line2D([], [], color=".2", ls=":", label="100 pivots; finite-bin CDF"),
+                Line2D([], [], color=".2", ls="-", label="800 pivots; finite-bin CDF")]
+    fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=7.5,
+               bbox_to_anchor=(.52, .015), columnspacing=1.4, handlelength=2.4)
+    export_figure(fig, output, "milling_barrasso_figure7")
+    caption = (
+        "Forward comparison with Barrasso et al. (2013), DOI 10.1007/s12247-013-9155-0, "
+        "Figure 7. (a,b) Instantaneous volume-weighted outlet median and mill hold-up at "
+        "3350/4923 RPM; symbols are published simulation markers extracted from the original "
+        "vector PDF, not experimental data. (c,d) Signed package-minus-source differences at "
+        "the 22 noninitial source times. The 100-pivot power grid and printed point-normalized "
+        "feed are used without fitting kinetic parameters. An initial inventory of one second "
+        "of feed (7.4 g) is a declared reconstruction. Dashed/dotted diameter curves change only "
+        "the observation reconstruction; solid curves additionally refine to 800 pivots at "
+        "fixed endpoint volumes. Hold-up is independent of the median reconstruction. "
+        "All package curves use the shared conservative model and checked CVODE BDF adapter. "
+        "Hold-up is close, but diameter startup and some later values differ: this is a partial "
+        "reproduction, not verified equivalence to the original gPROMS implementation. "
+        "This separate calculation does not replace the retained geometric-grid UQ ensemble."
+    )
+    (output / "forward_caption.txt").write_text(caption + "\n")
+    (output / "forward_figure_provenance.json").write_text(json.dumps({
+        "latex": usetex, "dpi": 300, "preview": preview,
+        "numerical_producer": manifest["revision"],
+        "numerical_files": manifest["numerical_files"],
+        "source_reference_sha256": manifest["configuration"]["reference_sha256"],
+        "plotter_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "style_sha256": hashlib.sha256(Path(__file__).with_name("plot_style.py").read_bytes()).hexdigest(),
+        "python": sys.version, "numpy": np.__version__, "matplotlib": matplotlib.__version__,
+        "presentation": "Lines connect stored predictions; source points and signed errors are unadjusted",
+    }, indent=2) + "\n")
+    print(f"Wrote Barrasso forward PNG/PDF/SVG to {output}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--usetex", action="store_true")
+    parser.add_argument("--forward", action="store_true", help="Plot the separate Barrasso Figure 7 check")
     args = parser.parse_args()
     if not args.smoke and not args.usetex:
         parser.error("Final figures require --usetex; mathtext is reserved for --smoke previews")
+    if args.forward:
+        plot_forward(usetex=args.usetex, preview=args.smoke)
+        return
     folder = ROOT / ".cache/milling_uncertainty/smoke" if args.smoke else ASSETS / "data"
     output = ROOT / ".cache/milling_uncertainty/preview" if args.smoke else ASSETS
     manifest = checked_data(folder, args.smoke)
