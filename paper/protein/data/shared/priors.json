@@ -1,45 +1,29 @@
 [
     {
         "name": "logAJ",
-        "meaning": "Natural log nucleation prefactor AJ in particles/(m³ s)",
+        "meaning": "Natural log of the numerical nucleation prefactor in particles/(L min)",
         "units": "dimensionless",
-        "label": "log A_J",
+        "label": "ln A_J",
         "family": "uniform",
         "arguments": [
-            0,
-            100
+            -2.8134107167600364,
+            97.18658928323997
         ],
         "density_coordinates": "physical",
         "transform": "logit",
         "plotting_coordinate": "physical",
-        "lower": 0,
-        "upper": 100
-    },
-    {
-        "name": "gamma",
-        "meaning": "Effective interfacial energy",
-        "units": "mJ/m²",
-        "label": "gamma",
-        "family": "lognormal",
-        "arguments": [
-            -0.4462871026284195,
-            0.7
-        ],
-        "density_coordinates": "physical",
-        "transform": "log",
-        "plotting_coordinate": "physical",
-        "lower": null,
-        "upper": null
+        "lower": -2.8134107167600364,
+        "upper": 97.18658928323997
     },
     {
         "name": "AG",
         "meaning": "Mean-growth prefactor",
-        "units": "nm/min",
+        "units": "μm/min",
         "label": "A_G",
         "family": "uniform",
         "arguments": [
-            -4.605170185988091,
-            7.313220387090301
+            -11.512925464970229,
+            0.4054651081081644
         ],
         "density_coordinates": "inference",
         "transform": "log",
@@ -55,22 +39,22 @@
         "family": "uniform",
         "arguments": [
             1,
-            3
+            5
         ],
         "density_coordinates": "physical",
         "transform": "logit",
         "plotting_coordinate": "physical",
         "lower": 1,
-        "upper": 3
+        "upper": 5
     },
     {
         "name": "grd_strength",
-        "meaning": "Random-fluctuation growth dispersion strength",
-        "units": "min",
-        "label": "theta_GRD",
+        "meaning": "Constant internal-coordinate diffusivity D0",
+        "units": "μm²/min",
+        "label": "D_0",
         "family": "exponential",
         "arguments": [
-            10
+            0.01
         ],
         "density_coordinates": "physical",
         "transform": "log",

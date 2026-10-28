@@ -1,3 +1,0 @@
-model,status,data_rank,condition_number,information_error,gradient_verification,forward_solves
-cnt,accepted,4,2209488.226069887,0.0002364972458033634,0.0006650101755905203,22
-cnt_grd,accepted,5,33208335.49747706,0.0010509113113648647,0.000325951133833125,26

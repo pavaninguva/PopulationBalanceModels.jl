@@ -1,19 +1,21 @@
 {
-    "transport_sha256": "8808ec2da98ae90ae05a18a748c429b15798f8c9afd2e9d453e99fdf4cefb6ea",
-    "max_depth": 12,
-    "sampling_coordinates": "transport_rates",
-    "chains": 4,
-    "samples": 2000,
-    "growth_reference_supersaturation": 6,
-    "secondary_start_inference": [
-        -0.7180347903313198,
-        -0.4607779131407843,
-        -1.0000077606762097,
-        3.4695733558049704,
-        0.5499387786891053
+    "diagnostic_quantities": [
+        "log_J_at_S6",
+        "log_G_at_S6"
     ],
+    "transport_sha256": null,
+    "max_samples": 10000,
+    "consecutive_passes": 2,
+    "min_samples": 500,
+    "max_depth": 10,
+    "sampling_coordinates": "initial_rates",
+    "batch_samples": 250,
+    "chains": 4,
+    "stopping": "diagnostics",
+    "growth_reference_supersaturation": null,
+    "secondary_start_inference": null,
     "seed": 20261024,
-    "target_acceptance": 0.999,
-    "metric_initialization": "transport_empirical",
-    "warmup": 1000
+    "target_acceptance": 0.9,
+    "metric_initialization": "expected_information",
+    "warmup": 300
 }

@@ -1,21 +1,23 @@
 {
     "model": "cnt",
     "parameters": {
-        "logAJ": 29.706882058244183,
-        "gamma": 0.5696003729545788,
-        "AG": 0.3694824721286949,
-        "g": 2.9574109367283308,
+        "logAJ": 30.564259928504423,
+        "gamma": 0.64,
+        "AG": 0.00023262180920943952,
+        "g": 3.194544893593783,
         "cstar": 2.16,
         "grd_strength": 0,
         "c0": 19.965841161400512,
-        "rho": 1240,
+        "rho": 1.24e-12,
         "kv": 0.81
     },
-    "frozen_at": "2026-10-24T21:41:19.192",
+    "frozen_at": "2026-10-28T13:55:04.294",
     "validation_used": false,
-    "target_hash": "7160f4409a03f6959f390f96f242bac111533ba70001cf773b1b3ec6e8a08a5b",
+    "target_hash": "e97ac7025e1f0d20d76c3efe6c5631af85c2c4ce6bbcc87674b2e889cdb5a466",
     "settings": {
         "model": "cnt",
+        "formulation": "fixed_gamma_constant_D0",
+        "population_units": "particles/L",
         "bins": 400,
         "Lmax_um": 50,
         "maximum_dt_min": 2,
@@ -30,7 +32,8 @@
             "T": 293.15,
             "nu": 2.97e-26,
             "kB": 1.380649e-23,
-            "rho": 1240,
+            "rho_g_um3": 1.24e-12,
+            "gamma_mJ_m2": 0.64,
             "kv": 0.81
         },
         "observation_model": {

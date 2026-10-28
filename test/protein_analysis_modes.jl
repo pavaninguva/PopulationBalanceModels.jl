@@ -37,6 +37,21 @@ const Reproduction = ProteinCaseReproduction
     end
 end
 
+@testset "Repeated verification preserves producer records" begin
+    root=joinpath(Reproduction.CASE,"data")
+    before=Reproduction.retained_hashes(root)
+    for _ in 1:2
+        Reproduction.main(["--verify"])
+        @test Reproduction.retained_hashes(root)==before
+        for model in ("cnt","cnt_grd")
+            receipt=Reproduction.readjson(joinpath(root,"analysis",model,"target_verification.json"))
+            manifest=Reproduction.readjson(joinpath(root,model,"manifest.json"))
+            @test receipt.passed
+            @test receipt.target_hash==manifest.target_hash
+        end
+    end
+end
+
 @testset "Retained sampler diagnostics match exported coordinates" begin
     # Reassemble by the saved chain/draw identities, independently of the
     # sampler's internal array and the production reporting code.

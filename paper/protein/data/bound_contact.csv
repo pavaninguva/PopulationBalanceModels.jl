@@ -1,7 +1,0 @@
-model,parameter,coordinates,fraction_lower_one_percent,fraction_upper_one_percent
-cnt,logAJ,physical,0.0,0.0
-cnt,AG,inference,0.0,0.0
-cnt,g,physical,0.0,0.358
-cnt_grd,logAJ,physical,0.0,0.026375
-cnt_grd,AG,inference,0.0,0.0
-cnt_grd,g,physical,0.0,0.032125

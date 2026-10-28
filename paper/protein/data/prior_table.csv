@@ -1,6 +1,0 @@
-parameter,meaning,units,prior,prior_coordinates,transform,model
-logAJ,Natural log nucleation prefactor AJ in particles/(m³ s),dimensionless,"Uniform(0, 100)",physical,logit,Both
-gamma,Effective interfacial energy,mJ/m²,"LogNormal(log(0.64), 0.7)",physical,log,Both
-AG,Mean-growth prefactor,nm/min,"log-uniform AG on [0.01, 1500]",inference,log,Both
-g,Supersaturation growth exponent,dimensionless,"Uniform(1, 3)",physical,logit,Both
-grd_strength,Random-fluctuation growth dispersion strength,min,Exponential(scale/mean 10 min),physical,log,CNT + GRD only

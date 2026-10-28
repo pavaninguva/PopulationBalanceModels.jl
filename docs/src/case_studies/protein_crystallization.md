@@ -90,7 +90,7 @@ from Tang or Mitchell or estimated independently. It is not a measured coefficie
 the old growth-dependent dispersion parameter. The two GRD laws are different
 models, so their parameters and posterior draws cannot be interchanged.
 
-Fixed values are T = 293.15 K, c(0) = 19.96584 g/L, c* = 2.16 g/L,
+Fixed values are T = 293.15 K, c(0) ≈ 19.97 g/L, c* = 2.16 g/L,
 ``\rho=1.24\times10^{-12}`` g/μm³ (= 1240 kg/m³), ``k_v=0.81``,
 ``\nu=2.97\times10^{-26}`` m³/molecule and
 ``k_{\rm B}=1.380649\times10^{-23}`` J/K. Solubility, density, shape and the

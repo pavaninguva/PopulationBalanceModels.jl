@@ -1,13 +1,20 @@
 {
-    "producer_sha256": "886deee38884e31b8361464c102e2580012d41cc1ccd2d68c0df6e47abafeead",
-    "recorded_at": "2026-10-24T23:35:46.889",
-    "process_isolation": true,
-    "diagnostic_source_sha256": "f4c1758ffcfae5b384f96a4f3e5ae3fa8a03ae8a3237a561cf2e40858909cc5e",
-    "chain_key": "2319ace9cbbb8fa4",
+    "producer_sha256": "072ad2fa5bba1b1c9147ceb6aa65ff14cb85b2b081ba0611dec94d2707e50c6e",
+    "recorded_at": "2026-10-28T17:32:19.663",
+    "coordinate_source_sha256": "5c0a4c618235bb85f4da21a88c44d26f3938e8d0363ca1d3052ddd8b6f94a8b6",
+    "transport_configuration_sha256": null,
+    "process_isolation": false,
+    "execution": "serial joint diagnostic controller",
+    "stopping_policy": "diagnostics",
+    "stopping_reason": "diagnostics_passed",
+    "chain_seeds": [
+        7688904591019346134,
+        2719041233231220061,
+        4053005061612255583,
+        5841459837525404621
+    ],
+    "diagnostic_source_sha256": "0c2e4216c247a4ded1ee6668d0316a33e537a413cc2e6a34652f9373f6dac745",
+    "chain_key": null,
     "chain_files": [
-        "chains/2319ace9cbbb8fa4_1.json",
-        "chains/2319ace9cbbb8fa4_2.json",
-        "chains/2319ace9cbbb8fa4_3.json",
-        "chains/2319ace9cbbb8fa4_4.json"
     ]
 }

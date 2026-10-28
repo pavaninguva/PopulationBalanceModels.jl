@@ -1,77 +1,71 @@
 {
     "z": [
-        1.61105312016052,
-        0.10167865799539966,
-        -0.7714598025290357,
-        1.6905022380048524,
-        2.2497840655285577
+        -0.6947633177717863,
+        -8.737106599065761,
+        0.3754472242724673,
+        -4.459442525445713
     ],
     "parameters": {
-        "logAJ": 83.3557546973833,
-        "gamma": 1.1070276800717307,
-        "AG": 0.4623376537690029,
-        "g": 2.688580395282762,
+        "logAJ": 30.484018135219802,
+        "gamma": 0.64,
+        "AG": 0.0001605176585920639,
+        "g": 3.3710982447487465,
         "cstar": 2.16,
-        "grd_strength": 9.485687328315228,
+        "grd_strength": 0.011568810807786002,
         "c0": 19.965841161400512,
-        "rho": 1240,
+        "rho": 1.24e-12,
         "kv": 0.81
     },
     "converged": true,
-    "loglikelihood_whitened_CDF": 139.60086010179117,
-    "logprior": -8.352288791331365,
-    "logposterior": 131.2485713104598,
+    "loglikelihood_whitened_CDF": 143.82243761867716,
+    "logprior": -6.4151822052872705,
+    "logposterior": 137.4072554133899,
     "original_CDF_loglikelihood_offset": 14.448267079693075,
-    "MAP_coordinates": "z: logit(logAJ), log(gamma), log(AG), logit(g), optional log(theta_GRD)",
-    "gradient_norm": 1.6039511132603934e-6,
+    "MAP_coordinates": "z: logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
+    "gradient_norm": 4.013932663582409e-6,
     "gradient": [
-        -1.2077426880807707e-7,
-        1.6039511132603934e-6,
-        -1.8429410886255937e-8,
-        -7.780676769542083e-9,
-        -1.7606511804046932e-9
+        -4.013932663582409e-6,
+        6.890498980283155e-7,
+        1.6365426545039696e-6,
+        -6.904164528975798e-8
     ],
-    "elapsed_seconds": 42.597288049,
-    "forward_solves": 648,
-    "failures": 27,
+    "elapsed_seconds": 46.373513509,
+    "forward_solves": 225,
+    "failures": 20,
     "failure_messages": [
-        "conditional number distribution is undefined for an empty observation window",
-        "trial exceeds 200000 explicit steps; inspect rate/dispersion scales or use a separately verified solver",
-        "negative bulk concentration in coupled solve"
+        "negative bulk concentration in coupled solve",
+        "trial exceeds 200000 explicit steps; inspect rate/dispersion scales or use a separately verified solver"
     ],
     "starts": [
         {
             "start": [
                 -0.8071413077593704,
-                -0.5327304591540407,
-                -0.7339691750802004,
-                2.843851742261273,
-                2.302585092994046
+                -7.641724454062337,
+                -0.11011111841642396,
+                -4.605170185988091
             ],
             "converged": true,
-            "objective": -128.0002125949162
+            "objective": -137.4072554133899
         },
         {
             "start": [
-                -1.00132611516311,
-                -0.6931471805599453,
-                1.8465077887376968,
-                -1.0986122886681098,
-                2.302585092994046
+                -0.7059509101195173,
+                -7.170665827150146,
+                -0.5108256237659907,
+                -4.605170185988091
             ],
             "converged": true,
-            "objective": -128.00021259491618
+            "objective": -137.4072554133899
         },
         {
             "start": [
-                0.6769595698115302,
-                0.0,
-                -0.8957360492397206,
-                2.1972245773362182,
-                3.4011973816621555
+                -0.7059509101195173,
+                -10.334793332508706,
+                1.0986122886681098,
+                -2.995732273553991
             ],
             "converged": true,
-            "objective": -131.2485713104598
+            "objective": -137.4072554133899
         }
     ]
 }

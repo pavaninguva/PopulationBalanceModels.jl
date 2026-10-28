@@ -1,0 +1,18 @@
+{
+  "original_cnt_attempt": {
+    "status": "interrupted",
+    "exitcode": 143,
+    "usable_posterior_saved": false,
+    "last_completed_draws_per_chain": 500,
+    "log_sha256": "4825db5a947ef0eb92aa8ae99979d94dab05adea9f300f88c8b6c427620548aa"
+  },
+  "cnt_restart": {
+    "returncode": 0,
+    "started_utc": "2026-10-28T15:56:47.377125+00:00",
+    "finished_utc": "2026-10-28T17:32:52.810982+00:00"
+  },
+  "grd_attempt": {
+    "status": "complete",
+    "log_sha256": "2b2516116041f16b7e56bb3a8d3319f1b140cc3d6be09ef3912c7388b80184e7"
+  }
+}

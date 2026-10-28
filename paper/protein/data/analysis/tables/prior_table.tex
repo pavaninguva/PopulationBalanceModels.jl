@@ -2,10 +2,10 @@
 \hline
 Parameter & Units & Prior & Model \\
 \hline
-logAJ & dimensionless & Uniform(0, 100) & Both \\
-gamma & mJ/m$^2$ & LogNormal(log(0.64), 0.7) & Both \\
-AG & nm/min & log-uniform AG on [0.01, 1500] & Both \\
-g & dimensionless & Uniform(1, 3) & Both \\
-grd\_strength & min & Exponential(scale/mean 10 min) & CNT + GRD only \\
+$\gamma$ & mJ/m$^2$ & 0.64 (fixed) & Both \\
+$\ln A_J$ & dimensionless & Uniform(-2.8134, 97.187) & Both \\
+$A_G$ & $\mu$m/min & log-uniform AG on [1e-05, 1.5] & Both \\
+$g$ & dimensionless & Uniform(1, 5) & Both \\
+$D_0$ & $\mu$m$^2$/min & Exponential(scale/mean 0.01 $\mu$m$^2$/min) & CNT + GRD only \\
 \hline
 \end{tabular}

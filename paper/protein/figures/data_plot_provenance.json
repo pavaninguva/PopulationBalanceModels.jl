@@ -1,0 +1,19 @@
+{
+  "renderer": "actual LaTeX",
+  "dpi": 300,
+  "files": {
+    "protein_data.png": "25674c83e43901350182885de6e13e7da70adfe61c9f923af1ccd5a255200e90"
+  },
+  "retained_inputs": {
+    "shared/concentration.csv": "5bf3970e14b4023de2f87a41d61e7a176e8964845125baf7732d079856029cc5",
+    "shared/psd.csv": "98b7d269a05281dab94624393b3bde77ceca3dff27d51a3fb8c3e2a45591b4b4",
+    "shared/quantiles.csv": "5468aebfdac664957a690b610ffb212bfb4c4af42ef107d209d0a673f2f90c9d"
+  },
+  "figures_only": true,
+  "display_only_density_bandwidth_um": 0.6,
+  "python": "3.12.15",
+  "numpy": "1.26.4",
+  "matplotlib": "3.8.4",
+  "driver_sha256": "5f1c4033ebf718feb7b9a07d6b88a5de56c0f102b082b8923c601278890375a8",
+  "density_helpers_sha256": "f99dafde90dc10fffe89b63d12f175957368baf00692f916c0884955c0754b34"
+}

@@ -1,0 +1,11 @@
+{
+    "gamma": 0.64,
+    "gamma_units": "mJ/m²",
+    "rho": 1.24e-12,
+    "rho_units": "g/μm³",
+    "population_units": "particles/L",
+    "time_units": "min",
+    "length_units": "μm",
+    "D0_prior_mean": 0.01,
+    "D0_units": "μm²/min"
+}

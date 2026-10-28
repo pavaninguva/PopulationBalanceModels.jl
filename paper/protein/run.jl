@@ -55,7 +55,7 @@ function main(args=ARGS)
     analysis && output!==nothing && error("--output is for new calculations, not retained-result analyses")
     root=output===nothing ? default_root : abspath(output)
     normpath(dirname(dirname(pathof(PopulationBalanceModels))))==ROOT || error("develop this checkout in the paper environment; see paper/README.md")
-    analysis || export_data(root)
+    (analysis || "--verify" in args) || export_data(root)
     "--data-only" in args && return
     for name in (model=="both" ? (:cnt,:cnt_grd) : (Symbol(model),))
         active=copy(config)

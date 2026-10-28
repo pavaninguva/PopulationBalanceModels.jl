@@ -2,31 +2,32 @@
   "renderer": "actual LaTeX",
   "dpi": 300,
   "files": {
-    "protein_data.png": "b170484a47f2726a8d3d241cc4f9fabed24117b2a53b7b1e7437c8dc86aec7a4",
-    "protein_fit_cnt.png": "beb7408aa2e09c4c40af771e165eb385cc9508fb9314c3e6a1fa2f63f1b8c558",
-    "protein_fit_cnt_grd.png": "11ecc5ba4bdaab398b593ecc1e559a70342c8dff20eeb185e6143e61b906ef36",
-    "protein_corner_cnt.png": "5e0319aefa89763f87c64dbcc0c16460b7740eb305afa4dca4add55e8009bfab",
-    "protein_corner_cnt_grd.png": "d267c25ec21e31440db342a7255b609e8c734dce88dbea189244de7cffc2aad8"
+    "protein_data.png": "25674c83e43901350182885de6e13e7da70adfe61c9f923af1ccd5a255200e90",
+    "protein_fit_cnt.png": "e8efdcc86cb2411c65a0acfb73604c0f0bb4b1056abbfdb4c619e1f5a6c2e6e7",
+    "protein_fit_cnt_grd.png": "4b6a5393ca8835102ad36777127aae063db3101d38b32694ebfc2491c3568610",
+    "protein_corner_cnt.png": "f43e48592952d8aef8bd7f1173097740d7f729ad5c19739a508faafa0c1a35d7",
+    "protein_corner_cnt_grd.png": "1a1ba8bdebb5df8d6f1204bc427aa2c323a244effabee6bfae7b91a864a1a5e5"
   },
   "retained_inputs": {
     "shared/concentration.csv": "5bf3970e14b4023de2f87a41d61e7a176e8964845125baf7732d079856029cc5",
     "shared/psd.csv": "98b7d269a05281dab94624393b3bde77ceca3dff27d51a3fb8c3e2a45591b4b4",
     "shared/quantiles.csv": "5468aebfdac664957a690b610ffb212bfb4c4af42ef107d209d0a673f2f90c9d",
-    "cnt/manifest.json": "63a20702b31e8b40a4fd8753ff4e6c642bd1001bcb100ff4ca3be53e89b478cb",
-    "cnt/posterior_draws.csv": "70870518b30c325dadeef0c597e1815516daf20c1af6a8a7a5b9432e00587575",
-    "cnt/map.json": "1fa42af962f2cbf2e269c6aa8ca73e75a441cac423bb795bf6fcaa58b5777764",
-    "cnt/latent_predictions.csv": "b4675c90b316dd55ea979072b85bf16ffd21a8b42c2796150b74d200189f9306",
-    "cnt/latent_distribution_curves.csv": "080ed41c65eb61f25a627be9d21295ca02c68abfc011143b4aecbc4efa3f76f3",
-    "cnt_grd/manifest.json": "c04a77448bc2c3f285f93eae98116e4a0f825af57041b5c215270cd638448207",
-    "cnt_grd/posterior_draws.csv": "55d58ca0dfdae8981e9438b854997577aa2eec47fbe19bd1de61b936e9059a5c",
-    "cnt_grd/map.json": "d6736b6e061186505c767a7dd97754d8e6281df6960ee66b5c97758664715d1a",
-    "cnt_grd/latent_predictions.csv": "dc783350bfdaf7f5b08af7bf1bb3884f89e59e0ad73341ffbcc06b63d3035fd8",
-    "cnt_grd/latent_distribution_curves.csv": "265b6b5b8fd2f9efdfcf0774348a29d2882849d8c4164085647170fe782a9d5e"
+    "cnt/manifest.json": "af3bc208bf74200e1019708c671b735e839c974039127f152f1a55833685d418",
+    "cnt/posterior_draws.csv": "a888fb2eecb7421385e9086cabaf29dd8dc5441c901b590f85b86d5cf22ab629",
+    "cnt/map.json": "e17fdf89f012270234b07b3e199460cb912482fa6a98c3c4cf77f8163ae8201b",
+    "cnt/latent_predictions.csv": "97325df7e7cc34f643709ad416d4d0f38f601c5abad6c79ed2a5d9373a66312d",
+    "cnt/latent_distribution_curves.csv": "50f18fd86ba37cf72a025889be558611cceebf548644cb58abfa4100595b1bc0",
+    "cnt_grd/manifest.json": "9da80894a0f298f7bad48e0a4b1e658fbd359b66727d8321c626ee7e74087baa",
+    "cnt_grd/posterior_draws.csv": "4dd63c9c49a2411c7c81d845bd026238cfb73997337885b5b5523c25e1bb7026",
+    "cnt_grd/map.json": "7752dbce543c0c1d2d98506b0c38941b05d2a51d80e8585d1755f3316874be1d",
+    "cnt_grd/latent_predictions.csv": "71ce68aa1849fbc444b15ce9da90260a76176cf76e6ff6b20ced59a9544a1add",
+    "cnt_grd/latent_distribution_curves.csv": "e16bc45a79b74423685b3ab77ae36bc7a9e7effe4f027c166052405bb9b41324"
   },
   "figures_only": true,
+  "display_only_density_bandwidth_um": 0.6,
   "python": "3.12.15",
   "numpy": "1.26.4",
   "matplotlib": "3.8.4",
-  "driver_sha256": "e84b5ffbf0af9785fba30ac68acdc52f755076b4a088a0d0d879966e52a43d46",
+  "driver_sha256": "5f1c4033ebf718feb7b9a07d6b88a5de56c0f102b082b8923c601278890375a8",
   "density_helpers_sha256": "f99dafde90dc10fffe89b63d12f175957368baf00692f916c0884955c0754b34"
 }

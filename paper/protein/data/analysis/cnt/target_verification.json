@@ -1,0 +1,82 @@
+{
+    "passed": true,
+    "checked_at": "2026-10-28T17:46:10.584",
+    "points": [
+        {
+            "chain": 1,
+            "draw": 1,
+            "logdensity_error": 0,
+            "gradient_relative_error": 4.5859328911870785e-5,
+            "mapped_gradient_relative_error": 3.8855097557721016e-5,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        },
+        {
+            "chain": 1,
+            "draw": 750,
+            "logdensity_error": 0,
+            "gradient_relative_error": 6.705579765579087e-5,
+            "mapped_gradient_relative_error": 6.519013175045743e-5,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        },
+        {
+            "chain": 2,
+            "draw": 1,
+            "logdensity_error": 0,
+            "gradient_relative_error": 8.936730063113628e-5,
+            "mapped_gradient_relative_error": 3.6041612430609036e-5,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        },
+        {
+            "chain": 2,
+            "draw": 750,
+            "logdensity_error": 0,
+            "gradient_relative_error": 0.0006165213194900078,
+            "mapped_gradient_relative_error": 0.0007737652225207861,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        },
+        {
+            "chain": 3,
+            "draw": 1,
+            "logdensity_error": 0,
+            "gradient_relative_error": 0.00011495818032986194,
+            "mapped_gradient_relative_error": 0.00011639678004387966,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        },
+        {
+            "chain": 3,
+            "draw": 750,
+            "logdensity_error": 0,
+            "gradient_relative_error": 3.4723711148386545e-6,
+            "mapped_gradient_relative_error": 3.4622856298499113e-6,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        },
+        {
+            "chain": 4,
+            "draw": 1,
+            "logdensity_error": 0,
+            "gradient_relative_error": 1.6708123262242542e-5,
+            "mapped_gradient_relative_error": 9.835058704017504e-6,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        },
+        {
+            "chain": 4,
+            "draw": 750,
+            "logdensity_error": 0,
+            "gradient_relative_error": 0.00016909282682402174,
+            "mapped_gradient_relative_error": 0.00019895355476993187,
+            "map_inverse_error": 0,
+            "log_jacobian": 0
+        }
+    ],
+    "target_hash": "e97ac7025e1f0d20d76c3efe6c5631af85c2c4ce6bbcc87674b2e889cdb5a466",
+    "posterior_draws_sha256": "a888fb2eecb7421385e9086cabaf29dd8dc5441c901b590f85b86d5cf22ab629",
+    "sampler_statistics_sha256": "44d77ae42f84063312ff574535b17c8c51ee8be19fd397b620a42fcd94df67a7",
+    "interpretation": "saved z densities and physical coordinates; AD and mapped gradients versus step-halved finite differences at retained draws"
+}

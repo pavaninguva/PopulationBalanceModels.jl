@@ -1,39 +1,36 @@
 {
     "z": [
-        -0.8612951603604615,
-        -0.5628202641188221,
-        -0.9956519764478743,
-        3.827780438749004
+        -0.6911526640978656,
+        -8.36609655955186,
+        0.19516199074228652
     ],
     "parameters": {
-        "logAJ": 29.706882058244183,
-        "gamma": 0.5696003729545788,
-        "AG": 0.3694824721286949,
-        "g": 2.9574109367283308,
+        "logAJ": 30.564259928504423,
+        "gamma": 0.64,
+        "AG": 0.00023262180920943952,
+        "g": 3.194544893593783,
         "cstar": 2.16,
         "grd_strength": 0,
         "c0": 19.965841161400512,
-        "rho": 1240,
+        "rho": 1.24e-12,
         "kv": 0.81
     },
     "converged": true,
-    "loglikelihood_whitened_CDF": 130.58814597498537,
-    "logprior": -8.491320579428452,
-    "logposterior": 122.09682539555692,
+    "loglikelihood_whitened_CDF": 129.5511542713814,
+    "logprior": -5.377297414120639,
+    "logposterior": 124.17385685726076,
     "original_CDF_loglikelihood_offset": 14.448267079693075,
-    "MAP_coordinates": "z: logit(logAJ), log(gamma), log(AG), logit(g), optional log(theta_GRD)",
-    "gradient_norm": 3.614338313862042e-6,
+    "MAP_coordinates": "z: logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
+    "gradient_norm": 0.0001637711800013264,
     "gradient": [
-        2.66067552795457e-6,
-        -3.614338313862042e-6,
-        -1.2205437869283742e-6,
-        -9.129587219547375e-8
+        0.0001637711800013264,
+        -6.4743331371630575e-6,
+        -1.1980004727352167e-5
     ],
-    "elapsed_seconds": 120.149446171,
-    "forward_solves": 514,
-    "failures": 21,
+    "elapsed_seconds": 24.575308757,
+    "forward_solves": 232,
+    "failures": 17,
     "failure_messages": [
-        "conditional number distribution is undefined for an empty observation window",
         "negative bulk concentration in coupled solve",
         "trial exceeds 200000 explicit steps; inspect rate/dispersion scales or use a separately verified solver"
     ],
@@ -41,32 +38,29 @@
         {
             "start": [
                 -0.8071413077593704,
-                -0.5327304591540407,
-                -0.7339691750802004,
-                2.843851742261273
+                -7.641724454062337,
+                -0.11011111841642396
             ],
             "converged": true,
-            "objective": -122.09682539555692
+            "objective": -124.17385685726076
         },
         {
             "start": [
-                -1.00132611516311,
-                -0.6931471805599453,
-                1.8465077887376968,
-                -1.0986122886681098
+                -0.7059509101195173,
+                -7.170665827150146,
+                -0.5108256237659907
             ],
             "converged": true,
-            "objective": -122.09682539555664
+            "objective": -124.17385685726057
         },
         {
             "start": [
-                0.6769595698115302,
-                0.0,
-                -0.8957360492397206,
-                2.1972245773362182
+                -0.7059509101195173,
+                -10.334793332508706,
+                1.0986122886681098
             ],
             "converged": true,
-            "objective": -122.09682539555683
+            "objective": -124.17385685726056
         }
     ]
 }

@@ -1,8 +1,21 @@
 {
+    "diagnostic_quantities": [
+        "log_J_at_S6",
+        "log_G_at_S6"
+    ],
+    "transport_sha256": null,
+    "max_samples": 10000,
+    "consecutive_passes": 2,
+    "min_samples": 500,
     "max_depth": 9,
-    "samples": 500,
-    "seed": 20261024,
-    "target_acceptance": 0.97,
+    "sampling_coordinates": "initial_rates",
+    "batch_samples": 250,
     "chains": 4,
+    "stopping": "diagnostics",
+    "growth_reference_supersaturation": null,
+    "secondary_start_inference": null,
+    "seed": 20261024,
+    "target_acceptance": 0.9,
+    "metric_initialization": "expected_information",
     "warmup": 300
 }

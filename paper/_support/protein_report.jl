@@ -434,11 +434,18 @@ function verify_saved_target(root,model,config)
                 map_inverse_error=mapped.inverse_error,log_jacobian=mapped.logjac))
         end
     end
-    json(joinpath(folder,"target_verification.json"),(passed=true,checked_at=string(now(UTC)),points=checks,
+    producer_receipt=joinpath(folder,"target_verification.json")
+    first_verification=!isfile(producer_receipt)
+    receipt=first_verification ? producer_receipt :
+        joinpath(root,"analysis",string(model),"target_verification.json")
+    mkpath(dirname(receipt))
+    json(receipt,(passed=true,checked_at=string(now(UTC)),points=checks,
         target_hash=manifest.target_hash,posterior_draws_sha256=hashfile(joinpath(folder,"posterior_draws.csv")),
         sampler_statistics_sha256=hashfile(joinpath(folder,"sampler_statistics.csv")),
         interpretation="saved z densities and physical coordinates; AD and mapped gradients versus step-halved finite differences at retained draws"))
-    write_manifest(folder,manifest.target_hash,numerical_sources();complete=true)
+    # The first check completes the producer manifest. Later checks belong to
+    # analysis and must preserve that manifest and its original receipt.
+    first_verification && write_manifest(folder,manifest.target_hash,numerical_sources();complete=true)
     println("Verified retained posterior target ",model," at ",length(checks)," draw points")
 end
 function predict_draws(folder,problem,posterior,config,model)

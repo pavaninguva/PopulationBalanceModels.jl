@@ -1,10 +1,10 @@
 {
-    "evaluated_at": "2026-10-26T00:03:01.394",
-    "calibration_concentration_RMSE_g_L": 1.286137874534808,
-    "validation_concentration_RMSE_g_L": 0.23964835398167111,
-    "maximum_material_error_g_L": 8.277822871605167e-13,
-    "maximum_upper_bin_fraction": 1.84510817162855e-17,
-    "solve_seconds": 0.0252566,
-    "allocated_bytes": 13632768,
-    "steps": 741
+    "evaluated_at": "2026-10-28T15:37:08.811",
+    "calibration_concentration_RMSE_g_L": 1.0423800368068667,
+    "validation_concentration_RMSE_g_L": 0.27971314062787933,
+    "maximum_material_error_g_L": 1.6271428648906294e-12,
+    "maximum_upper_bin_fraction": 3.9515996376982213e-19,
+    "solve_seconds": 0.052051609,
+    "allocated_bytes": 32436800,
+    "steps": 1368
 }

@@ -4,6 +4,8 @@
 
 - Revised the protein comparison to fixed interfacial energy (0.64 mJ/m²), a Uniform(1,5) growth exponent and constant native size diffusivity. Converted rate/population units consistently, removed reference-rate corner labels, and separated smooth graph-trace display guides from unchanged likelihood readings. Superseded posterior draws and producer/uncertainty records are preserved in a verified archive.
 
+- Preserved protein producer manifests/receipts during repeated verification, and protected completed-fit captions/provenance during data-only redraws.
+
 - Added diagnostic-controlled NUTS sampling by default: one warmup, continued chains, joint R-hat/ESS/energy checks, optional physical-summary MCSE limits, recorded stopping history and finite budgets. Explicit `samples=N` preserves fixed-length trajectories. Protein reproduction can use the controller in a fresh output directory; retained posterior files are protected from implicit replacement.
 
 - Split the API reference into source-routed topic pages with a shared symbol index, automatic inclusion of new subsystem files and strict coverage/size checks. Moved UQ docstrings out of the walkthrough and documented the extension workflow for future API additions.

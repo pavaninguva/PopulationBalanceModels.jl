@@ -1,8 +1,0 @@
-{
-    "sha256": "0432ba07bdac770a0cd4605b49aa3a2765bf5fe8dca2c2ccd756baf5461da120",
-    "chain": 3,
-    "seed": 20261324,
-    "warmup": 300,
-    "samples": 1500,
-    "completed": true
-}

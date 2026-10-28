@@ -1,19 +1,19 @@
 {
-    "bins": 200,
+    "bins": 400,
     "converged": true,
-    "gradient_norm": 5.5393929887515014e-8,
+    "gradient_norm": 8.629832604634124e-7,
     "parameters": {
-        "logAJ": 83.56060148584592,
-        "gamma": 1.1082818616835688,
-        "AG": 0.463410969572158,
-        "g": 2.6871825238059497,
+        "logAJ": 30.482656274949708,
+        "gamma": 0.64,
+        "AG": 0.00015945461135648682,
+        "g": 3.3746048639227517,
         "cstar": 2.16,
-        "grd_strength": 9.569334249418109,
+        "grd_strength": 0.011682699066649337,
         "c0": 19.965841161400512,
-        "rho": 1240,
+        "rho": 1.24e-12,
         "kv": 0.81
     },
-    "calibration_concentration_prediction_change_g_L": 0.0014071495232634845,
-    "calibration_CDF_prediction_change": 0.0008021035989457248,
+    "calibration_concentration_prediction_change_g_L": 0.0025788942057545228,
+    "calibration_CDF_prediction_change": 0.0007323639554080996,
     "interpretation": "one-start calibration-only finer-grid refit; not the primary posterior or a validation refit"
 }
