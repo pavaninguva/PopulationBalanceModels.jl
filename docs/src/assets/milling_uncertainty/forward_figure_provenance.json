@@ -1,0 +1,20 @@
+{
+  "latex": true,
+  "dpi": 300,
+  "preview": false,
+  "numerical_producer": "e128a26628b89a72ff09008630c1a21e6edb047e",
+  "numerical_files": {
+    "trajectories.csv": "519b99db754de7d64fff170109f3adb561c28c1c15b15dbd12dba8b1f69a8d17",
+    "reference_comparison.csv": "a23ef97f306b21a948ea2f9f561d7cfdd6bee279fc1a62771d27150cb3810f6f",
+    "errors.csv": "11c08cc0f58477a783cdc4573bd05d76144430c0b9c9d846ee405143f7e6246c",
+    "checks.json": "9c87c85a1ae5091d7d68ee4fb4e92766479b569c9de7fcc8cc7f3a797fd66024",
+    "comparison.md": "010e5f9c20b356bb1bd147d3c5d6e6538df3cd083ec9ce8c924a23abe26d7b26"
+  },
+  "source_reference_sha256": "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb",
+  "plotter_sha256": "3742e520cfd9615e9d0e7dbb23b5ac4b671a786e127f27dffbcf6f0aefc36c6c",
+  "style_sha256": "0e4366a9c3305995d6cbca2f484c6a78680c3684cbd147ecd0d220d2650dabea",
+  "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
+  "numpy": "1.26.4",
+  "matplotlib": "3.8.4",
+  "presentation": "Lines connect stored predictions; source points and signed errors are unadjusted"
+}

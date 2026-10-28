@@ -91,10 +91,72 @@ def check(folder, *, smoke=False, retained=False):
           f"{'Producer-file integrity only.' if retained else 'Current recorded sources match.'}")
 
 
+def check_forward(*, retained=False):
+    """The Barrasso comparison is independent of the retained Bhonsale ensemble."""
+    folder = ROOT / "docs/src/assets/milling_uncertainty/forward"
+    m = json.loads((folder / "provenance.json").read_text())
+    assert m["complete"] and m["mode"] == "forward_comparison"
+    for name, digest in m["numerical_files"].items():
+        assert hashlib.sha256((folder / name).read_bytes()).hexdigest() == digest, name
+    if not retained:
+        for name, digest in m["source_hashes"].items():
+            assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest, name
+    reference_path = ROOT / "examples/data/milling_uncertainty/barrasso_figure7.csv"
+    assert hashlib.sha256(reference_path.read_bytes()).hexdigest() == m["configuration"]["reference_sha256"]
+    reference = np.genfromtxt(reference_path, delimiter=",", names=True, dtype=None, encoding="utf-8")
+    assert len(reference) == 92
+    for rpm in (3350, 4923):
+        for quantity in ("d50_um", "holdup_g"):
+            assert np.sum((reference["rpm"] == rpm) & (reference["quantity"] == quantity)) == 23
+    trajectories = load(folder, "trajectories.csv")
+    assert np.max(np.abs(trajectories["material_defect_kg"])) < 1e-9
+    assert np.min(trajectories["minimum_inventory"]) >= 0
+    points = np.genfromtxt(folder / "reference_comparison.csv", delimiter=",", names=True,
+                           dtype=None, encoding="utf-8")
+    errors = np.genfromtxt(folder / "errors.csv", delimiter=",", names=True,
+                           dtype=None, encoding="utf-8")
+    for row in errors:
+        group = points[(points["bins"] == row["bins"]) & (points["rpm"] == row["rpm"]) &
+                       (points["quantity"] == row["quantity"]) & (points["statistic"] == row["statistic"])]
+        assert len(group) == row["points"] == 22
+        source = reference[(reference["rpm"] == row["rpm"]) &
+                           (reference["quantity"] == row["quantity"]) & (reference["time_s"] > .01)]
+        np.testing.assert_array_equal(group["time_s"], source["time_s"])
+        np.testing.assert_array_equal(group["reference"], source["value"])
+        trajectory = trajectories[(trajectories["bins"] == row["bins"]) &
+                                   (trajectories["rpm"] == row["rpm"])]
+        column = "holdup_g" if row["quantity"] == "holdup_g" else (
+            "pivot_CDF_d50_um" if row["statistic"] == "pivot_CDF" else "finite_bin_d50_um")
+        indices = np.searchsorted(trajectory["time_s"], group["time_s"])
+        np.testing.assert_array_equal(trajectory["time_s"][indices], group["time_s"])
+        np.testing.assert_array_equal(trajectory[column][indices], group["prediction"])
+        delta = group["prediction"]-group["reference"]
+        np.testing.assert_allclose(group["signed_difference"], delta, rtol=1e-13, atol=1e-13)
+        np.testing.assert_allclose(row["rmse"], np.sqrt(np.mean(delta**2)), rtol=2e-14)
+        np.testing.assert_allclose(row["mean_absolute_relative_percent"],
+                                   100*np.mean(np.abs(delta)/group["reference"]), rtol=2e-14)
+    checks = json.loads((folder / "checks.json").read_text())
+    assert len(checks["solves"]) == 8
+    assert m["full_solves"] == 10 and m["warmup_solves"] == 1
+    assert {r["bins"] for r in checks["solves"]} == {100, 200, 400, 800}
+    assert max(r["maximum_d50_change_um"] for r in checks["time_refinement"]) < 1e-3
+    assert max(r["maximum_d50_difference_um"] for r in checks["matrix_exponential"]) < 1e-3
+    assert all(r["daughter_defect"] < 2e-12 for r in checks["solves"])
+    print("Verified Barrasso reference readings, 8 forward configurations, signed errors, "
+          "material balance, time refinement and analytic-daughter exponential checks. "
+          + ("Producer-file integrity only." if retained else "Current recorded sources match."))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--retained", action="store_true", help="Verify original numerical assets; do not claim current-source equivalence")
+    parser.add_argument("--forward", action="store_true", help="Check the separate Barrasso Figure 7 comparison")
     args = parser.parse_args()
-    folder = ROOT / ".cache/milling_uncertainty/smoke" if args.smoke else ROOT / "docs/src/assets/milling_uncertainty/data"
-    check(folder, smoke=args.smoke, retained=args.retained)
+    if args.forward:
+        if args.smoke:
+            parser.error("--forward and --smoke select different numerical datasets")
+        check_forward(retained=args.retained)
+    else:
+        folder = ROOT / ".cache/milling_uncertainty/smoke" if args.smoke else ROOT / "docs/src/assets/milling_uncertainty/data"
+        check(folder, smoke=args.smoke, retained=args.retained)

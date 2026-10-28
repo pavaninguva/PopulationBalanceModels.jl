@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reordered the milling case around its UQ question, shared Barrasso/Bhonsale model, a reproducible Figure 7 forward comparison, then MC/PCE. Added source-labelled graph readings and separate conservative forward/refinement checks; retained the partial-reproduction qualification and unchanged UQ producer records.
+
 - Split the forward-UQ docstrings into the UQ guide so GitHub-linked documentation builds stay within Documenter's page-size limit; retained strict documentation checks.
 
 - Added data-free forward MC propagation and non-intrusive total-degree Hermite/Legendre PCE. Joint/supplied/posterior inputs, scenario rebuilding, existing transient/stationary observables, explicit solve budgets, retained failures, SVD regression and independent validation share one forward definition. No runtime dependencies added.

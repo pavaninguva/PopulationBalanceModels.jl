@@ -58,6 +58,7 @@ These are numerical investigations, separate from the physical walkthroughs:
 
 | Driver | Purpose |
 |:--|:--|
+| `verification/milling_forward.jl` | Barrasso Figure 7 startup comparison, fixed-endpoint refinement and independent time/quadrature checks; uses the milling environment |
 | `verification/compact_growth.jl` | Conservative HOC spatial/time refinement and work comparison |
 | `verification/compact_adi.jl` | Legacy compact/ADI Fourier and long-period diagnostics |
 | `verification/li2026_supplement.jl` | Literal supplement coefficients and independently corrected variant |
@@ -65,7 +66,7 @@ These are numerical investigations, separate from the physical walkthroughs:
 | `realizable_startup.jl`, `realizable_axial_transport.jl` | Positive-measure startup and axial balance |
 | `quadrature_moment_methods.jl` | Reconstruction and tracked/reconstructed moment checks |
 
-The four files under `verification/` were previously named `audit_*` or
+The compact/stencil files under `verification/` were previously named `audit_*` or
 `benchmark_compact_growth.jl` at this directory's top level. Their numerical
 equations and default output locations are unchanged. The separate
 collision-EQMOM investigation remains parked; this organization does not
