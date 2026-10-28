@@ -29,3 +29,10 @@ Nominal solubility 2.16 g/L, density 1240 kg/m³, shape factor 0.81 and an ident
 equivalent-diameter/length mapping are explicit modelling assumptions. Salt
 basis and stirring-speed conflicts remain unresolved. The final concentration
 is not assumed to be equilibrium.
+
+The current comparison fixes gamma = 0.64 mJ/m², fits g on [1,5], and compares
+CNT with constant size diffusivity D0. Rate and population units in the example
+are μm, min, g and L. This changes neither these measured concentrations nor
+the conditional number-CDF readings. Earlier four/five-parameter results with
+D = theta G² are preserved under test/fixtures/archives/paper_history/; they are
+not samples from the revised target.
