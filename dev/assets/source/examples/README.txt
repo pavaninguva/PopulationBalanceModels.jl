@@ -27,6 +27,7 @@ sampling uses AdvancedHMC and MCMCDiagnosticTools.
 
 | Calculation | Driver | Walkthrough |
 |:--|:--|:--|
+| MC and PCE for continuous milling | [milling_uncertainty.jl](milling_uncertainty.jl) | [Milling uncertainty](../docs/src/case_studies/milling_uncertainty.md) |
 | Gaussian growth and time methods | [constant_growth_methods.jl](constant_growth_methods.jl) | [Growth comparison](../docs/src/case_studies/constant_growth.md) |
 | Batch cooling | [cooling_crystallization_benchmark.jl](cooling_crystallization_benchmark.jl) | [Cooling crystallization](../docs/src/case_studies/crystallization.md) |
 | Extinction and solute release | [realizable_dissolution.jl](realizable_dissolution.jl) | [Boundary and material accounting](../docs/src/methods/realizable_evolution.md) |
