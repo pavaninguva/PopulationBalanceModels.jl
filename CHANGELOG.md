@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Split the forward-UQ docstrings into the UQ guide so GitHub-linked documentation builds stay within Documenter's page-size limit; retained strict documentation checks.
+
 - Added data-free forward MC propagation and non-intrusive total-degree Hermite/Legendre PCE. Joint/supplied/posterior inputs, scenario rebuilding, existing transient/stationary observables, explicit solve budgets, retained failures, SVD regression and independent validation share one forward definition. No runtime dependencies added.
 - Added a reproducible milling-UQ reconstruction with conservative daughter projection, the published algebraic screen law, exact operating segmentation, MC/PCE outputs and plot-only figures. Printed fixed-pivot/design/band ambiguities and missing initialization/domain/statistic details remain explicit reconstruction qualifications.
 

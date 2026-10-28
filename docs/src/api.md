@@ -181,7 +181,8 @@ retain their transient/stationary and representation contracts. `fit_pce`,
 regression; `uq_summary` and `diagnostics` distinguish propagated variability,
 numerical failures and iid sampling error. See
 [Forward uncertainty quantification](uncertainty_quantification.md) for a complete
-first calculation, budgets, joint-input semantics and validation.
+first calculation, budgets, joint-input semantics and validation. Its
+[constructors and operations](@ref Forward-UQ-reference) are documented there.
 
 ## Numerical extensions
 
@@ -198,4 +199,7 @@ Modules = [PopulationBalanceModels]
 Public = true
 Private = false
 Order = [:constant, :type, :function, :macro]
+Filter = t -> !(t in (UncertainInputs, UQProblem, UQResult, MonteCarlo,
+    PolynomialChaos, PCESurrogate, PCEFailure, propagate, pce_design,
+    fit_pce, evaluate_pce, validate_pce, uq_summary))
 ```

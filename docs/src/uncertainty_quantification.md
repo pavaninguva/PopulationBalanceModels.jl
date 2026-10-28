@@ -181,3 +181,21 @@ provides the physical UQ example; Makrygiorgos, Maggioni and Mesbah (2020),
 [DOI 10.1016/j.compchemeng.2020.106814](https://doi.org/10.1016/j.compchemeng.2020.106814),
 provides context for non-intrusive surrogates of two-coordinate PBMs. This change
 does not reproduce the latter study or add its sparse/Kriging methods.
+
+## [API reference](@id Forward-UQ-reference)
+
+```@docs
+UncertainInputs
+UQProblem
+UQResult
+MonteCarlo
+PolynomialChaos
+PCESurrogate
+PCEFailure
+propagate
+pce_design
+fit_pce
+evaluate_pce
+validate_pce
+uq_summary
+```
