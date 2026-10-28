@@ -7,9 +7,9 @@ python paper/architecture/generate_pbm_architecture.py --usetex
 ```
 
 This runs no Julia calculations. It checks dependency and extension roles against
-`Project.toml`, then exports `section2_architecture_revised.{pdf,svg,png}` and a
-revision/hash receipt under `paper/figures/00_architecture/`. The PNG is rendered
-from the LaTeX vector PDF at 300 dpi. Final assets are also copied into
+`Project.toml`, then exports `section2_architecture_revised.png` at 300 dpi and a
+revision/hash receipt under `paper/figures/00_architecture/`. The LaTeX artwork is rasterized from an in-memory vector image; no PDF/SVG
+derivatives are saved. The PNG is also copied into
 `docs/src/assets/architecture/`. Matplotlib, NumPy, PyMuPDF and LaTeX use the
 existing paper environment. `--preview` explicitly produces differently named
 mathtext previews; they do not replace final assets.

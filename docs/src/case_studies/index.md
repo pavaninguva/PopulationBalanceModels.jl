@@ -4,6 +4,10 @@ These calculations show how a physical population balance becomes a working
 model. Each develops the equations alongside the rate callbacks, initial state,
 boundaries, and numerical choices used in its implementation.
 
+- [Uncertainty in continuous milling](milling_uncertainty.md): propagate four
+  uncertain breakage/screen parameters by Monte Carlo and non-intrusive PCE,
+  with independent surrogate checks and explicit source-reconstruction limits.
+
 - [Batch cooling crystallization](crystallization.md): seeds grow and new crystals
   nucleate as cooling changes solubility. The population consumes dissolved
   solute, so the concentration balance is solved with the distribution.

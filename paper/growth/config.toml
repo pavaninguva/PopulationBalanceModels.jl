@@ -1,13 +1,17 @@
 [production]
-profile_bins = 100
-smooth_bins = [40,80,160,320,640,1280,2560]
+profile_family = "gaussian"
+profile_bins = 200
+bins = [40,80,160,320,640]
+profile_courants = [0.5,1.0]
 final_time = 4.0
 courant = 0.5
 roundoff_factor = 1000.0
 
 [smoke]
-profile_bins = 100
-smooth_bins = [20,40]
+profile_family = "gaussian"
+profile_bins = 40
+bins = [20,40]
+profile_courants = [0.5,1.0]
 final_time = 4.0
 courant = 0.5
 roundoff_factor = 1000.0

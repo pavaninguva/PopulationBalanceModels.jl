@@ -8,8 +8,11 @@ mixing along the tube; a well-mixed batch model cannot describe its startup.
 
 This calculation uses Case 7A of [Zhang et al. (2024)](https://doi.org/10.1016/j.compchemeng.2024.108612).
 It targets the transient fields and outlet distributions in Figure 9(a,c) and
-the error-versus-runtime comparison in Figure 10(a,b). It compares this package's Upwind, MUSCL and uniform-size WENO5
-reconstructions. These are not CADET's WENO23/WENO35 algorithms, boundary
+the resolution dependence discussed with Figures 10–12. Here we use
+geometry-aware WENO5 on logarithmic particle-size bins and MUSCL on uniform
+axial cells, refining the two coordinates separately. MUSCL reconstructs axial
+advection; axial dispersion uses the native conservative centred face gradient.
+These are not CADET's WENO23/WENO35 algorithms, boundary
 closures or timings. Case 7B is not included: the printed
 lognormal centre needs an unambiguous conversion to SI units before it can be
 used as a reproduction input.
@@ -92,10 +95,17 @@ have the units above because ``s`` is dimensionless.
 
 ## Assemble local precipitation, then add axial transport
 
-The kinetic callbacks read the local dissolved concentration. They do not need
-to know how the reactor is divided into cells:
+The logarithmic edges put more cells near the small-particle peak without
+changing the full 1–900 µm domain. Each local population state is a bin integral,
+``N_i(z,t)=\int_{x_i^-}^{x_i^+}n(x,z,t)\,dx``; the axial adapter stores its
+cell average in ``z``. Density plots divide by the actual size-bin widths.
+The kinetic callbacks read the local dissolved concentration; they do not
+need to know the axial mesh:
 
 ```julia
+p = ContinuousPrecipitation.parameters()
+nx, nz = 100, 100
+grid = Grid1D(exp.(range(log(p.xc),log(p.xmax);length=nx+1));coordinate=:length)
 supersaturation(p,ctx) = max(ctx.bulk.c/p.ceq-1,zero(ctx.bulk.c))
 growth(x,p,t,ctx) = p.kg*supersaturation(p,ctx)
 function nucleation(p,t,ctx)
@@ -108,10 +118,12 @@ model = PBMModel(
     primary_secondary=Nucleation(rate=nucleation,size=first(grid.edges)),
 )
 operator = compile(model,grid;methods=TermMethods(
-    growth=MUSCL(),by_term=(primary_secondary=BoundaryInjection(:left),)))
-system = PBMSystem((crystals=operator,);nonnegative_bulk=(:c,),
-    exchanges=(ConservativeExchange(:crystals,:c,
-        (x,p,t,ctx)->1e12*p.rho*p.kv*x^3),))
+    growth=WENO5(),by_term=(primary_secondary=BoundaryInjection(:left),)))
+cubes = grid.centers.^3
+bulk_balance(ctx,p,t) = (c=-sum((1e12*p.rho*p.kv*cubes[i]) *
+    ctx.derivatives.crystals[i] for i in eachindex(cubes)),)
+system = PBMSystem((crystals=operator,);bulk_rhs=bulk_balance,
+    nonnegative_bulk=(:c,))
 local_problem = PBMProblem(system,(crystals=zeros(length(grid)),),(0.,200.);
     bulk0=(c=0.,),p)
 reactor = AxialDispersion(AxialGrid(range(0.,p.L;length=nz+1));
@@ -125,8 +137,13 @@ For numerical scaling the internal particle counts are divided by ``10^{12}``.
 The rate divides by that scale, the mass callback multiplies by it, and exported
 densities restore physical units. This changes no physical coefficient.
 
-`ConservativeExchange` subtracts the **resolved discrete** crystal-mass increase
-from solute. This balances material exactly cell by cell before axial fluxes are
+The bulk balance subtracts the **current-stage resolved discrete** crystal-mass
+increase from solute. For this closed growth/nucleation model it is equivalent to
+`ConservativeExchange(:crystals,:c,(x,p,t,ctx)->1e12*p.rho*p.kv*x^3)`, without
+reevaluating the growth residual. The reproduction tests compare these two
+normal `PBMSystem` routes. Use one of them, not both. A total-derivative balance
+would need revisiting if particle escape or other removal mechanisms were added.
+This balances material cell by cell before axial fluxes are
 added. At finite resolution it differs from separately quadraturing the continuum
 sink above, including the mass assigned to the first bin. On coarse uniform size meshes,
 a 1-µm nucleus is represented at a much larger first pivot; a higher-order
@@ -138,248 +155,244 @@ finite-domain calculation as an approximation on an infinite size domain.
 
 ## Startup and the outlet distribution
 
-![Number-density fields at 0, 40, 80 and 200 seconds](../assets/continuous_precipitation/fields.png)
+![Number-density fields at 5, 40, 80 and 200 seconds](../assets/continuous_precipitation_log/precipitation_fields.png)
 
-The fields use 1,152 uniform size bins and 128 axial cells, with a shared
-colour scale. The empty initial condition is shown explicitly. At 40 s the
-feed has raised supersaturation near the inlet; nucleation creates small
-particles and growth moves them to larger sizes. Solute depletion and axial
-mixing reshape the distribution downstream. The 80-s field still describes
-startup; 200 s is the outlet comparison time, not an analytical steady solution.
-Colours are number density per size and fluid volume in m⁻⁴.
-The field view uses a **linear** 1–100 µm axis to show the number-density peak.
-A [logarithmic view](../assets/continuous_precipitation/fields_log.png) shows
-the same cell averages up to 300 µm. The simulation, outlet curves and all
-inventory calculations retain the full 1–900 µm size domain.
+These are physical cell-average number densities on the **1000 logarithmic-size
+bins × 500 uniform axial cells** reference mesh. The size axis is linear and
+zooms to **1–100 µm**, as in the earlier field figure. The simulation retains
+the full **1–900 µm** domain for outlet distributions, errors and inventories.
+The actual bin edges are used without image interpolation or smoothing.
+The four panels share one linear density colour scale and the earlier figure's
+`magma` palette, from zero to the largest density across the four full fields.
+Zero and tiny negative tails use the darkest colour, rather than a white mask.
+The numerical solution is not clipped or smoothed for display.
+At the four saved reference snapshots, the total negative-number fraction is
+below ``10^{-23}``; signed values remain in the diagnostics.
 
-The 144-bin comparison mesh has only three size bins below 20 µm, near the
-number-density peak, and its first bin spans 1–7.24 µm. The displayed 1,152-bin
-field has 0.780-µm spacing and 24 centres below 20 µm. Actual cell edges are
-plotted, with no spline or image smoothing. The log view enlarges the first few
-uniform cells; visible bands are cell averages. Zhang's Figure 9 uses **logarithmic** size meshes (100 bins for the
-field and 200 for Case 7A's outlet), which concentrate cells near this peak.
-These retained documentation runs used uniform size meshes and need many more
-bins across 1–900 µm for comparable local resolution. Current
-[geometry-aware WENO5](../methods/growth.md#WENO-on-a-nonuniform-mesh) also supports
-eligible fixed nonuniform and logarithmic meshes. That capability does not
-change the meshes, timings or provenance of the retained uniform-grid runs.
+Nucleation first populates small sizes near the inlet. Growth moves number to
+larger sizes while depletion reduces supersaturation. Axial dispersion spreads
+the residence times, so the downstream distribution includes particles with
+different growth histories. The 200-s outlet is the comparison time used in
+the paper; it is a transient calculation, not an analytical steady solution.
 
-The **1,152 × 128 reference is numerical**. Its matched time/axial checks were
-performed on **144 × 128**, not on this field mesh. The separate paper workflow
-uses a logarithmic **400 × 400** reference with an implicit BDF adapter; its
-required `time_refinement` dataset is missing. Neither study supplies the
-other's missing verification. The strict paper checker remains rejecting.
+![Outlet distributions at 200 seconds, with digitized literature points](../assets/continuous_precipitation_log/precipitation_outlet.png)
 
-![Outlet size refinement with WENO5 in size and MUSCL axially, at 200 seconds](../assets/continuous_precipitation/outlets.png)
-
-These curves hold 128 axial cells fixed and vary only the **size** mesh.
-Lines join bin centres without interpolating new values. The left panel shows
-absolute number density; the right weights bin numbers by centre ``x^3`` and
-normalizes by resolved volume. Its integral over size in µm is one.
-Large particles carry more volume, so the number and volume peaks differ.
-The number peak is near 10–15 µm, while the volume peak is near 100 µm.
-A 6.24-µm bin is large relative to the former and small relative to the latter;
-this explains why the old volume curve looked smoother than the number curve.
-A logarithmic display axis does not change either density's linear-size units.
-Volume normalization removes absolute number information; inspect both panels.
-The dashed curve is the finest numerical reference. The closed upper boundary
-and fixed axial mesh still leave domain and axial-resolution uncertainty.
-
-```@eval
-using Markdown, PopulationBalanceModels
-folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","continuous_precipitation")
-rows=split.(readlines(joinpath(folder,"size_resolution.csv"))[2:end],',')
-body=["| Size bins | Δx (µm) | Outlet L¹ difference from 1,152 bins | Number (m⁻³) |", "|--:|--:|--:|--:|"]
-for r in rows
-    error = r[1]=="1152" ? "reference" : string(round(100 * parse(Float64,r[7]);sigdigits=3))*"%"
-    push!(body,"| $(r[1]) | $(round(parse(Float64,r[3]);sigdigits=3)) | $error | $(round(parse(Float64,r[8]);sigdigits=4)) |")
-end
-Markdown.parse(join(body,"\n"))
-```
-
-This norm includes the difference between piecewise-constant representations;
-a visible peak change can exceed the change in total number. From 576 to 1,152
-bins, total number changes by only 0.066%, while the distribution difference is
-1.96%. The third moment is almost unchanged. Agreement of these integral
-quantities therefore does not certify that the number-density peak is resolved.
-The last row is
-not an exact solution or a zero-error estimate. See the downloadable
-[size-resolution results](../assets/continuous_precipitation/size_resolution.csv)
-and [bin densities](../assets/continuous_precipitation/size_resolution_outlets.csv).
-
-## Refine size and axial resolution separately
-
-Case 7 has **no analytical coupled PSD solution**. The SI's analytical DPFR
-solution belongs to Case 6, a first-order reaction problem. Following Eq. 49,
-the normalized distribution difference is
+The curves hold **1000 size bins fixed** and use 50, 100, 200 and 400 axial cells.
+The dashed curve has 500 axial cells. The left panel is absolute number density
+in m⁻⁴. The reported outlet is the last axial cell's average, without extrapolating
+a boundary value; its resolution error includes that approximation. The right
+panel weights each bin number by its centre cubed and normalizes:
 
 ```math
-E_{L^1}=
-\frac{\sum_i\Delta x_i\left|n_i-n_i^{\mathrm{ref}}\right|}
-     {\sum_i\Delta x_i n_i^{\mathrm{ref}}}.
+q_{3,i}=\frac{x_i^3N_i}{\Delta x_i\sum_jx_j^3N_j}.
 ```
 
-An error of 0.1 means 10%. To compare different meshes, we integrate their
-piecewise-constant densities on the union of their edges. This preserves bin
-numbers; it differs from the paper's spline interpolation. Every comparison,
-including the supplementary logarithmic-size runs, now uses **one common
-uniform-size numerical reference**, rather than a different target for each
-size-mesh family. Even exact bin integrals on two different meshes define
-different piecewise-constant densities. This norm includes that representation
-difference as well as evolution error; it is not a test of fifth-order face
-reconstruction in isolation.
+The plotted volume density is per micrometre and integrates to one. Larger
+particles carry more volume, so its peak need not coincide with the number peak.
+A logarithmic size axis changes neither density's linear-size units. Lines are
+steps of the computed bin averages; a smooth-looking peak comes from resolution,
+not a spline.
 
-The reference uses **WENO5 in size, MUSCL axially and RK4 in time** on 1,152 × 128
-cells, with a uniform size mesh for these retained calculations. On the checked startup meshes, WENO5 in *both* directions fails
-the negative-bulk check during empty-reactor startup, including after a tenfold
-step reduction; those [failed checks](../assets/continuous_precipitation/failures.csv)
-remain visible. We therefore do not call this a WENO5/WENO5 reference or infer
-high accuracy from the scheme name alone. The size and axial checks below
-quantify its remaining resolution dependence.
+The open circles are **17 graph-digitized number-density points** from Zhang's
+Figure 9(c), for their 200 × 200 WENO35 calculation at 200 s. The bars represent
+±2-pixel extraction uncertainty, not experimental noise. Only the unambiguous
+1.5–40 µm portion was extracted. A partial number-density curve cannot define a
+normalized volume distribution, so no literature points are invented in the
+right panel. The package uses WENO5/MUSCL and the rounded SI flow rate; it is
+not the paper's WENO35/WENO35 calculation. At the 17 sampled sizes, the
+reference density differs from the digitized ordinate by −3.6% to +5.9%, with
+a mean absolute relative difference of 3.2%. This is a pointwise comparison
+over the extracted window, not an error integral over the full distribution.
 
-The retained comparisons use this common numerical reference and their original
-single-run timings. All use RK4 and axial MUSCL, varying only size reconstruction
-among Upwind, MUSCL and WENO5. The primary study has two four-point paths:
+The digitized ordinates are retained unchanged and interpreted on the SI
+``\mathrm{m}^{-4}`` density scale used by the model and CADET output. Figure 9's
+printed per-micrometre ordinate label is ambiguous: taking it literally would
+give about ``3.2\times10^5`` kg m⁻³ of solids in just the digitized size window,
+versus 9 kg m⁻³ in the feed. On the SI scale that partial-window estimate is
+0.32 kg m⁻³. The literature comparison is conditional on this stated unit
+interpretation; no readings were multiplied to improve agreement.
 
-- Size refinement: ``N_x=12,24,48,72``, with ``N_z=96`` fixed.
-- Axial refinement: ``N_z=16,32,64,96``, with ``N_x=72`` fixed.
+The [extracted points](../assets/continuous_precipitation_log/zhang_figure9c_digitized.csv),
+[source and pixel calibration](../assets/continuous_precipitation_log/provenance.json),
+and [point-by-point comparison](../assets/continuous_precipitation_log/digitized_point_comparison.csv)
+retain the distinction between literature data and the package reference.
 
-The shared endpoint is solved once. Four logarithmic-size MUSCL runs at
-``N_x=12,24,36,48`` and ``N_z=64`` remain in the downloadable results as a
-mesh-family sensitivity check. Those particular runs used MUSCL; they do not
-test the subsequently implemented nonuniform WENO5.
+## [Refine each coordinate against one reference](@id Refine-size-and-axial-resolution-separately)
 
-![Independent size and axial refinement](../assets/continuous_precipitation/coordinate_refinement.png)
+Case 7 has **no analytical coupled PSD solution**. The analytical DPFR expression
+in the SI belongs to Case 6, a first-order reaction test. Our numerical reference
+uses 1000 logarithmic size bins and 500 uniform axial cells, with the same
+physical model, WENO5 size reconstruction and MUSCL axial reconstruction as
+all comparison runs.
 
-Smaller ``\Delta x`` or ``\Delta z`` lies to the right. Each line changes one
-resolution only. The black dashed size-refinement curve adds the finer WENO5
-study at **128 axial cells**; the coloured curves use 96. These paths are not
-joined across different axial meshes. The 1,152-bin reference's comparison with
-itself is omitted from the log plots. Flattening or nonmonotonic errors can occur when the other
-coordinate, finite first-bin source deposition, or reference error is limiting;
-these are not isolated smooth-advection order tests. Refining only axial transport cannot remove coarse size-space source/material
-error. These paths diagnose where each coordinate limits the solution; they do
-not establish asymptotic order for this coupled problem. A high-order growth
-stencil cannot recover a peak represented by only a few bins. The dedicated finer size study above addresses that gap.
+| Path | Varied resolution | Fixed resolution |
+|:--|:--|:--|
+| Size | ``N_x=50,100,200,400`` | ``N_z=500`` |
+| Axial | ``N_z=50,100,200,400`` | ``N_x=1000`` |
 
-![Error versus single-solve cost along each refinement path](../assets/continuous_precipitation/performance.png)
+These are two paths, not a Cartesian mesh study. Every error uses the **same**
+reference. Following the normalization in Eq. 49, the outlet difference is
 
-Numbers beside markers give the refined cell count. Lines connect increasing
-resolution along each path; they are **not Pareto fronts** or a claim that
-runtime must be monotone. A work plot that combines a Cartesian
-product of size and axial meshes can hide this: an expensive, axially fine but size-coarse
-run can be less accurate than a cheaper run with a better size mesh. Separating
-those paths makes that distinction inspectable. Step counts also change with the coupled solution: along the Upwind size
-path they are 8,936, 8,915, 6,705 and 8,717, rather than a fixed count per mesh.
-The state-dependent step bounds therefore contribute to nonmonotone costs.
-Single-run timing noise also matters for small differences.
+```math
+E_{L^1}=\frac{\int|n(x,L,t)-n^{\mathrm{ref}}(x,L,t)|\,dx}
+                  {\int n^{\mathrm{ref}}(x,L,t)\,dx}.
+```
 
-## Check the numerical reference and cost
+An error of 0.1 means 10%. The whole-field version integrates over both size
+and axial position. On nonmatching grids, both piecewise-constant densities are
+integrated on the common partition of their edges. This preserves bin numbers;
+it differs from the paper's spline interpolation. Even exact bin integrals on
+two grids have a nonzero piecewise-constant representation difference. These
+curves therefore do not establish fifth-order convergence of the full nonlinear
+startup problem.
+The 1000 × 500 reference is still finite: differences to it are not rigorous
+error bounds or evidence of convergence beyond the finest tested mesh.
 
-The driver uses a step bound of 0.3 divided by the sum of size-advection,
-axial-advection and axial-diffusion rates, an additional local solute-depletion
-bound, and a 0.25-s cap. RK4 stages keep the existing ``10^{-8}`` state-check
-tolerance; values are never clipped. This is a state-dependent benchmark step
-controller, not an adaptive-error solver or a positivity guarantee.
+![Size and axial refinement against the common reference](../assets/continuous_precipitation_log/precipitation_refinement.png)
 
-The retained half-step and axial checks were executed on the **previous
-144 × 128 baseline**. Their reference dimensions are explicit below; they do
-not establish temporal or axial convergence of the new 1,152 × 128 field.
-The finer study changes size resolution alone and reports its differences
-above. All differences are diagnostics, not upper error bounds.
+Panel (a) changes only size resolution; panel (b) changes only axial resolution.
+Each shows whole-field and outlet differences at 200 s. The outlet difference
+falls from 4.04% to 0.522% along the 50–400-bin size path, and from 30.3% to
+0.382% along the 50–400-cell axial path. Coarse axial resolution causes the
+larger outlet discrepancy over these tested ranges.
+The whole-field and outlet norms are close at this time; the hollow square and
+circle markers distinguish the two curves where they overlap.
+
+The first bin also
+changes when the size mesh changes: boundary births are deposited in that bin,
+and the discrete solute exchange uses its centre-cubed material weight.
+The existing Upwind fallbacks near physical size boundaries are retained; the
+interior WENO5 stencil is not a fifth-order boundary-source treatment.
+Early-time outlet errors are flagged as uninterpretable when the
+reference outlet signal is below its nominal summed absolute-tolerance scale;
+whole-field comparisons remain available.
+
+[Refinement results](../assets/continuous_precipitation_log/refinement.csv) retain
+all four transient times, bulk differences and the outlet-resolution flag.
+[Additional observables](../assets/continuous_precipitation_log/refinement_observables.csv)
+separate number, material, solute, upper-boundary occupancy and signed minima.
+
+## [Check time resolution, balance and cost](@id Check-the-numerical-reference-and-cost)
+
+The logarithmic first cell makes explicit integration expensive. The production
+workflow uses the checked external [SUNDIALS CVODE-BDF](https://sundials.readthedocs.io/en/latest/cvode/Mathematics_link.html)/GMRES adapter through `odeproblem`.
+CVODE supplies the time integrator; the paper helper supplies state checks and
+a problem-specific linear-solve preconditioner.
+CVODE selects its order up to five, with stability-limit detection enabled and
+no prescribed restart. This is an adaptive-order solver, not a claim of
+fifth-order convergence for the complete problem. Relative tolerance is ``10^{-7}``; absolute
+tolerances are ``10^{-14}`` for the ``10^{12}``-scaled bin populations and
+``10^{-11}`` kg m⁻³ for solute, with a 0.5-s maximum step. A separate check on
+the **same 1000 × 500 mesh** tightens all tolerances tenfold and halves the step
+cap. The adapter is compared against native RK4 on a small problem first.
+It checks every accepted state at the existing ``10^{-8}`` threshold; for
+populations this applies to scaled bin counts. Signed minima and small negative
+population contributions are exported without clipping. This external method
+has no positivity guarantee.
+The linear-solve preconditioner differentiates the native growth stencil with
+six-color AD, solves its banded local Jacobian with a rank-one conservative
+nucleation/solute correction, and applies a low-order axial factor. Dense
+Jacobians independently check the local algebra and cache updates. This changes
+the Krylov solve, not the WENO5/MUSCL residual; Sundials controls Jacobian lagging.
+
+Earlier explicit uniform-grid attempts with axial WENO5 failed the
+[negative-bulk checks](../assets/continuous_precipitation/failures.csv). Those
+historical failures are retained; they were not rerun as logarithmic-grid
+production calculations. The present axial reconstruction is MUSCL throughout.
 
 ```@eval
 using Markdown, PopulationBalanceModels
-folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","continuous_precipitation")
-rows=split.(readlines(joinpath(folder,"reference_checks.csv"))[2:end],',')
-body=["| Check | Compared mesh | Baseline mesh | Normalized difference |", "|:--|--:|--:|--:|"]
+folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","continuous_precipitation_log")
+rows=split.(readlines(joinpath(folder,"refinement.csv"))[2:end],',')
+rows=filter(r->r[1]=="time_refinement",rows)
+body=["| Time (s) | Whole-field L¹ | Outlet L¹ | Maximum bulk difference (kg m⁻³) |", "|--:|--:|--:|--:|"]
 for r in rows
-    push!(body,"| $(replace(r[2],"_"=>" ")) | $(r[3]) × $(r[4]) | $(r[8]) × $(r[9]) | $(round(parse(Float64,r[5]);sigdigits=3)) |")
+    outlet = r[12]=="true" ? string(round(parse(Float64,r[9]);sigdigits=3)) : "unresolved outlet signal"
+    push!(body,"| $(r[3]) | $(round(parse(Float64,r[8]);sigdigits=3)) | $outlet | $(round(parse(Float64,r[end]);sigdigits=3)) |")
 end
 Markdown.parse(join(body,"\n"))
 ```
 
-The [transient temporal checks](../assets/continuous_precipitation/temporal_checks.csv)
-compare the same 144 × 128 mesh at 40, 80 and 200 s. The whole-field number difference
-uses ``\sum_{ij}\Delta z_j|N_{ij}^{\mathrm{half}}-N_{ij}|`` divided by
-``\sum_{ij}\Delta z_jN_{ij}``; the bin numbers already include size widths.
-The largest field difference is ``2.6\times10^{-8}``, the largest outlet
-difference ``5.0\times10^{-7}``, and the largest bulk-concentration difference
-``1.3\times10^{-8}`` kg m⁻³. Startup differences exceed those at 200 s, which
-is why the late outlet check alone is insufficient. These checks support small
-time error at that mesh. The older separate spatial changes were about 6%;
-this motivated the additional size refinement rather than smoothing the plots.
+The whole-field time-refinement difference is below ``5\times10^{-7}`` at
+all four snapshots. The largest resolved outlet difference is
+``4.6\times10^{-5}`` at 40 s; at 200 s it is ``4.6\times10^{-10}``.
+These changes are much smaller than the tested spatial differences. At 5 s
+the outlet signal is effectively zero, so a relative outlet error has no
+useful accuracy interpretation. This check resolves temporal uncertainty at
+the tested settings; it does not remove the finite reference mesh's spatial
+uncertainty.
 
-Each timing is **one measured solve after a separate small compilation warmup**.
-It includes stepping, step selection, checks and saved states, excluding problem
-assembly, export and plotting. The reference saves 0, 40, 80 and 200 s;
-comparison runs save 200 s only. These are package timings, not CADET timings.
-The new size-study measurements and the earlier uniform comparison timings
-were each collected without other substantial compute jobs. The 144-bin size-study
-row reuses the earlier baseline; the 288-, 576- and 1,152-bin solves are new.
-The complete `--size-resolution` command also reruns the 144-bin case.
-Logarithmic-mesh sensitivity runtimes overlapped later checks and
-inference; they are recorded in the CSV but excluded from the work plots and
-representative timing table.
+The [reference accounting](../assets/continuous_precipitation_log/reference_accounting.csv)
+uses the actual discrete population derivative and axial face fluxes. Solute
+uptake and resolved crystal mass cancel locally; reactor inventory changes
+through the inlet and outlet. Number is created by nucleation. The closed upper
+size boundary is not an escape reservoir; inspect its occupancy before assuming
+the finite domain is inactive. The [reference settings and producer record](../assets/continuous_precipitation_log/reference_provenance.toml)
+include the first-bin deposition/material ratio and the actual solver diagnostics.
+The reference's saved material-rate balance defect is below
+``1.4\times10^{-17}`` kg m⁻² s⁻¹. At 200 s the uppermost size bin contains
+``3.0\times10^{-9}`` of its resolved solid material: little boundary pileup,
+although this occupancy check is not a separate domain-refinement test.
+
+![Single-run cost along the size and axial refinement paths](../assets/continuous_precipitation_log/precipitation_work_precision.png)
+
+There is one measured integration after a separate small compilation warmup.
+Timing includes stepping, state checks and saved states, but excludes assembly,
+explicit garbage collection, export and plotting. Lines follow increasing
+resolution within a path, not a Pareto front. Single measurements have no
+repeatability error bars.
 
 ```@eval
 using Markdown, PopulationBalanceModels
-folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","continuous_precipitation")
+folder=joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","continuous_precipitation_log")
 rows=split.(readlines(joinpath(folder,"runtimes.csv"))[2:end],',')
-rows=filter(r->r[1] in ("reference","size_resolution") || (r[1]=="comparison" && r[2]=="uniform" && r[5]=="72" && r[6]=="96"),rows)
-body=["| Role | Size / axial scheme | Size × axial | Steps | Seconds |", "|:--|:--|--:|--:|--:|"]
+body=["| Configuration | Size × axial | Steps | Seconds |", "|:--|--:|--:|--:|"]
 for r in rows
-    push!(body,"| $(r[1]) | $(r[3]) / $(r[4]) | $(r[5]) × $(r[6]) | $(r[8]) | $(round(parse(Float64,r[7]);sigdigits=3)) |")
+    push!(body,"| $(replace(r[1],"_"=>" ")) | $(r[2]) × $(r[3]) | $(r[6]) | $(round(parse(Float64,r[4]);sigdigits=3)) |")
 end
-machine=only(filter(line->startswith(line,"Julia "),readlines(joinpath(folder,"verification.txt"))))
-Markdown.parse(machine*"\n\n"*join(body,"\n"))
+Markdown.parse(join(body,"\n"))
 ```
 
-[Verification settings](../assets/continuous_precipitation/verification.txt),
-[all errors and timings](../assets/continuous_precipitation/performance.csv), and
-[reference outlet bin densities](../assets/continuous_precipitation/reference_outlets.csv)
-are retained. These finite references leave spatial and size-domain uncertainty;
-no full-horizon coupled analytical accuracy claim is made.
-
-```sh
-# Optional: rerun comparison solves and reference checks first (more expensive):
-# julia --project=. -e 'include("examples/continuous_precipitation.jl"); ContinuousPrecipitation.run_benchmark()'
-# Regenerate fine fields/outlets and rebase errors from retained comparison outlets:
-julia --project=. examples/continuous_precipitation.jl --size-resolution
-python docs/benchmarks/plot_population_studies.py precipitation --usetex
-# Larger study; separate output, not executed for these figures:
-julia --project=. -e 'include("examples/continuous_precipitation.jl"); ContinuousPrecipitation.run_benchmark(full=true, output="/tmp/precipitation-full")'
-```
-
-The larger option uses the SI reference arrangement ``(250,750)`` and all 25
-pairs of ``N_x=(12,25,50,100,200)`` with ``N_z=(37,75,150,300,600)`` per eligible
-size scheme/grid family. Axial MUSCL and RK4 remain fixed, unlike the paper's
-same-scheme-in-both-directions CADET study. It is an arrangement for further
-package refinement, not a reproduction of CADET's WENO23/WENO35 or boundary
-closures. Fine logarithmic meshes can make explicit integration expensive.
-The no-argument script runs the coarse comparison/check stage followed by the
-fine size study. `--size-resolution` runs only the latter, using retained
-comparison outlets. Neither command implies that the old 144-bin time/axial
-checks have been repeated on 1,152 bins.
+Full numerical exports, timings and source/dependency identities are retained
+under `paper/precipitation/data/`. The earlier uniform-size documentation outputs
+and the previous partial 400 × 400 paper study are historical calculations;
+they are not used for these errors or figures.
 
 ## Minimal run and full reproduction
 
-Run this block from the repository root. It constructs and solves one problem;
-including a driver does not run its CSV exports.
+From a checkout with the [standard environment](../verification.md), this small
+native calculation demonstrates the same model assembly without running a
+production refinement study:
 
 ```julia
 using PopulationBalanceModels
 include("examples/continuous_precipitation.jl")
-problem = ContinuousPrecipitation.build(; nx=24, nz=32, mesh=:log,
-    scheme=MUSCL(), axial_scheme=MUSCL())
-solution = ContinuousPrecipitation.advance(problem, [0.0, 40.0, 80.0, 200.0]; method=RK4())
-outlet = population(problem, last(solution.u), :crystals)[:, end]
-concentration = bulk(problem, last(solution.u), :c)
+problem = ContinuousPrecipitation.build(nx=50,nz=50,mesh=:log,
+    scheme=WENO5(),axial_scheme=MUSCL(),tf=5.)
+solution = ContinuousPrecipitation.advance(problem,[5.];method=RK4())
 ```
 
-Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
-to retain their directory layout and plotting environment.
+This small builder uses the equivalent generic `ConservativeExchange` route;
+the production wrapper reuses its physical terms and numerical preparation with
+the stage-derivative bulk balance shown above.
 
-- [continuous_precipitation.jl](../assets/source/examples/continuous_precipitation.jl)
+For the complete study, including the numerical reference and its time check:
 
-- [Benchmark/export helpers](../assets/source/examples/support/precipitation_benchmark.jl).
+```sh
+julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
+julia --project=paper paper/precipitation/run.jl
+python paper/precipitation/plot.py
+python test/paper_data.py --case 3
+julia --project=docs docs/make.jl
+```
+
+Focused model, source, exchange and preconditioner checks use
+`julia --project=paper test/paper_precipitation.jl`. The nonuniform WENO tests
+are in `test/nonuniform_weno.jl`, with the usual package test environment.
+
+The production run is expensive and resumes matching completed configurations.
+`--smoke` writes a separate small study under `.cache/paper/`; it does not replace
+production data. Plotting reads validated results and saves only 300-dpi PNGs,
+shared by the paper and this page. It never reruns a simulation. The full driver
+is `paper/precipitation/run.jl`; the physical builder is
+[examples/continuous_precipitation.jl](../assets/source/examples/continuous_precipitation.jl).

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Added data-free forward MC propagation and non-intrusive total-degree Hermite/Legendre PCE. Joint/supplied/posterior inputs, scenario rebuilding, existing transient/stationary observables, explicit solve budgets, retained failures, SVD regression and independent validation share one forward definition. No runtime dependencies added.
+- Added a reproducible milling-UQ reconstruction with conservative daughter projection, the published algebraic screen law, exact operating segmentation, MC/PCE outputs and plot-only figures. Printed fixed-pivot/design/band ambiguities and missing initialization/domain/statistic details remain explicit reconstruction qualifications.
+
+- Reworked tubular precipitation around logarithmic-size WENO5 and axial MUSCL, independent 50–400-cell refinement paths and a common 1000 × 500 reference with a matched temporal check. Outlet plots retain the digitized Zhang Figure 9(c) points and their extraction uncertainty.
+- Added independently checked native-growth banded Jacobian preconditioning and an equivalent current-stage bulk balance to the tubular driver, avoiding duplicate transport evaluation while preserving the physical residual and state checks.
+
+- Aligned the paper growth workflow with the manual's Gaussian benchmark, seven scheme/time pairings and separate error, observed-order and timing figures. Paper exporters now retain only 300-dpi PNG images; posterior samples and original numerical/uncertainty records are preserved.
+
 - Removed development-session reports, findings/disposition tables and internal review tracking from the public manual. Verification instructions and case-specific scientific qualifications remain beside the relevant methods/results; the existing audit URL is retained as a short entry point outside the navigation.
 
 - Clarified the distinct HOCADI and HOCFiniteVolume time updates, bin-integral interpretation, periodic CFL stability and dispersive undershoots. Removed unrelated literature planning notes from the compact verification notes; added independent Fourier-factor checks on unequal axes, including large Courant numbers and signed/zero velocities. Numerical algorithms are unchanged.

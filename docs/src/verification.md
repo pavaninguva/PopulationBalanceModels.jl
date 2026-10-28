@@ -89,11 +89,12 @@ python test/stem_cell_results.py
 
 `--retained` checks numerical data contracts without asserting current-source
 equivalence. Protein separately validates reviewed compatibility receipts while
-preserving original producers. The paper precipitation check currently rejects
-a missing `time_refinement` dataset. The stem-cell check rejects changed
+preserving original producers. The paper precipitation check requires all
+independent logarithmic-size/axial runs and the same-reference-mesh
+`time_refinement` dataset; a partial campaign is rejected. The stem-cell check rejects changed
 Project weak-dependency/extension declarations before numerical assertions, although its eight
-numerical-file hashes match. Keep these failures visible: editing prose or
-redrawing figures cannot complete the missing verification.
+numerical-file hashes match. Preserve failure reports: editing prose or
+redrawing figures cannot complete numerical or source-equivalence verification.
 
 The [moment comparison](case_studies/moment_crystallization.md) explains the
 remaining collision-EQMOM limitation and links the supporting numerical checks.

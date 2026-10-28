@@ -18,6 +18,21 @@ from protein_uncertainty import physical, display, gaussian_marginal, gaussian_d
 
 
 class PublicationContracts(unittest.TestCase):
+    def test_png_export_keeps_no_vector_derivatives(self):
+        from PIL import Image
+        import matplotlib.pyplot as plt
+        from plotting_style import save_png
+        with tempfile.TemporaryDirectory() as temporary:
+            fig,ax=plt.subplots(figsize=(2,1))
+            ax.plot([0,1],[0,1])
+            path=Path(temporary)/'figure.png'
+            save_png(fig,path)
+            plt.close(fig)
+            self.assertEqual([p.name for p in Path(temporary).iterdir()],['figure.png'])
+            with Image.open(path) as image:
+                self.assertEqual(image.size,(600,300))
+                np.testing.assert_allclose(image.info['dpi'],[300,300],atol=.01)
+
     def test_reviewed_reuse_preserves_original_analysis_identity(self):
         fields = dict(passed=True, model='cnt', original_target_hash='target',
                       inputs={'map.json': 'map'}, settings={'bins': 100},

@@ -2,9 +2,11 @@
 from pathlib import Path
 import sys
 import gzip
+import shutil
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
+from matplotlib.colors import Normalize
+from matplotlib.ticker import NullLocator, LogLocator, LogFormatterSciNotation, MaxNLocator, ScalarFormatter
 PAPER=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(PAPER))
 from _support import figures
@@ -24,6 +26,10 @@ def precipitation():
             completed_time=summary["completed_time"],cpu=provenance["environment"]["cpu"],
             julia=provenance["environment"]["julia"],julia_threads=provenance["environment"]["julia_threads"],
             blas_threads=provenance["environment"]["blas_threads"]))
+    runtime.sort(key=lambda r:(0 if r["configuration"].startswith("size_") else
+        1 if r["configuration"].startswith("axial_") else
+        2 if r["configuration"]=="reference" else 3,
+        r["nx"] if r["configuration"].startswith("size_") else r["nz"]))
     analysis_table(3,base,"runtimes.csv",runtime)
     folder,p = runs["reference"]
     settings = p["settings"]
@@ -32,8 +38,20 @@ def precipitation():
     x = table(folder/"size_edges.csv")["size_m"]
     z = table(folder/"axial_edges.csv")["z_m"]
     if not np.allclose(x[[0,-1]],[1e-6,900e-6],rtol=1e-12,atol=0):
-        raise ValueError("The field figure must retain the full 1--900 micrometre size domain")
+        raise ValueError("The saved reference must span the full 1--900 micrometre size domain")
     nx,nz = settings["nx"],settings["nz"]
+    info["display_conventions"] = dict(
+        fields="actual logarithmic size/uniform axial edges; linear 1--100 micrometre size-axis zoom; physical bin density; no interpolation",
+        field_size_axis="linear",
+        field_display_size_um=[1,100],
+        simulated_size_um=[1,900],
+        errors="normalized PWC L1 on common partitions; one common numerical reference",
+        outlet="stairs of bin averages; center-cubed volume weights; digitized number-density points only",
+        literature_ordinate="published ordinates unchanged, interpreted as SI m^-4; the printed per-micrometre label would violate the feed material scale",
+        color="shared linear scale from zero to the maximum over all four full reference fields; magma; negative tails use the lower endpoint colour",
+        field_color_scale="linear",
+        field_color_map="magma",
+        historical_tail_count_threshold_m4=1e9)
     fields,reference_numbers = [],[]
     for i in range(1,5):
         with gzip.open(folder/f"population_{i}.csv.gz","rt") as stream:
@@ -43,19 +61,9 @@ def precipitation():
     # Independent observables complement the distribution-norm refinement
     # table. No normalization is imposed on the physical populations.
     reference_account = table(folder/"accounting.csv")
-    color_minimum = 1e9
-    absolute_scale = nx*settings["population_absolute_tolerance"]*settings["population_scaling"]
-    checked_refinement = []
-    for row in rows(base/"refinement.csv"):
-        i = settings["times"].index(float(row["time_s"]))
-        reference_number = reference_account["outlet_number_per_m3"][i]
-        above = reference_number > absolute_scale
-        row.update(reference_outlet_number_per_m3=reference_number,
-            nominal_outlet_absolute_tolerance_scale_per_m3=absolute_scale,
-            outlet_reference_above_nominal_absolute_scale=above,
-            interpretable_outlet_L1=float(row["normalized_outlet_L1"]) if above else np.nan)
-        checked_refinement.append(row)
-    analysis_table(3,base,"checked_refinement.csv",checked_refinement)
+    # Preserve the established tail-count column and its threshold in existing
+    # exports. It is no longer the lower bound of the linear colour scale.
+    historical_tail_count_threshold = 1e9
     observables = []
     reference_centers = (x[:-1]+x[1:])/2
     for name,(run_path,record) in runs.items():
@@ -85,30 +93,33 @@ def precipitation():
                 negative_number_per_m2=a["negative_number_per_m2"],
                 stored_zero_cells=int(np.count_nonzero(numbers==0)),
                 negative_cells=int(np.count_nonzero(numbers<0)),
-                positive_cells_below_color_minimum=int(np.count_nonzero((numbers>0)&(numbers/np.diff(edges)[:,None]<color_minimum))),
+                positive_cells_below_color_minimum=int(np.count_nonzero((numbers>0)&(numbers/np.diff(edges)[:,None]<historical_tail_count_threshold))),
                 material_rate_defect_kg_m2_s=a["material_rate_defect_kg_m2_s"]))
     analysis_table(3,base,"refinement_observables.csv",observables)
     maximum = max(np.max(v) for v in fields)
-    norm = LogNorm(vmin=color_minimum,vmax=10**np.ceil(np.log10(maximum)))
+    norm = Normalize(vmin=0,vmax=maximum)
+    info["display_conventions"]["field_color_bounds_m4"] = [0.,float(maximum)]
     fig,axes = plt.subplots(2,2,figsize=(DOUBLE,4.8))
     fig.subplots_adjust(left=.09,right=.84,bottom=.11,top=.93,wspace=.3,hspace=.3)
     for letter,ax,t,data in zip("abcd",axes.flat,settings["times"],fields):
-        mesh = ax.pcolormesh(z,x*1e6,np.ma.masked_less_equal(data,0),norm=norm,cmap="viridis",shading="flat",rasterized=True)
-        ax.set(yscale="log",ylim=(1,900),xlabel=r"Axial position $z$ (m)",ylabel=r"Size $x$ ($\mu$m)")
+        mesh = ax.pcolormesh(z,x*1e6,data,norm=norm,cmap="magma",shading="flat",rasterized=True)
+        ax.set(yscale="linear",ylim=(1,100),xlabel=r"Axial position $z$ (m)",ylabel=r"Size $x$ ($\mu$m)")
         panel(ax,letter)
         ax.text(.97,.96,rf"$t={t:g}\,\mathrm{{s}}$",transform=ax.transAxes,ha="right",va="top",color="black",
                 bbox=dict(facecolor="white",edgecolor="none",alpha=.8,pad=1))
     coloraxis = fig.add_axes([.88,.16,.025,.74])
-    fig.colorbar(mesh,cax=coloraxis,label=r"Number density $n$ (m$^{-4}$)",extend="min")
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((0,0))
+    fig.colorbar(mesh,cax=coloraxis,label=r"Number density $n$ (m$^{-4}$)",format=formatter)
     export(fig,3,"precipitation_fields",info)
     fig,axes = plt.subplots(1,2,figsize=(DOUBLE,3.55))
     fig.subplots_adjust(left=.09,right=.98,bottom=.29,top=.93,wspace=.3)
-    colors = {1:"#8C564B",2:"#9467BD",3:"#D62728",13:"#2CA02C",50:"#FF7F0E",200:"#1F77B4"}
-    for i,nz_ in enumerate(info["configuration"]["outlet_nz"]):
-        data = table(runs[f"outlet_Nz{nz_}"][0]/"outlet.csv")
+    colors = ["#0072B2", "#D55E00", "#009E73", "#6A3D9A"]
+    for color,nz_ in zip(colors,info["configuration"]["axial_cells"]):
+        data = table(runs[f"axial_Nz{nz_}"][0]/"outlet.csv")
         edges = np.r_[data["left_m"],data["right_m"][-1]]*1e6
         for ax,quantity in zip(axes,(data["number_density_m4"]/1e15,data["volume_density_per_m"]*1e-6)):
-            ax.stairs(quantity,edges,color=colors.get(nz_,"#17BECF"),lw=1.0,label=rf"Package $N_z={nz_}$")
+            ax.stairs(quantity,edges,color=color,lw=1.0,label=rf"$N_z={nz_}$")
     data = table(folder/"outlet.csv")
     edges = np.r_[data["left_m"],data["right_m"][-1]]*1e6
     for ax,quantity in zip(axes,(data["number_density_m4"]/1e15,data["volume_density_per_m"]*1e-6)):
@@ -116,15 +127,12 @@ def precipitation():
     if figures.MODE == "production":
         lit = table(PAPER/"precipitation/data/literature"/"cadet_reference.csv")
         literature_edges = np.r_[lit["left_m"],lit["right_m"][-1]]
-        centers = (lit["left_m"]+lit["right_m"])*.5e6
-        for ax,quantity in zip(axes,(lit["number_density_m4"]/1e15,lit["volume_density_per_m"]*1e-6)):
-            ax.plot(centers,quantity,ls="none",marker="s",markevery=10,ms=3,mfc="none",color=".4",label="Public CADET verification")
         digitized = table(PAPER/"precipitation/data/literature"/"zhang_figure9c_digitized.csv")
         axes[0].errorbar(digitized["size_m"]*1e6,digitized["number_density_m4"]/1e15,
             xerr=digitized["size_uncertainty_m"]*1e6,yerr=digitized["density_uncertainty_m4"]/1e15,
             ls="none",marker="o",ms=3,mfc="white",color="k",elinewidth=.5,label="Zhang Fig. 9(c), digitized")
         comparisons = []
-        for name in ("outlet_Nz200","reference"):
+        for name in ("size_Nx200","reference"):
             values = table(runs[name][0]/"outlet.csv")
             edges_ = np.r_[values["left_m"],values["right_m"][-1]]
             comparisons.append(dict(configuration=name,
@@ -133,7 +141,7 @@ def precipitation():
                 normalized_volume_L1=density_l1(edges_,values["volume_density_per_m"],literature_edges,lit["volume_density_per_m"])))
         analysis_table(3,base,"public_cadet_comparison.csv",comparisons)
         extracted_comparison = []
-        for name in ("outlet_Nz200","reference"):
+        for name in ("size_Nx200","reference"):
             values = table(runs[name][0]/"outlet.csv")
             edges_ = np.r_[values["left_m"],values["right_m"][-1]]
             for point in digitized:
@@ -155,6 +163,54 @@ def precipitation():
         panel(ax,letter);ax.set(xscale="log",xlim=(1,900),xlabel=r"Particle size $x$ ($\mu$m)")
     fig.legend(*axes[0].get_legend_handles_labels(),loc="lower center",ncol=3)
     export(fig,3,"precipitation_outlet",info)
+
+    # Changing one coordinate at a time prevents fine-axial/coarse-size runs
+    # from being mixed into a misleading convergence or work-precision curve.
+    comparisons = rows(base/"refinement.csv")
+    for filename,work in (("precipitation_refinement",False),("precipitation_work_precision",True)):
+        fig,axes = plt.subplots(1,2,figsize=(DOUBLE,3.65))
+        fig.subplots_adjust(left=.14,right=.98,bottom=.25,top=.92,wspace=.45)
+        for letter,ax,direction,variable in zip("ab",axes,("size","axial"),("nx","nz")):
+            data = sorted((r for r in comparisons if r["refinement"]==direction and float(r["time_s"])==200.),
+                key=lambda r:int(r[variable]))
+            horizontal = [runs[r["comparison"]][1]["summary"]["seconds"] if work else int(r[variable]) for r in data]
+            for quantity,color,marker,label in (("normalized_field_L1",colors[0],"s","Whole field"),
+                    ("interpretable_outlet_L1",colors[1],"o","Outlet")):
+                values = np.array([float(r[quantity]) for r in data])
+                ax.loglog(horizontal,np.where(values>0,values,np.nan),color=color,marker=marker,
+                    mfc="white",lw=1.2,ms=4,label=label)
+            ax.set(xlabel="Integration wall time (s)" if work else
+                (r"Size bins $N_x$" if direction=="size" else r"Axial cells $N_z$"),
+                ylabel=r"Normalized $L^1$ difference")
+            if not work:
+                ax.set_xticks(horizontal,labels=[str(n) for n in horizontal])
+                ax.xaxis.set_minor_locator(NullLocator())
+            lower,upper = ax.get_ylim()
+            if upper/lower < 3:
+                ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
+                ax.yaxis.set_major_formatter(ScalarFormatter())
+            else:
+                ax.yaxis.set_major_locator(LogLocator(subs=(1,2,5),numticks=7))
+                ax.yaxis.set_major_formatter(LogFormatterSciNotation(labelOnlyBase=False,minor_thresholds=(np.inf,np.inf)))
+            ax.yaxis.set_minor_locator(NullLocator())
+            panel(ax,letter)
+            ax.text(.96,.95,rf"$N_z={nz}$" if direction=="size" else rf"$N_x={nx}$",
+                transform=ax.transAxes,ha="right",va="top",fontsize=8)
+        fig.legend(*axes[0].get_legend_handles_labels(),loc="lower center",ncol=2)
+        export(fig,3,filename,info)
+
+    if figures.MODE=="production":
+        destination = PAPER.parent/"docs/src/assets/continuous_precipitation_log"
+        destination.mkdir(parents=True,exist_ok=True)
+        for name in ("precipitation_fields","precipitation_outlet","precipitation_refinement","precipitation_work_precision"):
+            for suffix in (".png",".json"):
+                shutil.copyfile(PAPER/"precipitation/figures"/(name+suffix),destination/(name+suffix))
+        for name in ("refinement.csv","analysis/runtimes.csv","analysis/refinement_observables.csv",
+                "analysis/digitized_point_comparison.csv","literature/zhang_figure9c_digitized.csv",
+                "literature/provenance.json"):
+            shutil.copyfile(base/name,destination/Path(name).name)
+        for name in ("accounting.csv","outlet.csv","provenance.toml"):
+            shutil.copyfile(folder/name,destination/("reference_"+name))
 
 if __name__=="__main__":
     figures.run_plot(3,precipitation)

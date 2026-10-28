@@ -22,13 +22,13 @@
     "paper/moments/data/analysis/node_refinement.csv": "30d3f822b6412c3e29a6dffe363e814a6af688dd5d3a14fe6ad4a4bc37099eac"
   },
   "plotter_sha256": "6bc1bd8559a923269f2f5b1b4aca544ea2443c0c37a6bb7f65c12ba800a1268d",
-  "shared_plotting_sha256": "2b73a5d5c8990cb69eb030e1fc5bf1f94ee5ba448c507308b833a9e03e4b14f1",
-  "style_sha256": "8de37764733a09022d791dff6f5a3aaf53f74ed4b018181cd3dc53e325b0cb01",
+  "shared_plotting_sha256": "a7b3bfa618a93d88a362b7d415db853c3047812cc33737a5eede2a57673f4f63",
+  "style_sha256": "6d03afd1f9f96d8788dbbf80c6233a8dab370fafd07a2c18988dce5a99b7ca1c",
   "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
   "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
-  "matplotlib": "3.9.4",
+  "matplotlib": "3.8.4",
   "numpy": "1.26.4",
-  "pillow": "13.0.0",
+  "pillow": "10.3.0",
   "pymupdf": "1.28.2",
   "latex_version": "pdfTeX 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian)",
   "display_conventions": {
@@ -48,45 +48,7 @@
     299.9994,
     299.9994
   ],
-  "fonts": [
-    {
-      "name": "CMMI8",
-      "type": "Type1",
-      "embedded_bytes": 34904
-    },
-    {
-      "name": "CMMI9",
-      "type": "Type1",
-      "embedded_bytes": 35529
-    },
-    {
-      "name": "CMR10",
-      "type": "Type1",
-      "embedded_bytes": 35187
-    },
-    {
-      "name": "CMR6",
-      "type": "Type1",
-      "embedded_bytes": 32169
-    },
-    {
-      "name": "CMR8",
-      "type": "Type1",
-      "embedded_bytes": 32161
-    },
-    {
-      "name": "CMR9",
-      "type": "Type1",
-      "embedded_bytes": 33428
-    },
-    {
-      "name": "CMSY6",
-      "type": "Type1",
-      "embedded_bytes": 32022
-    }
-  ],
   "files": {
-    ".pdf": "b6751a7c44955a1b7063756fcc040a3aec209271f71bce6390a1af0e1f5be2a0",
-    ".png": "4a52dce3a22d03e1fbdfc6bbb755399b38b9665860b75c8930cdfc1301910b29"
+    ".png": "035a969229d5b542b2ab8f0b86f88bf7c2e01248fc3feab81188b97ac488f5f2"
   }
 }

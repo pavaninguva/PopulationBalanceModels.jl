@@ -1,0 +1,2 @@
+method,profile,bins,courant,dt,tf,rmse,l1,maximum_error,minimum_density,negative_number,number_drift,seconds,steps,bytes,gc_seconds
+weno5_ssprk33,gaussian,640,0.5,0.0078125,4.0,0.0006683573123241747,0.00022944480394002993,0.003406333312980743,-3.599648804662611e-10,1.0602632002515199e-12,-2.2737367544323206e-13,0.015157589,512,16268144,0.0

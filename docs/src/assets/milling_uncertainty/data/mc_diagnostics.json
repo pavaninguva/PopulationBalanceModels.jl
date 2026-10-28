@@ -1,0 +1,27 @@
+{
+    "method": "monte_carlo",
+    "seed": 2018255,
+    "iid": true,
+    "coordinates": "standard_normal",
+    "input_metadata": {
+        "transformation": "table1_affine",
+        "joint_law": "independent_gaussian",
+        "physical_units": [
+            "dimensionless",
+            "inverse_RPM_seconds",
+            "dimensionless",
+            "dimensionless"
+        ]
+    },
+    "design": null,
+    "solves": 12000,
+    "requested": 12000,
+    "setup_seconds": 4.943687541999976,
+    "solve_seconds": 250.72453499899981,
+    "observation_seconds": 6.780570824999979,
+    "total_seconds": 262.695811909,
+    "successful": 12000,
+    "failed": 0,
+    "failures": [
+    ]
+}

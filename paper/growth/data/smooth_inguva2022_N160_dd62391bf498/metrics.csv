@@ -1,2 +1,0 @@
-method,profile,bins,courant,dt,tf,rmse,l1,maximum_error,minimum_density,negative_number,number_drift,seconds,steps,bytes,gc_seconds
-inguva2022,smooth,160,1.0,0.0625,4.0,7.073120921559047e-15,5.059321017686358e-15,1.8873791418627727e-14,0.7001541769012889,-0.0,0.0,3.6507e-5,64,8768,0.0

@@ -1,46 +1,56 @@
 % Use, for example: \caption{\GrowthProfilesCaption}
-% The fourth case caption is generated from its frozen numerical results:
-% \input{figures/04_protein_crystallization/production/captions.tex}
-% \caption{\ProteinDataCaption} % or \ProteinCNTFitCaption / \ProteinGRDFitCaption
-% Corner captions: \ProteinCNTCornerCaption / \ProteinGRDCornerCaption
+% Protein captions are generated under paper/protein/figures/captions.tex.
 \newcommand{\GrowthProfilesCaption}{%
-Translation of an initially exponential population, $f(a,0)=100\exp(-a/0.01)$,
-at $t=4\,\mathrm{s}$ with $G=0.1$ on $a\in[0,1]$, zero inflow and open outflow.
-Both panels use exactly 100 uniform bins; (b) enlarges the translating front.
-The reference is the analytical bin average, and the numerical curves are
-piecewise-constant densities obtained from bin-integrated populations.
-All residual methods and the conservative HOC/midpoint update use $C=0.5$;
-Inguva2022 uses its required native $C=1$ update. Sparse markers identify
-computed bin values. Signed undershoots are retained, without clipping.
-The sharp front is a resolution diagnostic, not a smooth-order experiment.}
+Translation of the Gaussian $f(a,0)=100\exp[-(a-0.2)^2/(2(0.03)^2)]$
+initially restricted to $0\le a\le1$, with $G=0.1$ and $t=4\,\mathrm{s}$.
+Zero inflow and open outflow are used on 200 uniform bins. Panels (a,b) use
+$C=0.5$ and $C=1$, respectively; the characteristic Inguva2022 update is
+eligible only in (b). The initial centre moves from 0.2 to 0.6. Grey lines
+show the analytical density and black points its exact bin averages.
+Coloured lines join computed bin averages, with sparse markers at actual bin
+centres; they do not add subcell resolution. The seven pairings match the
+manual, including WENO5 with SSPRK3 and RK4 and conservative HOC with its
+native midpoint update. Signed undershoots are retained without clipping.}
+
+\newcommand{\GrowthGaussianErrorsCaption}{%
+Errors for the same translating Gaussian at $t=4\,\mathrm{s}$ on
+40, 80, 160, 320 and 640 bins. Panels (a,b) show integrated $L^1$ error
+$\sum_i\Delta a_i|\bar f_i-\bar f_i^{\mathrm{exact}}|$ and width-weighted
+RMSE $[\sum_i\Delta a_i(\bar f_i-\bar f_i^{\mathrm{exact}})^2/
+\sum_i\Delta a_i]^{1/2}$ against exact analytical bin integrals.
+Courant numbers are 0.5 except for the characteristic update's required one.
+The finite initial support and physical boundaries remain part of this test;
+the separate periodic calculation isolates smooth refinement behaviour.
+Exact zeros are omitted on logarithmic axes, not replaced by fabricated errors.}
 
 \newcommand{\GrowthConvergenceCaption}{%
-Smooth periodic constant-growth test on $[0,1]$, with
+Smooth periodic translation on $[0,1]$, with
 $f(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a)$, $G=0.1$ and $t=4\,\mathrm{s}$.
-Initial and exact final bin populations are integrated analytically.
-Meshes have 40, 80, 160, 320, 640, 1280 and 2560 bins.
-(a,b) Integrated $L^1$ error and width-weighted RMSE;
-(c,d) corresponding successive-grid orders
-$p_{\mathrm{obs}}=\log(E_c/E_f)/\log(N_f/N_c)$.
-RMSE is $[\sum_i\Delta a_i(\bar f_i-\bar f_i^{\mathrm{exact}})^2/
-\sum_i\Delta a_i]^{1/2}$. Courant numbers are 0.5, except the characteristic
-update's required value of one. Orders below the declared roundoff-resolution
-threshold are undefined, particularly for nearly exact characteristic shifts.
-Finite-range WENO slopes depend on nonlinear weights, temporal error and
-roundoff and are not new formal-order estimates. The complete HOC/midpoint method
-is second order in time despite its fourth-order interior spatial construction.}
+Panels (a,b) use the same integrated $L^1$ and width-weighted RMSE definitions
+as the Gaussian comparison. Initial and reference populations are exact bin
+integrals. Meshes have 40, 80, 160, 320 and 640 bins; Courant numbers are 0.5
+except Inguva2022's required one. These are independent paper calculations,
+not reused documentation timings.}
+
+\newcommand{\GrowthObservedOrdersCaption}{%
+Successive-grid orders $p_{\mathrm{obs}}=\log(E_c/E_f)/\log(N_f/N_c)$
+for the smooth periodic calculation, using (a) $L^1$ and (b) RMSE.
+Orders are undefined if either error is at or below the declared
+$1000\epsilon_{\mathrm{Float64}}$ resolution threshold. The near-exact
+characteristic shift therefore has no plotted formal-order estimate.
+Finite-range WENO slopes include nonlinear-weight and temporal effects and
+are not new formal orders. HOC/midpoint is second order in time despite its
+fourth-order interior spatial construction.}
 
 \newcommand{\GrowthWorkPrecisionCaption}{%
-Single-run integration cost for the same smooth periodic problem, meshes and
-error definition as the convergence figure. (a) Wall time versus bin count;
-(b) RMSE versus the same measured wall time. Each marker corresponds to an
-exported mesh configuration. A separate small warmup precedes one measured
-solve per method/boundary configuration. Model/grid assembly, explicit garbage
-collection, plotting and file I/O are excluded; integrator initialization,
-stepping, checks, in-solve allocation and
-saved states are included. These are single measurements without timing
-repeatability error bars. The characteristic method uses $C=1$; all others
-use $C=0.5$.}
+Single-run integration cost for the same smooth periodic problem, meshes,
+Courant numbers and error definitions as the convergence figure.
+(a) Wall time versus bin count; (b) RMSE versus the same measured wall time.
+Each marker corresponds to an exported mesh configuration. A separate small
+warmup precedes one measured solve for each actual method/boundary combination.
+Model/grid assembly, explicit garbage collection, plotting and file I/O are
+excluded; integrator initialization, stepping, checks, in-solve allocations
+and saved states are included. There are no repeatability error bars.}
 
 \newcommand{\MomentMethodsCaption}{%
 Aggregation--fragmentation of an initially exponential volume distribution
@@ -75,25 +85,30 @@ Closure error, integration error and unequal representation work are distinct.}
 Transient number density in an axially dispersed continuous precipitator,
 using Zhang et al. (2024), Case 7A, SI Table S8.
 (a--d) $t=5,40,80,200\,\mathrm{s}$ in chronological order.
-Actual logarithmic size edges span $1$--$900\,\mu\mathrm{m}$ and the axial
-mesh is uniform over $0$--$0.47\,\mathrm{m}$. The displayed numerical reference
-has 400 size bins and 400 axial cells. The cell averages are
+The computational logarithmic size edges span $1$--$900\,\mu\mathrm{m}$;
+the linear size axis displays a $1$--$100\,\mu\mathrm{m}$ zoom.
+The full size domain is retained for outlet curves, errors and inventories.
+The axial mesh is uniform over $0$--$0.47\,\mathrm{m}$. The numerical reference
+has 1000 size bins and 500 axial cells. The cell averages are
 computed with geometry-aware size WENO5, axial MUSCL, and checked CVODE-BDF;
-they are not CADET WENO35 results. CVODE uses maximum BDF order three through
-5 s, then restarts at maximum order two from the unchanged physical state,
+they are not CADET WENO35 results. CVODE uses adaptive BDF order up to five,
+stability-limit detection and no prescribed restart,
 relative tolerance $10^{-7}$, absolute tolerances $10^{-14}$ for the
 $10^{12}$-scaled bin populations and $10^{-11}\,\mathrm{kg\,m^{-3}}$ for solute,
-and a 0.5 s step cap. All panels share one logarithmic color scale.
-Nonpositive cells are masked; values below the displayed range use its lower
-color, and signed minima and negative populations are exported. No positive
+and a 0.5 s step cap. All panels share one linear color scale with the
+\texttt{magma} palette, from zero to the maximum across the four full fields.
+Zero and tiny negative tails use its darkest color; signed minima and negative
+populations remain in the exports. No numerical states are clipped. No positive
 startup background, image smoothing or spatial interpolation is introduced.
+The negative-number fraction at the saved reference times is below $10^{-23}$.
 This external integrator has no positivity guarantee; accepted states are checked.
 The initial population and solute are zero. Primary and secondary nucleation,
 solute depletion, Danckwerts inflow and zero-gradient outflow are retained.
-Independent $200\times400$ and $400\times200$ checks separate size and axial
-effects. A same-mesh run tightens all tolerances tenfold and halves the step cap;
-differences are recorded at all four times. No
-analytical coupled PSD solution exists for this case.}
+Independent size counts 50, 100, 200 and 400 at fixed 500 axial cells, and axial
+counts 50, 100, 200 and 400 at fixed 1000 size bins separate the two errors.
+The same-mesh time-refinement check uses tolerances tenfold tighter and half the
+step cap; its differences are exported at all four times. No analytical coupled PSD solution
+exists for this case.}
 
 \newcommand{\PrecipitationOutletCaption}{%
 Outlet distributions at $t=200\,\mathrm{s}$ for the same Case 7A model.
@@ -101,18 +116,42 @@ Outlet distributions at $t=200\,\mathrm{s}$ for the same Case 7A model.
 $q_3(x_i)=x_i^3N_i/[\Delta x_i\sum_jx_j^3N_j]$, expressed per micrometre.
 Here $x_i$ is the arithmetic bin centre.
 The particle-size axis is logarithmic; densities remain per linear size,
-not per log-size. Curves at axial counts 2, 3, 13, 50 and 200 use 200
+not per log-size. Curves at axial counts 50, 100, 200 and 400 use 1000
 logarithmic size bins, with a separately identified refined package reference.
-The reference has $400\times400$ cells. The unsupported one-cell axial case
-is omitted explicitly.
+The reference has $1000\times500$ cells.
 Low axial resolution changes peak number and the distribution of solid material.
 Open circles in (a) are digitized from the published Figure 9(c),
 $N_x=N_z=200$, WENO35 in both coordinates; bars show conservative two-pixel
 extraction uncertainty over the unambiguous 1.5--40 micrometre interval.
-Open squares are a separate, pinned public CADET verification calculation
-(200 by 200 cells, size Upwind/axial WENO23), not that published WENO35 curve.
+Published ordinate readings are unchanged and interpreted on the model's SI
+m$^{-4}$ scale; taking the source figure's printed per-micrometre label
+literally would exceed the feed's available material by orders of magnitude.
+Only the number-density branch is digitized; its partial size window cannot
+define an independently normalized volume distribution in (b).
 The package uses size WENO5/axial MUSCL and the rounded SI flow rate
 $1.67\times10^{-7}\,\mathrm{m^3\,s^{-1}}$; the public CADET input uses
 $10\,\mathrm{mL\,min^{-1}}$. Volume densities integrate to one with actual
 bin widths; they differ from the paper's material percentages per logarithmic
 bin. Literature data and a finite numerical reference are not exact solutions.}
+
+\newcommand{\PrecipitationRefinementCaption}{%
+Separate refinement at $t=200\,\mathrm{s}$ against the common logarithmic-size
+$1000\times500$ numerical reference. (a) Size counts 50, 100, 200 and 400 at
+$N_z=500$; (b) axial counts 50, 100, 200 and 400 at $N_x=1000$.
+Whole-field and outlet differences integrate the absolute difference of
+piecewise-constant number densities over common partitions, divided by the
+reference number integral on the corresponding domain. This differs from the
+paper's spline comparison. Differences include representation, source-deposition,
+evolution and finite-reference errors, not an isolated WENO order.
+Both refinements reduce the outlet discrepancy; coarse axial grids give the
+larger difference over these tested ranges. Near-overlapping squares and circles
+are separately evaluated whole-field and outlet norms.}
+
+\newcommand{\PrecipitationWorkPrecisionCaption}{%
+The same two refinement paths and normalized differences as the preceding
+figure, plotted against single-solve integration wall time. A separate small
+compilation warmup precedes the measured solves for this method and boundary
+combination. Stepping, checks and saved
+states are timed; assembly, explicit GC, export and plotting are excluded.
+Lines follow increasing resolution within a path and are not Pareto fronts.
+There are no repeatability error bars.}

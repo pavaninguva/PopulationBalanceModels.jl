@@ -30,6 +30,13 @@ Laplace uncertainty and optional MCMC. The [growth-kinetics example](docs/src/ca
 fits analytical density curves with Gaussian noise and compares two prior choices.
 Optim enables fitting; AdvancedHMC and MCMCDiagnosticTools enable sampling.
 
+[Forward uncertainty quantification](docs/src/uncertainty_quantification.md)
+propagates joint inputs or posterior draws without an estimation problem.
+Monte Carlo and non-intrusive Hermite/Legendre PCE share forward builders and
+observables. The [milling example](docs/src/case_studies/milling_uncertainty.md)
+includes numerical verification, independent surrogate validation and explicit
+paper-reconstruction qualifications.
+
 [Trajectory transport methods](docs/src/methods/characteristics.md) implement
 eligible 1D and separable 2D affine growth with matched travel-time meshes and
 CFL=1 steps, checked during compilation and simulation.

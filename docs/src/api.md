@@ -172,6 +172,17 @@ continuous forward/adjoint ODE sensitivities; see the estimation chapter for
 dependencies and compatibility. `TruncatedGaussianLikelihood(sigma=...)`
 provides normalized independent nonnegative measurements.
 
+## Forward uncertainty quantification
+
+Data-free forward uncertainty uses `UncertainInputs`, `UQProblem` and
+`propagate(...,MonteCarlo(...); max_solves=...)`. Named existing observables
+retain their transient/stationary and representation contracts. `fit_pce`,
+`PolynomialChaos`, `pce_design` and `evaluate_pce` add non-intrusive Hermite/Legendre
+regression; `uq_summary` and `diagnostics` distinguish propagated variability,
+numerical failures and iid sampling error. See
+[Forward uncertainty quantification](uncertainty_quantification.md) for a complete
+first calculation, budgets, joint-input semantics and validation.
+
 ## Numerical extensions
 
 A sectional policy supplies `prepare_term(term,method,representation; kwargs...)`

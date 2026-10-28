@@ -1,8 +1,31 @@
 # Documentation figures
 
+## Milling uncertainty
+
+Numerical production and plotting are separate:
+
+```sh
+julia --project=examples/environments/milling -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
+julia --project=examples/environments/milling examples/milling_uncertainty.jl --smoke
+python docs/benchmarks/plot_milling_uncertainty.py --smoke
+julia --project=examples/environments/milling examples/milling_uncertainty.jl --full
+python test/milling_results.py
+python docs/benchmarks/plot_milling_uncertainty.py --usetex
+```
+
+Final PNG/PDF/SVG figures read only completed production exports under
+`docs/src/assets/milling_uncertainty/data/`. Smoke data and previews stay under
+`.cache/milling_uncertainty/`. The plotter verifies producer-file hashes and
+requires real LaTeX for final output; it never runs a forward solve. See the
+[case study](../src/case_studies/milling_uncertainty.md) for source assumptions,
+interval definitions and numerical/validation checks.
+
+## Existing figure workflows
+
 These plotters consume the documentation examples' exported data. They are
-independent of the [manuscript workflow](../../paper/README.md), which has its
-own configurations, numerical outputs and publication figures. Documenter copies
+separate from the [manuscript workflow](../../paper/README.md). The active
+protein and logarithmic tubular pages share their paper figure producers;
+the commands below otherwise use the documentation exports. Documenter copies
 current downloadable sources and builds pages; it does not rerun expensive fits
 or numerical studies.
 
@@ -30,7 +53,7 @@ warmed timing protocol; other cases keep their own stated timing protocols.
 | Gaussian growth/time comparison | `constant_growth_methods.jl` | `plot_transport_comparisons.py constant --usetex` |
 | Batch cooling | `cooling_crystallization_benchmark.jl` | `plot_transport_comparisons.py cooling --usetex` |
 | Qamar moment comparisons | `qamar_moment_benchmarks.jl` | `plot_case_studies.py moments --usetex`, then `plot_moment_comparison.py --usetex` |
-| Tubular precipitation | `continuous_precipitation.jl` | `plot_population_studies.py precipitation --usetex` |
+| Historical uniform-size tubular precipitation | `continuous_precipitation.jl` | `plot_population_studies.py precipitation --usetex` |
 | Two-coordinate variable growth | `inguva_braatz_case2.jl` | `plot_case_studies.py transport --usetex` |
 | Stem-cell marker dynamics | `stem_cell_population.jl` | `plot_stem_cells.py --usetex` |
 | Synthetic Bayesian growth fit | `estimate_size_dependent_growth.jl` | `plot_bayesian_growth.py --usetex` |
@@ -53,18 +76,20 @@ for its driver, unresolved closures and retained long-time limitations.
 
 The cooling calculation uses a declared nonnegative initial distribution and a
 refined numerical reference, not a repaired version of the printed polynomial.
-The growth comparison uses a Gaussian while the independent paper calculation
-retains its exponential input. The two are not interchangeable cached results.
+The manual and paper growth comparisons use the same Gaussian and periodic
+problem definitions. Their numerical exports and timings are generated
+independently; they are not interchangeable cached results.
 Qamar `--methods-only` reuses the retained sectional reference; it still records
 failed closures and incomplete trajectories. Collision EQMOM remains unresolved.
 
-Tubular precipitation separates size and axial refinement. Its default runs
-comparisons followed by the finer size study; `--size-resolution` runs only the
-latter using retained comparison outlets. The full SI mesh arrangement is an
-explicit `--full` option and was not executed for the manual. The package's
-WENO5/MUSCL discretizations and numerical reference are distinct from CADET's
-methods. Preserve the reference's outstanding spatial/time qualifications beside
-the figures; no analytical coupled PSD solution exists for this case.
+The active tubular study uses `julia --project=paper paper/precipitation/run.jl`
+and `python paper/precipitation/plot.py`. It uses logarithmic-size WENO5, axial
+MUSCL, separate 50–400-cell refinement paths and a common 1000 × 500 reference
+with a same-mesh temporal check. The plotter publishes the same PNGs to paper
+and manual assets. `examples/continuous_precipitation.jl` supplies the common
+physical builder; its older `--size-resolution` and `--full` modes retain their
+historical uniform-size studies. They do not regenerate the active figures.
+Neither calculation is a CADET backend or an analytical coupled PSD solution.
 
 The stem-cell `--smoke` calculation writes to the system temporary directory;
 the full synthetic study exports the separate grid, time, daughter-quadrature

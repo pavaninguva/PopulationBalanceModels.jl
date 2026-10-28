@@ -22,7 +22,8 @@ class GrowthData(unittest.TestCase):
         cls.base,cls.info,cls.runs = plots.load_case(1,check_checkout=CHECK_CHECKOUT)
 
     def test_bin_integrals_and_width_weighted_norms(self):
-        for name,(folder,_) in self.runs.items():
+        self.assertEqual(self.info['configuration']['profile_family'],'gaussian')
+        for name,(folder,record) in self.runs.items():
             data = plots.table(folder/"profile.csv")
             metric = plots.rows(folder/"metrics.csv")[0]
             widths = data["right"]-data["left"]
@@ -31,14 +32,20 @@ class GrowthData(unittest.TestCase):
             self.assertAlmostEqual(float(metric["rmse"]),float(np.sqrt(np.dot(widths,error**2)/widths.sum())),delta=1e-12)
             self.assertAlmostEqual(float(metric["l1"]),float(np.dot(widths,np.abs(error))),delta=1e-12)
             self.assertAlmostEqual(float(metric["negative_number"]),float(-np.minimum(data["number"],0).sum()),delta=1e-13)
-            if name.startswith("front_"):
-                self.assertEqual(len(data),100)
-                a = np.maximum(data["left"]-.4,0)
-                b = np.maximum(data["right"]-.4,0)
-                # Independent CDF integration; cancellation in negligible tails
-                # is covered by an absolute population tolerance.
-                exact = np.exp(-a/.01)-np.exp(-b/.01)
-                np.testing.assert_allclose(data["exact_number"],exact,rtol=2e-12,atol=5e-15)
+            if name.startswith("gaussian_"):
+                settings=record['settings']
+                self.assertEqual(len(data),settings['bins'])
+                self.assertEqual(settings['standard_deviation'],.03)
+                shift=settings['growth']*settings['tf']
+                a=np.maximum(data['left']-shift,0)
+                b=np.minimum(data['right']-shift,1)
+                # Independent normal-CDF integration; small tails use an
+                # absolute population tolerance rather than density clipping.
+                z=lambda x:(x-settings['center'])/(math.sqrt(2)*settings['standard_deviation'])
+                erf=np.vectorize(math.erf)
+                scale=settings['height']*settings['standard_deviation']*math.sqrt(math.pi/2)
+                exact=np.where(b>a,scale*(erf(z(b))-erf(z(a))),0.)
+                np.testing.assert_allclose(data['exact_number'],exact,rtol=2e-12,atol=2e-14)
 
     def test_observed_orders_and_characteristic_resolution(self):
         data = plots.table(self.base/"observed_orders.csv")
@@ -52,6 +59,25 @@ class GrowthData(unittest.TestCase):
                     else:
                         expected = math.log(a[error]/b[error])/math.log(b["bins"]/a["bins"])
                         self.assertAlmostEqual(b[order],expected,places=12)
+
+    def test_time_methods_courants_and_steps(self):
+        methods={'upwind':'ForwardEuler','muscl':'SSPRK33','weno3':'SSPRK33',
+                 'weno5_ssprk33':'SSPRK33','weno5':'RK4',
+                 'hoc':'HOCFiniteVolume','inguva2022':'Inguva2022'}
+        self.assertEqual(set(plots.METHODS),set(methods))
+        for folder,record in self.runs.values():
+            settings=record['settings']
+            metric=plots.rows(folder/'metrics.csv')[0]
+            name=settings['method']
+            self.assertTrue(settings['api_time_method'].endswith(methods[name]))
+            self.assertEqual(float(metric['courant']),settings['courant'])
+            expected=settings['tf']*settings['growth']*settings['bins']/settings['courant']
+            steps=int(metric['steps'])
+            self.assertGreaterEqual(steps,round(expected))
+            self.assertLessEqual(steps,round(expected)+1)
+            if name=='inguva2022':
+                self.assertEqual(settings['courant'],1.)
+                self.assertEqual(steps,round(expected))
 
     def test_common_partition_norm_and_unit_conversion(self):
         a,b = np.array([0.,.5,1.]),np.array([0.,.25,1.])
@@ -128,6 +154,44 @@ class MomentData(unittest.TestCase):
         self.assertEqual(set(adaptive["active_rank"]),{3})
 
 class PrecipitationData(unittest.TestCase):
+    def test_separate_refinement_coordinates_and_reference_controls(self):
+        base,info,runs = plots.load_case(3,check_checkout=CHECK_CHECKOUT)
+        cfg = info['configuration']
+        if plots.MODE == 'production':
+            self.assertEqual((cfg['reference_nx'],cfg['reference_nz']),(1000,500))
+            self.assertEqual(cfg['size_bins'],[50,100,200,400])
+            self.assertEqual(cfg['axial_cells'],[50,100,200,400])
+        reference = runs['reference'][1]['settings']
+        temporal = runs['time_refinement'][1]['settings']
+        self.assertEqual((reference['nx'],reference['nz']),(temporal['nx'],temporal['nz']))
+        self.assertEqual(reference['physical_parameters'],temporal['physical_parameters'])
+        for name in ('relative_tolerance','population_absolute_tolerance','bulk_absolute_tolerance'):
+            self.assertAlmostEqual(reference[name]/temporal[name],cfg['temporal_refinement_factor'])
+        self.assertEqual(reference['maximum_step']/temporal['maximum_step'],2.)
+        for name,(_,record) in runs.items():
+            s = record['settings']
+            if name.startswith('size_Nx'):
+                self.assertEqual(s['nz'],cfg['reference_nz'])
+            if name.startswith('axial_Nz'):
+                self.assertEqual(s['nx'],cfg['reference_nx'])
+        # An unresolved early outlet must remain distinguishable from an
+        # accurate relative error. Reconstruct the flag from the independently
+        # exported inventory and the declared, dimensional tolerance scale.
+        account = plots.table(runs['reference'][0]/'accounting.csv')
+        nominal = reference['nx']*reference['population_absolute_tolerance']*reference['population_scaling']
+        for row in plots.rows(base/'refinement.csv'):
+            i = reference['times'].index(float(row['time_s']))
+            number = account['outlet_number_per_m3'][i]
+            above = number > nominal
+            self.assertEqual(row['outlet_reference_above_nominal_absolute_scale'].lower()=='true',above)
+            self.assertEqual(float(row['nominal_outlet_absolute_tolerance_scale_per_m3']),nominal)
+            self.assertAlmostEqual(float(row['reference_outlet_number_per_m3']),number,
+                delta=3e-14*max(1,abs(number)))
+            if above:
+                self.assertEqual(float(row['interpretable_outlet_L1']),float(row['normalized_outlet_L1']))
+            else:
+                self.assertTrue(np.isnan(float(row['interpretable_outlet_L1'])))
+
     def test_geometry_scaling_normalization_and_accounting(self):
         base,info,runs = plots.load_case(3,check_checkout=CHECK_CHECKOUT)
         for name,(folder,provenance) in runs.items():
@@ -138,12 +202,16 @@ class PrecipitationData(unittest.TestCase):
             self.assertEqual(summary["status"],"completed")
             self.assertEqual(summary["completed_time"],settings["tf"])
             self.assertEqual(summary["steps"],summary["checked_steps"])
-            self.assertEqual(settings["maximum_bdf_order"],3)
-            self.assertEqual(settings["late_maximum_bdf_order"],2)
-            self.assertEqual(summary["restarts"],1)
-            self.assertEqual(summary["phase_end_times"],[5.,200.])
-            self.assertEqual(summary["phase_maximum_orders"],[3,2])
-            self.assertTrue(all(1<=actual<=cap for actual,cap in zip(summary["phase_maximum_observed_orders"],[3,2])))
+            self.assertGreaterEqual(summary["growth_jacobian_updates"],1)
+            self.assertGreaterEqual(summary["preconditioner_setups"],summary["growth_jacobian_updates"])
+            self.assertEqual(settings["maximum_bdf_order"],info['configuration']['maximum_bdf_order'])
+            self.assertEqual(settings["late_maximum_bdf_order"],info['configuration']['late_maximum_bdf_order'])
+            restart = settings['late_maximum_bdf_order'] != 0
+            caps = [settings['maximum_bdf_order'],settings['late_maximum_bdf_order']] if restart else [settings['maximum_bdf_order']]
+            self.assertEqual(summary["restarts"],int(restart))
+            self.assertEqual(summary["phase_end_times"],[settings['bdf_restart_time'],200.] if restart else [200.])
+            self.assertEqual(summary["phase_maximum_orders"],caps)
+            self.assertTrue(all(1<=actual<=cap for actual,cap in zip(summary["phase_maximum_observed_orders"],caps)))
             self.assertEqual(sum(summary["phase_steps"]),summary["steps"])
             self.assertGreaterEqual(summary["minimum_scaled_population"],-1e-8)
             self.assertGreaterEqual(summary["minimum_solute"],-1e-8)
@@ -188,6 +256,43 @@ class PrecipitationData(unittest.TestCase):
             edges = np.r_[values["left_m"],values["right_m"][-1]]
             independent = plots.density_l1(edges,values["number_density_m4"],reference_edges,truth["number_density_m4"])
             self.assertAlmostEqual(independent,comparison["normalized_outlet_L1"],delta=2e-13)
+
+    def test_whole_field_error_and_literature_provenance(self):
+        base,info,runs = plots.load_case(3,check_checkout=CHECK_CHECKOUT)
+        path,producer = runs['reference']
+        nx,nz = producer['settings']['nx'],producer['settings']['nz']
+        x = plots.table(path/'size_edges.csv')['size_m']
+        z = plots.table(path/'axial_edges.csv')['z_m']
+        with gzip.open(path/'population_4.csv.gz','rt') as stream:
+            truth = np.loadtxt(stream,skiprows=1).reshape((nx,nz),order='F')/np.diff(x)[:,None]
+        for row in plots.rows(base/'refinement.csv'):
+            if float(row['time_s']) != 200.:
+                continue
+            path,record = runs[row['comparison']]
+            a = plots.table(path/'size_edges.csv')['size_m']
+            b = plots.table(path/'axial_edges.csv')['z_m']
+            with gzip.open(path/'population_4.csv.gz','rt') as stream:
+                density = np.loadtxt(stream,skiprows=1).reshape((record['settings']['nx'],record['settings']['nz']),order='F')/np.diff(a)[:,None]
+            common_x,common_z = np.unique(np.r_[x,a]),np.unique(np.r_[z,b])
+            mx,mz = (common_x[:-1]+common_x[1:])/2,(common_z[:-1]+common_z[1:])/2
+            ix,iz = np.searchsorted(x,mx)-1,np.searchsorted(z,mz)-1
+            ia,ib = np.searchsorted(a,mx)-1,np.searchsorted(b,mz)-1
+            weights = np.diff(common_x)[:,None]*np.diff(common_z)[None,:]
+            ref = truth[np.ix_(ix,iz)]
+            error = np.sum(np.abs(density[np.ix_(ia,ib)]-ref)*weights)/np.sum(ref*weights)
+            self.assertAlmostEqual(error,float(row['normalized_field_L1']),delta=3e-13)
+        if plots.MODE == 'production':
+            import json,hashlib
+            meta = json.loads((base/'literature/provenance.json').read_text())
+            digitized = plots.table(base/'literature/zhang_figure9c_digitized.csv')
+            self.assertEqual(meta['digitization']['figure'],'9(c)')
+            self.assertEqual(len(digitized),17)
+            source = base.parents[2]/'local_papers/Zhang2024.pdf'
+            if source.exists():
+                self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(),meta['digitization']['pdf_sha256'])
+            # Pixel-row calibration is independent of any package prediction.
+            expected = (1098-digitized['pixel_row'])*1.2e15/496
+            np.testing.assert_allclose(digitized['number_density_m4'],expected,rtol=3e-14)
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()

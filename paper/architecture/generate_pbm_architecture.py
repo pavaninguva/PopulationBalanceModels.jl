@@ -16,12 +16,11 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Rectangle
 from matplotlib.path import Path as GeometryPath
 import numpy as np
-import pymupdf
 
 PAPER = Path(__file__).resolve().parents[1]
 ROOT = PAPER.parent
 sys.path.insert(0, str(PAPER))
-from plotting_style import configure
+from plotting_style import configure, save_png
 
 COLORS = dict(ink='#243548', muted='#5D6B78', line='#C7D0D8',
               dependency_heading='#080808', dependency_category='#303030',
@@ -183,14 +182,7 @@ def main():
     out=args.output_dir;out.mkdir(parents=True,exist_ok=True)
     name='section2_architecture_revised'+('_preview' if args.preview else '')
     revision=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
-    pdf=out/(name+'.pdf')
-    fig.savefig(pdf,metadata={'Creator':'generate_pbm_architecture.py','Subject':f'Architecture checked against {revision}',
-                              'CreationDate':None,'ModDate':None})
-    with pymupdf.open(pdf) as document:
-        document[0].get_pixmap(dpi=300,alpha=False).save(out/(name+'.png'))
-    svg=out/(name+'.svg')
-    fig.savefig(svg,metadata={'Date':None})
-    svg.write_text('\n'.join(line.rstrip() for line in svg.read_text().splitlines())+'\n')
+    save_png(fig,out/(name+'.png'),creator='generate_pbm_architecture.py')
     plt.close(fig)
     receipt=dict(revision=revision,package_version=project['version'],
                  renderer='preview mathtext' if args.preview else 'actual LaTeX',dpi=300,
@@ -202,8 +194,7 @@ def main():
     (out/(name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
     if not args.preview:
         docs=ROOT/'docs/src/assets/architecture';docs.mkdir(parents=True,exist_ok=True)
-        for suffix in ('png','svg','pdf'):
-            shutil.copy2(out/(name+'.'+suffix),docs/(name+'.'+suffix))
+        shutil.copy2(out/(name+'.png'),docs/(name+'.png'))
     print(out)
 
 

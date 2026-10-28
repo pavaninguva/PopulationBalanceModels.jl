@@ -1,4 +1,14 @@
 using Test, PopulationBalanceModels, NonlinearSolve, LinearAlgebra
+@testset "Data-free stationary forward UQ" begin
+    g=Grid1D([0.,.4,1.])
+    op=compile(PBMModel(Birth((x,p,t,c)->2.)+Death((x,p,t,c)->p.k)),g)
+    base=StationaryPBMProblem(op,ones(2);p=(k=1.,),autonomous=true)
+    inputs=UncertainInputs([(k=.5,),(k=1.,),(k=2.,)])
+    uq=UQProblem(base,inputs;outputs=(number=MomentObservable(0),))
+    result=propagate(uq,MonteCarlo(3);max_solves=3)
+    @test result.values≈[4. 2. 1.] atol=1e-8
+    @test result.layout.times===nothing && diagnostics(result).solves==3
+end
 
 @testset "Stationary nonlinear collision moments and closure Jacobians" begin
     p=(J=1.,K=.4,d=.3)

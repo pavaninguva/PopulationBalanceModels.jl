@@ -48,6 +48,16 @@ isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_li
     @test sum(c.divergences for c in draws.diagnostics.per_chain)==draws.diagnostics.divergences
     @test all(c->0<c.acceptance_rate<=1 && c.step_size>0,draws.diagnostics.per_chain)
     @test parameter_draws(p,draws;n=12,seed=2).z==parameter_draws(p,draws;n=12,seed=2).z
+    retained_inputs=UncertainInputs(p,draws;n=12,seed=2,
+        map=theta->merge(theta.shared,theta.experiments.run))
+    forward=UQProblem(f.pb,retained_inputs;
+        outputs=(curve=first(first(p.experiments).measurements).observable,),
+        times=[0.,1.,2.,3.],solver=f.solver)
+    propagated=propagate(forward,MonteCarlo(12);max_solves=12)
+    selected=parameter_draws(p,draws;n=12,seed=2)
+    @test propagated.values≈f.A*selected.z atol=1e-14
+    @test propagated.ids==selected.indices
+    @test !propagated.metadata.iid && uq_summary(propagated).mean_mcse===nothing
     short=sample_posterior(p;initial=result,laplace=result.uncertainty,warmup=50,samples=24,chains=2,seed=43)
     repeat=sample_posterior(p;initial=result,laplace=result.uncertainty,warmup=50,samples=24,chains=2,seed=43)
     @test short.z==repeat.z

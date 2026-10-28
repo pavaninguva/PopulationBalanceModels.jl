@@ -203,7 +203,7 @@ def rejected_panel(canvas, report):
             fontsize=9, linespacing=1.6)
 
 
-def comparison(model,kind='laplace'):
+def comparison(model,kind='laplace', *, tables=False):
     folder = BASE/model
     verify_model(folder)
     analysis = ANALYSIS/model
@@ -264,21 +264,23 @@ def comparison(model,kind='laplace'):
         rows.append(dict(parameter=meta['name'],units=meta['units'],
                          MCMC_median=q[1],MCMC_q025=q[0],MCMC_q975=q[2],
                          Laplace_status=report['status'],Laplace_median=lq[1],Laplace_q025=lq[0],Laplace_q975=lq[2]))
-    write_tables(analysis, rows, samples, cheap, metadata,kind)
+    if tables:
+        write_tables(analysis, rows, samples, cheap, metadata,kind)
     receipt=dict(model=model,approximation=kind,status=report['status'],approximation_sha256=sha(report_path),
                  compatibility=compatibility,
                  posterior_sha256=sha(folder/'posterior_draws.csv'),gaussian_draws=diagnostics,
-                 renderer='actual LaTeX; vector PDF rendered at 300 dpi',
+                 renderer='actual LaTeX; 300-dpi PNG (in-memory vector rasterization)',
                  plotting_source_sha256=sha(Path(__file__)),
                  density_helpers_sha256=sha(Path(__file__).resolve().parents[1]/'_support/posterior_density.py'),
                  figures={f'{name}.{ext}':sha(OUT/f'{name}.{ext}')
-                          for name in figure_names for ext in ('pdf','svg','png')},
+                          for name in figure_names for ext in ('png',)},
                  contour_convention='MCMC whitened KDE 68/95%; local Gaussian transformed probability ellipses, not displayed-coordinate HDRs',
                  numerical_production_files='read only; no fit, sampling or latent propagation')
-    prefix=kind+'_' if kind!='laplace' else ''
     if kind=='laplace':
         receipt['laplace_sha256']=receipt['approximation_sha256'] # existing receipt readers
-    (analysis/(prefix+'comparison_plot.json')).write_text(json.dumps(receipt,indent=2)+'\n')
+    # Retain the original analysis/producer receipts. This records only the
+    # current PNG redraw and never changes the stored uncertainty calculation.
+    (OUT/(figure_names[0]+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
 
 
 def write_tables(folder, rows, samples, cheap, metadata,kind='laplace'):
@@ -312,14 +314,16 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model',choices=['cnt','cnt_grd','both'],default='both')
     parser.add_argument('--approximation',choices=list(APPROXIMATIONS),default='laplace')
+    parser.add_argument('--tables',action='store_true',help='Explicitly regenerate derived comparison tables')
     args=parser.parse_args(argv)
     configure(require_dvipng=False)
     for model in ('cnt','cnt_grd') if args.model=='both' else (args.model,):
-        comparison(model,args.approximation)
+        comparison(model,args.approximation,tables=args.tables)
     caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (a) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (b) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the inference-coordinate MAP. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
     if args.approximation=='gauss_newton':
         caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (a) A joint Gaussian in the original inference coordinates, centred at the retained MAP and using the whitened prediction Jacobian plus the actual transformed-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (b) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
-        publish_gauss_newton_tables()
+        if args.tables:
+            publish_gauss_newton_tables()
     (OUT/(args.approximation+'_captions.tex')).write_text(caption+'\n')
 
 

@@ -2,7 +2,7 @@
 
 ## Source organization
 
-![Model construction, forward problems, estimation, and dependency roles](assets/architecture/section2_architecture_revised.svg)
+![Model construction, forward problems, estimation, and dependency roles](assets/architecture/section2_architecture_revised.png)
 
 Physical terms and numerical preparation are shared by transient and stationary
 forward problems. Their inputs differ: a transient problem needs an initial
@@ -17,7 +17,7 @@ The diagram does not promise every combination of terms and methods.
 DQMOM evolves weights and weighted abscissas;
 the other displayed moment route need not have the same state layout.
 
-The [vector figure](assets/architecture/section2_architecture_revised.pdf) and
+The [figure](assets/architecture/section2_architecture_revised.png) and
 [generator](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/paper/architecture/generate_pbm_architecture.py)
 use the current dependency declarations. Regenerate without simulations using
 `python paper/architecture/generate_pbm_architecture.py --usetex` from the

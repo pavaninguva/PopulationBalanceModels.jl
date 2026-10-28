@@ -1,39 +1,39 @@
-case = "03_tubular_precipitation"
-derived_files = []
+case = "precipitation"
 mode = "production"
 schema = 1
-source_digest = "5624ad5a076db6cfa006f02ee369865e6a003c5601511c732ac352feb44584a0"
-workflow_digest = "11294f10eb4c0cdffe979544801e5661b37180e39fb614399422de90819636dc"
+source_digest = "04779370bb9406b4f7f04096b0a243cc82810730b96d4106a59cd6111d343981"
+workflow_digest = "7e2b98c8cd1cddc7fdad5fcb36beb7044c9c11aedb81bd1591775aba6a03c674"
 
 [configuration]
-axial_check_nz = 200
+axial_cells = [50, 100, 200, 400]
 bdf_restart_time = 5.0
 bulk_absolute_tolerance = 1.0e-11
 final_time = 200.0
-late_maximum_bdf_order = 2
-maximum_bdf_order = 3
+late_maximum_bdf_order = 0
+maximum_bdf_order = 5
 maximum_step = 0.5
-outlet_nx = 200
-outlet_nz = [2, 3, 13, 50, 200]
-paper_field_nx = 100
-paper_field_nz = 100
 population_absolute_tolerance = 1.0e-14
-reference_nx = 400
-reference_nz = 400
+reference_nx = 1000
+reference_nz = 500
 relative_tolerance = 1.0e-7
-size_check_nx = 200
+size_bins = [50, 100, 200, 400]
 stability_limit_detection = true
 temporal_refinement_factor = 10.0
 times = [5.0, 40.0, 80.0, 200.0]
 
+[[derived_files]]
+path = "refinement.csv"
+sha256 = "2dfb54df3083fd6aacc59da183d0a8f360afd7a15c3194a2826f9baf4000903e"
+
 [runs]
-axial_refinement = "axial_refinement_5bf7c1c61560"
-outlet_Nz13 = "outlet_Nz13_d7c48e2a1524"
-outlet_Nz2 = "outlet_Nz2_ec64956d3da3"
-outlet_Nz200 = "outlet_Nz200_40ec7c9be356"
-outlet_Nz3 = "outlet_Nz3_5094194f4d3c"
-outlet_Nz50 = "outlet_Nz50_2f5d70ac6acd"
-paper_field = "paper_field_eebca843ed5b"
-reference = "reference_3a8c17f6a2bb"
-size_refinement = "size_refinement_cce11c43d00b"
-solver_verification = "solver_verification_ae8581349f6a"
+axial_Nz100 = "axial_Nz100_8e4ce6ee4f05"
+axial_Nz200 = "axial_Nz200_f66a39095af9"
+axial_Nz400 = "axial_Nz400_0af1b1d4c625"
+axial_Nz50 = "axial_Nz50_c789f128c8e8"
+reference = "reference_c3fe64a8d899"
+size_Nx100 = "size_Nx100_9dabe127461c"
+size_Nx200 = "size_Nx200_7563debc59f9"
+size_Nx400 = "size_Nx400_3180f11f46f0"
+size_Nx50 = "size_Nx50_8b3b6d9f12b1"
+solver_verification = "solver_verification_207b6f04a9de"
+time_refinement = "time_refinement_41a05ed955c2"

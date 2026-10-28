@@ -1,0 +1,2 @@
+method,profile,bins,courant,dt,tf,rmse,l1,maximum_error,minimum_density,negative_number,number_drift,seconds,steps,bytes,gc_seconds
+weno3,gaussian,160,0.5,0.03125,4.0,2.900031915521473,0.946076226220178,16.991731268432194,-0.0002073967022828256,4.740136113741778e-6,-5.950795411990839e-14,0.001143834,128,1057248,0.0

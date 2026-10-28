@@ -1,19 +1,15 @@
 """Regenerate manuscript figures only from validated paper-mode numerical exports."""
 import argparse
 import csv
-import gzip
 import hashlib
 import json
 from pathlib import Path
 import subprocess
 import sys
 import tomllib
-from plotting_style import configure,panel,method_style,DOUBLE,METHODS
+from plotting_style import configure,save_png,METHODS
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 import numpy as np
-from PIL import Image
-import pymupdf
 
 PAPER = Path(__file__).resolve().parents[1]
 ROOT = PAPER.parent
@@ -90,13 +86,24 @@ def load_case(number, *, check_checkout=None):
     if check_checkout and info["workflow_digest"] != digest(support):
         raise ValueError("Driver/configuration differs from the retained results")
     if number == 1:
-        expected = {f"front_{m}_N{info['configuration']['profile_bins']}" for m in METHODS}
-        expected |= {f"smooth_{m}_N{n}" for m in METHODS for n in info["configuration"]["smooth_bins"]}
+        cfg=info['configuration']
+        if cfg.get('profile_family')!='gaussian':
+            raise ValueError('The active growth workflow requires fresh Gaussian results; run paper/growth/run.jl')
+        expected = {f"smooth_{m}_N{n}" for m in METHODS for n in cfg["bins"]}
+        for method in METHODS:
+            courant=1.0 if method=='inguva2022' else cfg['courant']
+            expected |= {gaussian_key(method,n,courant) for n in cfg['bins']}
+            expected |= {gaussian_key(method,cfg['profile_bins'],c) for c in cfg['profile_courants']
+                         if method!='inguva2022' or c==1.0}
     elif number == 2:
         expected = {m+f"_dt{r}" for m in MOMENT_METHODS for r in (1,2)} | {"qmom4_dt1"}
     else:
-        expected = {"reference","time_refinement","size_refinement","axial_refinement","paper_field","solver_verification"}
-        expected |= {f"outlet_Nz{n}" for n in info["configuration"]["outlet_nz"]}
+        cfg = info["configuration"]
+        if not {"size_bins", "axial_cells"} <= cfg.keys():
+            raise ValueError("The active tubular workflow requires the independent logarithmic-grid study; run paper/precipitation/run.jl")
+        expected = {"reference", "time_refinement", "solver_verification"}
+        expected |= {f"size_Nx{n}" for n in cfg["size_bins"]}
+        expected |= {f"axial_Nz{n}" for n in cfg["axial_cells"]}
     missing = expected-set(info["runs"])
     if missing:
         raise ValueError(f"Incomplete paper dataset: missing {sorted(missing)}")
@@ -110,6 +117,21 @@ def load_case(number, *, check_checkout=None):
             raise ValueError(f"Incomplete or smoke input: {folder}")
         if provenance["source_digest"] != info["source_digest"] or provenance["workflow_digest"] != info["workflow_digest"]:
             raise ValueError("Mixed source states in one figure")
+        if number == 3 and key != "solver_verification":
+            settings = provenance["settings"]
+            required_mesh = (info["configuration"]["reference_nx"],
+                             info["configuration"]["reference_nz"])
+            mesh = (settings["nx"], settings["nz"])
+            expected_mesh = ((int(key.removeprefix("size_Nx")), required_mesh[1])
+                             if key.startswith("size_Nx") else
+                             (required_mesh[0], int(key.removeprefix("axial_Nz")))
+                             if key.startswith("axial_Nz") else required_mesh)
+            if mesh != expected_mesh:
+                raise ValueError(f"{key} changes the wrong refinement coordinate: {mesh}, expected {expected_mesh}")
+            if (settings["size_reconstruction"] != "geometry-aware WENO5" or
+                    settings["axial_reconstruction"] != "MUSCL" or
+                    settings["mesh"] != "logarithmic sizes; uniform axial"):
+                raise ValueError(f"{key} is not the declared logarithmic WENO5 / axial MUSCL calculation")
         env = provenance["environment"]
         compute_environments.add((provenance["environment_digest"],env["julia"],env["cpu"],
                                   env["julia_threads"],env["blas_threads"]))
@@ -132,27 +154,15 @@ def load_case(number, *, check_checkout=None):
             INPUTS[number][str(path.relative_to(ROOT))] = sha(path)
     return base,info,runs
 
+def gaussian_key(method,bins,courant):
+    tag=str(float(courant)).replace('.', 'p')
+    return f'gaussian_{method}_C{tag}_N{bins}'
+
 def export(fig,number,name,info):
     folder = ROOT/".cache/paper/figures"/CASES[number-1] if MODE == "smoke" else PAPER/CASES[number-1]/"figures"
     folder.mkdir(parents=True,exist_ok=True)
     stem = name+("_PREVIEW" if PREVIEW else "")
-    fig.savefig(folder/(stem+".pdf"),dpi=300,
-                metadata={"CreationDate":None,"ModDate":None,
-                          "Creator":"PopulationBalanceModels.jl paper workflow"})
-    fig.savefig(folder/(stem+".png"),dpi=300)
-    image = Image.open(folder/(stem+".png"))
-    if any(abs(v-300)>.1 for v in image.info["dpi"]):
-        raise ValueError("PNG lacks 300-dpi metadata")
-    document = pymupdf.open(folder/(stem+".pdf"))
-    font_records = []
-    for page in document:
-        for font in page.get_fonts(full=True):
-            xref,ext,kind,basefont,*_ = font
-            data = document.extract_font(xref)[3]
-            if not data:
-                raise ValueError(f"Unembedded PDF font: {basefont}")
-            font_records.append(dict(name=basefont,type=kind,embedded_bytes=len(data)))
-    document.close()
+    image=save_png(fig,folder/(stem+".png"))
     provenance = dict(mode=MODE,renderer="Matplotlib + external LaTeX" if not PREVIEW else "fallback preview",
         source_digest=info["source_digest"],workflow_digest=info["workflow_digest"],
         checkout_verified=info.get("checkout_verified",True),retained_redraw=info.get("retained_redraw",False),
@@ -160,12 +170,12 @@ def export(fig,number,name,info):
         shared_plotting_sha256=sha(__file__),style_sha256=sha(PAPER/"plotting_style.py"),
         requirements_sha256=sha(PAPER/"requirements.txt"),
         python=sys.version,matplotlib=__import__("matplotlib").__version__,numpy=np.__version__,
-        pillow=__import__("PIL").__version__,pymupdf=pymupdf.VersionBind,
+        pillow=__import__("PIL").__version__,pymupdf=__import__("pymupdf").VersionBind,
         latex_version=(subprocess.check_output(["latex","--version"],text=True).splitlines()[0]
                        if not PREVIEW else "not used; fallback preview"),
         display_conventions=info.get("display_conventions",{}),
-        inches=list(fig.get_size_inches()),png_pixels=image.size,png_dpi=image.info["dpi"],fonts=font_records,
-        files={suffix:sha(folder/(stem+suffix)) for suffix in (".pdf",".png")})
+        inches=list(fig.get_size_inches()),**image,
+        files={".png":sha(folder/(stem+".png"))})
     (folder/(stem+".json")).write_text(json.dumps(provenance,indent=2)+"\n")
     plt.close(fig)
     print("Rendered",folder/stem,flush=True)

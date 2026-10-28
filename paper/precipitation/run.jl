@@ -8,6 +8,27 @@ const C = ContinuousPrecipitation
 const S = PaperPrecipitationSolver
 grid(pb) = first(pb.operator.local_operators).system.populations.crystals.grid
 
+"""Reuse the physical builder and normal coupled/axial APIs. For this closed
+growth/nucleation model, the current total population derivative gives exactly
+the same exchange as ConservativeExchange, without repeating its WENO residual.
+No analytical 3GM2 sink is added and no particle removal is returned to solute.
+"""
+function build(;kwargs...)
+    original = C.build(;kwargs...)
+    popop = first(original.operator.local_operators).system.populations.crystals
+    popop.bc.left isa NoFlux && popop.bc.right isa NoFlux &&
+        all(term->term isa Union{Growth,Nucleation},popop.model.terms) ||
+        error("The stage-derivative exchange requires this closed growth/nucleation model")
+    cubes = popop.grid.centers.^3
+    balance(ctx,p,t) = (c=-sum((1e12*p.rho*p.kv*cubes[i])*ctx.derivatives.crystals[i]
+        for i in eachindex(cubes)),)
+    system = PBMSystem((crystals=popop,);bulk_rhs=balance,nonnegative_bulk=(:c,))
+    local_problem = PBMProblem(system,(crystals=zeros(length(cubes)),),original.tspan;
+        bulk0=(c=0.,),p=original.p)
+    axial_problem(local_problem,original.operator.domain;initial=original.u0,
+        axial_scheme=original.operator.scheme)
+end
+
 function export_run(output,pb,solution)
     g,z,p = grid(pb),pb.operator.domain.grid,pb.p
     files = String["size_edges.csv","axial_edges.csv","accounting.csv","outlet.csv"]
@@ -37,7 +58,6 @@ function export_run(output,pb,solution)
         source = 0.0
         for j in eachindex(c)
             # Same physical nucleation law; no solver implementation here.
-            localop = pb.operator.local_operators[j].system.populations.crystals
             ctx = (;bulk=(c=c[j],),grid=g,N=view(N,:,j))
             source += 1e12*C.nucleation(p,t,ctx)*z.widths[j]
         end
@@ -68,7 +88,7 @@ end
 function load_run(folder)
     info = TOML.parsefile(joinpath(folder,"provenance.toml"))
     s = info["settings"]
-    pb = C.build(nx=s["nx"],nz=s["nz"],scheme=WENO5(),axial_scheme=MUSCL(),mesh=:log,tf=s["tf"])
+    pb = build(nx=s["nx"],nz=s["nz"],scheme=WENO5(),axial_scheme=MUSCL(),mesh=:log,tf=s["tf"])
     states = typeof(pb.u0)[]
     for frame in eachindex(s["times"])
         u = copy(pb.u0)
@@ -105,7 +125,70 @@ function field_error(pb,u,reference,v)
     total/normalization
 end
 
-function run(mode="production")
+"""One coordinate changes at a time; every error uses the same reference."""
+function configurations(cfg)
+    nx, nz = cfg["reference_nx"], cfg["reference_nz"]
+    all(n -> 6 <= n < nx, cfg["size_bins"]) ||
+        error("size_bins must contain WENO-compatible counts below reference_nx")
+    all(n -> 2 <= n < nz, cfg["axial_cells"]) ||
+        error("axial_cells must contain counts below reference_nz")
+    jobs = [(id="size_Nx$(n)", nx=n, nz=nz, factor=1., axis="size")
+        for n in cfg["size_bins"]]
+    append!(jobs, [(id="axial_Nz$(n)", nx=nx, nz=n, factor=1., axis="axial")
+        for n in cfg["axial_cells"]])
+    push!(jobs, (id="reference", nx=nx, nz=nz, factor=1., axis="reference"))
+    push!(jobs, (id="time_refinement", nx=nx, nz=nz,
+        factor=cfg["temporal_refinement_factor"], axis="time"))
+    jobs
+end
+
+function bulk_error(pb, u, reference, v)
+    z, w = pb.operator.domain.grid, reference.operator.domain.grid
+    edges = sort!(unique(vcat(z.edges, w.edges)))
+    a, b = bulk(pb,u,:c), bulk(reference,v,:c)
+    total, normalization, maximum_error = 0., 0., 0.
+    for i in 1:length(edges)-1
+        middle = (edges[i]+edges[i+1])/2
+        ai = clamp(searchsortedlast(z.edges,middle),1,length(z))
+        bi = clamp(searchsortedlast(w.edges,middle),1,length(w))
+        difference = abs(a[ai]-b[bi])
+        total += difference*(edges[i+1]-edges[i])
+        normalization += b[bi]*(edges[i+1]-edges[i])
+        maximum_error = max(maximum_error,difference)
+    end
+    (;normalized_bulk_L1=total/normalization,
+        maximum_bulk_difference_kg_m3=maximum_error)
+end
+
+function summarize(ctx, runs)
+    cfg = ctx.config
+    reference, refsol = load_run(runs["reference"])
+    comparisons = NamedTuple[]
+    for job in configurations(cfg)
+        job.id == "reference" && continue
+        pb, sol = load_run(runs[job.id])
+        for (i,t) in enumerate(sol.t)
+            reference_number = 1e12sum(population(reference,refsol.u[i],:crystals)[:,end])
+            nominal_absolute_scale = cfg["reference_nx"]*cfg["population_absolute_tolerance"]*1e12
+            resolved_outlet = reference_number > nominal_absolute_scale
+            outlet_difference = reference_number>0 ?
+                C.outlet_error(pb,sol.u[i],reference,refsol.u[i]) : NaN
+            push!(comparisons,(;comparison=job.id,refinement=job.axis,time_s=t,
+                nx=job.nx,nz=job.nz,reference_nx=cfg["reference_nx"],reference_nz=cfg["reference_nz"],
+                normalized_field_L1=field_error(pb,sol.u[i],reference,refsol.u[i]),
+                normalized_outlet_L1=outlet_difference,
+                reference_outlet_number_per_m3=reference_number,
+                nominal_outlet_absolute_tolerance_scale_per_m3=nominal_absolute_scale,
+                outlet_reference_above_nominal_absolute_scale=resolved_outlet,
+                interpretable_outlet_L1=resolved_outlet ? outlet_difference : NaN,
+                bulk_error(pb,sol.u[i],reference,refsol.u[i])...))
+        end
+    end
+    csv(joinpath(ctx.output,"refinement.csv"),comparisons)
+    index(ctx,runs)
+end
+
+function run(mode="production"; selected=nothing)
     ctx = context(@__DIR__,mode;support=[joinpath(PAPER,"_support","precipitation_solver.jl")])
     cfg = ctx.config
     runs = Dict{String,String}()
@@ -113,7 +196,7 @@ function run(mode="production")
             "nx"=>12,"nz"=>12,"tf"=>10.,"maximum_bdf_order"=>cfg["maximum_bdf_order"],
             "late_maximum_bdf_order"=>cfg["late_maximum_bdf_order"],"bdf_restart_time"=>cfg["bdf_restart_time"],
             "role"=>"independent native/implicit verification")) do output
-        pb = C.build(nx=12,nz=12,mesh=:log,scheme=WENO5(),axial_scheme=MUSCL(),tf=10.)
+        pb = build(nx=12,nz=12,mesh=:log,scheme=WENO5(),axial_scheme=MUSCL(),tf=10.)
         ts = [1.,5.,10.]
         implicit = S.advance(pb,ts;reltol=1e-8,population_abstol=1e-16,bulk_abstol=1e-12,dtmax=.1,
             max_order=cfg["maximum_bdf_order"],late_max_order=cfg["late_maximum_bdf_order"],
@@ -130,25 +213,24 @@ function run(mode="production")
         csv(joinpath(output,"verification.csv"),rows)
         (["verification.csv"],Dict("role"=>"verification","status"=>"passed"))
     end
-    warm = C.build(nx=8,nz=6,mesh=:log,scheme=WENO5(),axial_scheme=MUSCL(),tf=.02)
+    warm = build(nx=8,nz=6,mesh=:log,scheme=WENO5(),axial_scheme=MUSCL(),tf=.02)
     bulk(warm,warm.u0,:c) .= 2warm.p.ceq
     population(warm,warm.u0,:crystals) .= 1e-12
     S.advance(warm,[.01,.02];max_order=cfg["maximum_bdf_order"],
         late_max_order=cfg["late_maximum_bdf_order"],restart_time=.01,progress=false)
-    configurations = [("paper_field",cfg["paper_field_nx"],cfg["paper_field_nz"],1.)]
-    append!(configurations,[("outlet_Nz$(nz)",cfg["outlet_nx"],nz,1.) for nz in cfg["outlet_nz"]])
-    append!(configurations,[("size_refinement",cfg["size_check_nx"],cfg["reference_nz"],1.),
-        ("axial_refinement",cfg["reference_nx"],cfg["axial_check_nz"],1.),
-        ("reference",cfg["reference_nx"],cfg["reference_nz"],1.),
-        ("time_refinement",cfg["reference_nx"],cfg["reference_nz"],cfg["temporal_refinement_factor"])])
-    for (id,nx,nz,factor) in configurations
+    jobs = configurations(cfg)
+    selected === nothing || selected in getproperty.(jobs,:id) || error("Unknown configuration: $selected")
+    for (;id,nx,nz,factor,axis) in jobs
+        selected === nothing || selected == id || continue
         settings = Dict("nx"=>nx,"nz"=>nz,"mesh"=>"logarithmic sizes; uniform axial",
+            "refinement"=>axis,
+            "bulk_exchange"=>"same-stage weighted population derivative; independently verified equal to ConservativeExchange on this closed growth/nucleation model",
             "size_reconstruction"=>"geometry-aware WENO5","axial_reconstruction"=>"MUSCL",
             "time_solver"=>"CVODE_BDF/left-preconditioned GMRES(50)",
             "maximum_bdf_order"=>cfg["maximum_bdf_order"],
             "late_maximum_bdf_order"=>cfg["late_maximum_bdf_order"],"bdf_restart_time"=>cfg["bdf_restart_time"],
             "stability_limit_detection"=>cfg["stability_limit_detection"],
-            "preconditioner"=>"factored bidiagonal Upwind size / tridiagonal axial transport, with diagonal solute depletion; original WENO5/MUSCL residual unchanged",
+            "preconditioner"=>"six-color AD of the native growth term; banded local Jacobian and conservative nucleation/solute rank-one solve, then low-order tridiagonal axial factor; original WENO5/MUSCL residual unchanged",
             "relative_tolerance"=>cfg["relative_tolerance"]/factor,
             "population_absolute_tolerance"=>cfg["population_absolute_tolerance"]/factor,
             "bulk_absolute_tolerance"=>cfg["bulk_absolute_tolerance"]/factor,
@@ -157,7 +239,7 @@ function run(mode="production")
             "checks"=>"native checker after every accepted CVODE step at existing 1e-8; no clipping; Newton iterates are auxiliary",
             "population_scaling"=>1e12,"literature"=>"Zhang2024 SI Table S8; rounded Q=1.67e-7; public CADET uses 1.6666666667e-7")
         folder = cached(ctx,id,settings) do output
-            setup = @timed C.build(;nx,nz,mesh=:log,scheme=WENO5(),axial_scheme=MUSCL(),tf=cfg["final_time"])
+            setup = @timed build(;nx,nz,mesh=:log,scheme=WENO5(),axial_scheme=MUSCL(),tf=cfg["final_time"])
             pb = setup.value
             # Enforce use of the actual geometry-aware prepared reconstruction.
             popop = first(pb.operator.local_operators).system.populations.crystals
@@ -176,6 +258,8 @@ function run(mode="production")
             summary = Dict("status"=>"completed","seconds"=>measured.time,"setup_seconds"=>setup.time,
                 "steps"=>solution.steps,"bytes"=>measured.bytes,"gc_seconds"=>measured.gctime,
                 "error_test_failures"=>diag.error_test_failures,"checked_steps"=>diag.checked_steps,
+                "preconditioner_setups"=>diag.preconditioner_setups,
+                "growth_jacobian_updates"=>diag.growth_jacobian_updates,
                 "restarts"=>diag.restarts,"phase_steps"=>diag.phase_steps,
                 "phase_end_times"=>diag.phase_end_times,"phase_maximum_orders"=>diag.phase_maximum_orders,
                 "phase_maximum_observed_orders"=>diag.phase_maximum_observed_orders,
@@ -190,26 +274,12 @@ function run(mode="production")
         runs[id] = folder
         index(ctx,runs) # completed matching runs remain recoverable after interruption
     end
-    reference,refsol = load_run(runs["reference"])
-    rows = NamedTuple[]
-    for id in ("time_refinement","size_refinement","axial_refinement","paper_field")
-        pb,sol = load_run(runs[id])
-        for (i,t) in enumerate(sol.t)
-            reference_outlet_number = sum(population(reference,refsol.u[i],:crystals)[:,end])
-            # An effectively empty outlet cannot define a normalized PSD.
-            # Keep a raw ratio only when its denominator is positive; the
-            # analysis table separately flags signals below absolute tolerances.
-            outlet_difference = reference_outlet_number>0 ? C.outlet_error(pb,sol.u[i],reference,refsol.u[i]) : NaN
-            push!(rows,(;comparison=id,time_s=t,nx=length(grid(pb)),nz=length(pb.operator.domain.grid),
-                reference_nx=length(grid(reference)),reference_nz=length(reference.operator.domain.grid),
-                normalized_field_L1=field_error(pb,sol.u[i],reference,refsol.u[i]),
-                normalized_outlet_L1=outlet_difference))
-        end
-    end
-    csv(joinpath(ctx.output,"refinement.csv"),rows)
-    index(ctx,runs)
+    selected === nothing && summarize(ctx,runs)
 end
 end
 if abspath(PROGRAM_FILE)==@__FILE__
-    PaperPrecipitation.run("--smoke" in ARGS ? "smoke" : "production")
+    modes = filter(a->startswith(a,"--only="),ARGS)
+    length(modes)<=1 || error("Use at most one --only=configuration")
+    PaperPrecipitation.run("--smoke" in ARGS ? "smoke" : "production";
+        selected=isempty(modes) ? nothing : split(only(modes),'=';limit=2)[2])
 end

@@ -11,7 +11,7 @@ const P = PopulationBalanceModels
         @test sum(C.exact_counts(g,0.)) ≈ -expm1(-100.) atol=2e-15
         @test sum(C.smooth_counts(g,0.)) ≈ 1. atol=2e-15
         @test sum(C.exact_counts(g,4.)) ≈ -expm1(-60.) atol=2e-15
-        @test length(PaperGrowth.choices()) == 6
+        @test length(PaperGrowth.choices()) == 7
         @test PaperGrowth.PaperWorkflow.overlap_error([0.,.2,1.],[2.,2.],[0.,.7,1.],[3.,3.]) ≈ 1/3
         widths = [.25,.75]
         @test sqrt(sum(widths.*[1.,3.].^2)/sum(widths)) ≈ sqrt(7.)
@@ -93,41 +93,11 @@ const P = PopulationBalanceModels
                 "; native halving=",native,"; steps ",(a.steps,b.steps,c.steps))
         end
     end
-    @testset "Preconditioner against independent dense face-flux operators" begin
-        C,S = PaperPrecipitation.C,PaperPrecipitation.S
-        pb = C.build(nx=8,nz=6,mesh=:log,scheme=WENO5(),axial_scheme=MUSCL(),tf=5.)
-        g,z = PaperPrecipitation.grid(pb),pb.operator.domain.grid
-        nx,nz = length(g),length(z)
-        state = zero(pb.u0)
-        state[end,:] .= 2pb.p.ceq
-        velocity,dispersion = pb.operator.domain.velocity,pb.operator.domain.dispersion
-        function axial_rhs(row)
-            F = zeros(nz+1)
-            for j in 2:nz
-                F[j] = velocity*row[j-1]-dispersion*(row[j]-row[j-1])/(z.centers[j]-z.centers[j-1])
-            end
-            F[end] = velocity*row[end]
-            (F[1:end-1].-F[2:end])./z.widths
-        end
-        function size_rhs(row)
-            F = zeros(nx+1)
-            F[2:nx] .= pb.p.kg.*row[1:nx-1]./g.widths[1:nx-1]
-            F[1:end-1].-F[2:end]
-        end
-        Az = hcat([axial_rhs(Matrix{Float64}(I,nz,nz)[:,j]) for j in 1:nz]...)
-        Ax = zeros(nx+1,nx+1)
-        Ax[1:nx,1:nx] .= hcat([size_rhs(Matrix{Float64}(I,nx,nx)[:,j]) for j in 1:nx]...)
-        Ax[end,end] = -pb.p.rho*pb.p.kv*first(g.centers)^3*pb.p.kp*pb.p.u/pb.p.ceq
-        right = reshape([1+sin(i) for i in 1:length(pb.u0)],size(pb.u0))
-        prec = S.preconditioner(pb)
-        for gamma in (.1,.2,.2)
-            answer = zero(right)
-            prec(vec(answer),vec(right),pb.p,0.,vec(state),vec(zero(state)),gamma,1e-8,1)
-            expected = (I-gamma*Ax)\right
-            for i in axes(expected,1)
-                expected[i,:] .= (I-gamma*Az)\expected[i,:]
-            end
-            @test answer ≈ expected rtol=3e-13
-        end
-    end
+end
+
+# The banded native-growth preconditioner supersedes the former diagonal
+# depletion approximation. Verify it against full independent Jacobians,
+# including sources, bulk coupling, cache updates and tiny bulk directions.
+module PaperTubularContracts
+include(joinpath(@__DIR__, "..", "paper_precipitation.jl"))
 end

@@ -13,7 +13,8 @@ for (directory, subdirectories, files) in walkdir(joinpath(ROOT, "examples"))
     target = joinpath(source_assets, "examples", relpath(directory, joinpath(ROOT, "examples")))
     mkpath(target)
     for file in files
-        splitext(file)[2] in (".jl", ".py", ".csv", ".txt", ".md") || continue
+        file == "Manifest.toml" && continue
+        splitext(file)[2] in (".jl", ".py", ".csv", ".txt", ".md", ".toml") || continue
         name = endswith(file, ".md") ? file[1:end-3] * ".txt" : file
         cp(joinpath(directory, file), joinpath(target, name); force=true)
     end
@@ -70,6 +71,7 @@ makedocs(;
             "Realizable evolution and particle removal" => "methods/realizable_evolution.md",
         ],
         "Parameter estimation" => "inference.md",
+        "Forward uncertainty quantification" => "uncertainty_quantification.md",
         "Case studies" => [
             "Overview" => "case_studies/index.md",
             "Comparing growth and time methods" => "case_studies/constant_growth.md",
@@ -81,6 +83,7 @@ makedocs(;
             "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
             "Growth in two particle dimensions" => "case_studies/transport.md",
             "Estimating size-dependent growth" => "case_studies/estimating_growth.md",
+            "Uncertainty in continuous milling" => "case_studies/milling_uncertainty.md",
         ],
         "API reference" => "api.md",
         "Contributing and internals" => "development.md",

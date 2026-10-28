@@ -1,0 +1,24 @@
+{
+  "model": "cnt_grd",
+  "approximation": "laplace",
+  "status": "rejected",
+  "approximation_sha256": "040d0777aa834a85a5360b6d1256eadefe05589b1b7f825f33b23e5378c52cb2",
+  "compatibility": {
+    "producing_compatibility_sha256": "7eb9789158a889996ba7b01fc4ed29ccfd35a28ab7e969ee99f5dcd9b9f84273",
+    "current_compatibility_sha256": "b3a61bc9a09b1118cbaaeacbdef3b474981107c700ae120f3ec03c8e4e390811",
+    "reused_under_review": true
+  },
+  "posterior_sha256": "55d58ca0dfdae8981e9438b854997577aa2eec47fbe19bd1de61b936e9059a5c",
+  "gaussian_draws": null,
+  "renderer": "actual LaTeX; 300-dpi PNG (in-memory vector rasterization)",
+  "plotting_source_sha256": "a5b75c5012bd6558c3eba13a41bd33cb50a4b57011fcc660d6d0ef5e84d298c1",
+  "density_helpers_sha256": "f99dafde90dc10fffe89b63d12f175957368baf00692f916c0884955c0754b34",
+  "figures": {
+    "protein_laplace_mcmc_cnt_grd.png": "da7c7817ac8d7ec9c34881c66a7c934d37ef691157de6f1c744506fa47310026",
+    "protein_laplace_panel_cnt_grd.png": "7138f0519f9c38c3a9b427cfd3f12c8baddd3e03e421219bcbcd668233f2372f",
+    "protein_mcmc_panel_cnt_grd.png": "406de370df329e0581d97ba70fd19af0da765ff17546ef500dabed7acc7d29b3"
+  },
+  "contour_convention": "MCMC whitened KDE 68/95%; local Gaussian transformed probability ellipses, not displayed-coordinate HDRs",
+  "numerical_production_files": "read only; no fit, sampling or latent propagation",
+  "laplace_sha256": "040d0777aa834a85a5360b6d1256eadefe05589b1b7f825f33b23e5378c52cb2"
+}

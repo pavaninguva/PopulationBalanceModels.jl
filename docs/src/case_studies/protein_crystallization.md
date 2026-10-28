@@ -24,7 +24,7 @@ graph reconstructions, not raw crystal counts or independent 0.5 μm measurement
 The [data and provenance](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/examples/data/protein_crystallization/tang2018_isothermal)
 retain the original readings and unrounded graph-read times.
 
-![Original isothermal observations, without a model fit](../assets/protein_isothermal/protein_data.svg)
+![Original isothermal observations, without a model fit](../assets/protein_isothermal/protein_data.png)
 
 Panel (a) shows concentration; its diamond fixes ``c(0)\simeq19.97`` g/L.
 The exact graph-derived input is retained in the data file, not rounded for solving.
@@ -232,7 +232,7 @@ on this model and fixed assumptions. They do not include new measurement noise.
 
 ## Model 1: CNT
 
-![CNT fit and frozen held-out prediction](../assets/protein_isothermal/protein_fit_cnt.svg)
+![CNT fit and frozen held-out prediction](../assets/protein_isothermal/protein_fit_cnt.png)
 
 Panels match the data overview. Solid curves connect MAP bin averages at their centers;
 shading is the pointwise 95% latent interval. Dashed density curves are the
@@ -247,7 +247,7 @@ boundary. Its plateau and abrupt cutoff miss the measured peak and tail even
 when several quantiles are close. Refinement changes the front's numerical
 rounding; it does not remove this restriction of the model.
 
-![CNT posterior and analytical priors](../assets/protein_isothermal/protein_corner_cnt.svg)
+![CNT posterior and analytical priors](../assets/protein_isothermal/protein_corner_cnt.png)
 
 Diagonal curves show normalized NUTS marginal summaries and dashed analytical
 priors. Joint KDE contours, where shown, mark approximately 68% and 95%
@@ -264,14 +264,14 @@ compensation, not four independent measurements of material constants.
 
 ## Model 2: CNT with random-fluctuation GRD
 
-![CNT plus GRD fit and frozen held-out prediction](../assets/protein_isothermal/protein_fit_cnt_grd.svg)
+![CNT plus GRD fit and frozen held-out prediction](../assets/protein_isothermal/protein_fit_cnt_grd.png)
 
 The panel roles, data colors and corresponding axis limits match Model 1.
 The density bands propagate the population state itself; CDF uncertainty is not
 drawn as an arbitrary density or size band. Diffusion broadens particle histories
 but does not imply a Gaussian full distribution under continuous nucleation.
 
-![CNT plus GRD posterior and analytical priors](../assets/protein_isothermal/protein_corner_cnt_grd.svg)
+![CNT plus GRD posterior and analytical priors](../assets/protein_isothermal/protein_corner_cnt_grd.png)
 
 GRD is now a fifth inferred parameter. Correlations describe compensating
 kinetics and dispersion, not evidence that every coefficient is independently
@@ -310,17 +310,17 @@ using Markdown, PopulationBalanceModels
 Markdown.parse(read(joinpath(pkgdir(PopulationBalanceModels),"docs","src","assets","protein_isothermal","gauss_newton_verification.txt"),String))
 ```
 
-![CNT: sensitivity-based approximation and retained NUTS](../assets/protein_isothermal/protein_gauss_newton_mcmc_cnt.svg)
+![CNT: sensitivity-based approximation and retained NUTS](../assets/protein_isothermal/protein_gauss_newton_mcmc_cnt.png)
 
-![CNT with GRD: sensitivity-based approximation and retained NUTS](../assets/protein_isothermal/protein_gauss_newton_mcmc_cnt_grd.svg)
+![CNT with GRD: sensitivity-based approximation and retained NUTS](../assets/protein_isothermal/protein_gauss_newton_mcmc_cnt_grd.png)
 
 Left: the inference-coordinate Gaussian transformed to the displayed parameter
 coordinates. Its marginal densities are analytical; the joint curves transform
 Gaussian ellipses containing 68% and 95% probability, rather than claiming
 highest-density regions in physical coordinates. Right: the retained NUTS
 posterior. Axes, prior overlays and MAP markers match. Separate manuscript-size
-[CNT](../assets/protein_isothermal/protein_gauss_newton_panel_cnt.pdf) and
-[GRD](../assets/protein_isothermal/protein_gauss_newton_panel_cnt_grd.pdf)
+[CNT](../assets/protein_isothermal/protein_gauss_newton_panel_cnt.png) and
+[GRD](../assets/protein_isothermal/protein_gauss_newton_panel_cnt_grd.png)
 approximation panels are available. Gaussian draws are not truncated to the
 prior; support violations are exported.
 
@@ -337,8 +337,8 @@ latent bands; no new sampling, refitting or predictive propagation was performed
 
 Full-Hessian Laplace still fails its unchanged verification checks: CNT's
 Hessian disagreement is 7–24%; GRD's weakest curvature is below its absolute
-verification resolution. The [CNT](../assets/protein_isothermal/protein_laplace_mcmc_cnt.pdf)
-and [GRD](../assets/protein_isothermal/protein_laplace_mcmc_cnt_grd.pdf)
+verification resolution. The [CNT](../assets/protein_isothermal/protein_laplace_mcmc_cnt.png)
+and [GRD](../assets/protein_isothermal/protein_laplace_mcmc_cnt_grd.png)
 rejection comparisons remain available. No covariance is substituted for those
 failed calculations. The sensitivity-based calculation verifies its own
 approximate information matrix, rather than relaxing the Laplace checks.
@@ -445,7 +445,7 @@ python test/protein_publication.py
 ```
 
 This plotting-only command validates the saved manifests and leaves numerical
-result tables unchanged. It exports matching 300-dpi PNGs and vector PDF/SVGs.
+result tables unchanged. It exports matching 300-dpi PNGs for the paper and manual.
 `--compatibility-only` runs the reviewed retained-target checks without
 calculating curvature. Analysis files are separate from the immutable
 `cnt/`, `cnt_grd/` and `shared/` inputs, under `paper/protein/data/analysis/`.

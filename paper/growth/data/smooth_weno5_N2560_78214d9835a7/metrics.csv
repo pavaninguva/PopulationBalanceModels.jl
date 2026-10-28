@@ -1,2 +1,0 @@
-method,profile,bins,courant,dt,tf,rmse,l1,maximum_error,minimum_density,negative_number,number_drift,seconds,steps,bytes,gc_seconds
-weno5,smooth,2560,0.5,0.001953125,4.0,1.1479369788115972e-13,9.972258479054585e-14,2.1899149160730902e-13,0.7000006023923159,-0.0,0.0,0.608318422,2048,337040544,0.007476152

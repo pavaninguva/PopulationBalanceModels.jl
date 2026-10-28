@@ -15,8 +15,9 @@ if __name__ == '__main__':
     analysis.add_argument('--laplace', action='store_true')
     args = parser.parse_args()
     if args.gauss_newton or args.laplace:
-        if args.data_only or args.tables:
-            parser.error('Choose main figures/tables or an uncertainty comparison')
-        protein_uncertainty.main(['--approximation', 'gauss_newton' if args.gauss_newton else 'laplace'])
+        if args.data_only:
+            parser.error('Choose data-only figures or an uncertainty comparison')
+        protein_uncertainty.main(['--approximation', 'gauss_newton' if args.gauss_newton else 'laplace']
+                                + (['--tables'] if args.tables else []))
     else:
         protein_plot.plot(data_only=args.data_only, figures_only=not args.tables)

@@ -4,39 +4,53 @@ include("../_support/common.jl")
 using .PaperWorkflow
 include(joinpath(ROOT,"examples","constant_growth_methods.jl"))
 const C = ConstantGrowthMethods
-choices() = [("upwind",Upwind(),ForwardEuler()),("muscl",MUSCL(),SSPRK33()),
-    ("weno3",WENO3(),SSPRK33()),("weno5",WENO5(),RK4()),
-    ("inguva2022",nothing,Inguva2022()),("hoc",nothing,HOCFiniteVolume())]
+
+# Use the same seven pairings as the manual, including both WENO5 time methods.
+choices() = [(name=="weno5" && time=="ssprk33" ? "weno5_ssprk33" : name,scheme,method)
+    for (name,time,scheme,method) in C.combinations()]
+courant_tag(c) = replace(string(Float64(c)),"."=>"p")
+gaussian_key(id,n,c) = "gaussian_$(id)_C$(courant_tag(c))_N$(n)"
 
 function run(mode="production")
     ctx = context(@__DIR__,mode)
+    cfg = ctx.config
+    cfg["profile_family"]=="gaussian" || error("This driver requires the Gaussian benchmark")
     runs = Dict{String,String}()
     for (id,scheme,time) in choices(), periodic in (false,true)
         grid = Grid1D(range(0,1;length=21))
-        courant = id=="inguva2022" ? 1. : ctx.config["courant"]
-        dt = courant/(20C.growth)
+        courant = id=="inguva2022" ? 1. : cfg["courant"]
+        exact = periodic ? C.smooth_counts : C.gaussian_counts
         bc = periodic ? SizeBC(Periodic(),Periodic()) : SizeBC(OpenBoundary(),OpenBoundary())
-        simulate(C.make_problem(grid,C.exact_counts(grid,0.),scheme,time,dt,bc);
-            method=time,dt,check_nonnegative=false)
+        C.measure(grid,exact(grid,0.),exact(grid,cfg["final_time"]),scheme,time,
+            cfg["final_time"],courant/(20C.growth),bc)
     end
-    for profile in ("front","smooth"), (id,scheme,time) in choices()
-        bins = profile=="front" ? [ctx.config["profile_bins"]] : ctx.config["smooth_bins"]
-        for n in bins
-            courant = id=="inguva2022" ? 1. : ctx.config["courant"]
+    for (id,scheme,time) in choices(), profile in ("gaussian","smooth")
+        courant = id=="inguva2022" ? 1. : cfg["courant"]
+        jobs = [(n,courant) for n in cfg["bins"]]
+        if profile=="gaussian"
+            append!(jobs,[(cfg["profile_bins"],c) for c in cfg["profile_courants"]
+                if id!="inguva2022" || c==1.])
+        end
+        for (n,c) in unique(jobs)
             settings = Dict("profile"=>profile,"bins"=>n,"method"=>id,
-                "api_time_method"=>string(typeof(time)),"courant"=>courant,
-                "tf"=>ctx.config["final_time"],"growth"=>C.growth,
-                "initialization"=>"exact bin integrals","state_checks"=>"signed diagnostic; no clipping")
-            name = "$(profile)_$(id)_N$(n)"
+                "api_time_method"=>string(typeof(time)),"courant"=>c,
+                "tf"=>cfg["final_time"],"growth"=>C.growth,
+                "initialization"=>"exact bin integrals","state_checks"=>"signed diagnostic; no clipping",
+                "boundary"=>profile=="gaussian" ? "zero inflow / open outflow" : "periodic")
+            if profile=="gaussian"
+                merge!(settings,Dict("height"=>C.gaussian_height,
+                    "center"=>C.gaussian_center,"standard_deviation"=>C.gaussian_width))
+            end
+            name = profile=="gaussian" ? gaussian_key(id,n,c) : "smooth_$(id)_N$(n)"
             folder = cached(ctx,name,settings) do output
                 grid = Grid1D(range(0,1;length=n+1);coordinate=:length)
-                exact = profile=="front" ? C.exact_counts : C.smooth_counts
+                exact = profile=="gaussian" ? C.gaussian_counts : C.smooth_counts
                 initial,truth = exact(grid,0.),exact(grid,settings["tf"])
-                bc = profile=="front" ? SizeBC(OpenBoundary(),OpenBoundary()) : SizeBC(Periodic(),Periodic())
-                result = C.measure(grid,initial,truth,scheme,time,settings["tf"],courant/(n*C.growth),bc)
+                bc = profile=="gaussian" ? SizeBC(OpenBoundary(),OpenBoundary()) : SizeBC(Periodic(),Periodic())
+                result = C.measure(grid,initial,truth,scheme,time,settings["tf"],c/(n*C.growth),bc)
                 csv(joinpath(output,"profile.csv"),[(;left=grid.edges[i],right=grid.edges[i+1],
                     number=result.N[i],density=result.f[i],exact_number=truth[i],exact_density=truth[i]/grid.widths[i]) for i in 1:n])
-                row = (;method=id,profile,bins=n,courant,dt=courant/(n*C.growth),tf=settings["tf"],
+                row = (;method=id,profile,bins=n,courant=c,dt=c/(n*C.growth),tf=settings["tf"],
                     rmse=result.rmse,l1=result.l1,maximum_error=result.maximum_error,
                     minimum_density=result.minimum_density,negative_number=result.negative_number,
                     number_drift=result.number_drift,seconds=result.seconds,steps=result.steps,
@@ -47,21 +61,22 @@ function run(mode="production")
             runs[name] = folder
         end
     end
-    rows = NamedTuple[]
+    orders = NamedTuple[]
     for (id,_,_) in choices()
         old = nothing
-        for n in ctx.config["smooth_bins"]
+        for n in cfg["bins"]
             path = runs["smooth_$(id)_N$(n)"]
-            cells = split(readlines(joinpath(path,"metrics.csv"))[2],',')
-            rms,l1 = parse(Float64,cells[7]),parse(Float64,cells[8])
-            floor = ctx.config["roundoff_factor"]*eps(Float64)
+            header,values = split.(readlines(joinpath(path,"metrics.csv")),',')
+            row = Dict(zip(header,values))
+            rms,l1 = parse(Float64,row["rmse"]),parse(Float64,row["l1"])
+            floor = cfg["roundoff_factor"]*eps(Float64)
             pr = old===nothing || min(old.rms,rms)<=floor ? NaN : log(old.rms/rms)/log(n/old.n)
             pl = old===nothing || min(old.l1,l1)<=floor ? NaN : log(old.l1/l1)/log(n/old.n)
-            push!(rows,(;method=id,bins=n,rmse=rms,l1,observed_rmse_order=pr,observed_l1_order=pl,roundoff_limit=floor))
+            push!(orders,(;method=id,bins=n,rmse=rms,l1,observed_rmse_order=pr,observed_l1_order=pl,roundoff_limit=floor))
             old = (;n,rms,l1)
         end
     end
-    csv(joinpath(ctx.output,"observed_orders.csv"),rows)
+    csv(joinpath(ctx.output,"observed_orders.csv"),orders)
     index(ctx,runs)
 end
 end

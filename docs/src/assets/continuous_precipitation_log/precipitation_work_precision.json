@@ -1,0 +1,77 @@
+{
+  "mode": "production",
+  "renderer": "Matplotlib + external LaTeX",
+  "source_digest": "04779370bb9406b4f7f04096b0a243cc82810730b96d4106a59cd6111d343981",
+  "workflow_digest": "7e2b98c8cd1cddc7fdad5fcb36beb7044c9c11aedb81bd1591775aba6a03c674",
+  "checkout_verified": false,
+  "retained_redraw": true,
+  "inputs": {
+    "paper/precipitation/data/index.toml": "a40ba1d6a7ced583629b6f6857c6d2f9862021cf0a5e876ecda79a480a1c646a",
+    "paper/precipitation/data/axial_Nz100_8e4ce6ee4f05/provenance.toml": "5de030f21a3ffc020c47a737300374f791368d89112817762ca6b84c7de53354",
+    "paper/precipitation/data/axial_Nz200_f66a39095af9/provenance.toml": "e5cc422711bc99e189d9e131cf59f9f9415f642c6ac6cc748484363b08e64842",
+    "paper/precipitation/data/axial_Nz400_0af1b1d4c625/provenance.toml": "598ecf488d778e72f9f4b72f699796ee1f491a5d63c7ccbe727397bb0d0aa189",
+    "paper/precipitation/data/axial_Nz50_c789f128c8e8/provenance.toml": "45618ec7174fa7ab67e06de421760a013a6c8abc1d39b15d326334aa4d149ec2",
+    "paper/precipitation/data/reference_c3fe64a8d899/provenance.toml": "13b0d7aaac3da127f7b719fbb3b03796dc36669dbf63ae6f010c64a74f39ddc2",
+    "paper/precipitation/data/size_Nx100_9dabe127461c/provenance.toml": "5617aeec228a470f3ad37102e0625cba7bc2357a54afdb3fe92a938209b16270",
+    "paper/precipitation/data/size_Nx200_7563debc59f9/provenance.toml": "d6249a61144a3633e74fbb7f5123b7a18681233434102bf904dba3244d704d5f",
+    "paper/precipitation/data/size_Nx400_3180f11f46f0/provenance.toml": "fa3094dbe4e91648c7d95b873776ea66f4093383677de576bc251a74ee229bb2",
+    "paper/precipitation/data/size_Nx50_8b3b6d9f12b1/provenance.toml": "e87bf4b2740ef943c0cc0a798fe400f99e3e7844a6fe322da0fbe432c8210402",
+    "paper/precipitation/data/solver_verification_207b6f04a9de/provenance.toml": "fe99068d000936b23ebc780bcaf76ac32ed75285d43a122c52743cfa944f5581",
+    "paper/precipitation/data/time_refinement_41a05ed955c2/provenance.toml": "a2b77d9dee637b0ecae24422e10f60b6e6da1e7dcda78920d9a27f6add651e3e",
+    "paper/precipitation/data/literature/cadet_reference.csv": "00d3110974538318bf76079eaa46fb1f1f7dd80b4567c6e1804e35e03af32d68",
+    "paper/precipitation/data/literature/zhang_figure9c_digitized.csv": "a21e043ba1e2663c6f2dbf6ce24887df7d4a1f71ca0fb06ccebde6e57789dbb9",
+    "paper/precipitation/data/literature/provenance.json": "110b2f0e2c75562d99a38942ca7c8b93013922a79b826dfdf8aba237db77c6d6",
+    "paper/precipitation/data/analysis/runtimes.csv": "a508cf12c19300885f4ef1c5fee7dc726ad605d5b390093b5481161db30c1d29",
+    "paper/precipitation/data/analysis/refinement_observables.csv": "101cd45e65512f6fc3542e79f8427ec536eb673fc9155c24d879b5adcd50b717",
+    "paper/precipitation/data/analysis/public_cadet_comparison.csv": "9f38dd4fdfe4a005ba889248217f6d9d01e6ba1b5cf983e2385ab04fa1bf65ba",
+    "paper/precipitation/data/analysis/digitized_point_comparison.csv": "4193ab0591c54787cc7c4421d740559bd729acc24fb7db81b79252ce839919fa"
+  },
+  "plotter_sha256": "f4c4ff2aa4a557f4e0ee97db4723c8a4b411cc83a3909e50da12b82e449aace9",
+  "shared_plotting_sha256": "727b49a949f5f1ceb539695a0001fbe00bc260573426b8012daca5fac46c94d2",
+  "style_sha256": "6d03afd1f9f96d8788dbbf80c6233a8dab370fafd07a2c18988dce5a99b7ca1c",
+  "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
+  "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
+  "matplotlib": "3.8.4",
+  "numpy": "1.26.4",
+  "pillow": "10.3.0",
+  "pymupdf": "1.28.2",
+  "latex_version": "pdfTeX 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian)",
+  "display_conventions": {
+    "fields": "actual logarithmic size/uniform axial edges; linear 1--100 micrometre size-axis zoom; physical bin density; no interpolation",
+    "field_size_axis": "linear",
+    "field_display_size_um": [
+      1,
+      100
+    ],
+    "simulated_size_um": [
+      1,
+      900
+    ],
+    "errors": "normalized PWC L1 on common partitions; one common numerical reference",
+    "outlet": "stairs of bin averages; center-cubed volume weights; digitized number-density points only",
+    "literature_ordinate": "published ordinates unchanged, interpreted as SI m^-4; the printed per-micrometre label would violate the feed material scale",
+    "color": "shared linear scale from zero to the maximum over all four full reference fields; magma; negative tails use the lower endpoint colour",
+    "field_color_scale": "linear",
+    "field_color_map": "magma",
+    "historical_tail_count_threshold_m4": 1000000000.0,
+    "field_color_bounds_m4": [
+      0.0,
+      2318745607809357.5
+    ]
+  },
+  "inches": [
+    7.0,
+    3.65
+  ],
+  "png_pixels": [
+    2100,
+    1095
+  ],
+  "png_dpi": [
+    299.9994,
+    299.9994
+  ],
+  "files": {
+    ".png": "79667c3098b0ba26e8f257895ada89697fe8df00d9802857b2dbec302878e85f"
+  }
+}

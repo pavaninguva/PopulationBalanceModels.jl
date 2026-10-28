@@ -199,18 +199,15 @@ class ProteinResults(unittest.TestCase):
         logAJ=metas[0];self.assertAlmostEqual(np.trapz(prior_density(logAJ,np.linspace(25,35,101)),np.linspace(25,35,101)),.1,places=12)
 
     def test_five_publication_figures(self):
-        import pymupdf
         from PIL import Image
         folder=ROOT/'paper/protein/figures'
         for name in ('protein_data','protein_fit_cnt','protein_fit_cnt_grd','protein_corner_cnt','protein_corner_cnt_grd'):
             with Image.open(folder/f'{name}.png') as image:
                 self.assertEqual(image.width,2100);np.testing.assert_allclose(image.info['dpi'],[300,300],atol=.01)
-            with pymupdf.open(folder/f'{name}.pdf') as pdf:
-                self.assertEqual(len(pdf),1);self.assertAlmostEqual(pdf[0].rect.width,504,places=2)
-                for font in pdf[0].get_fonts(full=True): self.assertTrue(pdf.extract_font(font[0])[3],font)
-            for ext in ('png','svg'):
-                self.assertEqual(hashlib.sha256((folder/f'{name}.{ext}').read_bytes()).hexdigest(),
-                    hashlib.sha256((ROOT/f'docs/src/assets/protein_isothermal/{name}.{ext}').read_bytes()).hexdigest())
+            for ext in ('pdf','svg'):
+                self.assertFalse((folder/f'{name}.{ext}').exists())
+            self.assertEqual(hashlib.sha256((folder/f'{name}.png').read_bytes()).hexdigest(),
+                hashlib.sha256((ROOT/f'docs/src/assets/protein_isothermal/{name}.png').read_bytes()).hexdigest())
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

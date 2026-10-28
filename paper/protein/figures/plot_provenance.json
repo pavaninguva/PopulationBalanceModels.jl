@@ -3,20 +3,10 @@
   "dpi": 300,
   "files": {
     "protein_data.png": "b170484a47f2726a8d3d241cc4f9fabed24117b2a53b7b1e7437c8dc86aec7a4",
-    "protein_data.pdf": "f5b6272d519d2847f415e3a736609a150075c69cae27cb9ca43084445ed18f50",
-    "protein_data.svg": "9891596e7af797e26191c9f56b11d3b600e21acfe280de9bb6bf1d35df8f6b52",
     "protein_fit_cnt.png": "beb7408aa2e09c4c40af771e165eb385cc9508fb9314c3e6a1fa2f63f1b8c558",
-    "protein_fit_cnt.pdf": "21f26c0d2338cb98d914665b82b40bb58563b26a0bd4c2b8dcdf04fb931db31c",
-    "protein_fit_cnt.svg": "82f29d358de1194f25343e77f1835c6d8b99ce265ae3bb836ecf2a803555884d",
     "protein_fit_cnt_grd.png": "11ecc5ba4bdaab398b593ecc1e559a70342c8dff20eeb185e6143e61b906ef36",
-    "protein_fit_cnt_grd.pdf": "ed9d961fcba4b5013b820269ca1a32d0d47a570c75916af0c01b062afdcedbf3",
-    "protein_fit_cnt_grd.svg": "261e2926e94c05667de4d4d950578a18f0639579e3d7bfd1eb07c6d0f958ae10",
     "protein_corner_cnt.png": "5e0319aefa89763f87c64dbcc0c16460b7740eb305afa4dca4add55e8009bfab",
-    "protein_corner_cnt.pdf": "a2337e3ac86f9847e235ec20f12f29137c573eff65d9c5f9fe1796a9db22884b",
-    "protein_corner_cnt.svg": "d766c067471ac5c23b98fc38af78c2c3d1e42f3d3ec55ef43fa036faa9ca66b4",
-    "protein_corner_cnt_grd.png": "d267c25ec21e31440db342a7255b609e8c734dce88dbea189244de7cffc2aad8",
-    "protein_corner_cnt_grd.pdf": "83017e7b37f01ee7c20696c135ff794c56818607461998f5a8eb3c8429a5829d",
-    "protein_corner_cnt_grd.svg": "6f038218d2dd16ab3dda2f71d0035eb9000688c1b84863814886dad68a05148c"
+    "protein_corner_cnt_grd.png": "d267c25ec21e31440db342a7255b609e8c734dce88dbea189244de7cffc2aad8"
   },
   "retained_inputs": {
     "shared/concentration.csv": "5bf3970e14b4023de2f87a41d61e7a176e8964845125baf7732d079856029cc5",
@@ -36,7 +26,7 @@
   "figures_only": true,
   "python": "3.12.15",
   "numpy": "1.26.4",
-  "matplotlib": "3.9.4",
-  "driver_sha256": "e74260f9c7f82f1dadd367d991a114c1c558dda2db87846fd605bee62e0afa42",
+  "matplotlib": "3.8.4",
+  "driver_sha256": "e84b5ffbf0af9785fba30ac68acdc52f755076b4a088a0d0d879966e52a43d46",
   "density_helpers_sha256": "f99dafde90dc10fffe89b63d12f175957368baf00692f916c0884955c0754b34"
 }

@@ -1,0 +1,27 @@
+{
+    "method": "design",
+    "seed": 2022,
+    "iid": false,
+    "coordinates": "standard_normal",
+    "input_metadata": {
+        "transformation": "table1_affine",
+        "joint_law": "independent_gaussian",
+        "physical_units": [
+            "dimensionless",
+            "inverse_RPM_seconds",
+            "dimensionless",
+            "dimensionless"
+        ]
+    },
+    "design": null,
+    "solves": 9,
+    "requested": 9,
+    "setup_seconds": 0.004362134,
+    "solve_seconds": 0.17332848699999998,
+    "observation_seconds": 0.0043668000000000005,
+    "total_seconds": 0.182263757,
+    "successful": 9,
+    "failed": 0,
+    "failures": [
+    ]
+}

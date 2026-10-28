@@ -1,0 +1,3 @@
+configuration,reference,number_normalized_L1,normalized_volume_L1
+size_Nx200,Public CADET size Upwind / axial WENO23; not published WENO35,0.033843578837573364,0.08558698367688028
+reference,Public CADET size Upwind / axial WENO23; not published WENO35,0.03525660451158486,0.08657979791652705

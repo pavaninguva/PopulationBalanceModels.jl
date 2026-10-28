@@ -12,10 +12,9 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
-import pymupdf
 from protein_provenance import verify_compatibility
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from plotting_style import configure, DOUBLE
+from plotting_style import configure, save_png, DOUBLE
 from _support.posterior_density import joint_density, probability_levels
 
 PAPER=Path(__file__).resolve().parents[1]
@@ -57,18 +56,9 @@ def verify_shared_data():
 def export(fig,name):
     OUT.mkdir(parents=True,exist_ok=True);DOCS.mkdir(parents=True,exist_ok=True)
     creator='PopulationBalanceModels isothermal CNT/GRD comparison'
-    pdf=OUT/f'{name}.pdf'
-    fig.savefig(pdf,dpi=300,metadata={'Creator':creator,'CreationDate':None,'ModDate':None})
-    # Rasterize the final vector artwork so PNG and PDF have identical layout.
-    # This route uses actual LaTeX without requiring Agg's separate dvipng step.
-    with pymupdf.open(pdf) as document:
-        document[0].get_pixmap(dpi=300,alpha=False).save(OUT/f'{name}.png')
-    svg=OUT/f'{name}.svg'
-    fig.savefig(svg,dpi=300,metadata={'Creator':creator,'Date':None})
-    svg.write_text('\n'.join(line.rstrip() for line in svg.read_text().splitlines())+'\n')
-    for suffix in ('png','svg','pdf'):
-        path=OUT/f'{name}.{suffix}'
-        shutil.copy2(path,DOCS/path.name)
+    path=OUT/f'{name}.png'
+    save_png(fig,path,creator=creator)
+    shutil.copy2(path,DOCS/path.name)
     plt.close(fig)
     print(f'Rendered {name}',flush=True)
 
@@ -447,7 +437,7 @@ def plot(data_only=False,figures_only=True):
     captions(data_only=data_only)
     names=('protein_data',) if data_only else ('protein_data','protein_fit_cnt','protein_fit_cnt_grd','protein_corner_cnt','protein_corner_cnt_grd')
     files={f'{name}.{ext}':hashlib.sha256((OUT/f'{name}.{ext}').read_bytes()).hexdigest()
-        for name in names for ext in ('png','pdf','svg')}
+        for name in names for ext in ('png',)}
     inputs={f'{name}/{file}':hashlib.sha256((BASE/name/file).read_bytes()).hexdigest()
         for name in (('shared',) if data_only else ('shared','cnt','cnt_grd'))
         for file in (('concentration.csv','psd.csv','quantiles.csv') if name=='shared' else

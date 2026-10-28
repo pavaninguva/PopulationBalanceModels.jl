@@ -16,6 +16,7 @@ Files are grouped by behaviour, rather than by development milestone:
 | Moment representations and accounting | `extended_moments.jl`, `measure_evolution.jl`, `qamar_moments.jl` |
 | Axial and stationary balances | `axial.jl`, `axial_system.jl`, `stationary.jl` |
 | Calibration, Bayesian targets and derivatives | `uncertainty.jl`, `bayesian.jl`, `differentiation.jl`, `isothermal_protein.jl` |
+| Data-free forward UQ and milling physics | `forward_uq.jl`, `milling_model.jl`; optional BDF adapter: `milling_integration.jl` |
 | Scientific regression cases | `audit_regressions.jl`, `numerical_contracts.jl`, `stem_cells.jl`, `li_supplement.jl` |
 
 `fixtures/` holds independent references and reusable setup.

@@ -57,6 +57,10 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        StationaryPBMProblem, StationaryPBMSolution, StationaryBranch, StationarySolver,
        stationary_residual!, nonlinearproblem, solve_stationary, continue_stationary
 
+export UncertainInputs, UQProblem, UQResult, MonteCarlo, PolynomialChaos,
+       PCESurrogate, PCEFailure, propagate, pce_design, fit_pce, evaluate_pce,
+       validate_pce, uq_summary
+
 include("core/interfaces.jl")
 include("representations/grids.jl")
 include("modeling/terms.jl")
@@ -117,6 +121,10 @@ include("inference/sampling_coordinates.jl")
 include("stationary/problems.jl")
 include("stationary/continuation.jl")
 include("inference/stationary.jl")
+
+include("uq/inputs.jl")
+include("uq/propagation.jl")
+include("uq/polynomial_chaos.jl")
 
 @doc "Load Optim to enable fit(calibration, initial_parameters; ...) or MAP fit(estimation_problem; ...)." fit
 
