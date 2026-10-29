@@ -1,7 +1,31 @@
 include("fixtures/example_modules.jl")
 using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
+import Distributions
 include("size_diffusion_integration.jl")
 include("isothermal_protein_optim.jl")
+
+@testset "PCE wraps checked SciML simulations without another solver interface" begin
+    g = Grid1D([0.,.4,1.])
+    op = compile(PBMModel(Death((x,p,t,c) -> p.k)),g)
+    base = PBMProblem(op,2g.widths,(0.,.4);p=(k=.4,))
+    input = UncertainInputs((k=Distributions.Uniform(.2,.6),))
+    solver = (pb,times) -> begin
+        sol = SciMLBase.solve(odeproblem(pb),Tsit5();saveat=times,reltol=1e-11,abstol=1e-12)
+        SciMLBase.successful_retcode(sol) || throw(NumericalFailure("external UQ solve failed"))
+        stats = hasproperty(sol,:stats) ? sol.stats : sol.destats
+        PBMSolution(sol.t,sol.u,pb,stats.naccept)
+    end
+    problem = UQProblem(base,input;outputs=(number=MomentObservable(0),),times=[0.,.4],solver)
+    rule = pce_quadrature(input;order=5)
+    validation = propagate(problem,MonteCarlo(12;seed=89);max_solves=12)
+    fit = fit_pce(problem,PolynomialChaos(3;construction=:projection);
+        design=rule,validation,max_solves=5,validation_atol=1e-9,validation_rtol=1e-5)
+    E(t) = (exp(-.2t)-exp(-.6t))/(.4t)
+    @test fit.validation.passed
+    @test uq_summary(fit).mean.number[1,end] ≈ 2E(.4) atol=1e-10
+    @test uq_summary(fit).variance.number[1,end] ≈ 4*(E(.8)-E(.4)^2) atol=1e-10
+    @test diagnostics(fit).new_full_solves == 5
+end
 
 @testset "Nonuniform WENO5 SciML residual adapter" begin
     s = range(0,2pi;length=65)

@@ -2,7 +2,7 @@
 
 ## Source organization
 
-![Model construction, forward problems, estimation, and dependency roles](assets/architecture/section2_architecture_revised.png)
+![Model construction, forward problems, estimation, forward uncertainty quantification, and dependency roles](assets/architecture/section2_architecture_revised.png)
 
 Physical terms and numerical preparation are shared by transient and stationary
 forward problems. Their inputs differ: a transient problem needs an initial
@@ -16,6 +16,15 @@ Transient ODE sensitivities do not supply stationary or event jump rules.
 The diagram does not promise every combination of terms and methods.
 DQMOM evolves weights and weighted abscissas;
 the other displayed moment route need not have the same state layout.
+
+The [forward-UQ workflow](uncertainty_quantification.md) wraps the same problems,
+solvers and observables with `UncertainInputs` and `UQProblem`. Monte Carlo can
+propagate prescribed joint inputs or posterior draws without a fitting step;
+non-intrusive PCE uses eligible independent normal/uniform/beta reference
+coordinates and a declared map to physical inputs. Regression and quadrature
+share the public `pce_basis` recurrence contract; `refine_pce` checks validation
+and mean/variance stability before selecting a surrogate. These checks are
+separate from propagated uncertainty. Both methods use the core dependencies.
 
 The [figure](assets/architecture/section2_architecture_revised.png) and
 [generator](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/paper/architecture/generate_pbm_architecture.py)

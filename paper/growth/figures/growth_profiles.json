@@ -92,9 +92,9 @@
     "paper/growth/data/smooth_weno5_ssprk33_N80_a4bd09ca35d5/provenance.toml": "f667e36fe8e110783a300f953126ab664f9cf7d6a3a3feda5185b3390d9ecfa0",
     "paper/growth/data/analysis/growth_comparison.csv": "e686b75a4559408aa5807285adaaf48a53702d3c846f17ef0375b50617d6a28f"
   },
-  "plotter_sha256": "6690c97bb87e5ea84fb9c43c24d704ef6a82fe1e8de69c2a53027ff1f2301412",
-  "shared_plotting_sha256": "a7b3bfa618a93d88a362b7d415db853c3047812cc33737a5eede2a57673f4f63",
-  "style_sha256": "6d03afd1f9f96d8788dbbf80c6233a8dab370fafd07a2c18988dce5a99b7ca1c",
+  "plotter_sha256": "5522a04d5ffe4429f43d6a659545b20ab0abc4cdb29bc9bb10012c4fb97a88cb",
+  "shared_plotting_sha256": "53e3f9d85f53656dcc538aebc32e9e72254484be3d3f55376ed32b9ef04b8fb9",
+  "style_sha256": "e1a0a1ac74bef5c2dd15f5059824dd9d63dc29af12d9f9b5691515c4c19cbfb0",
   "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
   "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
   "matplotlib": "3.8.4",
@@ -110,17 +110,17 @@
   },
   "inches": [
     7.0,
-    3.65
+    3.25
   ],
   "png_pixels": [
     2100,
-    1095
+    975
   ],
   "png_dpi": [
     299.9994,
     299.9994
   ],
   "files": {
-    ".png": "dfbdfc653fed69489473994f76e139d767d2f4596414c39e3af43f97247c737b"
+    ".png": "3dca7fdbafc1168ba0c7712d100229ae9cd57b164e3a71eefc419d64e1954828"
   }
 }

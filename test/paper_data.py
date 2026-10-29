@@ -127,31 +127,65 @@ class GrowthData(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,"Changed numerical data"):
                     plots.load_case(1,check_checkout=False)
 
-class MomentData(unittest.TestCase):
-    def test_analytical_reference_layouts_and_shape_bias(self):
-        base,info,runs = plots.load_case(2,check_checkout=CHECK_CHECKOUT)
-        for method in plots.MOMENT_METHODS:
-            data = plots.table(runs[method+"_dt1"][0]/"moments.csv")
-            arrays = [data[data["order"]==k] for k in range(4)]
-            for k,d in enumerate(arrays):
-                times = d["time_s"]
-                steady = math.sqrt(.002)
-                r = (1-steady)/(1+steady)
-                number = steady*(1+r*np.exp(-steady*times))/(1-r*np.exp(-steady*times))
-                exact = number*(.001/number)**(k/3)*math.gamma(1+k/3)
-                np.testing.assert_allclose(d["exact"],exact,rtol=3e-14)
-                np.testing.assert_allclose(d["signed_difference"],d["moment"]-d["exact"],atol=1e-16)
-                np.testing.assert_allclose(d["absolute_relative_percent"],100*np.abs(d["moment"]-d["exact"])/d["exact"],rtol=2e-8,atol=3e-12)
-            if method=="lognormal":
-                reconstructed = arrays[0]["moment"]*(arrays[2]["moment"]/arrays[1]["moment"])**3
-                np.testing.assert_allclose(arrays[3]["moment"],reconstructed,rtol=3e-14)
-                self.assertGreater(arrays[3]["moment"][0]/.001,1.02)
-                self.assertTrue(all(str(v).lower()=="false" for v in arrays[3]["tracked"]))
-            else:
-                self.assertLess(np.max(np.abs(arrays[0]["moment"]/arrays[0]["exact"]-1)),1e-5)
-                self.assertLess(np.max(np.abs(arrays[3]["moment"]/.001-1)),1e-6)
-        adaptive = plots.table(runs["adaptive3_dt1"][0]/"moments.csv")
-        self.assertEqual(set(adaptive["active_rank"]),{3})
+class MillingData(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if plots.MODE == "smoke":
+            raise unittest.SkipTest("Milling paper figures use completed production inputs")
+        cls.base,cls.info,cls.runs = plots.load_case(2,check_checkout=CHECK_CHECKOUT)
+
+    def test_original_producers_and_single_forward_selection(self):
+        import hashlib,json
+        forward,uq = self.runs['forward'][1],self.runs['uq'][1]
+        self.assertEqual(uq['settings']['mc_samples'],12000)
+        self.assertEqual(self.info['configuration']['forward_statistic'],'pivot_CDF_d50_um')
+        data=plots.table(self.base/'forward.csv')
+        self.assertEqual(set(data['bins']),{100})
+        self.assertEqual(set(data['rpm']),{3350,4923})
+        self.assertTrue(np.all(data['minimum_inventory']>=0))
+        self.assertLess(np.max(np.abs(data['material_defect_kg'])),1e-9)
+        for speed in (3350,4923):
+            part=data[data['rpm']==speed]
+            self.assertTrue(np.all(np.diff(part['time_s'])>0))
+            self.assertTrue(np.all(part['pivot_CDF_d50_um']>0))
+        # The reference coordinates are original figure readings, not generated
+        # from the package trajectory or moved to agree with it.
+        reference=self.base.parents[2]/'examples/data/milling_uncertainty/barrasso_figure7.csv'
+        if reference.exists():
+            self.assertEqual((self.base/'reference.csv').read_bytes(),reference.read_bytes())
+        for kind,name in (('forward','forward_producer.json'),('uq','uq_producer.json')):
+            source=plots.ROOT/self.info[kind+'_source']/'provenance.json'
+            if source.exists(): self.assertEqual((self.base/name).read_bytes(),source.read_bytes())
+        self.assertEqual(set(self.info['configuration']['figures']),{'milling_forward','milling_uq'})
+
+    def test_uq_shared_times_and_unchanged_output_bands(self):
+        nominal=plots.table(self.base/'nominal.csv')
+        self.assertTrue(np.all(np.diff(nominal['time_s'])>0))
+        self.assertTrue({29.999,30.,30.001,31.}.issubset(set(nominal['time_s'])))
+        for name in ('mc','pce1','pce2'):
+            d=plots.table(self.base/f'{name}_summary.csv')
+            np.testing.assert_array_equal(d['time_s'],nominal['time_s'])
+            self.assertTrue(np.all(np.isfinite(d['mean_um'])))
+            self.assertTrue(np.all(d['sd_um']>=0))
+            np.testing.assert_allclose(d['gaussian_low_um'],d['mean_um']-1.96*d['sd_um'],rtol=2e-14)
+            np.testing.assert_allclose(d['gaussian_high_um'],d['mean_um']+1.96*d['sd_um'],rtol=2e-14)
+            self.assertTrue(np.all(d['q025_um']<=d['median_um']))
+            self.assertTrue(np.all(d['median_um']<=d['q975_um']))
+            source=plots.ROOT/self.info['uq_source']/f'{name}_summary.csv'
+            if source.exists(): self.assertEqual((self.base/f'{name}_summary.csv').read_bytes(),source.read_bytes())
+
+    def test_changed_curve_or_producer_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target=Path(tmp)/'data'
+            shutil.copytree(self.base,target)
+            original=(target/'mc_summary.csv').read_bytes()
+            with open(target/'mc_summary.csv','a') as stream: stream.write('changed\n')
+            with self.assertRaisesRegex(ValueError,'Changed numerical data'):
+                plots.load_case(2,check_checkout=False,input_path=target)
+            (target/'mc_summary.csv').write_bytes(original)
+            with open(target/'uq_producer.json','a') as stream: stream.write('\n')
+            with self.assertRaisesRegex(ValueError,'Changed numerical data'):
+                plots.load_case(2,check_checkout=False,input_path=target)
 
 class PrecipitationData(unittest.TestCase):
     def test_separate_refinement_coordinates_and_reference_controls(self):
@@ -305,7 +339,7 @@ if __name__=="__main__":
         print("Retained-result check: producer/current-checkout equivalence is NOT asserted.",flush=True)
     plots.MODE = "smoke" if args.smoke else "production"
     suite = unittest.TestSuite()
-    for i,case in enumerate((GrowthData,MomentData,PrecipitationData),1):
+    for i,case in enumerate((GrowthData,MillingData,PrecipitationData),1):
         if args.case in ("all",str(i)):
             suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     result = unittest.TextTestRunner(verbosity=2).run(suite)

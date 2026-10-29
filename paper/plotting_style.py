@@ -13,7 +13,7 @@ DOUBLE = 7.0
 METHODS = ["upwind","muscl","weno3","weno5_ssprk33","weno5","hoc","inguva2022"]
 LABELS = {"upwind":"Upwind + Euler", "muscl":"MUSCL + SSPRK3", "weno3":"WENO3 + SSPRK3",
           "weno5_ssprk33":"WENO5 + SSPRK3", "weno5":"WENO5 + RK4",
-          "inguva2022":"Inguva2022 ($C=1$)", "hoc":"HOC + midpoint"}
+          "inguva2022":r"Inguva2022 ($\mathrm{CFL}=1$)", "hoc":"HOC + midpoint"}
 COLORS = dict(zip(METHODS,["#0072B2","#D55E00","#009E73","#56B4E9","#CC79A7","#6A3D9A","#222222"]))
 MARKERS = dict(zip(METHODS,["o","s","^","P","v","D","x"]))
 STYLES = dict(zip(METHODS,["-","--","-.","-.","-","--",":"]))

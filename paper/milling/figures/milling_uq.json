@@ -1,0 +1,52 @@
+{
+  "mode": "production",
+  "renderer": "Matplotlib + external LaTeX",
+  "source_digest": "11634f2fbb674128bf4ae76d00c0ed86fab370ad64ed77d295cbf295df23c513",
+  "workflow_digest": "4530732e68e650d447b7b689272e9f3e40ab21cfeeb9bd508a7296571c785b58",
+  "checkout_verified": false,
+  "retained_redraw": true,
+  "inputs": {
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/index.json": "1c81e2957ef8802dddd1447c41573f30bd657a744c4224f7b96c137e53b95ca9",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/mc_summary.csv": "ec88baddf03829d0f65e55477c115ca5034bd65d1847c7a8f8e3aa57db7cbeba",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/pce2_summary.csv": "903971c30f517b35af6e5935a22f8413c60a0912a006bbe11f83083198625b31",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/reference.csv": "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/forward.csv": "555ed7ee350ba15a9dd7def07205b6af753f8f15225b3daff4534718a7df6f3c",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/uq_producer.json": "6c6f96c43c1fdc7f7e7e20690954bcf4ea3308ba9f1ece5aa773f852cf9bd1ad",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/pce1_summary.csv": "1301b8d9cc560ed207e2de7717aea24e160422e39ceb638d5b3bb5c42938ad82",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/forward_producer.json": "dc1998bd9f6df1cdebc23e77eed8476fe05e8e71a12262de74e6e83d4707c9f8",
+    "/mnt/c/Users/Pavan/Projects/PopulationBalanceModels.jl/paper/milling/data/nominal.csv": "f39bca33cdb889257ecfcd52ff159c8a1079658e890d1ab131faac9ba8b590d8"
+  },
+  "plotter_sha256": "b44a26a8b1998df5eaf6b1ee13d1fe4593677ea9ec43fc5733f8765a79c518b2",
+  "shared_plotting_sha256": "53e3f9d85f53656dcc538aebc32e9e72254484be3d3f55376ed32b9ef04b8fb9",
+  "style_sha256": "e1a0a1ac74bef5c2dd15f5059824dd9d63dc29af12d9f9b5691515c4c19cbfb0",
+  "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
+  "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
+  "matplotlib": "3.8.4",
+  "numpy": "1.26.4",
+  "pillow": "10.3.0",
+  "pymupdf": "1.28.2",
+  "latex_version": "pdfTeX 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian)",
+  "display_conventions": {
+    "forward": "One conservative fixed-pivot/CVODE-BDF scheme; 100 power-grid pivots; two constant speeds",
+    "forward_median": "Instantaneous outlet volume median; linear diameter interpolation of the pivot-volume CDF, as in the UQ example",
+    "reference": "Barrasso (2013) Figure 7 simulation markers; original graph readings, not experimental data",
+    "uq": "Original 12,000-draw MC, 12-point PCE1 and 32-point PCE2 summaries; full Gaussian input law",
+    "bands": "Pointwise 2.5/97.5% output quantiles and approximate mean +/-1.96 output SD, not confidence intervals on the mean",
+    "timing": "No new simulations or timings in this redraw; original numerical producers are retained"
+  },
+  "inches": [
+    7.0,
+    2.85
+  ],
+  "png_pixels": [
+    2100,
+    855
+  ],
+  "png_dpi": [
+    299.9994,
+    299.9994
+  ],
+  "files": {
+    ".png": "59d207ad0f29a48ca1fb11e4790f7c2ca62c7c5dd72caa0b76cf208c85965ca3"
+  }
+}

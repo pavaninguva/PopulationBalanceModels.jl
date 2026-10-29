@@ -1,4 +1,5 @@
 using Test, PopulationBalanceModels, NonlinearSolve, LinearAlgebra
+import Distributions
 @testset "Data-free stationary forward UQ" begin
     g=Grid1D([0.,.4,1.])
     op=compile(PBMModel(Birth((x,p,t,c)->2.)+Death((x,p,t,c)->p.k)),g)
@@ -8,6 +9,24 @@ using Test, PopulationBalanceModels, NonlinearSolve, LinearAlgebra
     result=propagate(uq,MonteCarlo(3);max_solves=3)
     @test result.values≈[4. 2. 1.] atol=1e-8
     @test result.layout.times===nothing && diagnostics(result).solves==3
+end
+
+@testset "Stationary PCE shares the checked forward and observation interfaces" begin
+    g = Grid1D([0.,.4,1.])
+    op = compile(PBMModel(Birth((x,p,t,c) -> p.rate)+Death((x,p,t,c) -> 1.)),g)
+    base = StationaryPBMProblem(op,ones(2);p=(rate=1.,),autonomous=true)
+    input = UncertainInputs((rate=Distributions.Beta(2,5),);
+        map=p -> (rate=2+p.rate,),coordinates=:reference)
+    problem = UQProblem(base,input;outputs=(number=MomentObservable(0),))
+    validation = propagate(problem,MonteCarlo(8;seed=88);max_solves=8)
+    study = refine_pce(problem,[PolynomialChaos(p;construction=:projection) for p in (1,2)];
+        designs=[pce_quadrature(input;order=q) for q in (2,3)],validation,max_solves=5,
+        validation_atol=1e-8,mean_atol=1e-8,variance_atol=1e-8)
+    @test study.converged
+    @test study.surrogate.training.layout.times === nothing
+    @test only(uq_summary(study.surrogate).mean.number) ≈ 16/7 atol=1e-8
+    @test only(uq_summary(study.surrogate).variance.number) ≈ 5/196 atol=1e-8
+    @test diagnostics(study).solves == 5
 end
 
 @testset "Stationary nonlinear collision moments and closure Jacobians" begin

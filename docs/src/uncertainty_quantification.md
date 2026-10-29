@@ -51,6 +51,7 @@ pce = fit_pce(uq,PolynomialChaos(2);
 uq_summary(pce).variance.number
 diagnostics(pce).condition
 pce.validation.rmse
+diagnostics(pce).accuracy_status  # :passed, :failed, or :not_run
 surrogate = evaluate_pce(pce,MonteCarlo(10_000; seed=45))
 uq_summary(surrogate).quantiles.number
 ```
@@ -150,18 +151,27 @@ Y(\xi)\approx\sum_{\alpha}c_\alpha\Psi_\alpha(\xi),
 \qquad |\alpha|\le p.
 ```
 
-The initial backend supports independent normal and uniform marginals, including
+The backend supports independent normal, uniform and beta marginals, including
 mixed products. It uses normalized probabilists' Hermite polynomials
 `He_k(z)/sqrt(k!)` for standard normal variables and
 `sqrt(2k+1) P_k(z)` for uniform variables on `[-1,1]`. Other normal/uniform
-locations and scales are transformed to these coordinates. Thus
+locations and scales are transformed to these coordinates. For `Beta(α,β)`,
+the coordinate `z=2x-1` uses Jacobi polynomials with weight proportional to
+`(1-z)^(β-1)*(1+z)^(α-1)`, normalized under the beta **probability** law. Thus
 `E[Ψα Ψβ] = δαβ`. Four inputs give five terms at degree one and fifteen at
 degree two.
 
-The small standard recurrences are implemented and independently tested in the
-package; no PolyChaos, optimization or sampling dependency is required. This is
-a full total-degree regression, not sparse/adaptive PCE. A basis for an arbitrary
-empirical or correlated posterior is not constructed automatically.
+One recurrence interface supplies basis evaluation and quadrature. The built-in
+families need only existing dependencies. [`pce_basis`](@ref) is the public hook
+for another distribution or a basis-library adapter: return a [`PCEBasis`](@ref)
+with probability-orthonormal recurrence coefficients. Monic polynomials or
+polynomials normalized under an unnormalized weight need conversion first.
+This contract also keeps future basis backends separate from PBM solving.
+The classical recurrences follow the [NIST DLMF](https://dlmf.nist.gov/18.9);
+PoCET illustrates their use for dynamic uncertainty propagation
+([Petzke et al., 2020](https://doi.org/10.1016/j.ifacol.2020.12.560)).
+A basis for an arbitrary empirical or correlated posterior is not constructed
+automatically. Correlated physical parameters still require an explicit map.
 
 `pce_design` records actual LHS or random training points. By default LHS
 stratifies the marginal CDFs over their full support. Optional training `bounds`
@@ -169,12 +179,14 @@ instead define a finite box; this changes the training design **without changing
 the propagated law**. Caller-supplied designs and reusable `UQResult`s are also
 accepted. Keep training and validation roles distinct.
 
-`fit_pce` uses an SVD least-squares solve for all output components/times, with
+By default, `fit_pce` uses an SVD least-squares solve for all output components/times, with
 rank and conditioning checks. It neither forms normal equations nor introduces
 a ridge. Failed training points are retained in `PCEFailure.evaluations`, not
 deleted. Validation inputs must be disjoint from training; disjointness alone
 does not establish independent sampling. Reusing already evaluated validation
 data costs no additional PBM solves.
+Surrogate predictions from `evaluate_pce` cannot serve as full-model training
+or validation references, even though they share the `UQResult` container.
 
 Orthonormal coefficients give the surrogate mean `c₀` and covariance from its
 nonconstant coefficients. Quantiles instead require surrogate evaluation and
@@ -182,6 +194,109 @@ are not presumed Gaussian. Negative surrogate predictions are retained.
 Independent full-model validation reports per-output/time errors separately
 from propagated uncertainty. Increasing polynomial degree, training size, MC
 size and PBM numerical resolution answer different convergence questions.
+
+### Quadrature construction
+
+For a few independent inputs, Gaussian quadrature offers a second way to
+calculate coefficients. With an orthonormal basis,
+
+```math
+c_\alpha=\mathbb E[Y\Psi_\alpha]
+\approx\sum_{r=1}^{Q}w_rY(\xi_r)\Psi_\alpha(\xi_r).
+```
+
+Using the same `uq` and full-model `validation` from the first calculation:
+
+```julia
+rule = pce_quadrature(inputs; order=5)
+projection = fit_pce(uq,PolynomialChaos(3; construction=:projection);
+    design=rule, validation, max_solves=5,
+    validation_atol=1e-8, validation_rtol=0.01)
+diagnostics(projection).accuracy_status
+```
+
+`order=q` means q nodes in **each** coordinate; a tuple selects individual
+orders. The probability weights sum to one. Golub–Welsch nodes and Christoffel
+weights retain small tail contributions without a weight floor. A q-point
+univariate rule integrates polynomials through degree `2q-1`; resolving the
+basis products requires at least `q=p+1` for degree p. This does not establish
+accuracy for a nonpolynomial PBM output. Refine quadrature order separately.
+Full tensor cost grows as the product of the node counts; `max_points` checks
+that size before allocating. This is neither sparse quadrature nor intrusive PCE.
+
+Projection rejects unresolved basis products, invalid weights and weights that
+do not sum to one. They are never silently renormalized. Weighted designs must
+select `construction=:projection`; explicitly pass `rule.samples` for an
+unweighted regression comparison. Quadrature nodes are not a random validation
+sample. Reusing `projection.training` retains its recorded weights and incurs
+zero new solves.
+
+### Validation and refinement
+
+A small training residual and a well-conditioned matrix do not establish PCE
+accuracy. For example, fitting a linear polynomial to `Y=X^3` at `X=-1,0,1`
+interpolates perfectly. Under a standard normal input it predicts variance 1,
+where the exact variance is 15.
+
+[`validate_pce`](@ref) checks every output and time against disjoint full-model
+evaluations. Its acceptance criterion is
+
+```math
+\mathrm{RMSE}_j\le a_j+r_j\,\mathrm{SD}_{j,\mathrm{validation}}.
+```
+
+`validation_atol` has output units; `validation_rtol` is relative to the reference
+output SD. Named tolerances can distinguish outputs with different units. A
+constant output has zero SD and needs an appropriate absolute tolerance.
+Failures retain all residual diagnostics; `fit_pce` does not throw away an
+inaccurate candidate. Missing validation is explicitly `:not_run`.
+
+[`refine_pce`](@ref) adds a selection rule. It requires validation and at least
+two distinct candidates, then stops when two successive candidates pass
+validation **and** their analytical means/variances meet the requested stability
+limits. Continue the first example with:
+
+```julia
+sizes = (8,12,16,20)
+study = refine_pce(uq,PolynomialChaos.((1,2,3,4));
+    designs=[pce_design(inputs; n,seed=100+n) for n in sizes],
+    validation, max_solves=sum(sizes),
+    validation_atol=1e-8, validation_rtol=0.01,
+    mean_atol=1e-8, mean_rtol=0.001,
+    variance_atol=1e-8, variance_rtol=0.01)
+study.converged || error("Inspect study.history and the retained candidates")
+selected = study.surrogate
+test = propagate(uq,MonteCarlo(100; seed=46); max_solves=100)
+validate_pce(selected,test; atol=1e-8,rtol=0.01).passed
+```
+
+Mean/variance stability uses `atol + rtol*max(abs(previous),abs(current))`;
+variance absolute tolerances have squared-output units. Specify absolute limits
+near zero. Hold degree fixed while enlarging a regression design or increasing
+quadrature order to isolate those errors; then increase degree. A prescribed
+list is not an adaptive/sparse basis algorithm. All candidates, criteria,
+coordinates, input points and actual solve counts remain available. Existing
+`UQResult` inputs can be reused at zero cost; ordinary repeated designs each
+incur their stated solve count. The worst-case budget is checked before solving.
+
+If the plan is exhausted, `converged=false` and `surrogate=nothing`; incomplete
+evidence is not returned as a selected surrogate. A forward failure also stops
+selection and retains earlier candidates plus the failed sample-level
+evaluations in `diagnostics(study).failure`. Programming errors remain errors.
+This empirical rule covers the
+specified outputs and validation set, not every tail or event. A set used for
+selection is no longer an untouched test set, which is why the example uses
+fresh final inputs. Forward discretization/closure errors and validity of the
+input law remain separate checks.
+
+A complete beta-removal calculation compares both constructions with the
+analytical moments of `N(t)=2 exp(-k t)`, `k~Beta(2,2)`:
+
+```sh
+julia --project=. examples/pce_refinement.jl
+```
+
+[Download the complete example](assets/source/examples/pce_refinement.jl).
 
 The [milling case](case_studies/milling_uncertainty.md) demonstrates all these
 steps. Bhonsale et al. (2018), [DOI 10.3390/pr6120255](https://doi.org/10.3390/pr6120255),

@@ -1,2 +1,0 @@
-method,states,dt,seconds,steps,completed_time,status,minimum_rank,maximum_rank,tracked_M3,initial_material_ratio,final_material_ratio,material_relative_change,max_number_rate_residual,max_mu1_error_percent,max_mu2_error_percent,quadrature_points
-eqmom3,7,0.01,10.332976346,5064,50.0,completed,3,3,true,1.0,1.0,0.0,2.0816681711721685e-16,0.00030070583443286836,0.0010115482425687716,36

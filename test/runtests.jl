@@ -172,6 +172,7 @@ include("numerical_contracts.jl")
 
 include("uncertainty.jl")
 include("forward_uq.jl")
+include("pce_construction.jl")
 include("milling_model.jl")
 include("bayesian.jl")
 include("observation_lifecycle.jl")

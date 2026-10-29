@@ -13,8 +13,8 @@ import numpy as np
 
 PAPER = Path(__file__).resolve().parents[1]
 ROOT = PAPER.parent
-CASES = ["growth","moments","precipitation"]
-ORIGINAL_CASES = ["01_growth_time_methods","02_aggregation_fragmentation","03_tubular_precipitation"]
+CASES = ["growth","milling","precipitation"]
+ORIGINAL_CASES = ["01_growth_time_methods","02_milling_uncertainty","03_tubular_precipitation"]
 MODE = "production"
 PREVIEW = False
 RETAINED = False
@@ -64,7 +64,7 @@ def analysis_table(number,base,name,data):
         writer.writerows(data)
     INPUTS[number][str(path.relative_to(ROOT))] = sha(path)
 
-def load_case(number, *, check_checkout=None):
+def load_case(number, *, check_checkout=None, input_path=None):
     """Validate recorded inputs; current producer equivalence is required by default.
 
     The independent checker can require current-producer equality. Figure-only
@@ -72,6 +72,10 @@ def load_case(number, *, check_checkout=None):
     """
     if check_checkout is None:
         check_checkout = not RETAINED
+    if number == 2:
+        return load_milling(input_path,check_checkout=check_checkout)
+    if input_path is not None:
+        raise ValueError("A custom input path is currently supported by the milling plotter")
     name = CASES[number-1]
     base = ROOT/".cache/paper/checks"/name if MODE == "smoke" else PAPER/name/"data"
     index_path = base/"index.toml"
@@ -95,8 +99,6 @@ def load_case(number, *, check_checkout=None):
             expected |= {gaussian_key(method,n,courant) for n in cfg['bins']}
             expected |= {gaussian_key(method,cfg['profile_bins'],c) for c in cfg['profile_courants']
                          if method!='inguva2022' or c==1.0}
-    elif number == 2:
-        expected = {m+f"_dt{r}" for m in MOMENT_METHODS for r in (1,2)} | {"qmom4_dt1"}
     else:
         cfg = info["configuration"]
         if not {"size_bins", "axial_cells"} <= cfg.keys():
@@ -154,6 +156,62 @@ def load_case(number, *, check_checkout=None):
             INPUTS[number][str(path.relative_to(ROOT))] = sha(path)
     return base,info,runs
 
+def load_milling(input_path=None, *, check_checkout=False):
+    """Validate compact figure data against unchanged numerical producers.
+
+    The original MC samples/coefficients remain in the source reproduction
+    dataset. This paper selection retains its four curve tables and producer,
+    and selects only the 100-pivot forward trajectory for both speeds.
+    """
+    if MODE != "production":
+        raise ValueError("Milling paper figures require completed production data, not smoke inputs")
+    base = Path(input_path) if input_path is not None else PAPER/"milling/data"
+    index_path = base/"index.json"
+    info = json.loads(index_path.read_text())
+    if not info["complete"] or info["mode"] != "production" or info["case"] != "milling":
+        raise ValueError("Expected completed production milling paper data")
+    cfg = tomllib.loads((PAPER/"milling/config.toml").read_text())
+    if info["configuration"] != cfg:
+        raise ValueError("Milling paper selection differs from config.toml; stage the requested selection")
+    required = {"forward.csv","reference.csv","forward_producer.json","uq_producer.json",
+                "nominal.csv","mc_summary.csv","pce1_summary.csv","pce2_summary.csv"}
+    if set(info["files"]) != required:
+        raise ValueError("Incomplete milling figure inputs")
+    for name,digest_ in info["files"].items():
+        if sha(base/name) != digest_:
+            raise ValueError(f"Changed numerical data: {base/name}")
+    forward = json.loads((base/"forward_producer.json").read_text())
+    uq = json.loads((base/"uq_producer.json").read_text())
+    if not forward["complete"] or forward["mode"] != "forward_comparison":
+        raise ValueError("Incomplete forward producer")
+    if not uq["complete"] or uq["mode"] != "production" or uq["settings"]["mc_samples"] != 12000:
+        raise ValueError("Paper UQ requires the full 12,000-solve production ensemble")
+    for name in ("nominal.csv","mc_summary.csv","pce1_summary.csv","pce2_summary.csv"):
+        if sha(base/name) != uq["numerical_files"][name]:
+            raise ValueError(f"UQ table differs from its numerical producer: {name}")
+    if info["forward_derivation"]["source_sha256"] != forward["numerical_files"]["trajectories.csv"]:
+        raise ValueError("Forward extraction does not identify its original trajectory")
+    if sha(base/"reference.csv") != forward["configuration"]["reference_sha256"]:
+        raise ValueError("Reference data differ from the original source readings")
+    expected_source = hashlib.sha256((base/"forward_producer.json").read_bytes()+
+                                    (base/"uq_producer.json").read_bytes()).hexdigest()
+    if info["source_digest"] != expected_source:
+        raise ValueError("Milling producer identity differs")
+    if check_checkout:
+        workflow = hashlib.sha256((PAPER/"milling/run.jl").read_bytes()+
+                                  (PAPER/"milling/config.toml").read_bytes()).hexdigest()
+        if workflow != info["workflow_digest"]:
+            raise ValueError("Milling staging workflow differs from the recorded selection")
+        for producer in (forward,uq):
+            for name,digest_ in producer["source_hashes"].items():
+                path = ROOT/name
+                if not path.is_file() or sha(path) != digest_:
+                    raise ValueError(f"Numerical source differs from retained milling producer: {name}; use --retained to check retained results")
+    info.update(checkout_verified=bool(check_checkout),retained_redraw=not check_checkout)
+    INPUTS[2] = {str(index_path.resolve()):sha(index_path)}
+    INPUTS[2].update({str((base/name).resolve()):sha(base/name) for name in required})
+    return base,info,{"forward":(base,forward),"uq":(base,uq)}
+
 def gaussian_key(method,bins,courant):
     tag=str(float(courant)).replace('.', 'p')
     return f'gaussian_{method}_C{tag}_N{bins}'
@@ -180,9 +238,6 @@ def export(fig,number,name,info):
     plt.close(fig)
     print("Rendered",folder/stem,flush=True)
 
-
-MOMENT_METHODS = ["qmom3","adaptive3","eqmom3","dqmom3","lognormal"]
-MOMENT_LABELS = ["QMOM(3)","Rank-adaptive QMOM(3)","Gamma EQMOM(3)","DQMOM(3)","Assumed lognormal"]
 
 def run_plot(number, renderer, argv=None):
     """Common CLI; retained redraws validate original payloads, never relabel producers."""

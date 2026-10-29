@@ -59,7 +59,8 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
 
 export UncertainInputs, UQProblem, UQResult, MonteCarlo, PolynomialChaos,
        PCESurrogate, PCEFailure, propagate, pce_design, fit_pce, evaluate_pce,
-       validate_pce, uq_summary
+       validate_pce, uq_summary, PCEBasis, pce_basis, pce_quadrature,
+       PCERefinement, refine_pce
 
 include("core/interfaces.jl")
 include("representations/grids.jl")
@@ -124,7 +125,9 @@ include("inference/stationary.jl")
 
 include("uq/inputs.jl")
 include("uq/propagation.jl")
+include("uq/bases.jl")
 include("uq/polynomial_chaos.jl")
+include("uq/refinement.jl")
 
 @doc "Load Optim to enable fit(calibration, initial_parameters; ...) or MAP fit(estimation_problem; ...)." fit
 

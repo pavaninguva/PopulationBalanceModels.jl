@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Reduced the growth paper selection to profiles/work–precision with in-panel legends and CFL labels; moved the precipitation outlet legend and clarified reference labels. Added a compact milling forward/MC/PCE paper workflow from retained production curves, preserving original producers. Archived the retired moments paper case and extra growth figures; documentation moment studies remain available.
+- Added beta/Jacobi reference inputs, a public probability-orthonormal recurrence interface and Gaussian-quadrature PCE projection. Added explicit validation acceptance and a budgeted refinement workflow that selects only after successive accuracy and mean/variance stability checks; existing regression and MC interfaces remain usable. No runtime dependencies added.
+- Reject surrogate-generated `UQResult`s as PCE training/validation references, preventing a surrogate from validating itself as if it were a full-model calculation.
+
+- Added forward Monte Carlo/PCE propagation to the architecture schematic and removed the redundant arrow glyphs from its transient/stationary solver labels.
+
 - Revised the protein comparison to fixed interfacial energy (0.64 mJ/m²), a Uniform(1,5) growth exponent and constant native size diffusivity. Converted rate/population units consistently, removed reference-rate corner labels, and separated smooth graph-trace display guides from unchanged likelihood readings. Superseded posterior draws and producer/uncertainty records are preserved in a verified archive.
 
 - Preserved protein producer manifests/receipts during repeated verification, and protected completed-fit captions/provenance during data-only redraws.

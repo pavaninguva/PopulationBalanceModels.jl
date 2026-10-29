@@ -1,7 +1,7 @@
 # Paper figures
 
-Each case is one directory. `run.jl` calculates the results; `plot.py` draws the
-figures from saved results. Settings are in `config.toml`, numerical exports in
+Each case is one directory. `run.jl` calculates results or explicitly stages
+retained production data; `plot.py` draws from saved results. Settings are in `config.toml`, numerical exports in
 `data/`, and finished figures in `figures/`.
 
 All figure exporters save **300-dpi PNG only**, including the architecture
@@ -11,7 +11,7 @@ receipts remain alongside the figures and data.
 | Directory | Case | Saved results |
 |:--|:--|:--|
 | [growth/](growth/) | Growth and time schemes | Available |
-| [moments/](moments/) | Aggregation–fragmentation | Available |
+| [milling/](milling/) | Cone-mill forward comparison and MC/PCE uncertainty | Retained production curves and original producers |
 | [precipitation/](precipitation/) | Tubular precipitation | Logarithmic WENO5 / axial MUSCL refinement study |
 | [protein/](protein/) | Fixed-γ CNT versus CNT + constant D0 | MAPs, MCMC draws and latent predictions available |
 
@@ -30,7 +30,7 @@ julia --project=paper paper/growth/run.jl
 python paper/growth/plot.py
 ```
 
-Use `moments` or `precipitation` in the same commands. Plotting validates the
+Use `precipitation` in the same commands. Plotting validates the
 saved data and preserves its original producer identity; it never reruns a
 simulation or treats old timings as newly measured results. Incomplete
 precipitation studies are rejected unless their reference, independent
@@ -49,6 +49,45 @@ The closed growth/nucleation model uses the normal `PBMSystem.bulk_rhs` callback
 and its current population derivative for material exchange. Tests compare this
 with `ConservativeExchange`; it avoids repeated transport evaluation and does
 not add a separate analytical uptake sink.
+
+The milling case also has exactly two outputs: `milling_forward.png` and
+`milling_uq.png`. Stage the retained data once, then redraw independently:
+
+```sh
+julia --project=paper paper/milling/run.jl --retained
+python paper/milling/plot.py
+python test/paper_data.py --case 2 --retained
+```
+
+The forward figure shows outlet d50 and hold-up for 3350/4923 RPM using one
+100-pivot fixed-pivot/CVODE-BDF calculation and the UQ example's pivot-CDF
+median convention. Reference points are published simulation readings, not
+experiments. Its power grid, initial feed inventory and point-normalized feed
+remain distinct from the geometric-grid, empty-start UQ calculation. The UQ
+figure reuses the manual's three-panel MC/PCE comparison, including the full
+12,000-draw MC ensemble. It does not rerun that ensemble or reinterpret the
+stored output bands. Compact curve tables and unchanged producer manifests
+live in `milling/data/`; full samples, coefficients and verification exports
+remain in the original documented reproduction dataset.
+
+A deliberate recalculation reuses the shared example builders/drivers and
+requires a fresh directory:
+
+```sh
+julia --project=paper paper/milling/run.jl --full --output=/tmp/milling-paper
+python paper/milling/plot.py --input=/tmp/milling-paper
+```
+
+This executes the original forward verification (including its supporting grid
+checks) and full MC/PCE study; it can be expensive. Only the selected 100-pivot
+forward curves and the three UQ summaries enter the two paper figures.
+Staging and plotting validate retained numerical hashes without asserting
+that historical producers equal today's checkout. Figure-only commands never
+rewrite numerical tables or producer records.
+
+The retired moments paper case and obsolete growth plots are preserved outside
+`paper/` in the historical archive under `test/fixtures/archives/paper_history/`.
+The documentation's aggregation/moment case and its verification remain active.
 
 For protein, redraw the retained results without fitting or sampling:
 
@@ -91,13 +130,12 @@ reuse requires matching observations, settings, priors and resolved dependencies
 Tests and historical runs live under `test/`, not here. Current protein samples
 are in `protein/data/{cnt,cnt_grd}/`; original manifests remain alongside them.
 
-The growth figures follow the [manual case study](../docs/src/case_studies/constant_growth.md):
-a Gaussian translated to 4 s, two Courant-number panels on 200 bins, separate
-Gaussian and periodic error plots, observed periodic orders, and runtime/work–precision.
-The seven pairings include both WENO5 + SSPRK3 and WENO5 + RK4. The smooth
-refinement uses 40–640 bins. The five outputs are `growth_profiles.png`,
-`growth_gaussian_errors.png`, `growth_smooth_refinement.png`,
-`growth_observed_orders.png` and `growth_work_precision.png`.
+The growth case has exactly two figure outputs: `growth_profiles.png` and
+`growth_work_precision.png`. The profiles translate the Gaussian to 4 s on
+200 bins, with separate CFL=0.5 and CFL=1 panels. The work–precision figure
+uses the smooth periodic problem on 40–640 bins. The seven pairings include
+both WENO5 + SSPRK3 and WENO5 + RK4. Error/order tables remain as supporting
+numerical verification; their extra paper plots have been removed.
 All figure data are calculated by this paper driver,
 not copied from documentation assets. A smoke check writes only ignored cache outputs:
 

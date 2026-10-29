@@ -1,4 +1,4 @@
-"""Plot the Gaussian growth comparison in the same sequence as the manual."""
+"""Plot the two manuscript growth figures from retained numerical exports."""
 from pathlib import Path
 import sys
 import numpy as np
@@ -13,16 +13,11 @@ from plotting_style import panel,method_style,DOUBLE,METHODS
 
 
 def panels():
-    fig,axes=plt.subplots(1,2,figsize=(DOUBLE,3.65))
-    fig.subplots_adjust(left=.105,right=.98,bottom=.30,top=.92,wspace=.34)
+    fig,axes=plt.subplots(1,2,figsize=(DOUBLE,3.25))
+    fig.subplots_adjust(left=.105,right=.98,bottom=.18,top=.92,wspace=.34)
     for letter,ax in zip('ab',axes):
         panel(ax,letter)
     return fig,axes
-
-
-def legend(fig,axis):
-    fig.legend(*axis.get_legend_handles_labels(),loc='lower center',ncol=3,
-               bbox_to_anchor=(.52,.005),fontsize=7.5)
 
 
 def mesh_axes(axes,bins):
@@ -71,44 +66,16 @@ def growth():
             style.update(markevery=(i*2,17),ms=2.8)
             ax.plot(x,data['density'],**style)
         ax.axhline(0,color='.75',lw=.5)
-        ax.set(xlim=(0,1),xlabel=r'Size coordinate $a$',ylabel=r'$\bar f(a,4\,\mathrm{s})$')
-        ax.text(.03,.95,rf'$C={courant:g},\ N={n}$',transform=ax.transAxes,
-                ha='left',va='top',fontsize=8)
+        ax.set(xlim=(0,1),xlabel=r'Size coordinate $a$',ylabel=r'$n(a,4\,\mathrm{s})$')
+        ax.text(.97,1.035,rf'$\mathrm{{CFL}}={courant:g},\ N={n}$',transform=ax.transAxes,
+                ha='right',va='bottom',fontsize=8)
     limits=(min(ax.get_ylim()[0] for ax in axes),max(ax.get_ylim()[1] for ax in axes))
     for ax in axes:
         ax.set_ylim(limits)
     axes[1].set_ylabel('')
-    legend(fig,axes[1])
+    axes[1].legend(loc='upper left',fontsize=6.5,handlelength=2.2,
+                   borderaxespad=.4,labelspacing=.35)
     export(fig,1,'growth_profiles',info)
-
-    for profile,filename in (('gaussian','growth_gaussian_errors'),('smooth','growth_smooth_refinement')):
-        fig,axes=panels()
-        for method in METHODS:
-            points=[]
-            for bins in cfg['bins']:
-                c=1. if method=='inguva2022' else cfg['courant']
-                key=gaussian_key(method,bins,c) if profile=='gaussian' else f'smooth_{method}_N{bins}'
-                points.append(rows(runs[key][0]/'metrics.csv')[0])
-            for ax,norm in zip(axes,('l1','rmse')):
-                error=np.asarray([float(row[norm]) for row in points])
-                ax.loglog(cfg['bins'],np.where(error>0,error,np.nan),**method_style(method))
-        axes[0].set(xlabel='Size bins',ylabel=r'$L^1$ density error')
-        axes[1].set(xlabel='Size bins',ylabel='RMSE')
-        mesh_axes(axes,cfg['bins']);legend(fig,axes[0])
-        export(fig,1,filename,info)
-
-    order=table(base/'observed_orders.csv')
-    fig,axes=panels()
-    for method in METHODS:
-        data=order[order['method']==method]
-        if not any(np.any(np.isfinite(data[key])) for key in ('observed_l1_order','observed_rmse_order')):
-            continue
-        for ax,column in zip(axes,('observed_l1_order','observed_rmse_order')):
-            ax.semilogx(data['bins'],data[column],**method_style(method))
-    axes[0].set(xlabel='Size bins',ylabel=r'$p_{\mathrm{obs}}$ ($L^1$)')
-    axes[1].set(xlabel='Size bins',ylabel=r'$p_{\mathrm{obs}}$ (RMSE)')
-    mesh_axes(axes,cfg['bins']);legend(fig,axes[0])
-    export(fig,1,'growth_observed_orders',info)
 
     fig,axes=panels()
     for method in METHODS:
@@ -117,9 +84,13 @@ def growth():
         rms=np.asarray([float(row['rmse']) for row in points])
         axes[0].loglog(cfg['bins'],seconds,**method_style(method))
         axes[1].loglog(seconds,rms,**method_style(method))
-    axes[0].set(xlabel='Size bins',ylabel=r'Integration wall time (s)')
+    axes[0].set(xlabel='Number of bins',ylabel=r'Integration wall time (s)')
     axes[1].set(xlabel=r'Integration wall time (s)',ylabel='RMSE')
-    mesh_axes([axes[0]],cfg['bins']);legend(fig,axes[0])
+    mesh_axes([axes[0]],cfg['bins'])
+    # Leave space above the measured curves for an in-panel legend.
+    axes[0].set_ylim(top=1.)
+    axes[0].legend(loc='upper left',fontsize=6.5,handlelength=2.2,
+                   borderaxespad=.4,labelspacing=.35)
     export(fig,1,'growth_work_precision',info)
 
 

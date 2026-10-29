@@ -113,7 +113,7 @@ def precipitation():
     fig.colorbar(mesh,cax=coloraxis,label=r"Number density $n$ (m$^{-4}$)",format=formatter)
     export(fig,3,"precipitation_fields",info)
     fig,axes = plt.subplots(1,2,figsize=(DOUBLE,3.55))
-    fig.subplots_adjust(left=.09,right=.98,bottom=.29,top=.93,wspace=.3)
+    fig.subplots_adjust(left=.09,right=.98,bottom=.18,top=.93,wspace=.3)
     colors = ["#0072B2", "#D55E00", "#009E73", "#6A3D9A"]
     for color,nz_ in zip(colors,info["configuration"]["axial_cells"]):
         data = table(runs[f"axial_Nz{nz_}"][0]/"outlet.csv")
@@ -123,14 +123,14 @@ def precipitation():
     data = table(folder/"outlet.csv")
     edges = np.r_[data["left_m"],data["right_m"][-1]]*1e6
     for ax,quantity in zip(axes,(data["number_density_m4"]/1e15,data["volume_density_per_m"]*1e-6)):
-        ax.stairs(quantity,edges,color="k",lw=1.2,ls="--",label=rf"Package reference ({nx}$\times${nz})")
+        ax.stairs(quantity,edges,color="k",lw=1.2,ls="--",label="Reference solution")
     if figures.MODE == "production":
         lit = table(PAPER/"precipitation/data/literature"/"cadet_reference.csv")
         literature_edges = np.r_[lit["left_m"],lit["right_m"][-1]]
         digitized = table(PAPER/"precipitation/data/literature"/"zhang_figure9c_digitized.csv")
         axes[0].errorbar(digitized["size_m"]*1e6,digitized["number_density_m4"]/1e15,
             xerr=digitized["size_uncertainty_m"]*1e6,yerr=digitized["density_uncertainty_m4"]/1e15,
-            ls="none",marker="o",ms=3,mfc="white",color="k",elinewidth=.5,label="Zhang Fig. 9(c), digitized")
+            ls="none",marker="o",ms=3,mfc="white",color="k",elinewidth=.5,label="Reference data")
         comparisons = []
         for name in ("size_Nx200","reference"):
             values = table(runs[name][0]/"outlet.csv")
@@ -161,7 +161,8 @@ def precipitation():
     axes[1].set_ylabel(r"Normalized volume density ($\mu$m$^{-1}$)")
     for letter,ax in zip("ab",axes):
         panel(ax,letter);ax.set(xscale="log",xlim=(1,900),xlabel=r"Particle size $x$ ($\mu$m)")
-    fig.legend(*axes[0].get_legend_handles_labels(),loc="lower center",ncol=3)
+    axes[1].legend(*axes[0].get_legend_handles_labels(),loc="upper left",fontsize=7.5,
+                   handlelength=2.0,borderaxespad=.4)
     export(fig,3,"precipitation_outlet",info)
 
     # Changing one coordinate at a time prevents fine-axial/coarse-size runs

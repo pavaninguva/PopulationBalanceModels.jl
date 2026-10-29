@@ -1,6 +1,7 @@
 using Test, PopulationBalanceModels, LinearAlgebra
 include(joinpath(@__DIR__,"..","..","paper","growth/run.jl"))
-include(joinpath(@__DIR__,"..","..","paper","moments/run.jl"))
+include(joinpath(@__DIR__,"..","..","paper","milling/run.jl"))
+include(joinpath(@__DIR__,"..","..","examples","qamar_moment_benchmarks.jl"))
 include(joinpath(@__DIR__,"..","..","paper","precipitation/run.jl"))
 const P = PopulationBalanceModels
 
@@ -17,7 +18,7 @@ const P = PopulationBalanceModels
         @test sqrt(sum(widths.*[1.,3.].^2)/sum(widths)) ≈ sqrt(7.)
     end
     @testset "Independent Riccati number and material solution" begin
-        Q = PaperMoments.Q
+        Q = QamarMomentBenchmarks
         steady = sqrt(.002)
         r = (1-steady)/(1+steady)
         for t in (0.,1.,10.,50.)

@@ -28,6 +28,7 @@ COLORS = dict(ink='#243548', muted='#5D6B78', line='#C7D0D8',
               model='#366A9F', model_fill='#EFF5FB',
               numerics='#287D7E', numerics_fill='#EDF7F5',
               inference='#A4672E', inference_fill='#FCF5EC',
+              uq='#70548C', uq_fill='#F4F0F8',
               neutral='#F5F7F9', white='#FFFFFF')
 
 
@@ -78,7 +79,7 @@ def workflow(ax):
     rect(ax,57,157,32,32);rect(ax,93,157,31,32)
     text(ax,73,183,'Direct PDE solution',weight='bold')
     text(ax,73,176,r'\texttt{Grid1D / Grid2D}')
-    text(ax,73,170,'Bin-integrated populations',size=7)
+    text(ax,73,170,'Bin-integrated state',size=7)
     density_glyph(ax,61,159,24,7)
     text(ax,108.5,183,'Moment methods',weight='bold')
     text(ax,108.5,176,r'\texttt{MomentSet} + method')
@@ -95,10 +96,10 @@ def workflow(ax):
     rect(ax,54,78,35,23,edge='numerics');rect(ax,93,78,34,23,edge='numerics')
     text(ax,71.5,96,r'\texttt{PBMProblem}',color='numerics',size=8)
     text(ax,71.5,90,'Initial state, time span')
-    text(ax,71.5,83,r'$\downarrow$ \texttt{simulate}',size=8)
+    text(ax,71.5,83,r'\texttt{simulate}',size=8)
     text(ax,110,96,r'\texttt{StationaryPBMProblem}',color='numerics',size=7)
     text(ax,110,90,'Numerical guess')
-    text(ax,110,83,r'$\downarrow$ \texttt{solve\_stationary}',size=7.5)
+    text(ax,110,83,r'\texttt{solve\_stationary}',size=7.5)
     arrow(ax,[(71.5,105),(71.5,101)],'numerics');arrow(ax,[(110,105),(110,101)],'numerics')
     rect(ax,3,78,45,23,fill='neutral')
     text(ax,25.5,95,'Forward inputs',weight='bold')
@@ -106,7 +107,7 @@ def workflow(ax):
     arrow(ax,[(48,89),(54,89)])
     rect(ax,136,171,38,17)
     text(ax,155,183,'Observation operators',weight='bold')
-    text(ax,155,175,'Moments, bins\nCDFs, quantiles',size=7)
+    text(ax,155,176,'Moments, bins\nCDFs, quantiles',size=7)
     arrow(ax,[(71.5,78),(71.5,76),(130,76),(130,179),(136,179)],'numerics')
     arrow(ax,[(110,78),(110,76),(130,76)],'numerics')
     text(ax,168,163,'Data',color='inference')
@@ -119,34 +120,56 @@ def workflow(ax):
     text(ax,155,118,'Transient and stationary\nforward problems',size=7,color='muted')
     arrow(ax,[(155,112),(155,72),(25.5,72),(25.5,78)],'inference',dashed=True)
     text(ax,78,73.5,'Update fitted parameters',size=7,color='inference')
-    text(ax,90,67,'Observation/solver restrictions apply; stationary sensitivities require a smooth isolated root.',
+    text(ax,95,67,'Eligible forward/observation combinations; stationary derivatives need a smooth isolated root.',
+         size=7,color='muted')
+
+
+def forward_uq(ax):
+    """A wrapper around the forward problems, separate from fitting data."""
+    card(ax,3,29,174,32,'Forward uncertainty quantification','uq')
+    for x,w in ((6,45),(59,57),(124,50)):
+        rect(ax,x,33,w,16,edge='uq')
+    text(ax,28.5,45,r'\texttt{UncertainInputs}',color='uq',size=8)
+    text(ax,28.5,37.5,'Prescribed joint law\nor posterior draws',size=7)
+    text(ax,87.5,45,r'\texttt{UQProblem}: scenario setup',color='uq',size=8)
+    text(ax,87.5,37.5,'Reuse forward solves + observables\nMonte Carlo / non-intrusive PCE',size=7)
+    text(ax,149,45,'Outputs and validation',color='uq',size=8)
+    text(ax,149,37.5,'Means, covariance, quantiles, events\nIndependent PCE validation',size=7)
+    arrow(ax,[(51,41),(59,41)],'uq')
+    arrow(ax,[(116,41),(124,41)],'uq')
+    # Uncertain scenario inputs enter the same forward construction above.
+    # This stays clear of the fitted-parameter return path at y=72.
+    arrow(ax,[(10,61),(10,78)],'uq')
+    text(ax,90,24,'PCE: independent normal/uniform reference coordinates; MC also accepts joint/posterior draws.',
          size=7,color='muted')
 
 
 def dependencies(ax):
     # Panel (b): dark headings, medium category labels, lighter package names.
-    text(ax,3,60,'(b)',size=11,ha='left')
+    origin=-40
+    text(ax,3,origin+60,'(b)',size=11,ha='left')
     for x,w in ((3,49),(56,76),(136,41)):
-        rect(ax,x,3,w,50,fill='neutral')
-    text(ax,27.5,48,'Required dependencies',weight='bold',size=8,color='dependency_heading')
-    text(ax,27.5,38,'Julia standard libraries',color='dependency_category')
-    text(ax,27.5,32,'LinearAlgebra, Random',color='dependency_package')
-    text(ax,27.5,23,'External packages',color='dependency_category')
-    text(ax,27.5,15,'Distributions, ForwardDiff\nSpecialFunctions',color='dependency_package')
-    text(ax,94,48,'Optional extensions',weight='bold',size=8,color='dependency_heading')
+        rect(ax,x,origin+3,w,50,fill='neutral')
+    text(ax,27.5,origin+48,'Required dependencies',weight='bold',size=8,color='dependency_heading')
+    text(ax,27.5,origin+38,'Julia standard libraries',color='dependency_category')
+    text(ax,27.5,origin+32,'LinearAlgebra, Random',color='dependency_package')
+    text(ax,27.5,origin+23,'External packages',color='dependency_category')
+    text(ax,27.5,origin+15,'Distributions, ForwardDiff\nSpecialFunctions',color='dependency_package')
+    text(ax,27.5,origin+6,'MC/PCE: no additional backend',size=7,color='dependency_package')
+    text(ax,94,origin+48,'Optional extensions',weight='bold',size=8,color='dependency_heading')
     for x,y,title,body in (
         (59,39,'Optimization','Optim'),
         (97,39,'Stationary solving','NonlinearSolve'),
         (59,26,'External ODE integration','SciMLBase + solver'),
         (97,26,'Continuous sensitivities','SciMLBase,\nSciMLSensitivity,\nReverseDiff'),
         (59,12,'Posterior sampling','AdvancedHMC, MCMCDiagnosticTools')):
-        text(ax,x,y,title,size=7,weight='bold',ha='left',color='dependency_category')
-        text(ax,x,y-(8 if title=='Continuous sensitivities' else 5),body,size=7,ha='left',color='dependency_package')
-    text(ax,156.5,48,'Development tools',weight='bold',size=8,color='dependency_heading')
-    text(ax,156.5,38,'Docs and verification',color='dependency_category')
-    text(ax,156.5,30,'Documenter, Aqua, JET',color='dependency_package')
-    text(ax,156.5,21,'Figure generation',color='dependency_category')
-    text(ax,156.5,12,'Python, NumPy, Matplotlib\nPillow, PyMuPDF',color='dependency_package')
+        text(ax,x,origin+y,title,size=7,weight='bold',ha='left',color='dependency_category')
+        text(ax,x,origin+y-(8 if title=='Continuous sensitivities' else 5),body,size=7,ha='left',color='dependency_package')
+    text(ax,156.5,origin+48,'Development tools',weight='bold',size=8,color='dependency_heading')
+    text(ax,156.5,origin+38,'Docs and verification',color='dependency_category')
+    text(ax,156.5,origin+30,'Documenter, Aqua, JET',color='dependency_package')
+    text(ax,156.5,origin+21,'Figure generation',color='dependency_category')
+    text(ax,156.5,origin+12,'Python, NumPy, Matplotlib\nPillow, PyMuPDF',color='dependency_package')
 
 
 def check_architecture():
@@ -176,9 +199,9 @@ def main():
         parser.error('Choose --preview or --usetex')
     project=check_architecture()
     configure(args.preview,require_dvipng=False)
-    fig=plt.figure(figsize=(7.2,8.4))
-    ax=fig.add_axes([0,0,1,1]);ax.set(xlim=(0,180),ylim=(0,210));ax.axis('off')
-    workflow(ax);dependencies(ax)
+    fig=plt.figure(figsize=(7.2,8.8))
+    ax=fig.add_axes([0,0,1,1]);ax.set(xlim=(0,180),ylim=(-40,210));ax.axis('off')
+    workflow(ax);forward_uq(ax);dependencies(ax)
     out=args.output_dir;out.mkdir(parents=True,exist_ok=True)
     name='section2_architecture_revised'+('_preview' if args.preview else '')
     revision=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
@@ -186,11 +209,14 @@ def main():
     plt.close(fig)
     receipt=dict(revision=revision,package_version=project['version'],
                  renderer='preview mathtext' if args.preview else 'actual LaTeX',dpi=300,
-                 width_inches=7.2,height_inches=8.4,
+                 width_inches=7.2,height_inches=8.8,
                  project_sha256=hashlib.sha256((ROOT/'Project.toml').read_bytes()).hexdigest(),
                  generator_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                 uq_source_sha256={str(path):hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
+                     for path in (Path('src/uq/inputs.jl'),Path('src/uq/propagation.jl'),
+                                  Path('src/uq/polynomial_chaos.jl'))},
                  dirty_state=subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain=v1'],text=True),
-                 scope='Conceptual glyph; shared observation/statistical API for eligible transient and stationary problems; representation, root-branch and derivative restrictions apply')
+                 scope='Conceptual glyph; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; PCE requires independent normal/uniform reference marginals; representation, root-branch and derivative restrictions apply')
     (out/(name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
     if not args.preview:
         docs=ROOT/'docs/src/assets/architecture';docs.mkdir(parents=True,exist_ok=True)

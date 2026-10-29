@@ -12,7 +12,16 @@ MAP estimation and optional sensitivity-based Gauss--Newton, full-Hessian
 Laplace or MCMC analysis, with parameter updates
 returning to the forward inputs. Stationary calculations use checked equilibria;
 implicit sensitivities require a smooth isolated root, while AD-incompatible
-closures need explicit finite differences. This does not imply universal
-compatibility of the displayed methods. (b) Required dependencies,
+closures need explicit finite differences. Forward uncertainty quantification
+wraps the same eligible forward problems and observables through
+\texttt{UncertainInputs} and \texttt{UQProblem}, without requiring calibration
+data. Scenario setup varies physical inputs; Monte Carlo propagation and
+non-intrusive polynomial chaos supply output means, covariance, quantiles and
+event probabilities, with independent full-model validation of the surrogate.
+MC preserves declared joint inputs or posterior draws. PCE uses independent
+normal/uniform reference coordinates with an explicit physical-input map;
+an arbitrary posterior does not automatically define a PCE basis. This does not
+imply universal compatibility of the displayed methods. (b) Required dependencies,
 optional extension roles and separate development/figure tools, checked against
-the current package declarations. The density glyph is conceptual.}
+the current package declarations. MC and PCE add no optional backend requirement.
+The density glyph is conceptual.}

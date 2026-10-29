@@ -1,14 +1,30 @@
-"""`PolynomialChaos(degree; condition_limit=1e8)` selects a full total-degree,
-non-intrusive, orthonormal Hermite/Legendre regression. Only independent normal
-and uniform reference marginals are supported; a declared deterministic map may
-produce correlated physical inputs. No basis is inferred from posterior samples."""
+"""
+    PolynomialChaos(degree; construction=:regression, condition_limit=1e8,
+                    quadrature_tolerance=1e-10)
+
+Full total-degree non-intrusive PCE. `:regression` uses SVD least squares;
+`:projection` uses recorded probability quadrature weights and checks discrete
+basis orthonormality to `quadrature_tolerance`. That check does not establish
+quadrature accuracy for a nonpolynomial output: refine and validate separately.
+
+Independent Normal, Uniform and Beta reference marginals use probability-
+orthonormal Hermite, Legendre and Jacobi bases; [`pce_basis`](@ref) is the extension
+hook. A declared map may produce correlated physical inputs. No basis is inferred
+from posterior samples. Both constructions reuse ordinary forward solves.
+"""
 struct PolynomialChaos
     degree::Int
+    construction::Symbol
     condition_limit::Float64
-    function PolynomialChaos(degree::Integer;condition_limit=1e8)
+    quadrature_tolerance::Float64
+    function PolynomialChaos(degree::Integer; construction=:regression,
+            condition_limit=1e8, quadrature_tolerance=1e-10)
         degree>=0 || throw(ArgumentError("PCE degree must be nonnegative"))
+        construction in (:regression,:projection) || throw(ArgumentError("PCE construction must be :regression or :projection"))
         isfinite(condition_limit) && condition_limit>1 || throw(ArgumentError("PCE condition_limit must exceed one"))
-        new(degree,Float64(condition_limit))
+        isfinite(quadrature_tolerance) && 0 < quadrature_tolerance < 1 ||
+            throw(ArgumentError("PCE quadrature_tolerance must lie in (0,1)"))
+        new(degree,construction,Float64(condition_limit),Float64(quadrature_tolerance))
     end
 end
 
@@ -34,15 +50,6 @@ struct PCESurrogate{P,T,V,R}
 end
 diagnostics(pce::PCESurrogate)=pce.report
 
-function _pce_marginals(inputs)
-    inputs.kind===:independent && all(d->d isa Union{Distributions.Normal,Distributions.Uniform},inputs.source) ||
-        throw(ArgumentError("PCE requires independent Normal/Uniform reference marginals; supply an explicit map for physical dependence, not an empirical posterior basis"))
-    for d in inputs.source
-        a,b=Distributions.params(d)
-        (d isa Distributions.Normal ? b>0 : b>a) || throw(ArgumentError("PCE reference marginals must be nondegenerate"))
-    end
-    Tuple(values(inputs.source))
-end
 function _pce_points(inputs,points)
     d=length(_pce_marginals(inputs))
     if points isa NamedTuple
@@ -82,31 +89,6 @@ function _pce_indices(d,degree)
     end
     reduce(vcat,permutedims.(indices))
 end
-function _pce_basis(inputs,indices,X)
-    marginals=_pce_marginals(inputs)
-    degree=maximum(indices);n=size(X,2)
-    polynomials=ones(length(marginals),degree+1,n)
-    for (j,dist) in enumerate(marginals)
-        a,b=Distributions.params(dist)
-        for i in 1:n
-            z=dist isa Distributions.Normal ? (X[j,i]-a)/b : (2X[j,i]-a-b)/(b-a)
-            degree==0 && continue
-            polynomials[j,2,i]=dist isa Distributions.Normal ? z : sqrt(3.)*z
-            for k in 1:degree-1
-                if dist isa Distributions.Normal
-                    polynomials[j,k+2,i]=(z*polynomials[j,k+1,i]-sqrt(k)*polynomials[j,k,i])/sqrt(k+1)
-                else
-                    polynomials[j,k+2,i]=sqrt(2k+3)/(k+1)*((2k+1)*z*polynomials[j,k+1,i]/sqrt(2k+1)-k*polynomials[j,k,i]/sqrt(2k-1))
-                end
-            end
-        end
-    end
-    basis=ones(n,size(indices,1))
-    for term in axes(indices,1),j in axes(indices,2),i in 1:n
-        basis[i,term]*=polynomials[j,indices[term,j]+1,i]
-    end
-    basis
-end
 
 """
     pce_design(inputs; n, method=:lhs, seed=2022, bounds=nothing)
@@ -141,36 +123,79 @@ function pce_design(inputs::UncertainInputs;n,method=:lhs,seed=2022,bounds=nothi
 end
 
 function _pce_success(result)
+    _pce_require_forward(result)
     all(result.success) || throw(PCEFailure("PCE cannot fit or validate after failed forward evaluations; inspect evaluations.failures",result))
     result
 end
 
-"""
-    fit_pce(problem, PolynomialChaos(degree); design, validation=nothing, max_solves)
+function _pce_require_forward(result::UQResult)
+    get(result.metadata,:method,nothing) === :pce && throw(ArgumentError(
+        "PCE construction/validation requires full-model evaluations; evaluate_pce outputs are surrogate predictions, not forward references"))
+    nothing
+end
 
-Fit every output/time using one SVD least-squares factorization. Rank and condition
-checks precede model solves; no normal equations, ridge or missing-point deletion
-is used. Designs and validation can be recorded designs, matrices or existing
-UQResults from this same UQProblem. Reusing evaluations incurs zero new solves.
-Validation must not overlap the training inputs; disjointness does not itself
-prove statistical independence. A missing validation set is reported as untested.
-"""
-function fit_pce(problem::UQProblem,method::PolynomialChaos;design,validation=nothing,max_solves)
-    construction_started=time_ns()
-    X=_pce_points(problem.inputs,design)
-    d,n=size(X)
-    terms=binomial(big(d+method.degree),method.degree)
-    terms<=n || throw(ArgumentError("degree $(method.degree) needs $terms terms but design has $n samples"))
-    indices=_pce_indices(d,method.degree)
-    V=_pce_basis(problem.inputs,indices,X);F=svd(V)
-    tolerance=maximum(size(V))*eps(Float64)*first(F.S)
-    numerical_rank=count(>(tolerance),F.S)
-    condition=last(F.S)>0 ? first(F.S)/last(F.S) : Inf
-    numerical_rank==size(V,2) && condition<=method.condition_limit ||
+function _pce_preparation(problem, method, design)
+    design isa UQResult && _pce_require_forward(design)
+    X = _pce_points(problem.inputs, design)
+    d,n = size(X)
+    terms = binomial(big(d+method.degree), method.degree)
+    terms <= n || throw(ArgumentError("degree $(method.degree) needs $terms terms but design has $n samples"))
+    indices = _pce_indices(d, method.degree)
+    bases = _pce_bases(problem.inputs,method.degree)
+    V = _pce_basis(problem.inputs,indices,X;bases)
+    recorded = design isa UQResult ? get(design.metadata,:design,nothing) : design
+    weights = recorded isa NamedTuple ? get(recorded,:weights,nothing) : nothing
+    if method.construction === :projection
+        weights === nothing && throw(ArgumentError("PCE projection requires recorded probability weights; use pce_quadrature"))
+        weights = Float64.(collect(weights))
+        length(weights) == n && all(w -> isfinite(w) && w > 0, weights) ||
+            throw(ArgumentError("projection needs one finite positive probability weight per node"))
+        abs(sum(weights)-1) <= method.quadrature_tolerance ||
+            throw(ArgumentError("quadrature weights must sum to one; they are not silently renormalized"))
+        gram_error = opnorm(V'*(weights.*V)-I, Inf)
+        gram_error <= method.quadrature_tolerance || throw(ArgumentError(
+            "quadrature does not resolve degree $(method.degree) basis products (Gram defect=$gram_error); increase quadrature order"))
+        F = svd(sqrt.(weights).*V)
+    else
+        weights === nothing || throw(ArgumentError("weighted designs require construction=:projection; pass design.samples explicitly for unweighted regression"))
+        gram_error = nothing
+        F = svd(V)
+    end
+    tolerance = maximum(size(V))*eps(Float64)*first(F.S)
+    numerical_rank = count(>(tolerance), F.S)
+    condition = last(F.S)>0 ? first(F.S)/last(F.S) : Inf
+    numerical_rank == size(V,2) && condition <= method.condition_limit ||
         throw(ArgumentError("PCE design is rank deficient or ill-conditioned (rank=$numerical_rank/$(size(V,2)), condition=$condition); change the design or degree"))
+    (;X, indices, bases, V, F, weights, gram_error, numerical_rank, condition)
+end
+
+"""
+    fit_pce(problem, PolynomialChaos(degree); design, validation=nothing,
+            max_solves, validation_atol=0, validation_rtol=0.05)
+
+Fit all outputs/times using SVD regression or probability-weighted projection.
+Rank/condition and quadrature checks precede solves. Designs and validation can
+be recorded designs, matrices or existing UQResults from this same UQProblem.
+Reusing full-model evaluations incurs zero new solves; surrogate outputs cannot
+be used as training or validation references. No ridge or missing-point deletion
+is used. Validation must not overlap training; disjointness alone does not prove
+independence. Weighted quadrature nodes are not an MC validation sample.
+
+Validation reports `passed` using [`validate_pce`](@ref)'s per-output/time RMSE
+criteria. A rejected or untested surrogate remains available for diagnosis;
+`diagnostics(pce).accuracy_status` distinguishes it from a passing fit.
+Use [`refine_pce`](@ref) to select only after validation and refinement checks.
+"""
+function fit_pce(problem::UQProblem,method::PolynomialChaos;design,validation=nothing,
+        max_solves,validation_atol=0,validation_rtol=0.05)
+    construction_started=time_ns()
+    prepared = _pce_preparation(problem, method, design)
+    (;X,indices,V,F,weights,numerical_rank,condition) = prepared
+    n = size(X,2)
     preparation_seconds=(time_ns()-construction_started)/1e9
     Z=validation===nothing ? nothing : _pce_points(problem.inputs,validation)
     if Z!==nothing
+        _pce_validation_design(validation)
         training_points=Set(Tuple(column) for column in eachcol(X))
         any(column->Tuple(column) in training_points,eachcol(Z)) &&
             throw(ArgumentError("PCE validation inputs overlap the training design"))
@@ -180,14 +205,20 @@ function fit_pce(problem::UQProblem,method::PolynomialChaos;design,validation=no
     training=design isa UQResult ? design : propagate(problem,MonteCarlo(n);samples=design,max_solves=n)
     training.problem===problem || throw(ArgumentError("PCE evaluations must use the same UQProblem"))
     _pce_success(training)
-    tick=time_ns();coefficients=F\permutedims(training.values)
+    tick=time_ns()
+    coefficients=method.construction===:regression ? F\permutedims(training.values) :
+        V'*(weights.*permutedims(training.values))
     regression_seconds=(time_ns()-tick)/1e9
     residual=V*coefficients-permutedims(training.values)
-    report=(;degree=method.degree,terms=size(indices,1),rank=numerical_rank,condition,
+    report=(;degree=method.degree,construction=method.construction,
+        terms=size(indices,1),rank=numerical_rank,condition,
         new_full_solves=needed,training_solves=training.metadata.solves,
         validation_new_solves=validation===nothing || validation isa UQResult ? 0 : size(Z,2),
         preparation_seconds,regression_seconds,training_rmse=vec(sqrt.(sum(abs2,residual;dims=1)/n)),
         basis=:orthonormal_product,normalization=:probability_measure,
+        basis_families=Tuple(basis.family for basis in prepared.bases),
+        basis_recurrences=prepared.bases,
+        quadrature_gram_error=prepared.gram_error,
         validation_status=validation===nothing ? :not_run : :disjoint_inputs,
         coordinates=problem.inputs.coordinates)
     surrogate=PCESurrogate(problem,method,indices,coefficients,training,nothing,report)
@@ -195,8 +226,9 @@ function fit_pce(problem::UQProblem,method::PolynomialChaos;design,validation=no
         nothing
     else
         reference=validation isa UQResult ? validation : propagate(problem,MonteCarlo(size(Z,2));samples=validation,max_solves=size(Z,2))
-        validate_pce(surrogate,_pce_success(reference))
+        validate_pce(surrogate,_pce_success(reference);atol=validation_atol,rtol=validation_rtol)
     end
+    report=merge(report,(;accuracy_status=checked===nothing ? :not_run : checked.passed ? :passed : :failed))
     PCESurrogate(problem,method,indices,coefficients,training,checked,report)
 end
 
@@ -213,7 +245,8 @@ function evaluate_pce(pce::PCESurrogate,points)
         X=_pce_points(input,points);raw=[_uq_named(input,copy(c)) for c in eachcol(X)]
         ids=collect(1:size(X,2));iid=false;seed=nothing
     end
-    values=permutedims(_pce_basis(input,pce.multi_indices,X)*pce.coefficients)
+    values=permutedims(_pce_basis(input,pce.multi_indices,X;
+        bases=pce.report.basis_recurrences)*pce.coefficients)
     all(isfinite,values) || throw(NumericalFailure("nonfinite PCE evaluation"))
     physical=Any[nothing for _ in ids];success=trues(length(ids));failures=NamedTuple[]
     for i in eachindex(ids)
@@ -228,13 +261,26 @@ function evaluate_pce(pce::PCESurrogate,points)
     UQResult(pce.problem,raw,physical,ids,values,success,failures,pce.training.layout,meta)
 end
 
-"""Independent-input full-model validation; errors are reported for every output
-and time, separately from propagated input variance. No relative error is assigned
-when a reference variance is zero. Training points must not be reused."""
-function validate_pce(pce::PCESurrogate,reference::UQResult)
+"""
+    validate_pce(pce, reference; atol=0, rtol=0.05)
+
+Compare with disjoint full-model evaluations. Every output/time must satisfy
+`RMSE <= atol + rtol*reference_SD` to set `passed=true`. `atol` has output units;
+`rtol` is relative to validation-output population SD (denominator n). Scalars
+apply everywhere; a NamedTuple can supply a scalar or output-by-time matrix per
+named block. Constant outputs require a suitable absolute tolerance.
+
+Signed bias, maximum error and normalized RMSE remain available even on failure.
+Validation does not establish tail/event accuracy or PBM numerical convergence.
+Inputs used for choosing a surrogate are a selection set; a fresh independent
+test set is needed for an assessment unaffected by that choice. No failed runs
+are dropped and no relative error is assigned at zero reference variance.
+"""
+function validate_pce(pce::PCESurrogate,reference::UQResult;atol=0,rtol=0.05)
     reference.problem===pce.problem && reference.layout==pce.training.layout ||
         throw(ArgumentError("PCE validation requires the same forward definition and output layout"))
     _pce_success(reference)
+    _pce_validation_design(reference)
     training=Set(Tuple(c) for c in eachcol(_pce_points(pce.problem.inputs,pce.training)))
     X=_pce_points(pce.problem.inputs,reference)
     any(c->Tuple(c) in training,eachcol(X)) && throw(ArgumentError("validation reuses training inputs"))
@@ -244,9 +290,15 @@ function validate_pce(pce::PCESurrogate,reference::UQResult)
     rms=vec(sqrt.(sum(abs2,difference;dims=2)/n))
     spread=vec(sum(abs2,reference.values.-mu;dims=2)/n)
     normalized=[spread[i]>0 ? rms[i]/sqrt(spread[i]) : NaN for i in eachindex(rms)]
+    absolute = _pce_tolerance(atol,reference.layout,"validation atol")
+    relative = _pce_tolerance(rtol,reference.layout,"validation rtol")
+    limits = absolute .+ relative.*sqrt.(spread)
+    within_tolerance = rms .<= limits
     (;reference,predicted,rmse=rms,normalized_rmse=normalized,
       maximum_absolute_error=vec(maximum(abs,difference;dims=2)),
       signed_mean_error=vec(sum(difference;dims=2))/n,n,
+      reference_sd=sqrt.(spread),rmse_tolerance=limits,within_tolerance,
+      passed=all(within_tolerance),atol=absolute,rtol=relative,
       training_overlap=false,independence=:declared_not_certified_by_disjointness)
 end
 

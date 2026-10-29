@@ -1,0 +1,41 @@
+{
+    "complete": true,
+    "case": "milling",
+    "mode": "production",
+    "configuration": {
+        "forward_statistic": "pivot_CDF_d50_um",
+        "forward_source": "docs/src/assets/milling_uncertainty/forward",
+        "reference_source": "examples/data/milling_uncertainty/barrasso_figure7.csv",
+        "forward_bins": 100,
+        "figures": [
+            "milling_forward",
+            "milling_uq"
+        ],
+        "uq_source": "docs/src/assets/milling_uncertainty/data"
+    },
+    "files": {
+        "forward_producer.json": "dc1998bd9f6df1cdebc23e77eed8476fe05e8e71a12262de74e6e83d4707c9f8",
+        "reference.csv": "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb",
+        "uq_producer.json": "6c6f96c43c1fdc7f7e7e20690954bcf4ea3308ba9f1ece5aa773f852cf9bd1ad",
+        "nominal.csv": "f39bca33cdb889257ecfcd52ff159c8a1079658e890d1ab131faac9ba8b590d8",
+        "pce1_summary.csv": "1301b8d9cc560ed207e2de7717aea24e160422e39ceb638d5b3bb5c42938ad82",
+        "forward.csv": "555ed7ee350ba15a9dd7def07205b6af753f8f15225b3daff4534718a7df6f3c",
+        "pce2_summary.csv": "903971c30f517b35af6e5935a22f8413c60a0912a006bbe11f83083198625b31",
+        "mc_summary.csv": "ec88baddf03829d0f65e55477c115ca5034bd65d1847c7a8f8e3aa57db7cbeba"
+    },
+    "source_digest": "11634f2fbb674128bf4ae76d00c0ed86fab370ad64ed77d295cbf295df23c513",
+    "workflow_digest": "4530732e68e650d447b7b689272e9f3e40ab21cfeeb9bd508a7296571c785b58",
+    "staging_revision": "a9edb6b69ddaa0210e9f8ea1f751650ffd5e749c",
+    "staging_working_tree": " M CHANGELOG.md\n M README.md\n M docs/src/api/uncertainty.md\n M docs/src/assets/architecture/section2_architecture_revised.png\n M docs/src/development.md\n M docs/src/uncertainty_quantification.md\n M examples/README.md\n M examples/milling_uncertainty.jl\n M paper/_support/figures.py\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/figures/00_architecture/section2_architecture_revised.json\n M paper/figures/00_architecture/section2_architecture_revised.png\n M paper/growth/plot.py\n M paper/plotting_style.py\n M paper/precipitation/plot.py\n M src/PopulationBalanceModels.jl\n M src/uq/polynomial_chaos.jl\n M test/README.md\n M test/integration.jl\n M test/runtests.jl\n M test/stationary_integration.jl\n?? examples/pce_refinement.jl\n?? paper/milling/\n?? src/uq/bases.jl\n?? src/uq/refinement.jl\n?? test/fixtures/archives/paper_history/retired_moments_and_growth_figures_20261028.zip\n?? test/pce_construction.jl\n",
+    "forward_source": "docs/src/assets/milling_uncertainty/forward",
+    "uq_source": "docs/src/assets/milling_uncertainty/data",
+    "forward_derivation": {
+        "source_file": "trajectories.csv",
+        "source_sha256": "519b99db754de7d64fff170109f3adb561c28c1c15b15dbd12dba8b1f69a8d17",
+        "filter_bins": 100,
+        "statistic": "pivot_CDF_d50_um",
+        "transformation": "Row selection only; stored ordinates unchanged"
+    },
+    "reference_sha256": "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb",
+    "producer_note": "Original producers are preserved byte-for-byte. Staging/redrawing does not assert current-source numerical equivalence."
+}

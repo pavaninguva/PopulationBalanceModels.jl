@@ -26,9 +26,9 @@
     "paper/precipitation/data/analysis/public_cadet_comparison.csv": "9f38dd4fdfe4a005ba889248217f6d9d01e6ba1b5cf983e2385ab04fa1bf65ba",
     "paper/precipitation/data/analysis/digitized_point_comparison.csv": "4193ab0591c54787cc7c4421d740559bd729acc24fb7db81b79252ce839919fa"
   },
-  "plotter_sha256": "f4c4ff2aa4a557f4e0ee97db4723c8a4b411cc83a3909e50da12b82e449aace9",
-  "shared_plotting_sha256": "727b49a949f5f1ceb539695a0001fbe00bc260573426b8012daca5fac46c94d2",
-  "style_sha256": "6d03afd1f9f96d8788dbbf80c6233a8dab370fafd07a2c18988dce5a99b7ca1c",
+  "plotter_sha256": "3f02b0fd4dcfb4a8660929e11b54b066d7466e102407d29c57eb8ad14a6c5928",
+  "shared_plotting_sha256": "53e3f9d85f53656dcc538aebc32e9e72254484be3d3f55376ed32b9ef04b8fb9",
+  "style_sha256": "e1a0a1ac74bef5c2dd15f5059824dd9d63dc29af12d9f9b5691515c4c19cbfb0",
   "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
   "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
   "matplotlib": "3.8.4",

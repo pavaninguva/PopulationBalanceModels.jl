@@ -32,8 +32,9 @@ Optim enables fitting; AdvancedHMC and MCMCDiagnosticTools enable sampling.
 
 [Forward uncertainty quantification](docs/src/uncertainty_quantification.md)
 propagates joint inputs or posterior draws without an estimation problem.
-Monte Carlo and non-intrusive Hermite/Legendre PCE share forward builders and
-observables. The [milling example](docs/src/case_studies/milling_uncertainty.md)
+Monte Carlo and non-intrusive Hermite/Legendre/Jacobi PCE share forward builders
+and observables. PCE offers regression or Gaussian-quadrature construction and
+explicit validation/refinement. The [milling example](docs/src/case_studies/milling_uncertainty.md)
 includes numerical verification, independent surrogate validation and explicit
 paper-reconstruction qualifications.
 
