@@ -205,14 +205,14 @@ function numerical_checks(folder;smoke=false)
     rows
 end
 
-function run(;full=false,force=false)
+function run(;full=false,force=false,output=nothing)
     config=TOML.parsefile(CONFIG)
     settings=merge(config,Dict("mode"=>full ? "production" : "smoke",
         "mc_samples"=>full ? config["mc_samples"] : 64,
         "validation_samples"=>full ? config["validation_samples"] : 32,
         "pce_quantile_samples"=>full ? config["pce_quantile_samples"] : 2048))
     identity=source_identity(settings)
-    folder=full ? joinpath(ASSETS,"data") : joinpath(ROOT,".cache","milling_uncertainty","smoke")
+    folder=output===nothing ? (full ? joinpath(ASSETS,"data") : joinpath(ROOT,".cache","milling_uncertainty","smoke")) : abspath(output)
     mkpath(folder)
     receipt=joinpath(folder,"provenance.json")
     if isfile(receipt) && !force

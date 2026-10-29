@@ -18,6 +18,9 @@ balances. Other capability examples are `nucleation_sources.jl`,
 `nonuniform_weno.jl`, `random_fluctuation_grd.jl` and `axially_dispersed_growth.jl`.
 `random_fluctuation_grd.jl --two-coordinate` demonstrates a coupled tensor
 population with bulk-dependent growth/dispersion and a closed material balance.
+`pce_refinement.jl` compares regression and Gaussian-quadrature PCE for a beta-
+distributed removal rate, with validation, refinement and an independent final
+test. It needs only the ordinary package dependencies.
 `steady_state_crystallizer.jl` needs the optional NonlinearSolve integration.
 `estimate_stationary_crystallizer.jl` adds synthetic stationary Bayesian
 calibration with Optim, implicit sensitivities and local uncertainty; optional
