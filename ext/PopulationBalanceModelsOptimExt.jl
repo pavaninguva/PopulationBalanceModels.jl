@@ -80,12 +80,14 @@ function PopulationBalanceModels.profile_likelihood(cal::PopulationBalanceModels
 end
 
 """
-MAP fit of the shared EstimationProblem posterior. Starts are inference-coordinate
+Physical-density MAP fit of EstimationProblem. Starts are inference-coordinate
 vectors; defaults come from physical ParameterSpec initial values. Additional
 starts use a seeded Gaussian perturbation. Scaling changes optimizer coordinates
-only and does not change the declared posterior density. Uncertainty is opt-in:
-`:gauss_newton` uses fixed-Gaussian prediction sensitivities and prior curvature;
-`:laplace` uses the full posterior Hessian. Neither changes the fitted target.
+only and does not change the physical posterior density. Transform Jacobians enter
+sampling, not this optimization. Physical/scaled stationarity rejects a vanishing
+transform gradient at a boundary. Uncertainty is opt-in:
+`:gauss_newton` uses physical fixed-Gaussian prediction sensitivities and prior curvature;
+`:laplace` uses the full physical posterior Hessian. Neither changes the fitted target.
 """
 function PopulationBalanceModels.fit(problem::EstimationProblem;
         method=:map,initial=initial_coordinates(problem),starts=nothing,nstarts=1,
@@ -109,6 +111,10 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
     function loss(w)
         z=w.*scaling
         value=-logposterior(problem,z;on_failure=:reject,_counts=counts)
+        if value == -Inf
+            PopulationBalanceModels._record_failure!(counts,NumericalFailure("unbounded physical posterior/boundary density; no regular interior MAP"))
+            value=Inf
+        end
         length(history)<10000 && push!(history,(evaluation=counts.evaluations,objective=value,z=copy(z)))
         value
     end
@@ -117,6 +123,8 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
     end
     for start in seeds
         check=try
+            PopulationBalanceModels._interior_start(problem,start) || throw(NumericalFailure(
+                "boundary-limited/nonregular initial candidate; choose an interior physical start. Endpoint MAP and ordinary Gaussian uncertainty are not certified"))
             isfinite(loss(start./scaling)) || throw(NumericalFailure("initial posterior is not finite"))
             checked=check_gradient(problem,start;derivatives,step=derivative_step,_counts=counts)
             checked.valid || throw(ArgumentError("posterior gradient check failed at a start"))
@@ -143,9 +151,12 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
             # Optim may stop because the objective rounded to the same value.
             # Filter starts using the same stationarity criterion as MAPResult
             # before selecting the best converged candidate.
-            stationary=norm(final_gradient,Inf)<=gradient_tolerance
-            push!(runs,(start=start,converged=Optim.converged(raw) && stationary,
-                result=raw,gradient_check=check,scaled_gradient_norm=norm(final_gradient,Inf)))
+            zfinal=Optim.minimizer(raw).*scaling
+            internal_gradient=final_gradient./scaling
+            stationarity=PopulationBalanceModels._map_stationarity(problem,zfinal,internal_gradient;
+                tolerance=gradient_tolerance)
+            push!(runs,(start=start,converged=Optim.converged(raw) && stationarity.valid,
+                result=raw,gradient_check=check,scaled_gradient_norm=norm(final_gradient,Inf),stationarity))
         end
     end
     valid=[r for r in runs if r.result!==nothing && isfinite(Optim.minimum(r.result))]
@@ -157,8 +168,12 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
     components=posterior_components(problem,z;_counts=counts)
     gradient=posterior_gradient(problem,z;derivatives,step=derivative_step,_counts=counts)
     scaled_gradient=gradient.*scaling
+    stationarity=PopulationBalanceModels._map_stationarity(problem,z,gradient;tolerance=gradient_tolerance)
     diagnostics=(;gradient,gradient_norm=norm(gradient,Inf),scaled_gradient,
         scaled_gradient_norm=norm(scaled_gradient,Inf),gradient_tolerance,history,
+        stationarity,physical_gradient=stationarity.physical,physical_scaled_gradient_norm=norm(stationarity.scaled,Inf),
+        density_coordinates=:physical,gradient_coordinates=:inference,
+        optimizer_coordinates=:scaled_inference,convention=PopulationBalanceModels._MAP_CONVENTION,
         history_truncated=length(history)==10000,starts=runs,seed,scaling,derivative_step,
         objective_evaluations=counts.evaluations,forward_solves=counts.solves,
         gradient_evaluations=counts.gradient_evaluations,adjoint_solves=counts.adjoint_solves,
@@ -166,13 +181,14 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
         failed_evaluations=counts.failures,failure_messages=counts.messages,
         elapsed_seconds=(time_ns()-started)/1e9,optimizer=best.result)
     result=MAPResult(z,physical_parameters(problem,z),components.loglikelihood,
-        components.logprior,components.logposterior,best.converged && norm(scaled_gradient,Inf)<=gradient_tolerance,
-        diagnostics,ParameterSpec[problem.parameters...],nothing)
+        components.logprior,components.logposterior,best.converged && stationarity.valid,
+        diagnostics,ParameterSpec[problem.parameters...],nothing;convention=PopulationBalanceModels._MAP_CONVENTION)
     if uncertainty!==:none
         approximation=uncertainty===:laplace ? laplace_approximation(problem,result;derivatives) :
             gauss_newton_approximation(problem,result;derivatives)
         return MAPResult(result.minimizer,result.parameters,result.loglikelihood,result.logprior,
-            result.logposterior,result.converged,result.diagnostics,result.coordinates,approximation)
+            result.logposterior,result.converged,result.diagnostics,result.coordinates,approximation;
+            convention=PopulationBalanceModels._MAP_CONVENTION)
     end
     result
 end
@@ -184,6 +200,7 @@ end
 function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,result::MAPResult,index::Integer,values;
         target,maxiters=400,starts=(result.minimizer,),derivatives=problem.derivatives,gradient_tolerance=1e-3)
     target in (:likelihood,:posterior) || throw(ArgumentError("target must explicitly be :likelihood or :posterior"))
+    PopulationBalanceModels._check_map_result(problem,result)
     result.converged || throw(ArgumentError("reference MAP did not converge"))
     isfinite(gradient_tolerance) && gradient_tolerance>0 || throw(ArgumentError("profile gradient tolerance must be positive"))
     n=length(result.minimizer)
@@ -205,11 +222,14 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
             nothing
         end
     end
-    function stationary(raw,gradient)
+    function stationary(raw,gradient;expand=identity,indices=collect(1:n))
         raw===nothing && return false
         Optim.converged(raw) && isfinite(Optim.minimum(raw)) || return false
         try
-            norm(gradient(Optim.minimizer(raw)),Inf)<=gradient_tolerance
+            v=Optim.minimizer(raw)
+            # gradient is of the NEGATIVE objective; the norm/check is sign invariant.
+            PopulationBalanceModels._map_stationarity(problem,expand(v),gradient(v);
+                indices,tolerance=gradient_tolerance).valid
         catch e
             e isa NumericalFailure || rethrow()
             false
@@ -228,7 +248,7 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
         else
             results=[optimize_profile(v->f(expand(v)),s[nuisance],v->full_gradient(expand(v))[nuisance]) for s in seeds]
             conditional_gradient=v->full_gradient(expand(v))[nuisance]
-            valid=[r for r in results if stationary(r,conditional_gradient)]
+            valid=[r for r in results if stationary(r,conditional_gradient;expand,indices=nuisance)]
             flag=!isempty(valid)
             chosen=flag ? valid[argmin([Optim.minimum(r) for r in valid])] : nothing
             z=flag ? expand(Optim.minimizer(chosen)) : fill(NaN,n)
@@ -240,6 +260,7 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
         throw(NumericalFailure("a conditional profile improved its reference optimum; refit from that solution"))
     (;target,values=grid,negative_log_density=losses,delta=losses.-minimum_value,
       minimizers,converged=flags,reference=reference_z,gradient_tolerance,
+      argument_coordinates=:inference,density_coordinates=:physical,convention=PopulationBalanceModels._MAP_CONVENTION,
       interpretation=target===:posterior ? :posterior_shape_no_likelihood_cutoff : :likelihood_profile)
 end
 end

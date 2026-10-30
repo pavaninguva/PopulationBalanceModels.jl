@@ -1,5 +1,15 @@
 # Estimating size-dependent growth
 
+**Retained-result convention.** The figures and fitted tables on this page keep
+their producer's internal-coordinate MAP and local Gaussian approximations.
+They have not been recomputed as physical-density MAP/physical covariance under
+`physical_map_v1`. The MCMC probability law is preserved by the new Jacobian
+handling when the model, likelihood and priors are unchanged; original source
+compatibility guards and producer records still apply. The runnable scripts
+now use the [physical-MAP interface](../inference.md#Migration-and-retained-results)
+and write new results separately.
+
+
 Suppose a particle population is measured several times while it grows. Can we
 recover how growth depends on particle size? This example answers that question
 with synthetic data: evaluate a known analytical solution, add nonnegative noisy measurements,
@@ -125,8 +135,8 @@ or logarithms, and is not uniquely noninformative.
 Both scenarios use log coordinates so rates stay positive. Each prior is
 explicitly a density in physical coordinates, so the posterior in log
 coordinates includes its transformation Jacobian once. In particular, a
-physical uniform prior is not flat in log coordinates. Reported MAP values
-are transformed log-coordinate modes; see [Parameter estimation](../inference.md).
+physical uniform prior is not flat in log sampling coordinates. Retained MAP values
+are transformed log-coordinate modes; new fits maximize physical density; see [Parameter estimation](../inference.md).
 
 ## Fit and calculate local uncertainty
 
@@ -324,7 +334,7 @@ for the method, conservation properties and restrictions.
 ## Run the study
 
 ```sh
-julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl
+julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl --output=/tmp/growth-physical-map
 python docs/benchmarks/plot_bayesian_growth.py --usetex
 ```
 

@@ -35,30 +35,65 @@ function likelihood_gradient(problem::EstimationProblem,z;derivatives=problem.de
     end
 end
 
-"""Log-posterior gradient in declared inference coordinates. The default uses ForwardDiff or configured SciML sensitivities; a supplied callback is honored in automatic mode. Finite differences are explicit and are also used for independent verification."""
-function posterior_gradient(problem::EstimationProblem,z;derivatives=problem.derivatives,step=cbrt(eps(Float64)),_counts=nothing)
+"""
+    posterior_gradient(problem,z; coordinates=:inference,...)
+
+Derivative of the PHYSICAL log posterior with respect to internal z. With
+`coordinates=:physical`, accept an ordered physical vector and differentiate
+with respect to those physical parameters instead. A declared gradient callback
+is adjusted from its explicit target; finite differences remain opt-in.
+"""
+function posterior_gradient(problem::EstimationProblem,v;coordinates=:inference,
+        derivatives=problem.derivatives,step=cbrt(eps(Float64)),_counts=nothing)
+    coordinates in (:inference,:physical) || throw(ArgumentError("input coordinates must be :inference or :physical"))
+    if coordinates===:physical
+        z=_inference_coordinates(problem,v)
+        g=posterior_gradient(problem,z;derivatives,step,_counts)
+        return g./[_transform_derivative(p.transform,x) for (p,x) in zip(problem.parameters,z)]
+    end
+    z=v
     _derivative_choice(derivatives)
     _counts===nothing || (_counts.gradient_evaluations+=1)
     backend=_gradient_backend(problem,derivatives)
     g=if backend===:callback
-        collect(problem.gradient(z))
+        supplied=collect(problem.gradient(z))
+        problem.gradient_target===:sampling ? supplied-_differentiate_gradient(w->_log_parameter_jacobian(problem,w),z) : supplied
     elseif backend===:sciml_sensitivities
         likelihood_gradient(problem,z;derivatives,step,_counts)+_differentiate_gradient(v->logprior(problem,v),z)
     else
         _differentiate_gradient(v->logposterior(problem,v;_counts),z;derivatives,step)
     end
-    length(g)==length(z) && all(isfinite,g) || throw(NumericalFailure("invalid posterior gradient"))
+    length(g)==length(z) && all(isfinite,g) || throw(NumericalFailure("invalid physical-posterior gradient"))
     g
 end
 
-"""Verify the selected gradient against independent step-halved central differences at a specified z. Local agreement does not establish global smoothness of limiter or mesh branches."""
-function check_gradient(problem::EstimationProblem,z;derivatives=problem.derivatives,step=cbrt(eps(Float64)),tolerance=1e-3,_counts=nothing)
-    f=v->logposterior(problem,v;_counts)
+"""Gradient with respect to z of `sampling_logposterior`: physical-posterior
+chain rule PLUS the coordinate log-Jacobian gradient. Custom callbacks are
+adjusted according to their declared target and verified independently."""
+function sampling_gradient(problem::EstimationProblem,z;derivatives=problem.derivatives,step=cbrt(eps(Float64)),_counts=nothing)
+    posterior_gradient(problem,z;derivatives,step,_counts)+_differentiate_gradient(v->_log_parameter_jacobian(problem,v),z;derivatives,step)
+end
+
+"""
+    check_gradient(problem,z; target=:map,coordinates=:inference,...)
+
+Compare with independent step-halved finite differences. `:map` checks the
+physical density; `:sampling` checks the Jacobian-corrected z density. The latter
+requires internal arguments. Local agreement does not prove global smoothness.
+"""
+function check_gradient(problem::EstimationProblem,z;target=:map,coordinates=:inference,
+        derivatives=problem.derivatives,step=cbrt(eps(Float64)),tolerance=1e-3,_counts=nothing)
+    target in (:map,:sampling) || throw(ArgumentError("gradient target must be :map or :sampling"))
+    target===:sampling && coordinates!==:inference && throw(ArgumentError("sampling gradients use internal coordinates"))
+    f=v->target===:map ? logposterior(problem,v;coordinates,_counts) : sampling_logposterior(problem,v;_counts)
     coarse=_fd_gradient(f,z;step);fine=_fd_gradient(f,z;step=step/2)
-    supplied=posterior_gradient(problem,z;derivatives,step,_counts)
+    supplied=target===:map ? posterior_gradient(problem,z;coordinates,derivatives,step,_counts) :
+        sampling_gradient(problem,z;derivatives,step,_counts)
     error=norm(supplied-fine)/max(1,norm(fine))
     halving=norm(coarse-fine)/max(1,norm(fine))
-    (;valid=error<=tolerance && halving<=tolerance,error,halving,gradient=supplied,reference=fine,backend=_gradient_backend(problem,derivatives))
+    (;valid=error<=tolerance && halving<=tolerance,error,halving,gradient=supplied,reference=fine,
+      backend=_gradient_backend(problem,derivatives),target,argument_coordinates=coordinates,
+      density_coordinates=target===:map ? :physical : :inference)
 end
 
 function _fd_hessian(f,z;step=eps(Float64)^(1/4))
@@ -84,7 +119,7 @@ struct LaplaceFailure{R} <: Exception
 end
 Base.showerror(io::IO,e::LaplaceFailure)=print(io,"Laplace approximation rejected: ",e.report.reason)
 
-"""Joint local Gaussian approximation of the z posterior, with the full negative-log-posterior Hessian and its factorization; includes all nuisance parameters."""
+"""Joint physical-coordinate Gaussian at the physical MAP. `center`, Hessian and covariance use physical parameter units and include every nuisance parameter. Internal coordinates are only numerical machinery."""
 struct LaplaceApproximation{F,D,P}
     center::Vector{Float64}
     physical_center::P
@@ -93,6 +128,7 @@ struct LaplaceApproximation{F,D,P}
     factor::F
     covariance::Matrix{Float64}
     diagnostics::D
+    convention::Symbol
 end
 
 include("gauss_newton.jl")
@@ -102,7 +138,7 @@ include("gauss_newton.jl")
 
 Explicitly requested approximation from the actual negative log posterior, not
 a likelihood-only/Gauss–Newton substitute. Checks optimizer convergence,
-stationarity, gradients, independent step-halved verification of the AD Hessian,
+stationarity, gradients, independent step-halved verification of the AD physical Hessian,
 positive curvature and condition number. Explicit finite differences use a
 step-halved finite-difference Hessian. Invalid or weak curvature is reported
 through LaplaceFailure. A local
@@ -111,9 +147,18 @@ check cannot establish Gaussian shape, unimodality or accurate tail coverage.
 function laplace_approximation(problem::EstimationProblem,result::MAPResult;
         step=eps(Float64)^(1/4),hessian_tolerance=0.01,gradient_tolerance=1e-3,
         condition_limit=1e10,derivatives=problem.derivatives)
-    result.converged || throw(LaplaceFailure((reason="MAP optimization did not converge",)))
     counts=_InferenceCounts();started=time_ns()
-    z=result.minimizer;f=v->-logposterior(problem,v;_counts=counts)
+    _check_map_result(problem,result;_counts=counts)
+    result.converged || throw(LaplaceFailure((reason="MAP optimization did not converge",)))
+    internal=result.minimizer;center=Float64.(_fitted_values(problem,internal))
+    stationarity=_map_stationarity(problem,internal,posterior_gradient(problem,internal;derivatives,_counts=counts);tolerance=gradient_tolerance)
+    stationarity.valid || throw(LaplaceFailure((reason=stationarity.reason,stationarity)))
+    scales=_local_physical_scales(problem,center)
+    all(x->isfinite(x) && x>0,scales) || throw(LaplaceFailure((reason="nonregular physical boundary or unresolved verification scale",)))
+    # This is an affine numerical scaling of θ, with a constant determinant;
+    # no log Jacobian enters the physical Hessian.
+    z=zeros(length(center))
+    f=v->-logposterior(problem,center+scales.*v;coordinates=:physical,_counts=counts)
     if derivatives===:finite_difference
         H1=_fd_hessian(f,z;step);H=_fd_hessian(f,z;step=step/2)
         verification=norm(H-H1)
@@ -128,29 +173,42 @@ function laplace_approximation(problem::EstimationProblem,result::MAPResult;
     eigenpair=eigen(Symmetric(H));s=eigenpair.values
     condition=minimum(s)>0 ? maximum(s)/minimum(s) : Inf
     curvature_resolution=max(verification,eps(Float64)*max(norm(H),1.0))
-    gradient=posterior_gradient(problem,z;derivatives,_counts=counts)
-    gradient_check=check_gradient(problem,z;derivatives,_counts=counts)
+    physical_gradient=posterior_gradient(problem,center;coordinates=:physical,derivatives,_counts=counts)
+    coarse=_fd_gradient(v->-f(v),z;step=cbrt(eps(Float64)))
+    fine=_fd_gradient(v->-f(v),z;step=cbrt(eps(Float64))/2)
+    g=physical_gradient.*scales
+    gradient_error=norm(g-fine)/max(1,norm(fine))
+    gradient_check=(valid=gradient_error<=1e-3 && norm(coarse-fine)/max(1,norm(fine))<=1e-3,error=gradient_error,gradient=g,reference=fine)
     reason=agreement>hessian_tolerance ? "Hessian has not converged under step halving" :
         minimum(s)<=0 ? "negative or zero posterior curvature" :
         minimum(s)<=curvature_resolution ? "weak curvature is unresolved by derivative verification" :
         condition>condition_limit ? "posterior curvature is ill-conditioned" :
-        norm(gradient,Inf)>gradient_tolerance ? "posterior mode is not stationary" :
         !gradient_check.valid ? "posterior gradient check failed" : ""
-    report=(;valid=isempty(reason),reason,hessian_agreement=agreement,hessian_backend=derivatives===:finite_difference ? :finite_difference : :forwarddiff,eigenvalues=s,
-        weak_direction=eigenpair.vectors[:,1],condition_number=condition,gradient,gradient_check,
+    report=(;valid=isempty(reason),reason,coordinates=:physical,convention=_MAP_CONVENTION,
+        verification_coordinates=:scaled_physical,verification_scales=scales,stationarity,
+        hessian_agreement=agreement,hessian_backend=derivatives===:finite_difference ? :finite_difference : :forwarddiff,eigenvalues=s,
+        weak_direction=eigenpair.vectors[:,1],condition_number=condition,gradient=physical_gradient,gradient_check,
         curvature_resolution,forward_solves=counts.solves,posterior_evaluations=counts.evaluations,elapsed_seconds=(time_ns()-started)/1e9)
     isempty(reason) || throw(LaplaceFailure(report))
-    factor=cholesky(Symmetric(H))
+    physical_hessian=Matrix(Symmetric((H./scales)./scales'))
+    factor=cholesky(Symmetric(physical_hessian))
     covariance=Matrix(Symmetric(factor\Matrix{Float64}(I,length(z),length(z))))
-    LaplaceApproximation(copy(z),physical_parameters(problem,z),ParameterSpec[problem.parameters...],H,factor,covariance,report)
+    LaplaceApproximation(center,physical_parameters(problem,internal),ParameterSpec[problem.parameters...],physical_hessian,factor,covariance,report,_MAP_CONVENTION)
 end
 
-"""Select the kinetic (or nuisance) marginal block from the FULL Laplace covariance, in inference coordinates. This never inverts a conditional Hessian subblock."""
+function _check_approximation(problem,approximation)
+    isdefined(approximation,:convention) && approximation.convention===_MAP_CONVENTION || throw(ArgumentError("old/unspecified covariance convention; recompute physical local uncertainty"))
+    _check_parameterization(problem,approximation.coordinates)
+    length(approximation.center)==length(problem.parameters) || throw(DimensionMismatch("approximation parameter dimension mismatch"))
+end
+
+"""Select the kinetic (or nuisance) marginal block from the FULL joint covariance, in physical parameter units. This never inverts a conditional Hessian subblock."""
 function marginal_covariance(problem::EstimationProblem,approximation::Union{LaplaceApproximation,GaussNewtonApproximation};role=:kinetic,indices=nothing)
+    _check_approximation(problem,approximation)
     selected=indices===nothing ? findall(p->p.role===role,problem.parameters) : collect(indices)
     !isempty(selected) && all(i->1<=i<=length(problem.parameters),selected) || throw(ArgumentError("select valid parameter indices"))
     (;indices=selected,parameters=[(problem.parameters[i].experiment,problem.parameters[i].name) for i in selected],
-      covariance=approximation.covariance[selected,selected],coordinates=:inference)
+      covariance=approximation.covariance[selected,selected],coordinates=:physical,convention=_MAP_CONVENTION)
 end
 
 """MCMC draws stored as (parameters, retained draws, chains), physical values and sampler diagnostics. Inspect diagnostics before using draws for inference."""
@@ -188,25 +246,52 @@ function diagnostics(z::AbstractArray{<:Real,3},statistics;kwargs...)
     throw(ArgumentError("load AdvancedHMC and MCMCDiagnosticTools for retained-chain diagnostics"))
 end
 
-"""Draw from an explicitly labelled Laplace or Gauss–Newton approximation and transform every draw to physical coordinates. This performs no forward PBM solves; support violations are flagged, not filtered."""
+"""
+    parameter_draws(problem,approximation; n=1000,seed=2022)
+
+Draw from a PHYSICAL-coordinate Laplace/Gauss–Newton Gaussian, with no PBM
+solves. `theta` and `physical` retain every draw, including support violations.
+`z` contains its inverse transform only when valid, and NaNs otherwise;
+`in_support` and `transform_valid` record both checks. No clipping, filtering,
+reject-resampling or truncation is performed. These are local Gaussian draws,
+not MCMC. Covariance has physical parameter units.
+"""
 function parameter_draws(problem::EstimationProblem,approximation::Union{LaplaceApproximation,GaussNewtonApproximation};n=1000,seed=2022)
+    _check_approximation(problem,approximation)
     n isa Integer && n>0 || throw(ArgumentError("positive draw count required"))
     rng=MersenneTwister(seed)
-    Z=approximation.center.+approximation.factor.U\randn(rng,length(approximation.center),n)
-    (;z=Z,physical=[physical_parameters(problem,z) for z in eachcol(Z)],
-      in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],coordinates=approximation.coordinates,
+    theta=approximation.center.+approximation.factor.U\randn(rng,length(approximation.center),n)
+    support=[isfinite(logprior(problem,v;coordinates=:physical)) for v in eachcol(theta)]
+    Z=fill(NaN,size(theta));valid=falses(n)
+    for i in 1:n
+        support[i] || continue
+        values=view(theta,:,i)
+        bounds=[_transform_bounds(p.transform) for p in problem.parameters]
+        all(b===nothing || b[1]<x<b[2] for (b,x) in zip(bounds,values)) || continue
+        z=_inference_coordinates(problem,values)
+        if all(isfinite,z) && all(_transform_valid(p.transform,v) for (p,v) in zip(problem.parameters,z))
+            Z[:,i]=z;valid[i]=true
+        end
+    end
+    (;theta,z=Z,physical=[_physical_parameter_tuple(problem,v) for v in eachcol(theta)],
+      in_support=support,transform_valid=valid,coordinates=approximation.coordinates,
+      draw_coordinates=:physical,z_coordinates=:inference,convention=_MAP_CONVENTION,
       method=approximation isa LaplaceApproximation ? :laplace : :gauss_newton,seed)
 end
-"""Select retained MCMC draws. `indices` records their columns in
-`reshape(samples.z, length(problem.parameters), :)`; preserve it with exported
-predictions because seeded permutations can differ across Julia releases."""
+"""Select retained MCMC draws of the physical posterior. `z` retains its internal
+coordinate representation; `theta`/`physical` are physical. `indices` records
+columns of reshape(samples.z, parameters, :), and must accompany predictions.
+The stored chain density remains with respect to dz, including its Jacobian."""
 function parameter_draws(problem::EstimationProblem,samples::PosteriorSamples;n=size(samples.z,2)*size(samples.z,3),seed=2022)
+    _check_parameterization(problem,samples.coordinates)
     available=reshape(samples.z,size(samples.z,1),:)
     n isa Integer && 0<n<=size(available,2) || throw(ArgumentError("select no more than the available MCMC draws"))
     indices=randperm(MersenneTwister(seed),size(available,2))[1:n];Z=available[:,indices]
-    (;z=Z,physical=[physical_parameters(problem,z) for z in eachcol(Z)],
-      in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],coordinates=samples.coordinates,
-      method=:mcmc,seed,indices)
+    theta=hcat([_fitted_values(problem,z) for z in eachcol(Z)]...)
+    (;theta,z=Z,physical=[physical_parameters(problem,z) for z in eachcol(Z)],
+      in_support=[isfinite(logprior(problem,z)) for z in eachcol(Z)],transform_valid=trues(n),
+      coordinates=samples.coordinates,draw_coordinates=:inference,z_coordinates=:inference,
+      posterior_law=:physical,method=:mcmc,seed,indices)
 end
 
 function _predictive_block(rng,m,P,theta,ex,noise)
@@ -254,8 +339,14 @@ function posterior_predictive(problem::EstimationProblem,draws;max_solves,measur
     required=size(Z,2)*length(problem.experiments)
     max_solves isa Integer && max_solves>=required || throw(ArgumentError("predictive propagation requires $required solves; budget is $max_solves"))
     rng=MersenneTwister(seed);results=Any[];counts=_InferenceCounts()
-    for z in eachcol(Z)
+    support=draws isa AbstractMatrix ? nothing : get(draws,:in_support,nothing)
+    valid=draws isa AbstractMatrix ? nothing : get(draws,:transform_valid,nothing)
+    for (i,z) in enumerate(eachcol(Z))
         prediction=try
+            if !(draws isa AbstractMatrix)
+                (support===nothing || support[i]) || throw(NumericalFailure("predictive physical Gaussian draw is outside prior/constraint support; retained without resampling"))
+                (valid===nothing || valid[i]) || throw(NumericalFailure("predictive physical draw has no finite internal coordinate; retained without an inverse transform"))
+            end
             isfinite(logprior(problem,z)) || throw(NumericalFailure("predictive draw is outside prior support; inspect the approximation"))
             raw=_inference_predictions(problem,z,counts)
             measurements=map(problem.experiments,raw) do ex,blocks
@@ -273,37 +364,40 @@ function posterior_predictive(problem::EstimationProblem,draws;max_solves,measur
 end
 
 """Likelihood-only local prediction sensitivities/SVD and observed curvature, reported separately from prior curvature. Prediction rank alone omits information in inferred noise/covariance parameters; observed likelihood curvature includes it. Neither establishes global identifiability."""
-function identifiability_report(problem::EstimationProblem,z;step=cbrt(eps(Float64)),derivatives=problem.derivatives)
-    flatten(v)=vcat((vec(P) for blocks in predictions(problem,v) for P in blocks)...)
-    J=_differentiate_jacobian(flatten,z;derivatives,step)
+function identifiability_report(problem::EstimationProblem,z;coordinates=:physical,step=cbrt(eps(Float64)),derivatives=problem.derivatives)
+    coordinates in (:physical,:inference) || throw(ArgumentError("report coordinates must be :physical or :inference"))
+    point=coordinates===:physical ? _fitted_values(problem,z) : z
+    internal(v)=coordinates===:physical ? _inference_coordinates(problem,v) : v
+    flatten(v)=vcat((vec(P) for blocks in predictions(problem,internal(v)) for P in blocks)...)
+    J=_differentiate_jacobian(flatten,point;derivatives,step)
     decomposition=svd(J);s=decomposition.S
     numerical_rank=count(x->x>sqrt(eps())*maximum(s),s)
-    likelihood_hessian=_differentiate_hessian(v->-loglikelihood(problem,v),z;derivatives)
-    prior_hessian=_differentiate_hessian(v->-logprior(problem,v),z;derivatives)
+    likelihood_hessian=_differentiate_hessian(v->-loglikelihood(problem,v;coordinates),point;derivatives)
+    prior_hessian=_differentiate_hessian(v->-logprior(problem,v;coordinates),point;derivatives)
     eig=eigen(Symmetric(likelihood_hessian))
     (;prediction_jacobian=J,prediction_singular_values=s,prediction_rank=numerical_rank,
-      likelihood_hessian,prior_hessian,likelihood_eigenvalues=eig.values,weak_direction=eig.vectors[:,1])
+      likelihood_hessian,prior_hessian,likelihood_eigenvalues=eig.values,weak_direction=eig.vectors[:,1],coordinates,convention=_MAP_CONVENTION)
 end
 
-"""Replace all scalar prior declarations, retaining transforms, data, histories and parameter sharing. Supply one explicitly coordinated Prior per fitted parameter."""
+"""Replace all scalar prior declarations, retaining transforms, data, histories and parameter sharing. Supply one physical distribution (or advanced Prior) per fitted parameter."""
 function replace_priors(problem::EstimationProblem,priors)
     length(priors)==length(problem.parameters) || throw(DimensionMismatch("one replacement prior per parameter required"))
     ps=[ParameterSpec(p.name;initial=p.initial,prior=q,transform=p.transform,role=p.role,experiment=p.experiment) for (p,q) in zip(problem.parameters,priors)]
     EstimationProblem(ps,problem.experiments;fixed=problem.fixed,constraints=problem.constraints,derivatives=problem.derivatives)
 end
 
-"""Fit explicitly supplied alternative-prior problems; compare z modes, Laplace standard deviations, and shifts in reference posterior SD units. This reports prior dependence without treating it as data identifiability."""
+"""Fit explicitly supplied alternative-prior problems; compare physical MAP values, Laplace standard deviations, and shifts in reference posterior SD units. This reports prior dependence without treating it as data identifiability."""
 function prior_sensitivity(problems::NamedTuple;shift_threshold=1.0,scale_ratio_threshold=2.0,kwargs...)
     _check_comparable_problems(problems;priors_may_change=true)
     fits=map(p->fit(p;uncertainty=:laplace,kwargs...),problems)
     reference=first(fits);sd=sqrt.(diag(reference.uncertainty.covariance))
-    comparisons=map(fits) do r
-        shift=(r.minimizer-reference.minimizer)./sd
+    comparisons=map(problems,fits) do p,r
+        shift=(_fitted_values(p,r.minimizer)-reference.uncertainty.center)./sd
         posterior_sd=sqrt.(diag(r.uncertainty.covariance));ratio=posterior_sd./sd
         (;parameters=r.parameters,shift_in_reference_sd=shift,posterior_sd,converged=r.converged,
           prior_sensitive=maximum(abs,shift)>shift_threshold || maximum(ratio)>scale_ratio_threshold || minimum(ratio)<1/scale_ratio_threshold)
     end
-    (;fits,comparisons,coordinates=:inference,shift_threshold,scale_ratio_threshold)
+    (;fits,comparisons,coordinates=:physical,shift_threshold,scale_ratio_threshold)
 end
 
 function _check_comparable_problems(problems;priors_may_change=false)
@@ -338,11 +432,12 @@ function refinement_study(problems::NamedTuple;kwargs...)
     reference=first(fits);sd=sqrt.(diag(reference.uncertainty.covariance))
     basepred=vcat((vec(P) for blocks in predictions(first(problems),reference.minimizer) for P in blocks)...)
     comparisons=map(problems,fits) do p,r
-        P=vcat((vec(v) for blocks in predictions(p,reference.minimizer) for v in blocks)...)
+        common=_inference_coordinates(p,reference.uncertainty.center)
+        P=vcat((vec(v) for blocks in predictions(p,common) for v in blocks)...)
         length(P)==length(basepred) || throw(DimensionMismatch("refinement must retain measurements and observation order"))
-        shift=(r.minimizer-reference.minimizer)./sd
+        shift=(_fitted_values(p,r.minimizer)-reference.uncertainty.center)./sd
         (;converged=r.converged,shift_in_reference_sd=r.converged ? shift : nothing,
           candidate_shift_in_reference_sd=shift,max_prediction_change=norm(P-basepred,Inf),reference_posterior_sd=sd)
     end
-    (;fits,comparisons,coordinates=:inference)
+    (;fits,comparisons,coordinates=:physical,convention=_MAP_CONVENTION)
 end

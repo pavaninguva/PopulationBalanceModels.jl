@@ -135,8 +135,8 @@ measurement = Measurement([observed_number], MomentObservable(0);
     likelihood=GaussianLikelihood(sigma=number_sd))
 experiment = InferenceExperiment(:vessel, problem, measurement;
     solver=StationarySolver(abstol=1e-12))
-parameter = ParameterSpec(:J; initial=1.0, transform=LogTransform(),
-    prior=Prior(Normal(0, 1); coordinates=:inference)) # log(J) prior
+parameter = ParameterSpec(:J; initial=1.0,
+    prior=LogNormal(0, 1)) # physical J prior; log coordinates selected automatically
 estimation = EstimationProblem((parameter,), (experiment,))
 result = fit(estimation) # load Optim; MAP by default
 ```

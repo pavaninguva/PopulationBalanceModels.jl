@@ -3,7 +3,19 @@
 An estimation problem combines a forward PBM, observations, a measurement
 likelihood and parameter priors. `fit` computes a maximum a posteriori (MAP)
 point using those definitions. Optional local uncertainty and posterior sampling
-reuse the same posterior; neither runs automatically with a basic fit.
+reuse the same physical probability model; neither runs automatically with a basic fit.
+Declare a physical starting guess and a physical prior; internal coordinates are
+chosen from the prior support:
+
+```julia
+ParameterSpec(:g0; initial=0.2, prior=LogNormal(log(0.2), 0.5))
+```
+
+**MAP convention changed (`physical_map_v1`).** `fit` now finds the mode of the
+physical parameter density. Earlier releases optimized the internal-coordinate
+density. MCMC retains the intended physical probability law, with coordinate
+Jacobians handled internally. Older MAP, Laplace and Gauss–Newton results must
+not be relabelled as new results; see [migration](#Migration-and-retained-results).
 
 ## A complete first fit
 
@@ -26,8 +38,7 @@ times = [0.5,1.0,2.0]
 data = [1.24,1.00,0.68] # synthetic number measurements
 measurement = Measurement(times,data,MomentObservable(0);
     likelihood=GaussianLikelihood(sigma=0.03))
-parameter = ParameterSpec(:k;initial=0.3,transform=LogTransform(),
-    prior=Prior(LogNormal(log(0.4),0.5);coordinates=:physical))
+parameter = ParameterSpec(:k; initial=0.3, prior=LogNormal(log(0.4), 0.5))
 experiment = InferenceExperiment(:batch,forward_problem,measurement;dt=0.02)
 estimation = EstimationProblem((parameter,),(experiment,))
 
@@ -41,12 +52,18 @@ predicted = vec(only(only(predictions(estimation,fitted.minimizer))))
 ```
 
 The Gaussian standard deviation is a declared synthetic observation assumption.
-`LogTransform` keeps k positive; the physical-coordinate LogNormal prior is
-converted to the inference density with its Jacobian **once**. The returned
-physical value is the transformed MAP in ``z=\log k`` coordinates, not necessarily
-the mode of the physical-coordinate density. Inspect convergence and derivative
-diagnostics before reporting the estimate. Multistart searches do not prove a
-global optimum.
+`initial=0.3` is a starting guess in the same units as the removal coefficient.
+It is neither a prior mean nor a fixed rate. The standalone `forward_problem`
+still has its nominal `p.k=0.3`; estimation sends each current physical candidate
+to a remade problem without mutating that base. To match another nominal tuple,
+write `initial=p.k` explicitly.
+
+The LogNormal prior selects log coordinates automatically. Those coordinates
+help optimization but do not change the physical MAP objective. For a constant
+likelihood and `LogNormal(log(0.2),0.5)`, the physical mode is
+``0.2\exp(-0.5^2)=0.1557601566``, whereas the median is 0.2. Inspect convergence
+and physical stationarity diagnostics before reporting an estimate. Multistart
+searches do not prove a global optimum.
 
 For a distribution-based physical example, continue with
 [estimating size-dependent growth](case_studies/estimating_growth.md). The sections
@@ -223,24 +240,53 @@ tags. Untagged dependence cannot be inferred automatically.
 
 ## Declare fitted and fixed parameters
 
-Each scalar declaration states its physical initial value, transform and prior:
+Each scalar declaration supplies a physical starting value and prior:
 
 ```julia
-using Distributions: LogNormal, Normal
-g0 = ParameterSpec(:g0; initial=0.4, transform=LogTransform(),
-    prior=Prior(LogNormal(log(0.4),0.4); coordinates=:physical))
-noise = ParameterSpec(:noise; initial=0.003, transform=LogTransform(),
-    role=:nuisance,
-    prior=Prior(Normal(log(0.003),0.4); coordinates=:inference))
+using Distributions: LogNormal
+g0 = ParameterSpec(:g0; initial=0.4, prior=LogNormal(log(0.4), 0.4))
+noise = ParameterSpec(:noise; initial=0.003,
+    prior=LogNormal(log(0.003), 0.4), role=:nuisance)
 ```
 
-Both priors above imply Gaussian log coordinates. The noise declaration is an
-optional nuisance parameter when noise is unknown; the growth case study keeps
-its noise fixed. The coordinate declaration identifies which density is meant. There is no implicit prior-coordinate
-default. IdentityTransform supports a location and scale; LogTransform supports
-a positive reference scale. LogitTransform(lower,upper) gives an open bounded
-physical interval. Additional physical restrictions belong in the estimation
-problem's constraints callback; truncating admissible support changes the prior.
+The noise declaration is optional when measurement noise is unknown; it is not
+needed for a fixed-error study. All fitted nuisance parameters enter the joint
+posterior and covariance. Priors must be proper continuous univariate
+Distributions.jl distributions; discrete or multivariate priors are not supplied
+by this scalar interface. There is no implicit improper prior.
+
+Automatic selection uses declared **support**, never sampled values or a prior
+mean. It resolves to a concrete transform stored in the specification:
+
+| Physical prior support | Automatic internal coordinates |
+|:--|:--|
+| Entire real line | `IdentityTransform()` |
+| Positive half-line | `LogTransform()` |
+| Finite interval | `LogitTransform(lower,upper)` |
+| Other lower/upper half-line | `ShiftedLogTransform(bound; upper=false/true)` |
+
+Normal, LogNormal, Exponential, Gamma, Beta, Uniform and eligible truncated
+versions are included, along with other registered interval families. An
+unclassified/custom or disconnected support requires an explicit compatible
+transform; the generic minimum/maximum of a distribution does not certify an
+interval. `IdentityTransform()` covers the real line and lets the prior reject
+outside-support proposals. Initial values must be finite, in prior support and
+representable by the transform. They are never clamped.
+
+Advanced users may override the numerical coordinates:
+
+```julia
+g0 = ParameterSpec(:g0; initial=0.4, prior=LogNormal(log(0.4),0.4),
+    transform=LogTransform(scale=0.1))
+parameterization(estimation) # resolved transforms, physical initials and prior declarations
+```
+
+An explicit identity remains distinct from `transform=:auto`. A transform may
+cover a larger domain than the prior, but must not silently remove allowed
+physical support. For example, a log transform cannot turn an untruncated
+Normal into a positive prior; declare the intended truncated distribution.
+Additional constraints are checked on physical candidates. Arbitrary constraint
+callbacks do not certify a regular boundary optimum or a global support map.
 
 A shared parameter has no experiment name. Add `experiment=:batch_B` to make
 a fitted parameter local to that experiment. Put known values in the problem's
@@ -266,37 +312,6 @@ factors and noise parameters. A Measurement response callback
 Operating histories remain in the physical problem or are rebuilt by setup.
 The default setup merges physical parameters into a NamedTuple p.
 
-## Keep the density coordinates explicit
-
-`Prior(distribution; coordinates=...)` accepts continuous univariate
-Distributions.jl densities, including Normal, LogNormal, Uniform, Exponential,
-Gamma, Beta and truncated distributions such as a half-Normal. It is not a
-two-family prior interface. Choose a transform compatible with the parameter's
-support. NUTS also requires a differentiable `logpdf` under the selected backend;
-it does not sample discrete parameter choices. Case-specific metadata/figure
-exporters may support fewer distribution families than the inference engine.
-
-The inference vector is ``z``, with physical parameters ``\theta=T(z)``.
-For each physical-coordinate prior the package evaluates
-
-```math
-\log p_z(z)=\log p_\theta(T(z))+\log|\det J_T(z)|.
-```
-
-An inference-coordinate prior needs no additional Jacobian. This adjustment
-occurs exactly once in logprior. MAP, Hessian calculations and NUTS all use
-
-```math
-\log p(z\mid y)=\sum_e\log p(y_e\mid T(z))+\log p_z(z)+\text{constant}.
-```
-
-The functions loglikelihood, logprior and logposterior expose these separate
-evaluations. posterior_components returns all three at one coordinate vector.
-Returned physical parameter values are the transformed z-density mode.
-Modes depend on density coordinates: transforming that mode does not generally
-give the mode of the physical-coordinate density. Every result records its
-parameter declarations and coordinates.
-
 ## Fit the posterior mode
 
 Load Optim in a working environment. For a constructed EstimationProblem:
@@ -313,11 +328,14 @@ result = fit(problem; starts=[z_start_1,z_start_2])
 ```
 
 The default is BFGS with ForwardDiff derivatives of the shared posterior.
-The supplied scaling affects the optimizer coordinates, not the statistical
-density being optimized. Convergence uses the gradient in those optimizer
-coordinates; diagnostics retain both raw z gradients and scaled gradients,
-together with the requested tolerance. Choosing scales is therefore part of
-the numerical specification. A seeded perturbation generates extra starts.
+The supplied scaling affects optimizer coordinates, not the physical density
+being optimized. Convergence also checks the physical gradient in parameter-scaled
+units (`diagnostics.stationarity`). Raw internal and optimizer-scaled gradients
+remain labelled in diagnostics. A small internal gradient caused by a vanishing
+transform derivative at an endpoint does not establish physical stationarity.
+Allowed endpoint or singular-density modes are reported as boundary-limited or
+nonregular; this interface does not manufacture an interior MAP or a Gaussian
+uncertainty there. A seeded perturbation generates extra starts.
 Multiple starts improve exploration but do not establish a global optimum.
 
 The selected gradient is checked against step-halved central differences before
@@ -336,16 +354,18 @@ silently with finite differences.
 
 `EstimationProblem(...;derivatives=:auto)` and the legacy CalibrationProblem use
 ForwardDiff by default. This propagates parameter derivatives through the
-actual calculation, including transforms, prior Jacobians, observation responses
-and inferred noise. For a small parameter vector it usually requires one
+actual calculation, including transforms, the appropriate target-specific prior
+terms, observation responses and inferred noise. For a small parameter vector it usually requires one
 dual-number solve per experiment, rather than two perturbed solves per parameter.
 Larger vectors are processed in ForwardDiff chunks. Evaluation counts describe
 these solves, not the number of underlying arithmetic operations.
 
 ```julia
-posterior_gradient(problem,z)
+posterior_gradient(problem,z) # physical log posterior, differentiated with respect to z
+sampling_gradient(problem,z)  # additionally differentiates the coordinate Jacobian
 likelihood_gradient(problem,z) # excludes the prior
-check_gradient(problem,z)     # independent finite-difference verification
+check_gradient(problem,z; target=:map)
+check_gradient(problem,z; target=:sampling)
 result.diagnostics.derivative_backend
 result.diagnostics.gradient_evaluations
 result.diagnostics.forward_solves
@@ -417,20 +437,22 @@ kinetics = marginal_covariance(problem,local_gaussian; role=:kinetic)
 draws = parameter_draws(problem,local_gaussian; n=1000,seed=23)
 ```
 
-Let ``r(z)`` contain all observation residuals after covariance whitening and
+Let ``r(\theta)`` contain all observation residuals after covariance whitening and
 any independent contrasts. The response, times, experiments, parameter sharing
 and uncertain initial conditions are the same as in the likelihood. Then
 
 ```math
-J=\left.\frac{\partial r}{\partial z}\right|_{\widehat z},\qquad
-P_{\mathrm{GN}}=J^\mathsf TJ+
-\left.\frac{\partial^2[-\log p_z(z)]}{\partial z\,\partial z^\mathsf T}
-\right|_{\widehat z},\qquad
-C_{\mathrm{GN}}=P_{\mathrm{GN}}^{-1}.
+J_\theta=\left.\frac{\partial r}{\partial\theta}\right|_{\widehat\theta},\qquad
+P_{\mathrm{GN}}=J_\theta^\mathsf TJ_\theta+
+\left.\frac{\partial^2[-\log\pi_\theta(\theta)]}{\partial\theta\,\partial\theta^\mathsf T}
+\right|_{\widehat\theta},\qquad
+\Sigma_{\mathrm{GN}}=P_{\mathrm{GN}}^{-1}.
 ```
 
-This is a **Gaussian in the declared inference coordinates**, with exact local
-prior curvature, including physical-prior transformation Jacobians. No averaging
+This is a **Gaussian in physical parameter coordinates**. The prior curvature
+is that of the physical density, including the inverse Jacobian only for an
+explicit advanced internal-coordinate prior. Numerical-transform Jacobians do
+not enter the MAP objective or this covariance. No averaging
 over bins/times or residual-based noise rescaling is introduced. Factorizations
 and solves produce the covariance. A kinetic marginal uses the relevant block
 of the full joint covariance, including calibration and initial-state nuisance
@@ -467,8 +489,11 @@ Jacobian's AD path. This does not convert an adjoint scalar-gradient callback
 into a prediction Jacobian; `derivatives=:finite_difference` is an explicit
 alternative, subject to the same checks.
 
-Parameter draws cost no PBM solves. They transform to physical units and retain
-`in_support` flags rather than truncating the Gaussian. `posterior_predictive`
+Parameter draws cost no PBM solves. They are physical Gaussian draws: `theta`
+and `physical` retain every value, including negative or out-of-support values.
+`in_support` and `transform_valid` report validity; invalid inverse transforms
+are not attempted (`z` is NaN for those columns). No draw is clipped, filtered,
+resampled or silently truncated. `posterior_predictive`
 still needs its explicit solve budget. Label resulting intervals **Gauss–Newton
 approximations**. The construction omits ``\sum_i r_i\nabla^2r_i`` from the full
 posterior Hessian; it need not capture bounds, curved compensation, multiple
@@ -489,9 +514,9 @@ The Hessian uses nested ForwardDiff on the actual negative log posterior.
 Independent step-halved differences of its AD gradient verify the curvature:
 
 ```math
-H=\left.\frac{\partial^2[-\log p(z\mid y)]}{\partial z\,\partial z^\mathsf T}
-\right|_{\widehat z},\qquad
-p(z\mid y)\approx\mathcal N(\widehat z,H^{-1}).
+H_\theta=\left.\frac{\partial^2[-\ell_\theta(\theta)]}{\partial\theta\,\partial\theta^\mathsf T}
+\right|_{\widehat\theta},\qquad
+p(\theta\mid y)\approx\mathcal N(\widehat\theta,H_\theta^{-1}).
 ```
 
 All nuisance parameters enter this joint curvature. A kinetic marginal uses
@@ -506,13 +531,16 @@ nonstationarity, unstable derivatives, nonpositive curvature or excessive
 conditioning reject the approximation with a LaplaceFailure report. No
 regularization converts an invalid Hessian into reported certainty.
 Positive local curvature does not establish unimodality or Gaussian tails.
-Intervals and parameter regions from these draws are labelled Laplace
-approximations and are transformed to physical coordinates explicitly.
+Centers, Hessians, covariances, marginal blocks and Gaussian draws are in
+physical parameter units. Internal verification may use an affine scaling of
+physical values; it does not replace the density with an unconstrained one.
+Intervals and parameter regions are labelled physical-coordinate Laplace
+approximations. A Gaussian may extend outside physical support.
 Draws include an in_support flag. Predictive propagation reports draws outside
 the declared prior/constraint support as failures; it does not silently truncate
 the Gaussian approximation.
 
-The case study compares the previous lognormal growth priors with physical
+The retained growth case study compares lognormal growth priors with physical
 uniform priors bounded by stated growth timescales. These choices express
 different assumptions; neither is a universal default. Both are shown here,
 and their fitted posteriors are compared below.
@@ -557,8 +585,9 @@ samples = sample_posterior(estimation; initial=fitted,
     stopping=:fixed, samples=1000, chains=4, warmup=500, seed=24)
 ```
 
-Existing calls with `samples=N` also select fixed mode and keep their previous
-transition sequence. They report diagnostics but do not stop early. Fixed mode
+Existing calls with `samples=N` also select fixed mode and retain that sampling
+policy. The Jacobian-corrected target represents the same physical posterior;
+bitwise transition sequences across code changes are not promised. They report diagnostics but do not stop early. Fixed mode
 allows one chain; diagnostic stopping requires at least two. Four dispersed
 chains are a useful default, especially when different plausible modes need to
 be explored. Joint chains are currently advanced serially. Batching preserves
@@ -585,8 +614,12 @@ Repeated checks are a computational stopping rule, not proof of global mixing,
 a rigorous sequential-coverage guarantee, identifiability or model adequacy.
 Inspect traces and posterior shape before interpreting intervals.
 
-NUTS uses explicit posterior gradients. A supplied `laplace` approximation
-initializes a dense metric; otherwise adaptation is diagonal by default.
+NUTS uses the gradient of `sampling_logposterior`, not the physical-MAP
+objective alone. A supplied physical `laplace` covariance is locally converted
+through the inverse parameter Jacobian, and through any auxiliary sampling map,
+for metric initialization and dispersed starts. Diagnostics label this conversion
+as **tuning**; it is not another posterior covariance estimate. Otherwise
+adaptation is diagonal by default.
 An explicit positive-definite `initial_covariance` also selects dense adaptation.
 It is tuning, not a verified uncertainty estimate. Supply one matrix or a
 tuple/vector of matrices for different chain starts. A Laplace approximation can
@@ -614,8 +647,10 @@ independent finite-difference verification stencil; check its halving where
 limiter switches or sharp likelihood curvature affect the comparison. Finite
 tests cannot prove that arbitrary callbacks are globally bijective or cover the
 whole posterior support; that remains a requirement of the supplied map.
-Priors remain in their originally declared coordinates; returned `z`
-draws and `statistics.log_density` remain in inference coordinates. A tuning
+The prior probability laws remain unchanged. Returned `z` draws and
+`statistics.log_density` refer to the internal-coordinate sampling density,
+including the parameter-transform Jacobian exactly once. `sampler_log_density`
+also includes the auxiliary-map Jacobian. A tuning
 matrix supplied with a map must be expressed in **sampler** coordinates.
 AdvancedHMC's `DenseEuclideanMetric` takes the inverse mass matrix: a supplied
 `initial_covariance` initializes that matrix, following its
@@ -633,8 +668,8 @@ records are retained with the
 
 See the upstream [AdvancedHMC](https://turinglang.org/AdvancedHMC.jl/stable/get_started/)
 and [MCMCDiagnosticTools](https://turinglang.org/MCMCDiagnosticTools.jl/stable/)
-documentation for sampler and diagnostic definitions. NUTS uses the same
-selected AD or ODE-sensitivity gradient as MAP; diagnostics record its backend.
+documentation for sampler and diagnostic definitions. NUTS reuses the selected AD or ODE-sensitivity backend and adds the required
+coordinate-Jacobian gradient; diagnostics record the target and backend.
 
 The [growth-estimation case](case_studies/estimating_growth.md) compares priors,
 Laplace intervals and NUTS draws for synthetic density measurements. The
@@ -647,6 +682,74 @@ Retain these identities when exporting predictive curves. A seed alone need not
 reproduce `randperm` selection across Julia versions; the historical protein
 example exports `posterior_predictive_indices.csv` for that purpose. Sampling tuning
 matrices and transformed Hamiltonian energies retain their separate meanings.
+
+## Keep the density coordinates explicit
+
+This advanced section states the change of variables; ordinary declarations need
+only physical initials and distributions. Let ``\theta=T(z)``. The physical
+posterior is
+
+```math
+\ell_\theta(\theta)=\sum_{e,b}\log L_{e,b}(\theta)
++\sum_j\log\pi_j(\theta_j).
+```
+
+Each ParameterSpec contributes its prior once, regardless of the number of
+experiments or blocks. Optimization over ``z`` maximizes
+``\ell_\theta(T(z))`` **without** a coordinate correction. Sampling instead uses
+
+```math
+\ell_z(z)=\ell_\theta(T(z))+\log|\det DT(z)|.
+```
+
+With an auxiliary ``z=S(y)``, the sampler adds ``\log|\det DS(y)|`` once more.
+These changes preserve probabilities, while modes depend on the reference density.
+
+| Function | Argument | Returned density / derivative |
+|:--|:--|:--|
+| `loglikelihood(problem,z)` | Internal z | Likelihood only |
+| `logprior`, `logposterior`, `posterior_components` | Internal z by default | Physical density at T(z) |
+| Same functions with `coordinates=:physical` | Ordered physical vector | Physical density |
+| `posterior_gradient(problem,z)` | Internal z | Derivative of the physical-density objective with respect to z |
+| `sampling_logprior`, `sampling_logposterior`, `sampling_gradient` | Internal z | Density with respect to dz, or its gradient |
+
+`Prior(d; coordinates=:physical)` remains equivalent to a direct distribution.
+`Prior(d; coordinates=:inference)` is advanced and requires an explicit transform.
+It describes a law for z: physical MAP uses
+``\log\pi_\theta(\theta)=\log\pi_z(T^{-1}(\theta))-\log|\det DT|``.
+Sampling restores the forward Jacobian, leaving that declared law intact.
+For example a Normal prior on log(k) implies a physical LogNormal, not a Normal
+prior on k. An explicit identity is a valid advanced declaration too. For an
+advanced inference prior, changing the transform while holding its z-density
+fixed changes the implied physical law; transform invariance applies when the
+physical prior law is held fixed.
+
+A custom `gradient(z)` must declare `gradient_target=:physical` or `:sampling`.
+Both mean derivatives with respect to z; the package adds/subtracts the Jacobian
+gradient for the other target. Both targets have independent finite-difference
+checks. An old callback is never silently used for a different density.
+
+## Migration and retained results
+
+- Prefer `ParameterSpec(:k; initial=p.k, prior=LogNormal(...))`.
+  Legacy physical Prior wrappers remain valid. Automatic transforms can differ
+  from the old identity default; use `initial_coordinates` rather than assuming
+  that a start vector contains physical values.
+- Existing inference-coordinate priors must specify their transform explicitly.
+  Explicit transforms must cover the declared physical prior support; choose an
+  explicitly truncated prior when that is the intended physical domain.
+- MAP components and local covariances now use `physical_map_v1`. Older modes,
+  full-Hessian Laplace and Gauss–Newton results require recomputation. A native
+  result with unspecified/old convention is rejected for new uncertainty or
+  MAP-based sampler initialization, rather than silently relabelled.
+- MCMC draws may remain scientifically valid when the forward model, observations,
+  likelihood and physical prior law are unchanged. Their original producer and
+  compatibility records remain authoritative. This refactor alone is not a
+  current-source replay receipt.
+- The retained growth and protein figures/tables still use their recorded
+  inference-density MAP/local approximations. Their historical labels remain;
+  current scripts use the new convention and must write a new output directory.
+  No production fits or long posterior chains were rerun for this migration.
 
 ## Check prediction, identifiability and numerical error
 
@@ -673,7 +776,8 @@ remain visible by draw. Poisson predictions include known exposure; multinomial
 predictive counts condition on the observed snapshot totals.
 
 identifiability_report separates likelihood prediction sensitivities and
-observed likelihood curvature from prior curvature. Prediction rank uses the
+observed likelihood curvature from physical-prior curvature. By default its
+parameter derivatives are physical; `coordinates=:inference` is explicit. Prediction rank uses the
 unscaled measurement units and omits noise-only information; inferred noise
 also enters the likelihood Hessian. These are local diagnostics, not proof of
 structural identifiability.
@@ -685,7 +789,8 @@ posterior  = estimation_profile(problem,result,index,values; target=:posterior)
 
 Each profile reoptimizes every remaining coordinate, including nuisances.
 The likelihood profile obtains its own unpenalized reference optimum.
-Posterior profiles describe penalized posterior shape and have no ordinary
+Posterior profiles describe physical-posterior density shape (their supplied
+profile grid still uses internal coordinates) and have no ordinary
 likelihood-confidence threshold. Check every conditional convergence flag.
 
 replace_priors retains the physical experiment and changes explicit prior

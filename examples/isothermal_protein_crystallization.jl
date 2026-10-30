@@ -277,7 +277,7 @@ function sampler_tuning(problem,z,mapping=sampling_coordinates(problem))
         W[rows,:]./=sigma isa Number ? sigma : vec(sigma)
         offset+=length(m.data)
     end
-    prior=-ForwardDiff.hessian(v->logprior(problem,mapping.from_sampler(v)),y)
+    prior=-ForwardDiff.hessian(v->sampling_logprior(problem,mapping.from_sampler(v)),y)
     info=Symmetric(W'*W+prior)
     factor=cholesky(info)
     covariance=Matrix(Symmetric(factor\Matrix{Float64}(I,n,n)))

@@ -137,7 +137,7 @@ end
             @test check_sampling_map(b,map,at).valid
         end
         y=map.to_sampler(z)
-        H=-ForwardDiff.hessian(v->logprior(b,map.from_sampler(v))+map.logabsdetjac(v),y)
+        H=-ForwardDiff.hessian(v->sampling_logprior(b,map.from_sampler(v))+map.logabsdetjac(v),y)
         sg=(theta.g-1)/4;sa=(theta.logAJ-C.AJ_BOUNDS[1])/100
         expected=[2sa*(1-sa),0.,2sg*(1-sg)]
         n==4 && push!(expected,theta.grd_strength/C.D0_PRIOR_MEAN)
@@ -184,7 +184,7 @@ include("fixtures/protein_transport.jl")
                 [getproperty(p,s.name) for s in problem.parameters]
             end
             actual=physical_prior+logabsdet(ForwardDiff.jacobian(physical_vector,y))[1]
-            @test logprior(problem,q)+map.logabsdetjac(y)≈actual atol=2e-11
+            @test sampling_logprior(problem,q)+map.logabsdetjac(y)≈actual atol=2e-11
         end
         @test check_sampling_map(problem,map,z).valid
         @test_throws ArgumentError S.bounded_rate_coordinates(C,problem,z;growth_reference_supersaturation=1.)
@@ -224,7 +224,7 @@ end
         physical(v)=let p=physical_parameters(problem,mapping.from_sampler(v),:batch)
             [getproperty(p,s.name) for s in problem.parameters]
         end
-        @test logprior(problem,z)+mapping.logabsdetjac(u)≈
+        @test sampling_logprior(problem,z)+mapping.logabsdetjac(u)≈
             density+logabsdet(ForwardDiff.jacobian(physical,u))[1] atol=3e-10
     end
     @test check_sampling_map(problem,mapping,reference).valid

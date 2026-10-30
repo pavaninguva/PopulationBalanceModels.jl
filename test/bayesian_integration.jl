@@ -5,6 +5,7 @@ using PopulationBalanceModels, Optim, AdvancedHMC, MCMCDiagnosticTools
 include("gauss_newton_optim.jl")
 isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_linear.jl")
 include("sampling_control.jl")
+include("physical_parameters_integration.jl")
 
 @testset "MAP, full Laplace and shared sampler density" begin
     f=bayesian_linear_fixture();p=f.problem
@@ -74,12 +75,10 @@ include("sampling_control.jl")
     @test_throws UndefKeywordError estimation_profile(p,result,1,values)
     positive=ParameterSpec(:rate;initial=0.4,transform=LogTransform(),prior=Prior(Exponential(0.5);coordinates=:physical))
     unused=EstimationProblem((positive,),p.experiments;fixed=(a=0.0,b=0.0))
-    shifted=fit(unused;uncertainty=:laplace)
-    @test shifted.parameters.shared.rate≈0.5 rtol=1e-6 # physical exponential density has its mode at zero.
-    @test shifted.uncertainty.covariance[1,1]≈1.0 rtol=1e-5
-    @test identifiability_report(unused,shifted.minimizer).prediction_rank==0
-    prior_only=prior_sensitivity((base=unused,changed=replace_priors(unused,[Prior(Exponential(5.0);coordinates=:physical)])))
-    @test prior_only.comparisons.changed.prior_sensitive
+    shifted=fit(unused)
+    @test !shifted.converged # physical exponential mode is an endpoint, not θ=.5.
+    @test_throws LaplaceFailure laplace_approximation(unused,shifted)
+    @test identifiability_report(unused,initial_coordinates(unused)).prediction_rank==0
     alternatives=(base=p,weaker=replace_priors(p,[Prior(Normal(0,4);coordinates=:physical),Prior(Normal(0,2);coordinates=:inference)]))
     comparison=prior_sensitivity(alternatives)
     @test comparison.comparisons.base.shift_in_reference_sd≈zeros(2)
@@ -162,7 +161,7 @@ end
     @test maximum(s.diagnostics.rhat)<1.05
     @test all(abs.(vec(mean(Z;dims=2))-f.mode).<.3sqrt.(diag(f.covariance)))
     @test norm(cov(permutedims(Z))-f.covariance)/norm(f.covariance)<.2
-    @test s.diagnostics.statistics[1][1].log_density≈logposterior(p,s.z[:,1,1]) atol=1e-10
+    @test s.diagnostics.statistics[1][1].log_density≈sampling_logposterior(p,s.z[:,1,1]) atol=1e-10
     wrong=(;to_sampler,from_sampler,logabsdetjac=y->one(first(y)),label=:wrong)
     @test_throws ArgumentError sample_posterior(p;initial=r,sampling_map=wrong,warmup=50,samples=8,chains=2)
 
@@ -179,9 +178,9 @@ end
     @test maximum(nonlinear.diagnostics.rhat)<1.05
     @test all(abs.(vec(mean(Z;dims=2))-f.mode).<.3sqrt.(diag(f.covariance)))
     @test norm(cov(permutedims(Z))-f.covariance)/norm(f.covariance)<.2
-    @test nonlinear.diagnostics.statistics[1][1].log_density≈logposterior(p,nonlinear.z[:,1,1]) atol=1e-10
+    @test nonlinear.diagnostics.statistics[1][1].log_density≈sampling_logposterior(p,nonlinear.z[:,1,1]) atol=1e-10
     for chain in 1:2,draw in (1,97,350,700)
-        @test nonlinear.diagnostics.statistics[chain][draw].log_density≈logposterior(p,nonlinear.z[:,draw,chain]) atol=1e-9
+        @test nonlinear.diagnostics.statistics[chain][draw].log_density≈sampling_logposterior(p,nonlinear.z[:,draw,chain]) atol=1e-9
     end
     @test nonlinear.diagnostics.sampling_map_validation===:every_evaluation
     @test nonlinear.diagnostics.energy==hcat([[s.hamiltonian_energy for s in chain] for chain in nonlinear.diagnostics.statistics]...)

@@ -15,7 +15,7 @@ Files are grouped by behaviour, rather than by development milestone:
 | Transport and time methods | `transport_integrators.jl`, `nonuniform_weno.jl`, `compact_finite_volume.jl`, `tensor.jl` |
 | Moment representations and accounting | `moment_compilation.jl`, `extended_moments.jl`, `measure_evolution.jl`, `qamar_moments.jl` |
 | Axial and stationary balances | `axial.jl`, `axial_system.jl`, `stationary.jl` |
-| Calibration, Bayesian targets and derivatives | `uncertainty.jl`, `bayesian.jl`, `differentiation.jl`, `isothermal_protein.jl` |
+| Calibration, Bayesian targets and derivatives | `uncertainty.jl`, `bayesian.jl`, `physical_parameters.jl`, `differentiation.jl`, `isothermal_protein.jl` |
 | Data-free forward UQ and milling physics | `forward_uq.jl`, `pce_construction.jl`, `milling_model.jl`; optional BDF adapter: `milling_integration.jl` |
 | Scientific regression cases | `audit_regressions.jl`, `numerical_contracts.jl`, `stem_cells.jl`, `li_supplement.jl` |
 
@@ -47,7 +47,7 @@ julia --project=/path/to/sensitivity-env test/sensitivity_integration.jl
 
 The inference tests use small analytical targets; they do not regenerate the
 long protein posterior. `sampling_control.jl`, included by
-`bayesian_integration.jl`, checks diagnostic stopping against conjugate Gaussian
+`bayesian_integration.jl` (includes `physical_parameters_integration.jl`), checks diagnostic stopping against conjugate Gaussian
 and transformed lognormal posteriors, exact continuation against upstream
 AdvancedHMC, independent batch sizes, MCSE requirements, budgets and failure
 propagation. `protein_parallel.jl` checks joint reassessment and retained-output

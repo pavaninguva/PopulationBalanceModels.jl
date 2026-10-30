@@ -55,7 +55,7 @@ function export_data(root)
         length_units="μm",D0_prior_mean=C.D0_PRIOR_MEAN,D0_units="μm²/min"))
 end
 function model_settings(config,model)
-    (;model=string(model),formulation="fixed_gamma_constant_D0",population_units="particles/L",
+    (;model=string(model),formulation="fixed_gamma_constant_D0",map_convention="physical_map_v1",local_covariance_coordinates="physical",population_units="particles/L",
       bins=config["bins"],Lmax_um=config["Lmax"],maximum_dt_min=config["maximum_dt"],
       coefficient_interval_min=config["coefficient_interval"],cfl=config["cfl"],
       time_method="SSPRK33",growth_reconstruction="MUSCL",diffusion_method=model===:cnt_grd ? "FiniteVolumeDiffusion (Ito)" : "none",
@@ -72,10 +72,10 @@ function solve_physical(p,config,model,times;bins=config["bins"],Lmax=config["Lm
     forward(p;model,bins,Lmax,dt,cfl,coefficient_interval=config["coefficient_interval"],times)
 end
 function map_export(problem,fitted)
-    (;z=fitted.minimizer,parameters=physical_from_z(problem,fitted.minimizer),converged=fitted.converged,
+    (;convention=string(fitted.convention),density_coordinates="physical",z_coordinates="inference",z=fitted.minimizer,parameters=physical_from_z(problem,fitted.minimizer),converged=fitted.converged,
       loglikelihood_whitened_CDF=fitted.loglikelihood,logprior=fitted.logprior,logposterior=fitted.logposterior,
       original_CDF_loglikelihood_offset=-sum(sum(log,diag(C.cdf_factor(m.observable.points))) for m in only(problem.experiments).measurements[2:end]),
-      MAP_coordinates="z: logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
+      MAP_coordinates="physical logAJ, AG, g, optional D0; gamma fixed; z stores internal numerical coordinates",
       gradient_norm=fitted.diagnostics.gradient_norm,gradient=fitted.diagnostics.gradient,
       elapsed_seconds=fitted.diagnostics.elapsed_seconds,forward_solves=fitted.diagnostics.forward_solves,
       failures=fitted.diagnostics.failed_evaluations,failure_messages=fitted.diagnostics.failure_messages,
@@ -420,13 +420,13 @@ function verify_saved_target(root,model,config)
         indices=findall(r->r.chain==chain,raw)
         for j in unique([first(indices),last(indices)])
             r=raw[j];z=[getproperty(r,Symbol("z",i)) for i in 1:n]
-            density=logposterior(problem,z)
+            density=sampling_logposterior(problem,z)
             abs(density-statistics[j].logdensity_z)<1e-8+1e-10abs(density) ||
                 error("saved inference-coordinate density does not match the active posterior")
             theta=physical_parameters(problem,z,:batch)
             all(isapprox(getproperty(theta,s.name),getproperty(r,s.name);rtol=1e-12) for s in problem.parameters) ||
                 error("saved physical/inference coordinates disagree")
-            derivative=check_gradient(problem,z)
+            derivative=check_gradient(problem,z;target=:sampling)
             mapped=check_sampling_map(problem,map,z)
             derivative.valid && mapped.valid || error("posterior gradient verification failed at chain $chain, draw $(r.draw)")
             push!(checks,(chain=Int(chain),draw=Int(r.draw),logdensity_error=density-statistics[j].logdensity_z,

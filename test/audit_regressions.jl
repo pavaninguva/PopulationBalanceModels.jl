@@ -161,7 +161,7 @@ end
     @test calls[]==0
     measurement=Measurement([.5],[1.],MomentObservable(0);likelihood=GaussianLikelihood(sigma=.1))
     solver=(pb,ts)->(rhs!(zero(invalid),invalid,pb.operator,pb.p,first(ts));nothing)
-    spec=ParameterSpec(:unused;initial=0.,prior=Prior(Normal();coordinates=:inference))
+    spec=ParameterSpec(:unused;initial=0.,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform())
     estimation=EstimationProblem((spec,),(InferenceExperiment(:run,pb,measurement;solver),))
     @test logposterior(estimation,[0.];on_failure=:reject)==-Inf
     @test pb.u0==before
@@ -172,7 +172,7 @@ end
     measurement=Measurement([0.],reshape([1.2,-.4],2,1),
         FunctionObservable((u,op,p,t)->[p.a,p.b]);likelihood=GaussianLikelihood(sigma=1.))
     specs=(ParameterSpec(:a;initial=0.,prior=Prior(Normal();coordinates=:physical)),
-           ParameterSpec(:b;initial=0.,prior=Prior(Normal();coordinates=:inference)))
+           ParameterSpec(:b;initial=0.,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform()))
     problem=EstimationProblem(specs,(InferenceExperiment(:run,pb,measurement;dt=.1),))
     map=(to_sampler=z->[asinh(z[1]),z[2]],from_sampler=y->[sinh(y[1]),y[2]],
         logabsdetjac=y->log(cosh(y[1])),label=:sinh_audit)
@@ -257,7 +257,7 @@ end
     measurement=Measurement([0.],reshape([1.2,-.4],2,1),
         FunctionObservable((u,op,p,t)->[p.a,p.b]);likelihood=GaussianLikelihood(sigma=1.))
     specs=(ParameterSpec(:a;initial=0.,prior=Prior(Normal();coordinates=:physical)),
-           ParameterSpec(:b;initial=0.,prior=Prior(Normal();coordinates=:inference)))
+           ParameterSpec(:b;initial=0.,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform()))
     problem=EstimationProblem(specs,(InferenceExperiment(:run,pb,measurement;dt=.1),))
     map=(to_sampler=z->[asinh(z[1]),z[2]],from_sampler=y->[sinh(y[1]),y[2]],
         logabsdetjac=y->log(cosh(y[1])),label=:sinh_independent)

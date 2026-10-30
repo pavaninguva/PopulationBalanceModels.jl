@@ -113,14 +113,20 @@ function compatible_target(root,model,config)
     diag=readjson(joinpath(folder,"sampling_diagnostics.json"))
     diag.passed || error("Retained MCMC did not pass its screen")
     saved=readjson(joinpath(folder,"map.json"));z=Float64.(saved.z)
-    parts=posterior_components(problem,z);g=posterior_gradient(problem,z)
-    abs(parts.logposterior-saved.logposterior)<1e-6 &&
+    parts=posterior_components(problem,z);g=sampling_gradient(problem,z)
+    # Original producer records optimized p_z. Verify their unchanged sampling
+    # law without reinterpreting those saved modes as physical MAP estimates.
+    old_convention=get(saved,:convention,"legacy_inference_map")!="physical_map_v1"
+    stored_post=old_convention ? sampling_logposterior(problem,z) : parts.logposterior
+    stored_prior=old_convention ? sampling_logprior(problem,z) : parts.logprior
+    saved_gradient=old_convention ? g : posterior_gradient(problem,z)
+    abs(stored_post-saved.logposterior)<1e-6 &&
         abs(parts.loglikelihood-saved.loglikelihood_whitened_CDF)<1e-6 &&
-        abs(parts.logprior-saved.logprior)<1e-9 || error("Saved MAP posterior components changed")
-    norm(g-Float64.(saved.gradient),Inf)<1e-4 || error("Saved MAP gradient changed")
+        abs(stored_prior-saved.logprior)<1e-9 || error("Saved MAP posterior components changed")
+    norm(saved_gradient-Float64.(saved.gradient),Inf)<1e-4 || error("Saved MAP gradient changed")
     checks=NamedTuple[]
-    push!(checks,(kind="MAP",chain=0,draw=0,logdensity_error=parts.logposterior-saved.logposterior,
-        gradient_error=norm(g-Float64.(saved.gradient),Inf)))
+    push!(checks,(kind="MAP",chain=0,draw=0,logdensity_error=stored_post-saved.logposterior,
+        gradient_error=norm(saved_gradient-Float64.(saved.gradient),Inf)))
     rows=C.table(joinpath(folder,"posterior_draws.csv"));stats=C.table(joinpath(folder,"sampler_statistics.csv"))
     n=length(problem.parameters)
     coordinates(r)=[Float64(getproperty(r,Symbol("z",k))) for k in 1:n]
@@ -135,12 +141,12 @@ function compatible_target(root,model,config)
     for index in unique(selected)
         r=rows[index];zz=coordinates(r)
         stat=only(filter(s->s.chain==r.chain && s.draw==r.draw,stats))
-        density=logposterior(problem,zz)
+        density=sampling_logposterior(problem,zz)
         abs(density-stat.logdensity_z)<1e-6 || error("Saved posterior density changed at draw $index")
         theta=physical_parameters(problem,zz,:batch)
         all(isapprox(getproperty(theta,s.name),getproperty(r,s.name);rtol=1e-12) for s in problem.parameters) ||
             error("Physical/inference coordinates disagree")
-        gradient=check_gradient(problem,zz;step=1e-6)
+        gradient=check_gradient(problem,zz;target=:sampling,step=1e-6)
         gradient.valid || error("Gradient verification failed at chain $(r.chain), draw $(r.draw): $(gradient.error), $(gradient.halving)")
         push!(checks,(kind="retained",chain=Int(r.chain),draw=Int(r.draw),
             logdensity_error=density-stat.logdensity_z,gradient_error=gradient.error))
@@ -186,13 +192,15 @@ end
 function retained_map_result(problem,saved)
     z=Float64.(saved.z);g=posterior_gradient(problem,z);parts=posterior_components(problem,z)
     original_convergence=saved.converged && any(s->s.converged,saved.starts)
-    valid=original_convergence && norm(g,Inf)<=1e-3
+    declared=get(saved,:convention,"legacy_inference_map")=="physical_map_v1"
+    valid=declared && original_convergence && norm(g,Inf)<=1e-3
     # Rehydrate genuine saved optimizer evidence; do not invent an Optim result.
     info=(gradient=g,gradient_norm=norm(g,Inf),gradient_tolerance=1e-3,
         origin=:verified_retained_map,original_optimizer_starts=saved.starts,
         original_converged=saved.converged)
     MAPResult(z,physical_parameters(problem,z),parts.loglikelihood,parts.logprior,
-        parts.logposterior,valid,info,ParameterSpec[problem.parameters...],nothing)
+        parts.logposterior,valid,info,ParameterSpec[problem.parameters...],nothing;
+        convention=declared ? :physical_map_v1 : :legacy_inference_map)
 end
 
 function analyze_uncertainty(root,model,config;compatibility_only=false,method=:laplace)
@@ -209,6 +217,7 @@ function analyze_uncertainty(root,model,config;compatibility_only=false,method=:
             refined=true
         end
         json(joinpath(out,"map_analysis.json"),(original=saved,refined,
+            convention="physical_map_v1",density_coordinates="physical",gradient_coordinates="inference",
             selected_z=result.minimizer,selected_parameters=physical_parameters(problem,result.minimizer,:batch),
             converged=result.converged,gradient=posterior_gradient(problem,result.minimizer),
             inference_coordinates="logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
@@ -228,9 +237,9 @@ function analyze_uncertainty(root,model,config;compatibility_only=false,method=:
             end
         end
         common=(schema=1,model=string(model),approximation=string(method),
-            coordinates=method===:laplace ? "original inference z; full negative log posterior, including all prior Jacobians" :
-                "original inference z; whitened prediction sensitivities plus actual prior curvature, including all prior Jacobians",
-            parameter_names=string.(getproperty.(problem.parameters,:name)),center=result.minimizer,
+            convention="physical_map_v1",coordinates="physical",internal_center=result.minimizer,
+            density="physical posterior; numerical-transform Jacobians excluded from MAP and local curvature",
+            parameter_names=string.(getproperty.(problem.parameters,:name)),center=[getproperty(physical_parameters(problem,result.minimizer,:batch),s.name) for s in problem.parameters],
             physical_center=physical_parameters(problem,result.minimizer,:batch),
             priors=C.prior_metadata(problem),attempts,refined,
             compatibility_sha256=hashfile(joinpath(out,"compatibility.json")),

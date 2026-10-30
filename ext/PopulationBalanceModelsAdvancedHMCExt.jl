@@ -208,10 +208,11 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
     _mcse_settings(keys(diagnostic_quantities),mcse_limits)
     metric in (:auto,:diagonal,:dense) || throw(ArgumentError("metric must be :auto, :diagonal or :dense"))
     dense=metric===:dense || (metric===:auto && (laplace!==nothing || initial_covariance!==nothing))
+    counts=PopulationBalanceModels._InferenceCounts();started=time_ns()
+    initial isa MAPResult && PopulationBalanceModels._check_map_result(problem,initial;_counts=counts)
     center=initial isa MAPResult ? initial.minimizer : Float64.(initial)
     n=length(problem.parameters);rng=MersenneTwister(seed)
     mapped=sampling_map!==nothing
-    mapped && laplace!==nothing && throw(ArgumentError("Laplace metric initialization is in inference coordinates; supply an explicit sampler-coordinate tuning matrix with sampling_map"))
     mapped && PopulationBalanceModels._validate_sampling_map(sampling_map)
     to_sampler=z->mapped ? sampling_map.to_sampler(z) : z
     from_sampler=y->mapped ? sampling_map.from_sampler(y) : y
@@ -228,13 +229,22 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
     end
     length(center)==n && all(isfinite,center) || throw(ArgumentError("invalid initial coordinates"))
     laplace===nothing || (laplace isa LaplaceApproximation && length(laplace.center)==n) || throw(ArgumentError("Laplace initialization has incompatible dimensions"))
+    laplace_internal=nothing
+    laplace_tuning=nothing
+    if laplace!==nothing
+        PopulationBalanceModels._check_approximation(problem,laplace)
+        laplace_z=PopulationBalanceModels._inference_coordinates(problem,laplace.center)
+        jac=Diagonal([PopulationBalanceModels._transform_derivative(p.transform,z) for (p,z) in zip(problem.parameters,laplace_z)])
+        laplace_internal=Matrix(Symmetric(jac\laplace.covariance/jac'))
+        A=mapped ? ForwardDiff.jacobian(to_sampler,laplace_z) : Matrix{Float64}(I,n,n)
+        laplace_tuning=_tuning_matrix(Matrix(Symmetric(A*laplace_internal*A')),n)
+    end
     seeds=if starts===nothing
-        [center.+start_scale.*(laplace===nothing ? randn(rng,n) : laplace.factor.U\randn(rng,n)) for _ in 1:chains]
+        [center.+start_scale.*(laplace===nothing ? randn(rng,n) : cholesky(Symmetric(laplace_internal)).L*randn(rng,n)) for _ in 1:chains]
     else
         [Float64.(s) for s in starts]
     end
     length(seeds)==chains && all(s->length(s)==n && all(isfinite,s),seeds) || throw(ArgumentError("one initial inference-coordinate vector per chain required"))
-    counts=PopulationBalanceModels._InferenceCounts();started=time_ns()
     function logdensity(y)
         state=try
             mapped ? PopulationBalanceModels._sampling_map_state(sampling_map,y) : nothing
@@ -243,14 +253,14 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
             PopulationBalanceModels._record_failure!(counts,e)
             return -Inf
         end
-        logposterior(problem,mapped ? state.z : y;on_failure=:reject,_counts=counts)+
+        sampling_logposterior(problem,mapped ? state.z : y;on_failure=:reject,_counts=counts)+
             (mapped ? state.logjac : 0.0)
     end
     function value_gradient(y)
         value=logdensity(y)
         isfinite(value) || return (value,zeros(n))
         gradient=try
-            gz=posterior_gradient(problem,from_sampler(y);derivatives,_counts=counts)
+            gz=sampling_gradient(problem,from_sampler(y);derivatives,_counts=counts)
             mapped ? ForwardDiff.jacobian(from_sampler,y)'*gz+ForwardDiff.gradient(logjac,y) : gz
         catch e
             e isa NumericalFailure || rethrow()
@@ -265,7 +275,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         length(y0)==n && all(isfinite,y0) && isapprox(from_sampler(y0),seeds[c];rtol=1e-10,atol=1e-12) ||
             throw(ArgumentError("sampling coordinate maps must be finite inverses"))
         isfinite(logdensity(y0)) || throw(ArgumentError("chain $c starts outside the posterior support"))
-        check=check_gradient(problem,seeds[c];derivatives,_counts=counts)
+        check=check_gradient(problem,seeds[c];target=:sampling,derivatives,_counts=counts)
         check.valid || throw(ArgumentError("gradient verification failed for chain $c"))
         push!(gradient_checks,check)
         if mapped
@@ -273,7 +283,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
             map_check.valid || throw(ArgumentError("transformed sampler gradient verification failed"))
             push!(map_checks,map_check)
         end
-        covariance=tuning===nothing ? (laplace===nothing ? nothing : laplace.covariance) :
+        covariance=tuning===nothing ? laplace_tuning :
             tuning isa Tuple ? tuning[c] : tuning
         mass=dense ? (covariance===nothing ? HMC.DenseEuclideanMetric(n) : HMC.DenseEuclideanMetric(copy(covariance))) :
             (covariance===nothing ? HMC.DiagEuclideanMetric(n) : HMC.DiagEuclideanMetric(diag(covariance)))
@@ -334,9 +344,12 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         max_samples=budget,batch_samples=batch,consecutive_passes_required=policy===:fixed ? 1 : consecutive_passes,
         check_history=history,diagnostic_quantity_names=keys(diagnostic_quantities),
         seed,chain_seeds=Tuple(chain_seeds),warmup,target_acceptance,start_scale,metric=dense ? :dense : :diagonal,
-        initial_covariance=tuning,metric_initialization=tuning===nothing ? (laplace===nothing ? :identity : :laplace) :
+        initial_covariance=tuning,metric_initialization=tuning===nothing ? (laplace===nothing ? :identity : :physical_laplace_local_tuning) :
             tuning isa Tuple ? :user_tuning_per_chain : :user_tuning,
         sampling_coordinates=mapped ? sampling_map.label : :inference,z_coordinates=:inference,
+        log_density_coordinates=:inference,sampler_log_density_coordinates=mapped ? sampling_map.label : :inference,
+        map_density_coordinates=:physical,posterior_law=:physical,parameter_jacobian=:included_once,
+        laplace_tuning_covariance=laplace_tuning,laplace_tuning_coordinates=:sampler,
         map_checks,sampling_map_validation=mapped ? :every_evaluation : :none,gradient_checks,
         forward_solves=counts.solves,posterior_evaluations=counts.evaluations,
         gradient_evaluations=counts.gradient_evaluations,adjoint_solves=counts.adjoint_solves,

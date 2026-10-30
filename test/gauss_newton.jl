@@ -8,7 +8,7 @@ function analytic_map(problem,z; converged=true)
     parts=posterior_components(problem,z)
     MAPResult(Float64.(z),physical_parameters(problem,z),parts.loglikelihood,
         parts.logprior,parts.logposterior,converged,(origin=:analytic_reference,),
-        ParameterSpec[problem.parameters...],nothing)
+        ParameterSpec[problem.parameters...],nothing;convention=:physical_map_v1)
 end
 
 @testset "Sensitivity covariance equals the independent linear Gaussian posterior" begin
@@ -47,7 +47,7 @@ end
     obs=Measurement(first(p.experiments).measurements[1].times,f.y,
         FunctionObservable((u,op,p,t)->p.a/1000+p.b*t);likelihood=GaussianLikelihood(covariance=f.C))
     specs=[ParameterSpec(:a;initial=1000f.mode[1],prior=Prior(Normal(0,2000);coordinates=:physical)),
-        ParameterSpec(:b;initial=f.mode[2],role=:nuisance,prior=Prior(Normal();coordinates=:inference))]
+        ParameterSpec(:b;initial=f.mode[2],role=:nuisance,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform())]
     scaled=EstimationProblem(specs,(InferenceExperiment(:run,f.pb,obs;solver=f.solver),))
     z=[1000f.mode[1],f.mode[2]]
     scale=Diagonal([1000.,1.])
@@ -77,8 +77,8 @@ end
 @testset "Multiple experiments, joint nuisance covariance and observation responses" begin
     f=bayesian_linear_fixture();ts=[0.,1.,2.]
     specs=[ParameterSpec(:a;initial=0.,prior=Prior(Normal(0,2);coordinates=:physical)),
-        ParameterSpec(:b;initial=0.,experiment=:first,role=:nuisance,prior=Prior(Normal();coordinates=:inference)),
-        ParameterSpec(:b;initial=0.,experiment=:second,role=:nuisance,prior=Prior(Normal();coordinates=:inference))]
+        ParameterSpec(:b;initial=0.,experiment=:first,role=:nuisance,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform()),
+        ParameterSpec(:b;initial=0.,experiment=:second,role=:nuisance,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform())]
     C=[.04 .01 0.;.01 .09 .01;0. .01 .16]
     y1=[.8,1.3,2.];y2=[1.1,.6,.2]
     # Response adds a shared offset; local observable contains the experiment's slope.
@@ -117,20 +117,16 @@ end
 @testset "Physical priors, transformation Jacobians, support and nonlinear curvature" begin
     f=bayesian_linear_fixture()
     constant=Measurement([0.],[0.],FunctionObservable((u,op,p,t)->zero(p.rate));likelihood=GaussianLikelihood(sigma=1.))
-    specs=[ParameterSpec(:rate;initial=2.,transform=LogTransform(scale=2.),prior=Prior(Exponential(2.);coordinates=:physical))]
+    # The physical exponential mode is at zero: no interior Gaussian is valid.
+    specs=[ParameterSpec(:rate;initial=2.,transform=LogTransform(scale=2.),prior=Exponential(2.))]
     p=EstimationProblem(specs,(InferenceExperiment(:run,f.pb,constant;solver=f.solver),))
-    a=gauss_newton_approximation(p,analytic_map(p,[0.]))
-    @test a.prior_hessian[1,1]≈1
-    @test a.covariance[1,1]≈1
-    @test a.physical_center.shared.rate≈2
-    @test a.diagnostics.data_rank==0 && a.diagnostics.prior_regularized
-    # Real bounded physical priors contribute their logit-Jacobian curvature.
-    ps=[ParameterSpec(:rate;initial=.5,transform=LogitTransform(0.,1.),prior=Prior(Uniform(0,1);coordinates=:physical))]
+    @test_throws GaussNewtonFailure gauss_newton_approximation(p,analytic_map(p,[0.]))
+    # A physical uniform prior is flat, regardless of numerical logit curvature.
+    ps=[ParameterSpec(:rate;initial=.5,transform=LogitTransform(0.,1.),prior=Uniform(0,1))]
     bounded=EstimationProblem(ps,p.experiments)
-    b=gauss_newton_approximation(bounded,analytic_map(bounded,[0.]))
-    @test b.prior_hessian[1,1]≈.5
+    @test_throws GaussNewtonFailure gauss_newton_approximation(bounded,analytic_map(bounded,[0.]))
     # Identity-coordinate bounded prior: Gaussian draws outside support stay present.
-    flat=EstimationProblem([ParameterSpec(:rate;initial=0.,prior=Prior(Uniform(-1,1);coordinates=:physical))],
+    flat=EstimationProblem([ParameterSpec(:rate;initial=0.,prior=Prior(Uniform(-1,1);coordinates=:physical), transform=IdentityTransform())],
         (InferenceExperiment(:run,f.pb,Measurement([0.],[0.],FunctionObservable((u,op,p,t)->p.rate);
             likelihood=GaussianLikelihood(sigma=2.));solver=f.solver),))
     c=gauss_newton_approximation(flat,analytic_map(flat,[0.]))
@@ -174,8 +170,18 @@ end
     m=Measurement(times,exp.(-k.*times),MomentObservable(0);likelihood=GaussianLikelihood(;sigma))
     p=EstimationProblem([ParameterSpec(:k;initial=k,transform=LogTransform(),prior=Prior(Normal(log(k),1);coordinates=:inference))],
         (InferenceExperiment(:run,pb,m;dt=.001),))
-    a=gauss_newton_approximation(p,analytic_map(p,[log(k)]))
-    exact=-k.*times.*exp.(-k.*times)./sigma
+    # Independently minimize the unchanged physical lognormal-prior posterior.
+    # It differs from its z-density mode: include d(log k)/dk in the PRIOR only.
+    derivative(x)=sum((exp.(-x.*times).-exp.(-k.*times)).*(-times.*exp.(-x.*times)))/sigma^2+(1+log(x/k))/x
+    lo,hi=k/2,k
+    for _ in 1:60
+        mid=(lo+hi)/2
+        derivative(mid)>0 ? (hi=mid) : (lo=mid)
+    end
+    mode=(lo+hi)/2
+    a=gauss_newton_approximation(p,analytic_map(p,[log(mode)]))
+    exact=-times.*exp.(-mode.*times)./sigma
+    prior_curvature=log(k/mode)/mode^2
     @test vec(a.jacobian)≈exact rtol=1e-8
-    @test a.covariance[1,1]≈1/(sum(abs2,exact)+1) rtol=1e-8
+    @test a.covariance[1,1]≈1/(sum(abs2,exact)+prior_curvature) rtol=1e-8
 end

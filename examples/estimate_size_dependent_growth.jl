@@ -84,7 +84,8 @@ end
 Two fitted kinetic parameters; the initial density and truncated Gaussian error scale are known.
 `prior=:lognormal` retains the previous growth priors. `prior=:uniform` uses
 physical bounds from stated growth/stretching timescales. Both use log inference
-coordinates, so uniform physical priors still receive their Jacobians.
+coordinates as an explicit numerical override. MAP uses physical density;
+posterior sampling adds the coordinate Jacobian.
 The default forward calculation evaluates the analytical continuous density.
 The optional bin solvers rebuild the characteristic mesh when parameters change.
 """
@@ -102,7 +103,7 @@ function estimation_problem(data=synthetic_measurements();prior=:lognormal,forwa
     ex=InferenceExperiment(:growth,base,measurement;setup,solver,dt=forward===:sectional ? dt : nothing)
     distributions=prior===:lognormal ? (LogNormal(log(0.4),0.4),LogNormal(log(0.25),0.6)) :
         (Uniform(UNIFORM_BOUNDS[1]...),Uniform(UNIFORM_BOUNDS[2]...))
-    specs=[ParameterSpec(name;initial,transform=LogTransform(),prior=Prior(d;coordinates=:physical))
+    specs=[ParameterSpec(name;initial,transform=LogTransform(),prior=d)
         for (name,initial,d) in zip((:g0,:g1),(0.40,0.23),distributions)]
     EstimationProblem(specs,(ex,);derivatives=forward===:inguva ? :finite_difference : :auto)
 end
@@ -123,11 +124,13 @@ function refit_numerics(problem,fitted,data;output)
         domain_larger=(forward=:sectional,bins=800,upper=2.0,dt=0.0005))
     rows=NamedTuple[];reference=predictions(problem,fitted.minimizer)[1][1]
     sd=sqrt.(diag(fitted.uncertainty.covariance))
+    reference_theta=[getproperty(fitted.parameters.shared,p.name) for p in problem.parameters]
+    internal_sd=sd./reference_theta # these declarations explicitly use logarithmic coordinates
     for (name,options) in pairs(variants)
         ep=estimation_problem(data;options...)
-        r=fit(ep;initial=fitted.minimizer,scaling=sd,maxiters=200,derivative_step=1e-6)
+        r=fit(ep;initial=fitted.minimizer,scaling=internal_sd,maxiters=200,derivative_step=1e-6)
         P=predictions(ep,fitted.minimizer)[1][1]
-        push!(rows,(;name,converged=r.converged,shift=(r.minimizer-fitted.minimizer)./sd,
+        push!(rows,(;name,converged=r.converged,shift=([getproperty(r.parameters.shared,p.name) for p in ep.parameters]-reference_theta)./sd,
             max_error_sigma=maximum(abs,P-reference)/data.noise,
             gradient=r.diagnostics.scaled_gradient_norm,solves=r.diagnostics.forward_solves))
         println("Numerical refit ",name,": converged=",r.converged,"; shift/SD=",last(rows).shift);flush(stdout)
@@ -145,6 +148,9 @@ adaptation statistics. These checks are evidence, not a convergence guarantee.
 """
 function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayesian_growth"),
         samples=1500,warmup=1000,chains=4,refine=true)
+    for file in ("draws.csv","chains.csv","parameters.csv")
+        isfile(joinpath(output,file)) && throw(ArgumentError("Existing inference outputs must not be relabelled under physical_map_v1; select a new output directory"))
+    end
     mkpath(output);data=synthetic_measurements();runs=Dict{Symbol,Any}()
     for (i,scenario) in enumerate((:lognormal,:uniform))
         problem=estimation_problem(data;prior=scenario)
@@ -152,7 +158,9 @@ function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayes
         fitted.converged || error("MAP failed for $scenario")
         println(scenario," MAP: ",fitted.parameters.shared);flush(stdout)
         # Disperse starts in BOTH principal directions of the local posterior.
-        Z=fitted.minimizer.+3.0.*(fitted.uncertainty.factor.U\randn(MersenneTwister(80),2,chains))
+        theta=[getproperty(fitted.parameters.shared,p.name) for p in problem.parameters]
+        local_internal=Matrix(Symmetric((fitted.uncertainty.covariance./theta)./theta'))
+        Z=fitted.minimizer.+3.0.*(cholesky(Symmetric(local_internal)).L*randn(MersenneTwister(80),2,chains))
         mcmc=sample_posterior(problem;initial=fitted,laplace=fitted.uncertainty,starts=collect(eachcol(Z)),
             samples,warmup,chains,seed=24+i,target_acceptance=0.9,max_depth=9)
         report=diagnostics(mcmc)
@@ -172,14 +180,14 @@ function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayes
     write_table(joinpath(output,"curves.csv"),"prior,time,size,truth,map",
         [(s,t,a,exact_density(a,t),exact_density(a,t,r.fitted.parameters.shared))
             for (s,r) in sort!(collect(runs);by=first) for t in data.times for a in x])
-    write_table(joinpath(output,"parameters.csv"),"prior,name,true,map,laplace_sd_z",
+    write_table(joinpath(output,"parameters.csv"),"prior,name,true,map,laplace_sd_physical",
         [(s,p.name,getproperty(TRUTH,p.name),getproperty(r.fitted.parameters.shared,p.name),sqrt(r.fitted.uncertainty.covariance[i,i]))
             for (s,r) in sort!(collect(runs);by=first) for (i,p) in enumerate(r.problem.parameters)])
     write_table(joinpath(output,"draws.csv"),"prior,method,chain,draw,g0,g1",
         Iterators.flatten([Iterators.flatten(([(s,"laplace",0,i,p.shared.g0,p.shared.g1) for (i,p) in enumerate(r.laplace.physical)],
             [(s,"mcmc",c,i,p.shared.g0,p.shared.g1) for c in 1:chains for (i,p) in enumerate(r.mcmc.physical[:,c])]))
             for (s,r) in sort!(collect(runs);by=first)]))
-    write_table(joinpath(output,"chains.csv"),"prior,chain,draw,g0,g1,log_posterior,energy,acceptance,step_size,tree_depth,leapfrog_steps,divergent",
+    write_table(joinpath(output,"chains.csv"),"prior,chain,draw,g0,g1,log_density_inference,energy,acceptance,step_size,tree_depth,leapfrog_steps,divergent",
         [(s,c,i,p.shared.g0,p.shared.g1,st.log_density,st.hamiltonian_energy,st.acceptance_rate,st.step_size,st.tree_depth,st.n_steps,st.numerical_error)
             for (s,r) in sort!(collect(runs);by=first) for c in 1:chains for i in 1:samples
             for p in (r.mcmc.physical[i,c],) for st in (r.mcmc.diagnostics.statistics[c][i],)])
@@ -200,7 +208,7 @@ function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayes
         println(io,"Inguva, Schickel & Braatz (2022), Case 2; doi:10.1016/j.compchemeng.2022.107808")
         println(io,"f0=50 exp(-(a-.2)^2/.0005); g0=.434; g1=.2604. Scaled size/time units from the benchmark.")
         println(io,length(data.sizes)," density observation positions at each of six times; no sampled counts or binning.")
-        println(io,"Initial density and noise are fixed. Only g0 and g1 are fitted. All priors are physical-coordinate densities, with log-coordinate Jacobians exactly once.")
+        println(io,"Initial density and noise are fixed. Only g0 and g1 are fitted. Physical-MAP convention physical_map_v1; local covariance in physical units. Priors are physical densities; coordinate Jacobians enter sampling only.")
         println(io,"Uniform bounds: g0 in [0.05,1], g1 in [0.02,1], corresponding at reference size 1 to offset times 1–20 and stretching times 1–50.")
         for (s,r) in sort!(collect(runs);by=first)
             println(io,s," MAP=",r.fitted.parameters.shared,"; converged=",r.fitted.converged,
@@ -221,6 +229,8 @@ function run_example(;output=joinpath(@__DIR__,"..","docs","src","assets","bayes
 end
 if abspath(PROGRAM_FILE)==@__FILE__
     @eval using Optim, AdvancedHMC, MCMCDiagnosticTools
-    run_example()
+    output_option=findfirst(x->startswith(x,"--output="),ARGS)
+    output=output_option===nothing ? joinpath(@__DIR__,"..","docs","src","assets","bayesian_growth") : split(ARGS[output_option],"=";limit=2)[2]
+    run_example(;output)
 end
 end

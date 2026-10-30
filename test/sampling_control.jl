@@ -219,7 +219,7 @@ end
         6d.quantity_diagnostics.rate.mcse_mean
     for c in 1:2,i in (1,d.samples÷2,d.samples)
         z=post.z[:,i,c];stat=d.statistics[c][i]
-        @test stat.log_density≈logposterior(problem,z) atol=1e-10
+        @test stat.log_density≈sampling_logposterior(problem,z) atol=1e-10
         @test stat.sampler_log_density-stat.log_density≈mapping.logabsdetjac(mapping.to_sampler(z)) atol=1e-10
         @test stat.hamiltonian_energy==d.energy[i,c]
     end

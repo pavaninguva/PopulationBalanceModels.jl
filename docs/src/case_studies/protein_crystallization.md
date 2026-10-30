@@ -1,5 +1,15 @@
 # Protein crystallization: CNT and growth dispersion
 
+**Retained-result convention.** The figures and fitted tables on this page keep
+their producer's internal-coordinate MAP and local Gaussian approximations.
+They have not been recomputed as physical-density MAP/physical covariance under
+`physical_map_v1`. The MCMC probability law is preserved by the new Jacobian
+handling when the model, likelihood and priors are unchanged; original source
+compatibility guards and producer records still apply. The runnable scripts
+now use the [physical-MAP interface](../inference.md#Migration-and-retained-results)
+and write new results separately.
+
+
 Dissolved concentration measures how much protein has crystallized; a number
 size distribution measures how that material is divided among crystals. Here
 we use both to calibrate two descriptions of one isothermal lysozyme batch:
@@ -299,8 +309,8 @@ From the checkout root:
 julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
 python -m pip install -r paper/requirements.txt
 julia --project=paper paper/protein/run.jl --smoke
-julia --project=paper paper/protein/run.jl --full --output=/tmp/protein-constant-D0
-python paper/protein/plot.py --tables --input=/tmp/protein-constant-D0
+julia --project=paper paper/protein/run.jl --full --output=/tmp/protein-physical-map
+python paper/protein/plot.py --tables --input=/tmp/protein-physical-map
 # Retained active results: no fits, sampling or forward solves.
 python paper/protein/plot.py --tables
 python test/protein_results.py

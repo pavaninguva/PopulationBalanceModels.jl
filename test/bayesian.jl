@@ -19,8 +19,8 @@ isdefined(@__MODULE__,:bayesian_linear_fixture) || include("fixtures/bayesian_li
         p=EstimationProblem((spec,),f.problem.experiments;fixed=(a=0.,b=0.))
         for x in points
             z=transform isa LogTransform ? log(x) : log(x/(1-x))
-            @test logprior(p,[z])≈value(x) atol=2e-13
-            @test ForwardDiff.derivative(v->logprior(p,[v]),z)≈derivative(x) atol=2e-13
+            @test sampling_logprior(p,[z])≈value(x) atol=2e-13
+            @test ForwardDiff.derivative(v->sampling_logprior(p,[v]),z)≈derivative(x) atol=2e-13
         end
     end
 end
@@ -39,11 +39,13 @@ end
     ep=EstimationProblem(positive,p.experiments;fixed=(a=0.0,b=0.0))
     for x in (0.2,0.5,2.0)
         coordinate=log(x/2)
-        @test logprior(ep,[coordinate])≈logpdf(Exponential(0.5),x)+log(x)
+        @test logprior(ep,[coordinate])≈logpdf(Exponential(0.5),x)
     end
-    @test logprior(ep,[log(0.5/2)])>logprior(ep,[log(0.01/2)]) # z-mode θ=.5, physical mode θ=0.
+    @test sampling_logprior(ep,[log(0.5/2)])>sampling_logprior(ep,[log(0.01/2)]) # sampler-coordinate mode is not physical MAP.
+    @test logprior(ep,[log(0.5/2)])<logprior(ep,[log(0.01/2)])
     direct=replace_priors(ep,[Prior(Normal();coordinates=:inference)])
-    @test logprior(direct,[0.4])≈logpdf(Normal(),0.4)
+    @test sampling_logprior(direct,[0.4])≈logpdf(Normal(),0.4)
+    @test logprior(direct,[0.4])≈logpdf(Normal(),0.4)-log(2)-.4
     @test_throws UndefKeywordError Prior(Normal())
     @test_throws ArgumentError ParameterSpec(:x;initial=0.0,transform=LogTransform(),prior=Prior(Normal();coordinates=:physical))
     t=LogitTransform(2,5)
@@ -104,7 +106,7 @@ end
 
 @testset "Actual posterior Hessian and nuisance marginal covariance" begin
     f=bayesian_linear_fixture();p=f.problem;parts=posterior_components(p,f.mode)
-    result=MAPResult(f.mode,physical_parameters(p,f.mode),parts.loglikelihood,parts.logprior,parts.logposterior,true,(;),ParameterSpec[p.parameters...],nothing)
+    result=MAPResult(f.mode,physical_parameters(p,f.mode),parts.loglikelihood,parts.logprior,parts.logposterior,true,(;),ParameterSpec[p.parameters...],nothing;convention=:physical_map_v1)
     lap=laplace_approximation(p,result)
     @test lap.physical_center==result.parameters
     @test [(p.name,p.experiment) for p in lap.coordinates]==[(:a,nothing),(:b,nothing)]
@@ -124,13 +126,13 @@ end
     obs=Measurement([0.0],[1.0],FunctionObservable((N,op,p,t)->p.x^2);likelihood=GaussianLikelihood(sigma=0.1))
     ep=EstimationProblem([ParameterSpec(:x;initial=0.,prior=Prior(Normal();coordinates=:physical))],(InferenceExperiment(:run,f.pb,obs;solver=f.solver),))
     c=posterior_components(ep,[0.0])
-    saddle=MAPResult([0.],physical_parameters(ep,[0.]),c.loglikelihood,c.logprior,c.logposterior,true,(;),ParameterSpec[ep.parameters...],nothing)
+    saddle=MAPResult([0.],physical_parameters(ep,[0.]),c.loglikelihood,c.logprior,c.logposterior,true,(;),ParameterSpec[ep.parameters...],nothing;convention=:physical_map_v1)
     @test_throws LaplaceFailure laplace_approximation(ep,saddle)
     uniform=Prior(Uniform(-1e6,1e6);coordinates=:physical)
     flat_obs=Measurement([0.0],[0.0],FunctionObservable((N,op,p,t)->p.a+p.b);likelihood=GaussianLikelihood(sigma=1.0))
     flat=EstimationProblem([ParameterSpec(:a;initial=0.,prior=uniform),ParameterSpec(:b;initial=0.,prior=uniform)],
         (InferenceExperiment(:run,f.pb,flat_obs;solver=f.solver),))
     c=posterior_components(flat,[0.,0.])
-    ridge=MAPResult([0.,0.],physical_parameters(flat,[0.,0.]),c.loglikelihood,c.logprior,c.logposterior,true,(;),ParameterSpec[flat.parameters...],nothing)
+    ridge=MAPResult([0.,0.],physical_parameters(flat,[0.,0.]),c.loglikelihood,c.logprior,c.logposterior,true,(;),ParameterSpec[flat.parameters...],nothing;convention=:physical_map_v1)
     @test_throws LaplaceFailure laplace_approximation(flat,ridge)
 end

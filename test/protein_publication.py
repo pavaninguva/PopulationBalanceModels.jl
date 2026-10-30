@@ -16,7 +16,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'paper/_support'))
 import protein_provenance as provenance
 from protein_plot import BASE, prior_density
-from protein_uncertainty import physical, display, gaussian_marginal, gaussian_draws
+from protein_uncertainty import physical, display, gaussian_marginal, gaussian_draws, approximation_coordinates
 
 
 class PublicationContracts(unittest.TestCase):
@@ -133,6 +133,33 @@ class PublicationContracts(unittest.TestCase):
         x=np.linspace(-.5,.5,101)
         self.assertAlmostEqual(float(np.trapz(prior_density(meta,x),x)),.5)
 
+    def test_physical_gaussian_display_and_support(self):
+        with self.assertRaisesRegex(ValueError,'explicit compatible convention'):
+            approximation_coordinates(dict(coordinates='physical'))
+        # N(theta;2,.2^2), displayed on log(theta): density includes exp(x).
+        meta=dict(name='AG',transform='log',plotting_coordinate='log',
+                  density_coordinates='physical',family='uniform',arguments=[0.,4.])
+        x=np.log(np.array([1.8,2.,2.2]))
+        expected=np.exp(-.5*((np.exp(x)-2.)/.2)**2)/(.2*np.sqrt(2*np.pi))*np.exp(x)
+        np.testing.assert_allclose(gaussian_marginal(x,2.,.04,meta,coordinates='physical'),expected)
+        report=dict(center=[2.],covariance=[[.04]],priors=[meta],
+                    convention='physical_map_v1',coordinates='physical')
+        raw,theta,shown,diagnostic=gaussian_draws(report,count=1000,seed=92)
+        np.testing.assert_array_equal(theta,raw)
+        np.testing.assert_allclose(shown,np.log(theta))
+        self.assertEqual(diagnostic['prior_support_violations']['AG'],0)
+        meta=dict(name='x',transform='identity',plotting_coordinate='physical',
+                  density_coordinates='physical',family='uniform',arguments=[-1.,1.])
+        report.update(center=[0.],covariance=[[4.]],priors=[meta])
+        raw,theta,shown,diagnostic=gaussian_draws(report,count=10000,seed=93)
+        self.assertEqual(len(raw),10000)
+        self.assertGreater(diagnostic['prior_support_violations']['x'],5000)
+        np.testing.assert_array_equal(raw,theta)
+        np.testing.assert_array_equal(raw,shown)
+        meta.update(transform='log',plotting_coordinate='log',family='exponential',arguments=[1.])
+        with self.assertRaisesRegex(ValueError,'Nonfinite Gaussian transformation'):
+            gaussian_draws(report,count=1000,seed=94)
+
     def test_compatibility_guard_rejects_stale_sources_and_inputs(self):
         folder=self.history/'cnt'
         manifest=json.loads((folder/'manifest.json').read_text())
@@ -174,6 +201,7 @@ class PublicationContracts(unittest.TestCase):
         for model,n in (('cnt',4),('cnt_grd',5)):
             folder=self.history/'analysis'/model
             report=json.loads((folder/'gauss_newton.json').read_text())
+            self.assertEqual(approximation_coordinates(report),'inference')
             receipt=json.loads((folder/'gauss_newton_comparison_plot.json').read_text())
             self.assertEqual(receipt['approximation_sha256'],provenance.sha(folder/'gauss_newton.json'))
             self.assertEqual(receipt['posterior_sha256'],provenance.sha(self.history/model/'posterior_draws.csv'))

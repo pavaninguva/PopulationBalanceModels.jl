@@ -274,7 +274,7 @@ def marginal(values,x,bounds):
     return sum(np.exp(-.5*((x[:,None]-v)/h)**2).sum(axis=1) for v in centers)/(len(values)*h*np.sqrt(2*np.pi))
 
 def corner(name,metadata,*,write_tables=True):
-    folder=BASE/name;draws=read(folder,'posterior_draws.csv');mode=json.loads((folder/'map.json').read_text())['parameters']
+    folder=BASE/name;draws=read(folder,'posterior_draws.csv');map_record=json.loads((folder/'map.json').read_text());mode=map_record['parameters']
     metas=json.loads((folder/'priors.json').read_text());n=len(metas)
     samples=np.column_stack([np.log(draws[m['name']]) if m['plotting_coordinate']=='log' else draws[m['name']] for m in metas])
     point=[np.log(mode[m['name']]) if m['plotting_coordinate']=='log' else mode[m['name']] for m in metas]
@@ -341,11 +341,12 @@ def result_tables(metadata):
     metadata=[dict(name='gamma',units=fixed['gamma_units']),*metadata]
     rows=[];comp=[];numerical=[]
     for name in ('cnt','cnt_grd'):
-        folder=BASE/name;draws=read(folder,'posterior_draws.csv');mode=json.loads((folder/'map.json').read_text())['parameters']
+        folder=BASE/name;draws=read(folder,'posterior_draws.csv');map_record=json.loads((folder/'map.json').read_text());mode=map_record['parameters']
         for m in metadata:
             key=m['name'];is_fixed=key=='gamma' or (name=='cnt' and key=='grd_strength')
             q=[np.nan]*3 if is_fixed else np.quantile(draws[key],[.025,.5,.975])
             rows.append(dict(model=name,parameter=key,units=m['units'],MAP=mode[key],
+                MAP_convention=map_record.get('convention','legacy_inference_map'),
                 median=q[1],q025=q[0],q975=q[2],fixed=is_fixed))
         v=json.loads((folder/'validation_metrics.json').read_text());diag=json.loads((folder/'sampling_diagnostics.json').read_text())
         comp.append(dict(model=name,training_concentration_RMSE=v['calibration_concentration_RMSE_g_L'],
@@ -413,6 +414,13 @@ def captions(data_only=False):
 \newcommand{\ProteinFitCaption}{CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview. Solid curves/stairs show the inference-coordinate MAP; markers retain the graph readings and dashed density guides have a fixed 0.6 micrometre display bandwidth, without changing likelihood observations. Shading is the pointwise 95\% latent interval from screened NUTS draws, conditional on fixed observation errors and physical constants; it excludes additional measurement noise. The vertical dotted line marks the end of training at 420 min. The 660-min PSD and later concentrations are predicted without refitting. Quantile segments are omitted when the conditioning window is empty; quantiles derived from PSDs are not independent likelihood data. Numerical densities use actual bin edges without smoothing.}
 \newcommand{\ProteinCornerCaption}{Three-parameter CNT or four-parameter CNT+GRD NUTS posterior, identified by filename. Diagonals show normalized posterior KDEs and dashed analytical priors generated from the active specifications; positive wide-scale parameters use labelled natural-log plotting coordinates, including the correct prior Jacobian. Broad priors are not renormalized to the displayed posterior window; full support is in the prior table. In each two-parameter marginal, KDE contours enclose approximately 68\% and 95\% probability. Interfacial energy is fixed at 0.64 mJ per squared metre and is absent from these inferred coordinates. Orange markers denote the transformed inference-coordinate MAP. Sampling convergence does not establish numerical convergence, identifiability or physical model adequacy.}
 '''
+    if not data_only:
+        conventions = [json.loads((BASE/name/'map.json').read_text()).get('convention','legacy_inference_map')
+                       for name in ('cnt','cnt_grd')]
+        if all(c=='physical_map_v1' for c in conventions):
+            text=text.replace('inference-coordinate MAP','physical-density MAP')
+        elif any(c=='physical_map_v1' for c in conventions):
+            text=text.replace('inference-coordinate MAP','MAP under each model\'s recorded density convention')
     text=text.replace('Solid curves/stairs show','Solid curves show')
     text=text.replace('Numerical densities use actual bin edges without smoothing.',
         'Numerical density curves and bands connect the stored bin averages at their bin centers; no smoothing or extra forward solves are used.')

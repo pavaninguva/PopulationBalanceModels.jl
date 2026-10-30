@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Changed Bayesian MAP convention:** ordinary ParameterSpec declarations accept physical priors and infer internal transforms from support. MAP now maximizes physical parameter density; MCMC retains the same physical posterior through separate Jacobian-corrected targets. Laplace/Gauss–Newton centers, covariance and approximate draws use physical units, with boundary/stationarity and legacy-result checks. Inference-prior and gradient callbacks require explicit contracts. Retained scientific outputs keep their original convention and provenance pending recomputation.
+
 - Added canonical `moment_method` selection with inferred node counts and per-equation analytical/reconstruction planning. `moment_plan` exposes dependencies, family/state layout and closure requirements; legacy family keywords and deliberate weak-form overrides remain supported. Generic callbacks retain their integral route, while known formulas use tracked moments directly and reconstruct only missing orders. Strict ExactClosure rejects unresolved boundaries. Direct-discretization algorithms and retained numerical results are unchanged.
 
 - Clarified optional bulk coupling and axial transport in the architecture schematic, restored sans-serif lettering with a LaTeX equation, organized its physical-process labels, and updated its PCE basis coverage.

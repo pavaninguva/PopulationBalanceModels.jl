@@ -117,7 +117,13 @@ def plot(folder):
     axes[1].plot(expected, observed, color="C0", lw=1)
     axes[1].plot(expected, expected, "k--", lw=1)
     axes[1].set(xlabel="Standard normal quantile", ylabel="Residual quantile")
-    changes = np.log(estimates["uniform"]["map"] / ref["map"]) / ref["laplace_sd_z"]
+    if "laplace_sd_physical" in ref.dtype.names:
+        changes = (estimates["uniform"]["map"] - ref["map"]) / ref["laplace_sd_physical"]
+    elif "laplace_sd_z" in ref.dtype.names:
+        # Historical z-density MAP and Gaussian: retain their original convention.
+        changes = np.log(estimates["uniform"]["map"] / ref["map"]) / ref["laplace_sd_z"]
+    else:
+        raise ValueError("Missing explicit Laplace covariance-coordinate column")
     axes[2].bar([0, 1], changes, color=["C0", "C1"])
     axes[2].axhline(0, color="k", lw=.7)
     axes[2].set(xticks=[0, 1], xticklabels=[r"$g_0$", r"$g_1$"], ylabel="MAP change / reference posterior SD",
