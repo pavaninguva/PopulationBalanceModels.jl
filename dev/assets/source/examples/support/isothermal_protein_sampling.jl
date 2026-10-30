@@ -186,7 +186,7 @@ function expected_information_tuning(problem,z,map)
         W[rows,:]./=sigma isa Number ? sigma : vec(sigma)
         offset+=length(measurement.data)
     end
-    prior=-ForwardDiff.hessian(v->logprior(problem,map.from_sampler(v))+map.logabsdetjac(v),y)
+    prior=-ForwardDiff.hessian(v->sampling_logprior(problem,map.from_sampler(v))+map.logabsdetjac(v),y)
     information=Symmetric(W'*W+prior)
     factor=cholesky(information)
     covariance=Matrix(Symmetric(factor\Matrix{Float64}(I,length(z),length(z))))
@@ -201,7 +201,7 @@ are obtained from this matrix. Nonfinite or nonpositive curvature fails without
 a ridge. Distinct calibration basins may initialize distinct chain metrics.
 """
 function curvature_tuning(problem,z,map)
-    H=ForwardDiff.hessian(v->-logposterior(problem,v),z)
+    H=ForwardDiff.hessian(v->-sampling_logposterior(problem,v),z)
     all(isfinite,H) || throw(ArgumentError("nonfinite local posterior curvature; cannot initialize this sampler metric"))
     factor=cholesky(Symmetric(H))
     inverse=factor\Matrix{Float64}(I,length(z),length(z))

@@ -22,10 +22,8 @@ function estimation_problem()
         Measurement([exact(3)], MomentObservable(3); likelihood=GaussianLikelihood(sigma=0.10)),
     )
     parameters = (
-        ParameterSpec(:G; initial=0.3, transform=LogTransform(),
-            prior=Prior(Normal(log(0.3),0.7); coordinates=:inference)),
-        ParameterSpec(:J; initial=1.0, transform=LogTransform(),
-            prior=Prior(Normal(log(1.0),0.7); coordinates=:inference)),
+        ParameterSpec(:G; initial=0.3, prior=LogNormal(log(0.3),0.7)),
+        ParameterSpec(:J; initial=1.0, prior=LogNormal(log(1.0),0.7)),
     )
     experiment = InferenceExperiment(:crystallizer, base, measurements...;
         solver=StationarySolver(abstol=1e-12))
@@ -40,7 +38,7 @@ function run(; sample=false)
     println("MAP in physical units: ", result.parameters.shared)
     println("Gradient verification: ", check_gradient(problem,result.minimizer))
     println("Predicted stationary moments: ", predictions(problem,result.minimizer))
-    println("Local covariance in log(G), log(J): ", result.uncertainty.covariance)
+    println("Local covariance in physical G, J units: ", result.uncertainty.covariance)
     if sample
         posterior = sample_posterior(problem; initial=result, warmup=300,
             samples=1000, chains=2, seed=43)

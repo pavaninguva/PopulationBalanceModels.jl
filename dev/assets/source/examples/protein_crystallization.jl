@@ -238,7 +238,7 @@ function run_posterior(;output=joinpath(@__DIR__,"..",".cache","legacy_docs_asse
     data=observations();scales=vcat(fill(data.concentration.sigma,length(data.concentration.t)),fill(data.D50.sigma,length(data.D50.t)))
     flattened=z->vcat((vec(v) for v in first(predictions(problem,z)))...)
     J=ForwardDiff.jacobian(flattened,center)./scales
-    prior_curvature=ForwardDiff.hessian(z->-logprior(problem,z),center)
+    prior_curvature=ForwardDiff.hessian(z->-sampling_logprior(problem,z),center)
     precision=Symmetric(J'*J+prior_curvature)
     factor=cholesky(precision) # no ridge, no uncertainty assertion
     tuning_z=Matrix(Symmetric(factor\Matrix{Float64}(I,length(center),length(center))))
