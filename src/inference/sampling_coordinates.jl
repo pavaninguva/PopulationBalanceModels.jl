@@ -33,7 +33,7 @@ end
 Check a supplied sampling map at an inference-coordinate point `z`. The named
 fields are `to_sampler`, `from_sampler`, `logabsdetjac` and `label`.
 `logabsdetjac(y)` means log|det D(from_sampler)(y)|. The sampler density is
-`sampling_logposterior(problem,from_sampler(y)) + logabsdetjac(y)`.
+`logposterior(problem,from_sampler(y)) + logabsdetjac(y)`.
 
 Checks both inverse directions, the Jacobian determinant, and the pulled-back
 posterior gradient against independent step-halved differences. Repeat at
@@ -52,13 +52,13 @@ function check_sampling_map(problem::EstimationProblem,map,z;
     y isa AbstractVector && length(y)==length(z) && all(isfinite,y) || throw(ArgumentError("invalid sampler-coordinate check point"))
     state=_sampling_map_state(map,y)
     all(isapprox.(state.z,z;rtol=1e-10,atol=1e-12)) || throw(ArgumentError("sampling_map does not invert the supplied inference point"))
-    density=sampling_logposterior(problem,state.z;_counts)
+    density=logposterior(problem,state.z;_counts)
     isfinite(density) || throw(ArgumentError("map-check point is outside posterior support or has an invalid solve"))
     function target(v)
         at=_sampling_map_state(map,v)
-        sampling_logposterior(problem,at.z;_counts)+at.logjac
+        logposterior(problem,at.z;_counts)+at.logjac
     end
-    gradient=state.jacobian'*sampling_gradient(problem,state.z;derivatives,_counts)+
+    gradient=state.jacobian'*posterior_gradient(problem,state.z;derivatives,_counts)+
         _ad_evaluate(()->ForwardDiff.gradient(map.logabsdetjac,y))
     coarse=_fd_gradient(target,y;step)
     fine=_fd_gradient(target,y;step=step/2)

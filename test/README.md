@@ -46,8 +46,10 @@ julia --project=/path/to/sensitivity-env test/sensitivity_integration.jl
 ```
 
 The inference tests use small analytical targets; they do not regenerate the
-long protein posterior. `sampling_control.jl`, included by
-`bayesian_integration.jl` (includes `physical_parameters_integration.jl`), checks diagnostic stopping against conjugate Gaussian
+long protein posterior. `physical_parameters.jl` and its optional integration
+companion verify explicit transforms, physical priors, z-density modes/curvature,
+joint nuisance covariance, mapped Gaussian draws and convention guards.
+`sampling_control.jl`, included by `bayesian_integration.jl`, checks diagnostic stopping against conjugate Gaussian
 and transformed lognormal posteriors, exact continuation against upstream
 AdvancedHMC, independent batch sizes, MCSE requirements, budgets and failure
 propagation. `protein_parallel.jl` checks joint reassessment and retained-output

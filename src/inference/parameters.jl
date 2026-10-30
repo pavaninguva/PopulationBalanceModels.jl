@@ -1,6 +1,6 @@
 abstract type AbstractInferenceTransform end
 
-"""Identity internal coordinates, θ=location+scale*z. Explicit identity never requests automatic selection."""
+"""Identity inference coordinates, θ=location+scale*z. Select explicitly for untransformed parameters."""
 struct IdentityTransform <: AbstractInferenceTransform
     location::Float64
     scale::Float64
@@ -9,7 +9,7 @@ struct IdentityTransform <: AbstractInferenceTransform
         new(location,scale)
     end
 end
-"""Positive parameter θ=scale*exp(z). The reference scale changes internal coordinates, not the physical MAP target."""
+"""Positive parameter θ=scale*exp(z). MAP and local covariance refer to the declared z-density; the forward model still receives θ."""
 struct LogTransform <: AbstractInferenceTransform
     scale::Float64
     function LogTransform(;scale=1.0)
@@ -73,11 +73,12 @@ _transform_derivative(t::AbstractInferenceTransform,z)=ForwardDiff.derivative(v-
 """
     Prior(distribution; coordinates)
 
-Advanced/compatibility density declaration. Prefer passing a continuous
+Compatibility density declaration. In new code pass a continuous
 univariate distribution directly to ParameterSpec: it is a physical prior.
-`:physical` is equivalent. An explicit `:inference` prior requires an explicit
-transform: physical MAP subtracts its forward log Jacobian; sampling restores
-that Jacobian exactly once. Its probability law is never reinterpreted.
+`:physical` is equivalent. Legacy `:inference` declarations preserve their
+tagged law for z and receive no additional parameter Jacobian. Prefer the
+equivalent physical distribution in new code, e.g. LogNormal for a Normal
+belief about log(θ). Every ParameterSpec requires an explicit transform.
 """
 struct Prior{D}
     distribution::D
@@ -91,7 +92,7 @@ end
 
 # These library families have a declared connected interval support. The
 # generic Distributions.support fallback also returns a RealInterval for custom
-# distributions with holes, so that fallback alone cannot certify auto selection.
+# distributions with holes, so that fallback alone cannot certify coverage.
 const _IntervalPrior = Union{Distributions.Normal,Distributions.LogNormal,
     Distributions.Exponential,Distributions.Gamma,Distributions.Beta,Distributions.Uniform,
     Distributions.Cauchy,Distributions.TDist,Distributions.Laplace,Distributions.Logistic,
@@ -101,21 +102,6 @@ function _prior_interval(d::Distributions.Truncated)
     _prior_interval(d.untruncated)===nothing ? nothing : (minimum(d),maximum(d))
 end
 _prior_interval(d)=nothing
-function _automatic_transform(d)
-    bounds=_prior_interval(d)
-    bounds===nothing && throw(ArgumentError("automatic coordinates cannot certify a connected support for $(typeof(d)); supply an explicit compatible transform (IdentityTransform covers the real line)"))
-    lo,hi=bounds
-    lo<hi && !isnan(lo) && !isnan(hi) || throw(ArgumentError("invalid prior support"))
-    if isfinite(lo) && isfinite(hi)
-        LogitTransform(lo,hi)
-    elseif isfinite(lo)
-        iszero(lo) ? LogTransform() : ShiftedLogTransform(lo)
-    elseif isfinite(hi)
-        ShiftedLogTransform(hi;upper=true)
-    else
-        IdentityTransform()
-    end
-end
 function _validate_transform_support(transform,prior)
     prior.coordinates===:physical || return
     bounds=_prior_interval(prior.distribution)
@@ -125,23 +111,25 @@ function _validate_transform_support(transform,prior)
 end
 
 """
-    ParameterSpec(name; initial, prior, transform=:auto, role=:kinetic, experiment=nothing)
+    ParameterSpec(name; initial, prior, transform, role=:kinetic, experiment=nothing)
 
 One fitted physical scalar. Supply its physical starting guess and a continuous
 univariate prior, e.g. `ParameterSpec(:g0; initial=0.2,
-prior=LogNormal(log(0.2),0.5))`. The guess is neither a prior statistic nor a fixed
+prior=LogNormal(log(0.2),0.5), transform=LogTransform())`. The guess is neither a prior statistic nor a fixed
 parameter; it never mutates the base forward problem. Kinetic callbacks receive
 physical candidate values.
 
-Automatic coordinates use the prior's declared support: identity on R, log on
-(0,Inf), logit on a finite interval, shifted/reflected log on other half-lines.
-Explicit transforms override auto selection without removing allowed support.
-Inspect `parameterization(problem)` or `spec.transform`. Custom/unclassified
-supports require an explicit compatible transform. An explicit inference prior
-requires an explicit transform. Invalid guesses are rejected, never clamped.
+Select coordinates explicitly, including IdentityTransform() for untransformed
+parameters. Different parameters may use different transforms. A transform
+cannot remove allowed physical prior support: truncate a Normal explicitly
+before using log coordinates. Custom support/transform compatibility is the
+caller's declaration. Inspect `parameterization(problem)` or `spec.transform`.
+Invalid guesses are rejected, never clamped.
 
-MAP maximizes the PHYSICAL posterior. MCMC includes the internal-coordinate
-Jacobian. `experiment=nothing` shares the scalar; a name makes it local.
+MAP, local uncertainty and MCMC use the same declared inference-coordinate
+density, including each physical-prior Jacobian once. The mapped MAP is not
+generally the physical-density mode or posterior mean.
+`experiment=nothing` shares the scalar; a name makes it local.
 `role=:nuisance` labels initial conditions, calibration or noise parameters.
 Fixed values belong in the estimation problem or experiment's `fixed` tuple.
 """
@@ -152,15 +140,11 @@ struct ParameterSpec{T,P}
     transform::T
     role::Symbol
     experiment::Union{Nothing,Symbol}
-    automatic::Bool
-    function ParameterSpec(name::Symbol;initial,prior,transform=:auto,role=:kinetic,experiment=nothing)
+    function ParameterSpec(name::Symbol;initial,prior,transform,role=:kinetic,experiment=nothing)
         role in (:kinetic,:nuisance) || throw(ArgumentError("role must be :kinetic or :nuisance"))
         experiment===nothing || experiment isa Symbol || throw(ArgumentError("experiment must be a name"))
         prior=prior isa Prior ? prior : Prior(prior;coordinates=:physical)
-        automatic=transform===:auto
-        automatic && prior.coordinates===:inference && throw(ArgumentError("an inference-coordinate prior requires an explicit transform; prefer a direct physical prior"))
-        transform=automatic ? _automatic_transform(prior.distribution) : transform
-        transform isa AbstractInferenceTransform || throw(ArgumentError("transform must be :auto or an inference transform"))
+        transform isa AbstractInferenceTransform || throw(ArgumentError("select an explicit inference transform, including IdentityTransform() for untransformed parameters; automatic selection is unavailable"))
         _validate_transform_support(transform,prior)
         initial isa Real && isfinite(initial) && isfinite(Float64(initial)) || throw(ArgumentError("initial must be a finite physical starting value"))
         z=_coordinate(transform,initial)
@@ -168,7 +152,7 @@ struct ParameterSpec{T,P}
         x=prior.coordinates===:physical ? initial : z
         Distributions.insupport(prior.distribution,x) && isfinite(Distributions.logpdf(prior.distribution,x)) ||
             throw(ArgumentError("initial is outside prior support or has nonfinite prior density; endpoint singularities are not regular interior starts"))
-        new{typeof(transform),typeof(prior)}(name,initial,prior,transform,role,experiment,automatic)
+        new{typeof(transform),typeof(prior)}(name,initial,prior,transform,role,experiment)
     end
 end
 
@@ -195,7 +179,7 @@ end
 Map INTERNAL coordinates to physical model parameters, including fixed values.
 Return `(shared=...,experiments=...)`, or the merged tuple for one experiment.
 This conversion says nothing about the reference density. `fit` reports the
-physical-density MAP; stored MCMC z values sample a Jacobian-corrected density.
+mapped inference-density MAP; stored MCMC z values sample that same density.
 """
 function physical_parameters(problem,z)
     length(z)==length(problem.parameters) || throw(DimensionMismatch("one coordinate per fitted parameter required"))
@@ -206,36 +190,12 @@ physical_parameters(problem,z,name::Symbol)=let p=physical_parameters(problem,z)
     merge(p.shared,getproperty(p.experiments,name))
 end
 
-"""Inspect physical guesses/priors, scopes, and resolved internal transforms. `automatic` distinguishes automatic selection from an explicit identity."""
+"""Inspect physical guesses/priors, scopes, and explicitly selected transforms. MAP and sampling both refer to the declared inference density."""
 parameterization(problem)=[(name=p.name,experiment=p.experiment,role=p.role,initial=p.initial,
     prior=p.prior.distribution,prior_coordinates=p.prior.coordinates,transform=p.transform,
-    automatic=p.automatic,map_density=:physical,sampling_density=:inference) for p in problem.parameters]
+    map_density=:inference,sampling_density=:inference) for p in problem.parameters]
 
 _log_parameter_jacobian(problem,z)=sum(_logjac(p.transform,v) for (p,v) in zip(problem.parameters,z))
-function _parameter_scales(problem)
-    map(problem.parameters) do p
-        sd=_prior_interval(p.prior.distribution)===nothing ? NaN : Distributions.std(p.prior.distribution)
-        scale=p.prior.coordinates===:physical ? sd : abs(_transform_derivative(p.transform,_coordinate(p.transform,p.initial)))*sd
-        isfinite(scale) && scale>0 ? Float64(scale) : max(abs(p.initial),1.0)
-    end
-end
-function _physical_gradient(problem,z,g;indices=collect(eachindex(z)))
-    base=_parameter_scales(problem)
-    theta=_fitted_values(problem,z)
-    # A weak prior can have an enormous SD unrelated to local parameter units.
-    # Use a fixed physical start/current scale, bounded by a finite prior scale;
-    # it never vanishes with an unconstraining derivative near an endpoint.
-    # An exactly zero start/center uses unit numerical scale, capped by the
-    # prior SD, rather than a potentially enormous weak-prior scale.
-    scales=[begin
-        reference=max(abs(problem.parameters[i].initial),abs(theta[i]))
-        min(base[i],reference>0 ? reference : 1.0)
-    end for i in indices]
-    derivatives=[_transform_derivative(problem.parameters[i].transform,z[i]) for i in indices]
-    physical=g./derivatives
-    (;physical,scaled=physical.*scales,scales,derivatives)
-end
-
 function _parameter_interval(p)
     p.prior.coordinates===:physical && return _prior_interval(p.prior.distribution)
     prior_bounds=_prior_interval(p.prior.distribution)
@@ -253,31 +213,19 @@ function _interior_start(problem,z)
     end
 end
 
-# Numerical verification uses an affine scaling of PHYSICAL values, never a
-# nonlinear posterior reparameterization. The scale does not change the density.
-function _local_physical_scales(problem,theta)
-    base=_parameter_scales(problem)
-    [begin
-        bounds=_parameter_interval(p)
-        distance=bounds===nothing ? Inf : min(x-bounds[1],bounds[2]-x)
-        local_scale=max(abs(x),abs(p.initial))
-        min(base[i],local_scale>0 ? local_scale : 1.0,distance)
-    end for (i,(p,x)) in enumerate(zip(problem.parameters,theta))]
-end
-function _map_stationarity(problem,z,g;indices=collect(eachindex(z)),tolerance=1e-3)
-    report=_physical_gradient(problem,z,g;indices)
-    theta=_fitted_values(problem,z)
-    boundary=any(enumerate(indices)) do (j,i)
-        bounds=_parameter_interval(problem.parameters[i])
-        bounds!==nothing && begin
-            distance=min(theta[i]-bounds[1],bounds[2]-theta[i])
-            distance<=0 || (distance/report.scales[j]<=sqrt(tolerance) &&
-                norm(g,Inf)<=tolerance && norm(report.scaled,Inf)>tolerance)
-        end
-    end
-    valid=!boundary && all(isfinite,report.scaled) && norm(report.scaled,Inf)<=tolerance
-    reason=boundary ? "boundary-limited/nonregular mode; an interior physical MAP is not established" :
-        !all(isfinite,report.scaled) ? "unresolved physical gradient or singular transform derivative" :
-        valid ? "" : "physical posterior is not stationary in parameter-scaled units"
-    merge(report,(;valid,reason,boundary_limited=boundary,tolerance))
+# Stationarity belongs to the selected z-density, not the physical density.
+# Still reject invalid support, saturated transforms and nonfinite states.
+function _map_stationarity(problem,z,g;indices=collect(eachindex(z)),tolerance=1e-3,prior_support=true)
+    length(g)==length(indices) || throw(DimensionMismatch("one gradient per free coordinate required"))
+    admissible=all(isfinite,z) &&
+        all(_transform_valid(p.transform,v) for (p,v) in zip(problem.parameters,z)) &&
+        (!prior_support || _interior_start(problem,z)) &&
+        problem.constraints(physical_parameters(problem,z))
+    finite=all(isfinite,g)
+    valid=admissible && finite && norm(g,Inf)<=tolerance
+    reason=!admissible ? "boundary-limited/nonregular or saturated coordinates; select a finite interior start" :
+        !finite ? "nonfinite inference-coordinate posterior gradient" :
+        valid ? "" : "declared inference-coordinate posterior is not stationary"
+    (;valid,reason,boundary_limited=!admissible,gradient=g,gradient_norm=norm(g,Inf),
+      coordinates=:inference,tolerance)
 end

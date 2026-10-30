@@ -160,6 +160,23 @@ class PublicationContracts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Nonfinite Gaussian transformation'):
             gaussian_draws(report,count=1000,seed=94)
 
+    def test_declared_coordinate_gaussian_metadata_and_display(self):
+        meta=dict(name='AG',transform='log',plotting_coordinate='physical',
+                  density_coordinates='physical',family='lognormal',arguments=[np.log(.2),.5])
+        report=dict(center=[np.log(.2)],covariance=[[.25]],priors=[meta],
+                    convention='inference_map_v2',coordinates='inference')
+        self.assertEqual(approximation_coordinates(report),'inference')
+        z,theta,shown,diagnostic=gaussian_draws(report,count=1000,seed=95)
+        np.testing.assert_allclose(theta,np.exp(z))
+        np.testing.assert_array_equal(shown,theta)
+        self.assertEqual(diagnostic['prior_support_violations']['AG'],0)
+        x=np.array([.1,.2,.4])
+        exact=np.exp(-.5*((np.log(x)-np.log(.2))/.5)**2)/(x*.5*np.sqrt(2*np.pi))
+        np.testing.assert_allclose(gaussian_marginal(x,np.log(.2),.25,meta),exact)
+        report['coordinates']='physical'
+        with self.assertRaisesRegex(ValueError,'lacks inference covariance'):
+            approximation_coordinates(report)
+
     def test_compatibility_guard_rejects_stale_sources_and_inputs(self):
         folder=self.history/'cnt'
         manifest=json.loads((folder/'manifest.json').read_text())

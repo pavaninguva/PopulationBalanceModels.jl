@@ -44,8 +44,8 @@ end
     obs=Measurement(ts,exp.(-0.4.*ts),MomentObservable(0);likelihood=GaussianLikelihood(sigma=0.1))
     setup=(theta,base)->remake(base;p=theta,u0=theta.initial.*base.u0)
     ex=InferenceExperiment(:a,pb,obs;setup,dt=0.001)
-    specs=[ParameterSpec(:k;initial=0.3,prior=Prior(Normal(0.4,1.);coordinates=:physical)),
-        ParameterSpec(:initial;initial=1.1,prior=Prior(Normal(1.,1.);coordinates=:physical),role=:nuisance)]
+    specs=[ParameterSpec(:k;initial=0.3,prior=Prior(Normal(0.4,1.);coordinates=:physical),transform=IdentityTransform()),
+        ParameterSpec(:initial;initial=1.1,prior=Prior(Normal(1.,1.);coordinates=:physical),role=:nuisance,transform=IdentityTransform())]
     problem=EstimationProblem(specs,(ex,));z=initial_coordinates(problem)
     expected=[sum((exp.(-z[1].*ts).*z[2].-exp.(-0.4.*ts)).*ts.*z[2].*exp.(-z[1].*ts))/0.01,
         -sum((exp.(-z[1].*ts).*z[2].-exp.(-0.4.*ts)).*exp.(-z[1].*ts))/0.01]

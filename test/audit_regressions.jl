@@ -89,7 +89,7 @@ end
     pb=PBMProblem(compile(PBMModel(),Grid1D([0.,1.,2.])),ones(2),(0.,1.))
     response=(P,theta,e)->2P
     m=Measurement([0.],reshape([.5,.5],2,1),obs;likelihood,response)
-    spec=ParameterSpec(:unused;initial=0.,prior=Prior(Normal();coordinates=:physical))
+    spec=ParameterSpec(:unused;initial=0.,prior=Prior(Normal();coordinates=:physical),transform=IdentityTransform())
     problem=EstimationProblem((spec,),(InferenceExperiment(:run,pb,m;dt=.1),))
     @test logposterior(problem,[0.];on_failure=:reject)==-Inf
     @test pb.u0==ones(2,1)
@@ -171,7 +171,7 @@ end
     pb=PBMProblem(compile(PBMModel(),Grid1D([0.,1.,2.])),ones(2),(0.,1.))
     measurement=Measurement([0.],reshape([1.2,-.4],2,1),
         FunctionObservable((u,op,p,t)->[p.a,p.b]);likelihood=GaussianLikelihood(sigma=1.))
-    specs=(ParameterSpec(:a;initial=0.,prior=Prior(Normal();coordinates=:physical)),
+    specs=(ParameterSpec(:a;initial=0.,prior=Prior(Normal();coordinates=:physical),transform=IdentityTransform()),
            ParameterSpec(:b;initial=0.,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform()))
     problem=EstimationProblem(specs,(InferenceExperiment(:run,pb,measurement;dt=.1),))
     map=(to_sampler=z->[asinh(z[1]),z[2]],from_sampler=y->[sinh(y[1]),y[2]],
@@ -256,7 +256,7 @@ end
     pb=PBMProblem(compile(PBMModel(),Grid1D([0.,1.,2.])),ones(2),(0.,1.))
     measurement=Measurement([0.],reshape([1.2,-.4],2,1),
         FunctionObservable((u,op,p,t)->[p.a,p.b]);likelihood=GaussianLikelihood(sigma=1.))
-    specs=(ParameterSpec(:a;initial=0.,prior=Prior(Normal();coordinates=:physical)),
+    specs=(ParameterSpec(:a;initial=0.,prior=Prior(Normal();coordinates=:physical),transform=IdentityTransform()),
            ParameterSpec(:b;initial=0.,prior=Prior(Normal();coordinates=:inference), transform=IdentityTransform()))
     problem=EstimationProblem(specs,(InferenceExperiment(:run,pb,measurement;dt=.1),))
     map=(to_sampler=z->[asinh(z[1]),z[2]],from_sampler=y->[sinh(y[1]),y[2]],

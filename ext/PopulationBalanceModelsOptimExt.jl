@@ -80,14 +80,11 @@ function PopulationBalanceModels.profile_likelihood(cal::PopulationBalanceModels
 end
 
 """
-Physical-density MAP fit of EstimationProblem. Starts are inference-coordinate
-vectors; defaults come from physical ParameterSpec initial values. Additional
-starts use a seeded Gaussian perturbation. Scaling changes optimizer coordinates
-only and does not change the physical posterior density. Transform Jacobians enter
-sampling, not this optimization. Physical/scaled stationarity rejects a vanishing
-transform gradient at a boundary. Uncertainty is opt-in:
-`:gauss_newton` uses physical fixed-Gaussian prediction sensitivities and prior curvature;
-`:laplace` uses the full physical posterior Hessian. Neither changes the fitted target.
+MAP of the declared inference-coordinate posterior. ParameterSpec initials are
+physical guesses; optimizer starts and scaling use z. Physical-prior Jacobians
+are already included in the common target. Convergence checks z-stationarity
+and finite, unsaturated support; no physical-posterior stationarity is required.
+Optional :laplace and :gauss_newton covariance use those same z coordinates.
 """
 function PopulationBalanceModels.fit(problem::EstimationProblem;
         method=:map,initial=initial_coordinates(problem),starts=nothing,nstarts=1,
@@ -112,7 +109,7 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
         z=w.*scaling
         value=-logposterior(problem,z;on_failure=:reject,_counts=counts)
         if value == -Inf
-            PopulationBalanceModels._record_failure!(counts,NumericalFailure("unbounded physical posterior/boundary density; no regular interior MAP"))
+            PopulationBalanceModels._record_failure!(counts,NumericalFailure("unbounded declared-coordinate posterior density; no regular interior MAP"))
             value=Inf
         end
         length(history)<10000 && push!(history,(evaluation=counts.evaluations,objective=value,z=copy(z)))
@@ -124,7 +121,7 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
     for start in seeds
         check=try
             PopulationBalanceModels._interior_start(problem,start) || throw(NumericalFailure(
-                "boundary-limited/nonregular initial candidate; choose an interior physical start. Endpoint MAP and ordinary Gaussian uncertainty are not certified"))
+                "boundary-limited/nonregular initial candidate; choose a finite interior start. Endpoint/saturated-coordinate MAP and ordinary Gaussian uncertainty are not certified"))
             isfinite(loss(start./scaling)) || throw(NumericalFailure("initial posterior is not finite"))
             checked=check_gradient(problem,start;derivatives,step=derivative_step,_counts=counts)
             checked.valid || throw(ArgumentError("posterior gradient check failed at a start"))
@@ -171,8 +168,8 @@ function PopulationBalanceModels.fit(problem::EstimationProblem;
     stationarity=PopulationBalanceModels._map_stationarity(problem,z,gradient;tolerance=gradient_tolerance)
     diagnostics=(;gradient,gradient_norm=norm(gradient,Inf),scaled_gradient,
         scaled_gradient_norm=norm(scaled_gradient,Inf),gradient_tolerance,history,
-        stationarity,physical_gradient=stationarity.physical,physical_scaled_gradient_norm=norm(stationarity.scaled,Inf),
-        density_coordinates=:physical,gradient_coordinates=:inference,
+        stationarity,
+        density_coordinates=:inference,gradient_coordinates=:inference,
         optimizer_coordinates=:scaled_inference,convention=PopulationBalanceModels._MAP_CONVENTION,
         history_truncated=length(history)==10000,starts=runs,seed,scaling,derivative_step,
         objective_evaluations=counts.evaluations,forward_solves=counts.solves,
@@ -209,7 +206,9 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
     !isempty(grid) && all(isfinite,grid) && all(diff(grid).>0) || throw(ArgumentError("profile grid must increase"))
     seeds=[copy(s) for s in starts]
     !isempty(seeds) && all(s->length(s)==n && all(isfinite,s),seeds) || throw(ArgumentError("invalid profile starts"))
-    f=z->target===:likelihood ? -loglikelihood(problem,z;on_failure=:reject) : -logposterior(problem,z;on_failure=:reject)
+    f=z->target===:likelihood ?
+        (problem.constraints(physical_parameters(problem,z)) ? -loglikelihood(problem,z;on_failure=:reject) : Inf) :
+        -logposterior(problem,z;on_failure=:reject)
     # Likelihood profiles require their own unpenalized optimum, not the MAP baseline.
     full_gradient=z->target===:likelihood ? -likelihood_gradient(problem,z;derivatives) : -posterior_gradient(problem,z;derivatives)
     function optimize_profile(loss,start,gradient)
@@ -229,7 +228,7 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
             v=Optim.minimizer(raw)
             # gradient is of the NEGATIVE objective; the norm/check is sign invariant.
             PopulationBalanceModels._map_stationarity(problem,expand(v),gradient(v);
-                indices,tolerance=gradient_tolerance).valid
+                indices,tolerance=gradient_tolerance,prior_support=target===:posterior).valid
         catch e
             e isa NumericalFailure || rethrow()
             false
@@ -260,7 +259,7 @@ function PopulationBalanceModels.estimation_profile(problem::EstimationProblem,r
         throw(NumericalFailure("a conditional profile improved its reference optimum; refit from that solution"))
     (;target,values=grid,negative_log_density=losses,delta=losses.-minimum_value,
       minimizers,converged=flags,reference=reference_z,gradient_tolerance,
-      argument_coordinates=:inference,density_coordinates=:physical,convention=PopulationBalanceModels._MAP_CONVENTION,
+      argument_coordinates=:inference,density_coordinates=target===:posterior ? :inference : :measurement,convention=PopulationBalanceModels._MAP_CONVENTION,
       interpretation=target===:posterior ? :posterior_shape_no_likelihood_cutoff : :likelihood_profile)
 end
 end

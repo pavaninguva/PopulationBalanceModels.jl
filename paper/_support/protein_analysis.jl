@@ -114,12 +114,13 @@ function compatible_target(root,model,config)
     diag.passed || error("Retained MCMC did not pass its screen")
     saved=readjson(joinpath(folder,"map.json"));z=Float64.(saved.z)
     parts=posterior_components(problem,z);g=sampling_gradient(problem,z)
-    # Original producer records optimized p_z. Verify their unchanged sampling
-    # law without reinterpreting those saved modes as physical MAP estimates.
-    old_convention=get(saved,:convention,"legacy_inference_map")!="physical_map_v1"
-    stored_post=old_convention ? sampling_logposterior(problem,z) : parts.logposterior
-    stored_prior=old_convention ? sampling_logprior(problem,z) : parts.logprior
-    saved_gradient=old_convention ? g : posterior_gradient(problem,z)
+    # Preserve producer conventions. Physical-MAP-v1 records subtract the
+    # parameter determinant from the common z-density; older z records do not.
+    physical_legacy=get(saved,:convention,"legacy_inference_map")=="physical_map_v1"
+    jac=PopulationBalanceModels._log_parameter_jacobian(problem,z)
+    stored_post=parts.logposterior-(physical_legacy ? jac : 0.)
+    stored_prior=parts.logprior-(physical_legacy ? jac : 0.)
+    saved_gradient=physical_legacy ? g-ForwardDiff.gradient(v->PopulationBalanceModels._log_parameter_jacobian(problem,v),z) : g
     abs(stored_post-saved.logposterior)<1e-6 &&
         abs(parts.loglikelihood-saved.loglikelihood_whitened_CDF)<1e-6 &&
         abs(stored_prior-saved.logprior)<1e-9 || error("Saved MAP posterior components changed")
@@ -192,7 +193,7 @@ end
 function retained_map_result(problem,saved)
     z=Float64.(saved.z);g=posterior_gradient(problem,z);parts=posterior_components(problem,z)
     original_convergence=saved.converged && any(s->s.converged,saved.starts)
-    declared=get(saved,:convention,"legacy_inference_map")=="physical_map_v1"
+    declared=get(saved,:convention,"legacy_inference_map")=="inference_map_v2"
     valid=declared && original_convergence && norm(g,Inf)<=1e-3
     # Rehydrate genuine saved optimizer evidence; do not invent an Optim result.
     info=(gradient=g,gradient_norm=norm(g,Inf),gradient_tolerance=1e-3,
@@ -200,7 +201,7 @@ function retained_map_result(problem,saved)
         original_converged=saved.converged)
     MAPResult(z,physical_parameters(problem,z),parts.loglikelihood,parts.logprior,
         parts.logposterior,valid,info,ParameterSpec[problem.parameters...],nothing;
-        convention=declared ? :physical_map_v1 : :legacy_inference_map)
+        convention=declared ? :inference_map_v2 : :legacy_inference_map)
 end
 
 function analyze_uncertainty(root,model,config;compatibility_only=false,method=:laplace)
@@ -217,7 +218,7 @@ function analyze_uncertainty(root,model,config;compatibility_only=false,method=:
             refined=true
         end
         json(joinpath(out,"map_analysis.json"),(original=saved,refined,
-            convention="physical_map_v1",density_coordinates="physical",gradient_coordinates="inference",
+            convention="inference_map_v2",density_coordinates="inference",gradient_coordinates="inference",
             selected_z=result.minimizer,selected_parameters=physical_parameters(problem,result.minimizer,:batch),
             converged=result.converged,gradient=posterior_gradient(problem,result.minimizer),
             inference_coordinates="logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
@@ -237,9 +238,9 @@ function analyze_uncertainty(root,model,config;compatibility_only=false,method=:
             end
         end
         common=(schema=1,model=string(model),approximation=string(method),
-            convention="physical_map_v1",coordinates="physical",internal_center=result.minimizer,
-            density="physical posterior; numerical-transform Jacobians excluded from MAP and local curvature",
-            parameter_names=string.(getproperty.(problem.parameters,:name)),center=[getproperty(physical_parameters(problem,result.minimizer,:batch),s.name) for s in problem.parameters],
+            convention="inference_map_v2",coordinates="inference",
+            density="declared inference posterior; physical-prior Jacobians included once",
+            parameter_names=string.(getproperty.(problem.parameters,:name)),center=result.minimizer,
             physical_center=physical_parameters(problem,result.minimizer,:batch),
             priors=C.prior_metadata(problem),attempts,refined,
             compatibility_sha256=hashfile(joinpath(out,"compatibility.json")),

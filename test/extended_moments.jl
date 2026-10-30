@@ -72,7 +72,7 @@ end
     pb=PBMProblem(op,quadrature_state(method,[1.,3.],[.4,.6]),(0.,.2);p=(k=.2,))
     measurement=Measurement([.2],[2.2exp(.04)],MomentObservable(1);likelihood=GaussianLikelihood(sigma=.1))
     ex=InferenceExperiment(:run,pb,measurement;dt=.005)
-    problem=EstimationProblem((ParameterSpec(:k;initial=.2,prior=Prior(Normal(.2,.1);coordinates=:physical)),),(ex,))
+    problem=EstimationProblem((ParameterSpec(:k;initial=.2,prior=Prior(Normal(.2,.1);coordinates=:physical),transform=IdentityTransform()),),(ex,))
     @test check_gradient(problem,initial_coordinates(problem)).valid
     # EQMOM histograms are opt-in kernel integrals, never implicit QMOM atoms.
     basis=MomentSet(0:2);eq=EQMOM(1)

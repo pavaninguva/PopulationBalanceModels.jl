@@ -2,7 +2,7 @@ module ProteinCrystallization
 # Historical Mitchell-based Bayesian recipe. The active Tang isothermal
 # calibration/prediction tutorial is examples/isothermal_protein_crystallization.jl.
 using PopulationBalanceModels
-using Distributions: Uniform, Normal, rand, pdf, logpdf
+using Distributions: Uniform, Normal, LogNormal, rand, pdf, logpdf
 using Random, LinearAlgebra
 import ForwardDiff
 export parameters,build,volume_median,observations,estimation_problem,run_study,run_posterior,scheduled_solver,physical_prior_density,prior_configuration,run_identifiability
@@ -82,9 +82,9 @@ function estimation_problem(;bins=100,solver=nothing,dt=.5,priors=:broad,
     sizes=Measurement(data.D50.t,data.D50.y,FunctionObservable(volume_median);
         likelihood=GaussianLikelihood(sigma=data.D50.sigma),source=:figure4_D50)
     specs=(
-        ParameterSpec(:logAJ;initial=p.logAJ,prior=Prior(Uniform(bounds.logAJ...);coordinates=:physical)),
+        ParameterSpec(:logAJ;initial=p.logAJ,prior=Prior(Uniform(bounds.logAJ...);coordinates=:physical),transform=IdentityTransform()),
         ParameterSpec(:j;initial=p.j,transform=LogitTransform(bounds.j...),prior=Prior(Uniform(bounds.j...);coordinates=:physical)),
-        ParameterSpec(:AG;initial=p.AG,transform=LogTransform(),prior=Prior(Normal(log(p.AG),growth_prior_sd);coordinates=:inference)),
+        ParameterSpec(:AG;initial=p.AG,transform=LogTransform(),prior=LogNormal(log(p.AG),growth_prior_sd)),
         ParameterSpec(:g;initial=p.g,transform=LogitTransform(bounds.g...),prior=Prior(Uniform(bounds.g...);coordinates=:physical)))
     ex=InferenceExperiment(:batch,problem,concentration,sizes;dt=solver===nothing ? dt : nothing,solver)
     EstimationProblem(specs,(ex,))

@@ -6,7 +6,7 @@ end
 Base.showerror(io::IO, e::GaussNewtonFailure) =
     print(io, "Gauss–Newton approximation rejected: ", e.report.reason)
 
-"""Local Gaussian in physical parameter coordinates, with precision
+"""Local Gaussian in the declared inference coordinates, with precision
 `jacobian' * jacobian + prior_hessian`. The Jacobian is of the joint whitened
 Gaussian residuals. This omits residual-weighted second prediction derivatives;
 it is distinct from full-Hessian `LaplaceApproximation` and sampler tuning."""
@@ -69,11 +69,11 @@ end
     gauss_newton_approximation(problem, map; step=cbrt(eps(Float64)), ...)
 
 Construct sensitivity-based posterior covariance at a converged MAP point:
-`P = J_theta'J_theta + ∇²_theta[-log pi_theta]`, `C = P⁻¹`. `J` differentiates the joint
+`P = J'J + ∇²[-logprior(problem,z)]`, `C = P⁻¹`. `J` differentiates the joint
 whitened residuals after observation responses and any independent contrasts.
 Every experiment, time and fitted parameter (including nuisance parameters)
-is included. Both the residual Jacobian and prior Hessian are with respect to
-physical parameters. No numerical-transform Jacobian enters this covariance.
+is included. Prior curvature uses the declared inference density, including
+physical-prior transformation Jacobians exactly once.
 
 Initially supports fixed scalar/array Gaussian standard deviations or covariance
 matrices. Parameter-dependent noise callbacks, count likelihoods and truncated
@@ -91,9 +91,10 @@ by prior curvature; it is not interpreted as identification by the data.
 
 The approximation omits residual-weighted second prediction derivatives.
 Successful checks establish neither a full-posterior minimum nor Gaussian
-tails, unimodality or model adequacy. It is not full-Hessian Laplace. Draws are physical Gaussians and report prior/constraint support violations
-without truncation or attempting invalid inverse transforms. No PBM solves are needed to draw parameters; predictive
-propagation still costs solves. All covariance entries are in physical parameter units.
+tails, unimodality or model adequacy. It is not full-Hessian Laplace. Draws
+transform to physical parameters and report prior/constraint support violations
+without truncation. No PBM solves are needed to draw parameters; predictive
+propagation still costs solves. All covariance entries are in inference units.
 """
 function gauss_newton_approximation(problem::EstimationProblem, result::MAPResult;
         step=cbrt(eps(Float64)), derivative_tolerance=1e-3,
@@ -114,21 +115,19 @@ function gauss_newton_approximation(problem::EstimationProblem, result::MAPResul
         [(p.name,p.experiment) for p in problem.parameters] ||
         throw(ArgumentError("MAP and problem parameter order differ"))
     started = time_ns()
-    internal = copy(result.minimizer)
-    center = Float64.(_fitted_values(problem,internal))
-    blocks = _fixed_gaussian_blocks(problem, internal)
-    stationarity = _map_stationarity(problem,internal,
-        posterior_gradient(problem,internal;derivatives,_counts=counts);tolerance=gradient_tolerance)
+    z = copy(result.minimizer)
+    blocks = _fixed_gaussian_blocks(problem, z)
+    stationarity = _map_stationarity(problem,z,posterior_gradient(problem,z;derivatives,_counts=counts);tolerance=gradient_tolerance)
     stationarity.valid || throw(GaussNewtonFailure((valid=false,reason=stationarity.reason,stationarity)))
-    scales = _local_physical_scales(problem,center)
-    all(x->isfinite(x) && x>0,scales) || throw(GaussNewtonFailure((valid=false,reason="nonregular physical boundary or unresolved verification scale",)))
-    z = zeros(length(center))
-    physical = v -> center + scales.*v
-    residual = v -> _fixed_gaussian_residuals(problem,
-        _inference_coordinates(problem,physical(v)),blocks,counts)
+    parts = posterior_components(problem, z; _counts=counts)
+    all(isapprox(a,b; rtol=1e-10, atol=1e-8) for (a,b) in
+        ((parts.loglikelihood,result.loglikelihood), (parts.logprior,result.logprior),
+         (parts.logposterior,result.logposterior))) ||
+        throw(ArgumentError("MAP result does not match this problem's posterior at its center"))
+    residual = v -> _fixed_gaussian_residuals(problem, v, blocks, counts)
     r = residual(z)
     J = _differentiate_jacobian(residual, z; derivatives, step=step/2)
-    prior = v -> -logprior(problem, physical(v);coordinates=:physical)
+    prior = v -> -logprior(problem, v)
     prior_gradient = v -> _differentiate_gradient(prior, v; derivatives, step=step/2)
     Q = _differentiate_hessian(prior, z; derivatives, step=step/2)
     Q = Matrix(Symmetric((Q+Q')/2))
@@ -140,11 +139,10 @@ function gauss_newton_approximation(problem::EstimationProblem, result::MAPResul
     decomposition = svd(J; full=true)
     singular = decomposition.S
     data_rank = count(x -> x > rank_tolerance * maximum(singular), singular)
-    gradient = -posterior_gradient(problem, center;coordinates=:physical, derivatives, step=step/2, _counts=counts).*scales
+    gradient = -posterior_gradient(problem, z; derivatives, step=step/2, _counts=counts)
     expected_gradient = J' * r + prior_gradient(z)
     gradient_consistency = norm(gradient-expected_gradient)/max(1,norm(gradient),norm(expected_gradient))
-    base_report = (; coordinates=:physical, convention=_MAP_CONVENTION, approximation=:gauss_newton,
-        verification_coordinates=:scaled_physical,verification_scales=scales,stationarity,
+    base_report = (; coordinates=:inference, convention=_MAP_CONVENTION, stationarity, approximation=:gauss_newton,
         observations=length(r), parameters=length(z), data_rank,
         data_singular_values=singular, data_weak_direction=decomposition.V[:,end],
         prior_curvature_eigenvalues=eigvals(Symmetric(Q)), eigenvalues=values,
@@ -194,13 +192,7 @@ function gauss_newton_approximation(problem::EstimationProblem, result::MAPResul
         forward_solves=counts.solves, posterior_evaluations=counts.evaluations,
         elapsed_seconds=(time_ns()-started)/1e9))
     isempty(reason) || throw(GaussNewtonFailure(report))
-    Jphysical = J ./ scales'
-    Qphysical = (Q ./ scales) ./ scales'
-    information_physical = Jphysical' * Jphysical
-    precision_physical = Matrix(Symmetric(information_physical + Qphysical))
-    physical_factor = cholesky(Symmetric(precision_physical))
-    covariance = Matrix(Symmetric(physical_factor \ Matrix{Float64}(I,length(z),length(z))))
-    GaussNewtonApproximation(center, physical_parameters(problem,internal), ParameterSpec[problem.parameters...],
-        Matrix(Jphysical), Matrix(information_physical), Qphysical, precision_physical,
-        physical_factor, covariance, report, _MAP_CONVENTION)
+    covariance = Matrix(Symmetric(factor \ Matrix{Float64}(I,length(z),length(z))))
+    GaussNewtonApproximation(z, physical_parameters(problem,z), ParameterSpec[problem.parameters...],
+        Matrix(J), Matrix(information), Q, precision, factor, covariance, report, _MAP_CONVENTION)
 end

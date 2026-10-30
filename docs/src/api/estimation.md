@@ -1,9 +1,10 @@
 # Parameter estimation
 
 Bayesian estimation shares one statistical model across MAP, uncertainty and
-sampling. Direct distributions declare physical priors; internal transforms are
-automatic by default. MAP and local covariance use physical parameter density
-and units; sampling includes the coordinate Jacobian to preserve probabilities. Full-Hessian Laplace and sensitivity-based
+sampling. Direct distributions always declare physical priors; every parameter
+requires an explicit transform. MAP, local covariance and sampling use the same
+declared-coordinate density, including physical-prior Jacobians exactly once.
+Full-Hessian Laplace and sensitivity-based
 Gauss–Newton approximations have separate assumptions and diagnostics.
 The older Gaussian-calibration and deterministic-discrepancy interfaces retain
 their distinct interpretations.

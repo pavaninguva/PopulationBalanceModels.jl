@@ -15,7 +15,7 @@ function sampling_location_fixture(; native=false)
     measurement=Measurement([1.],[2. + (native ? exp(-1.) : 0.)],observable;
         likelihood=GaussianLikelihood(sigma=1.))
     spec=ParameterSpec(:location;initial=.5,role=:nuisance,
-        prior=Prior(Normal(0.,1.);coordinates=:physical))
+        prior=Prior(Normal(0.,1.);coordinates=:physical),transform=IdentityTransform())
     experiment=native ? InferenceExperiment(:batch,pb,measurement;dt=.02) :
         InferenceExperiment(:batch,pb,measurement;
             solver=(p,ts)->PBMSolution(ts,[copy(p.u0) for _ in ts],p,0))

@@ -55,7 +55,7 @@ function export_data(root)
         length_units="μm",D0_prior_mean=C.D0_PRIOR_MEAN,D0_units="μm²/min"))
 end
 function model_settings(config,model)
-    (;model=string(model),formulation="fixed_gamma_constant_D0",map_convention="physical_map_v1",local_covariance_coordinates="physical",population_units="particles/L",
+    (;model=string(model),formulation="fixed_gamma_constant_D0",map_convention="inference_map_v2",local_covariance_coordinates="inference",population_units="particles/L",
       bins=config["bins"],Lmax_um=config["Lmax"],maximum_dt_min=config["maximum_dt"],
       coefficient_interval_min=config["coefficient_interval"],cfl=config["cfl"],
       time_method="SSPRK33",growth_reconstruction="MUSCL",diffusion_method=model===:cnt_grd ? "FiniteVolumeDiffusion (Ito)" : "none",
@@ -72,10 +72,10 @@ function solve_physical(p,config,model,times;bins=config["bins"],Lmax=config["Lm
     forward(p;model,bins,Lmax,dt,cfl,coefficient_interval=config["coefficient_interval"],times)
 end
 function map_export(problem,fitted)
-    (;convention=string(fitted.convention),density_coordinates="physical",z_coordinates="inference",z=fitted.minimizer,parameters=physical_from_z(problem,fitted.minimizer),converged=fitted.converged,
+    (;convention=string(fitted.convention),density_coordinates="inference",z_coordinates="inference",z=fitted.minimizer,parameters=physical_from_z(problem,fitted.minimizer),converged=fitted.converged,
       loglikelihood_whitened_CDF=fitted.loglikelihood,logprior=fitted.logprior,logposterior=fitted.logposterior,
       original_CDF_loglikelihood_offset=-sum(sum(log,diag(C.cdf_factor(m.observable.points))) for m in only(problem.experiments).measurements[2:end]),
-      MAP_coordinates="physical logAJ, AG, g, optional D0; gamma fixed; z stores internal numerical coordinates",
+      MAP_coordinates="z: logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed; parameters are the mapped z-mode",
       gradient_norm=fitted.diagnostics.gradient_norm,gradient=fitted.diagnostics.gradient,
       elapsed_seconds=fitted.diagnostics.elapsed_seconds,forward_solves=fitted.diagnostics.forward_solves,
       failures=fitted.diagnostics.failed_evaluations,failure_messages=fitted.diagnostics.failure_messages,

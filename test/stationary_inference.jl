@@ -11,7 +11,7 @@ function stationary_normal_fixture(;bins=2)
         likelihood=GaussianLikelihood(sigma=.2))
     spec=ParameterSpec(:rate;initial=1.,transform=LogTransform(),prior=Prior(Normal();coordinates=:inference))
     experiment=InferenceExperiment(:steady,pb,measurement;solver=StationarySolver(NewtonRaphson()))
-    (;pb,measurement,spec,experiment,problem=EstimationProblem((spec,),(experiment,)),mode=1.25,variance=1/26,physical_map_z=31.5/26,physical_variance=exp(2*31.5/26)/26)
+    (;pb,measurement,spec,experiment,problem=EstimationProblem((spec,),(experiment,)),mode=1.25,variance=1/26)
 end
 
 @testset "Stationary Bayesian target, implicit derivatives and uncertainty" begin
@@ -20,23 +20,23 @@ end
         z=[value]
         @test predictions(p,z)[1][1]≈reshape(z,1,1) atol=1e-10
         @test loglikelihood(p,z)≈logpdf(Normal(value,.2),1.3) atol=1e-9
-        @test posterior_gradient(p,z)≈[-value-1-(value-1.3)/.2^2] atol=1e-8
+        @test posterior_gradient(p,z)≈[-value-(value-1.3)/.2^2] atol=1e-8
         @test ForwardDiff.hessian(v->-logposterior(p,v),z)≈reshape([26.],1,1) atol=1e-7
         @test check_gradient(p,z).valid
     end
     result=fit(p;nstarts=2,seed=18,uncertainty=:laplace)
     @test result.converged
-    @test result.minimizer≈[f.physical_map_z] atol=1e-7
-    @test result.uncertainty.covariance≈reshape([f.physical_variance],1,1) atol=1e-8
+    @test result.minimizer≈[f.mode] atol=1e-7
+    @test result.uncertainty.covariance≈reshape([f.variance],1,1) atol=1e-8
     @test result.diagnostics.derivative_backend===:implicit_stationary
     gn=gauss_newton_approximation(p,result)
-    @test gn.covariance[1]≈exp(2f.physical_map_z)/(25-f.physical_map_z) atol=1e-8
+    @test gn.covariance≈result.uncertainty.covariance atol=1e-8
     report=identifiability_report(p,result.minimizer)
     @test report.prediction_rank==1
-    @test report.prediction_jacobian≈reshape([exp(-f.physical_map_z)],1,1) atol=1e-10
+    @test report.prediction_jacobian≈ones(1,1) atol=1e-10
     profile=estimation_profile(p,result,1,[1.15,1.25,1.35];target=:posterior)
     @test all(profile.converged)
-    @test profile.delta≈([1.15,1.25,1.35] .- f.physical_map_z).^2 ./ (2f.variance) atol=1e-7
+    @test profile.delta≈([1.15,1.25,1.35] .- f.mode).^2 ./ (2f.variance) atol=1e-7
     propagated=posterior_predictive(p,reshape([1.1,1.2,1.3],1,:);max_solves=3)
     @test propagated.solves==3 && propagated.failed_draws==0
     @test [x.raw[1][1][1] for x in propagated.results]≈[1.1,1.2,1.3]
@@ -57,18 +57,18 @@ end
 @testset "Stationary shared/local parameters and nuisance marginal covariance" begin
     f=stationary_normal_fixture()
     offset=ParameterSpec(:offset;initial=0.,prior=Prior(Normal(0,.3);coordinates=:physical),
-        role=:nuisance,experiment=:other)
+        role=:nuisance,experiment=:other,transform=IdentityTransform())
     measurement=Measurement([1.0],f.measurement.observable;likelihood=GaussianLikelihood(sigma=.1),
         response=(y,theta,ex)->y .+theta.offset)
     other=InferenceExperiment(:other,f.pb,measurement;solver=StationarySolver(NewtonRaphson()))
     problem=EstimationProblem((f.spec,offset),(f.experiment,other))
     A=[1. 0.;1. 1.];C=Diagonal([.2^2,.1^2])
     H=Diagonal([1.,1/.3^2])+A'*(C\A)
-    reference=H\(A'*(C\[1.3,1.0])-[1.,0.])
+    reference=H\(A'*(C\[1.3,1.0]))
     result=fit(problem;uncertainty=:laplace)
     @test result.converged
     @test result.minimizer≈reference atol=1e-6
-    @test result.uncertainty.covariance≈Diagonal([exp(reference[1]),1.])*(H\Matrix{Float64}(I,2,2))*Diagonal([exp(reference[1]),1.]) rtol=1e-6
+    @test result.uncertainty.covariance≈H\Matrix{Float64}(I,2,2) rtol=1e-6
     @test marginal_covariance(problem,result.uncertainty).covariance≈result.uncertainty.covariance[1:1,1:1]
     @test abs(result.uncertainty.covariance[1,2])>1e-3
 end
@@ -80,7 +80,7 @@ end
         Aggregation(ConstantKernel((p,t,c)->K))+Death(PolynomialRate((d,)))),MomentSet(0:0))
     pb=StationaryPBMProblem(op,[1.];p=(J=.8,),autonomous=true)
     m=Measurement([1.1],MomentObservable(0);likelihood=GaussianLikelihood(sigma=.2))
-    spec=ParameterSpec(:J;initial=.8,prior=Prior(Normal(1.,.4);coordinates=:physical))
+    spec=ParameterSpec(:J;initial=.8,prior=Prior(Normal(1.,.4);coordinates=:physical),transform=IdentityTransform())
     p=EstimationProblem((spec,),(InferenceExperiment(:nonlinear,pb,m),))
     value=.8;M=2value/(d+sqrt(d^2+2K*value));a=1/(d+K*M);b=-K/(d+K*M)^3
     @test predictions(p,[value])[1][1][1]≈M atol=1e-9
@@ -96,7 +96,7 @@ end
         problem=StationaryPBMProblem(operator,grid.widths;p=(k=1.,),autonomous=true)
         observation=Measurement([2.],FunctionObservable((u,op,p,t)->sum(u)/extent);
             likelihood=GaussianLikelihood(sigma=.1))
-        parameter=ParameterSpec(:k;initial=2.,prior=Prior(Normal(2.,1.);coordinates=:physical))
+        parameter=ParameterSpec(:k;initial=2.,prior=Prior(Normal(2.,1.);coordinates=:physical),transform=IdentityTransform())
         estimation=EstimationProblem((parameter,),(InferenceExperiment(:units,problem,observation),))
         @test ForwardDiff.jacobian(z->vec(predictions(estimation,z)[1][1]),[2.])≈ones(1,1) rtol=1e-8
     end
@@ -220,16 +220,6 @@ end
     @test posterior_gradient(mixed,[.1])≈posterior_gradient(mixed,[.1];derivatives=:finite_difference) rtol=1e-5
 end
 
-# Independent scalar root of the analytically differentiated physical density.
-function physical_test_root(f,lo,hi)
-    @assert f(lo)<0<f(hi)
-    for _ in 1:70
-        mid=(lo+hi)/2
-        f(mid)>0 ? (hi=mid) : (lo=mid)
-    end
-    (lo+hi)/2
-end
-
 @testset "Transient direct, tensor and axial models retain the same estimation API" begin
     grid=Grid1D(range(0,1;length=11))
     parameter=ParameterSpec(:amplitude;initial=1.7,transform=LogTransform(),
@@ -248,8 +238,7 @@ end
         @test check_gradient(problem,[log(1.7)]).valid
         result=fit(problem;maxiters=80)
         @test result.converged
-        expected=physical_test_root(x->5800*(x-2)+(1+log(x/2))/x,1.,2.)
-        @test result.parameters.shared.amplitude≈expected rtol=1e-7
+        @test result.parameters.shared.amplitude≈2. rtol=1e-5
     end
     tensor=Grid2D(Grid1D([0.,.3,1.]),Grid1D([0.,.5,2.]))
     operator=compile(PBMModel(Birth((xy,p,t,c)->p.amplitude)),tensor)
@@ -257,8 +246,7 @@ end
     m=Measurement([1.],[4.],MomentObservable((0,0));likelihood=GaussianLikelihood(sigma=.01))
     problem=EstimationProblem((parameter,),(InferenceExperiment(:tensor,pb,m;dt=.1),))
     @test check_gradient(problem,[log(1.7)]).valid
-    expected=physical_test_root(x->40000*(x-2)+(1+log(x/2))/x,1.,2.)
-    @test fit(problem).parameters.shared.amplitude≈expected rtol=1e-7
+    @test fit(problem).parameters.shared.amplitude≈2. rtol=1e-5
 
     z=AxialGrid([0.,.2,.5,1.]);domain=AxialDispersion(z;velocity=.2,dispersion=.01,boundary=:periodic)
     grid=Grid1D([0.,.5,1.])
@@ -269,9 +257,7 @@ end
         likelihood=GaussianLikelihood(sigma=.01))
     problem=EstimationProblem((spec,),(InferenceExperiment(:axial,pb,m;dt=.005),))
     @test check_gradient(problem,[log(.25)]).valid
-    times=[.5,1.]
-    expected=physical_test_root(x->sum((exp.(-x.*times).-exp.(-0.3 .* times)).*(-times.*exp.(-x.*times)))/.01^2+(1+log(x/.3))/x,.15,.3)
-    @test fit(problem).parameters.shared.d≈expected rtol=1e-7
+    @test fit(problem).parameters.shared.d≈.3 rtol=1e-5
 end
 
 @testset "Stationary NUTS shares the analytically known posterior" begin
@@ -291,6 +277,6 @@ end
         ess_tail=diagnostics(posterior).ess_tail,divergences=diagnostics(posterior).divergences))
     for chain in 1:2,draw in (1,300,700)
         @test diagnostics(posterior).statistics[chain][draw].log_density≈
-            sampling_logposterior(f.problem,posterior.z[:,draw,chain]) atol=1e-9
+            logposterior(f.problem,posterior.z[:,draw,chain]) atol=1e-9
     end
 end

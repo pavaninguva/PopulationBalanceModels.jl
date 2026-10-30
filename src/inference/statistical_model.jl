@@ -212,13 +212,12 @@ end
 """
     EstimationProblem(parameters,experiments;fixed=NamedTuple(),constraints=p->true,gradient=nothing)
 
-Shared statistical model for MAP, Laplace and sampling. Priors are independent
-scalar declarations; use inference transforms for bounds and constraints for
-additional physical restrictions. A `gradient(z)` callback must declare
-`gradient_target=:physical` for d ell_theta(T(z))/dz, or `:sampling` for the
-legacy Jacobian-corrected density. The package adjusts the other target and
-independently verifies both. Physical MAP, physical local covariance and
-Jacobian-corrected sampling use the same likelihood and physical prior law.
+Shared statistical model for MAP, Laplace and sampling. Ordinary priors are
+physical scalar distributions; each ParameterSpec declares its transform.
+A custom `gradient(z)` returns d ell_z / dz by default (`gradient_target=:inference`).
+`:sampling` is a compatibility alias for the same target. The legacy explicit
+`:physical` callback contract means d ell_theta(T(z))/dz and is converted by
+adding the parameter log-Jacobian gradient. Both are independently verified.
 `derivatives=:auto` uses ForwardDiff or a SciMLSensitivitySolver adapter.
 Finite differences require `derivatives=:finite_difference`. Differentiability
 depends on the solver, representation and callbacks; failures never silently
@@ -249,11 +248,9 @@ function EstimationProblem(parameters,experiments;fixed=NamedTuple(),constraints
         isempty(intersect(localnames,collect(Base.keys(e.fixed)))) || throw(ArgumentError("local parameter is both fixed and fitted"))
     end
     all(p->p.experiment===nothing || p.experiment in names,ps) || throw(ArgumentError("parameter names an unknown experiment"))
-    gradient_target===nothing || gradient_target in (:physical,:sampling) || throw(ArgumentError("gradient_target must be :physical or :sampling"))
-    gradient===nothing || gradient_target in (:physical,:sampling) || throw(ArgumentError(
-        "gradient callbacks require gradient_target=:physical (gradient of the physical log posterior with respect to z) or :sampling (legacy Jacobian-corrected z-density gradient)"))
+    gradient_target===nothing || gradient_target in (:inference,:physical,:sampling) || throw(ArgumentError("gradient_target must be :inference (:sampling alias) or legacy :physical"))
     EstimationProblem(ps,es,fixed,constraints,gradient,_derivative_choice(derivatives),
-        gradient_target===nothing ? :physical : gradient_target)
+        gradient_target===nothing ? :inference : gradient_target)
 end
 
 _noise_value(x,theta,ex)=applicable(x,theta,ex) ? x(theta,ex) : x
@@ -437,31 +434,31 @@ end
 """
     logprior(problem, z; coordinates=:inference)
 
-Physical prior log density, evaluated at θ=T(z). `coordinates=:physical` accepts
-an ordered physical vector instead. Direct distributions and legacy physical
-Prior declarations add no optimization Jacobian. An advanced inference prior
-is converted with the inverse Jacobian. Each scalar prior is counted once,
-independently of experiments/blocks; no PBM solve is performed.
+Prior density with respect to the declared dz. Direct distributions always
+refer to physical parameters: log pi(T(z)) + log|det DT(z)|. Legacy tagged
+inference priors contribute log pi_z(z) without another parameter Jacobian.
+Each scalar prior is counted once across all experiments and blocks.
+`coordinates=:physical` changes the ARGUMENT to an ordered physical vector;
+the returned density still refers to dz. No PBM solve is performed.
 """
 function logprior(problem::EstimationProblem,v;coordinates=:inference)
     length(v)==length(problem.parameters) || throw(DimensionMismatch("parameter dimension mismatch"))
     coordinates in (:inference,:physical) || throw(ArgumentError("input coordinates must be :inference or :physical"))
     all(isfinite,v) || return -Inf
-    if coordinates===:inference
-        all(_transform_valid(p.transform,z) for (p,z) in zip(problem.parameters,v)) || return -Inf
-    end
-    values=coordinates===:physical ? v : _fitted_values(problem,v)
-    total=zero(eltype(values))
-    for (i,p) in enumerate(problem.parameters)
-        if p.prior.coordinates===:physical
-            term=Distributions.logpdf(p.prior.distribution,values[i])
-        else
+    if coordinates===:physical
+        all(begin
             bounds=_transform_bounds(p.transform)
-            bounds===nothing || bounds[1]<values[i]<bounds[2] || return -Inf
-            z=coordinates===:inference ? v[i] : _coordinate(p.transform,values[i])
-            isfinite(z) || return -Inf
-            term=Distributions.logpdf(p.prior.distribution,z)-_logjac(p.transform,z)
-        end
+            bounds===nothing || bounds[1]<x<bounds[2]
+        end for (p,x) in zip(problem.parameters,v)) || return -Inf
+    end
+    z=coordinates===:inference ? v : _inference_coordinates(problem,v)
+    all(_transform_valid(p.transform,x) for (p,x) in zip(problem.parameters,z)) || return -Inf
+    values=coordinates===:physical ? v : _fitted_values(problem,z)
+    total=zero(eltype(z))
+    for (p,x,w) in zip(problem.parameters,values,z)
+        term=p.prior.coordinates===:physical ?
+            Distributions.logpdf(p.prior.distribution,x)+_logjac(p.transform,w) :
+            Distributions.logpdf(p.prior.distribution,w)
         (isnan(term) || term == -Inf) && return -Inf
         total+=term
     end
@@ -472,11 +469,11 @@ end
 """
     logposterior(problem,z; coordinates=:inference,on_failure=:throw)
 
-PHYSICAL log-posterior density at θ=T(z), used by MAP. The default argument is
-an internal vector; `coordinates=:physical` accepts physical values in parameter
-order. Numerical coordinates do not add a Jacobian to this objective. Use
-`sampling_logposterior` for the density with respect to dz. NumericalFailure
-can be rejected explicitly; programming errors propagate.
+Common posterior density with respect to declared dz, used for MAP, local
+uncertainty and MCMC. Physical-prior Jacobians are included once in logprior.
+`coordinates=:physical` changes only the input vector, never the reference
+density. An auxiliary sampling map adds its own determinant separately.
+NumericalFailure can be rejected explicitly; programming errors propagate.
 """
 function logposterior(problem::EstimationProblem,v;coordinates=:inference,on_failure=:throw,_counts=nothing)
     _counts===nothing || (_counts.evaluations+=1)
@@ -485,39 +482,28 @@ function logposterior(problem::EstimationProblem,v;coordinates=:inference,on_fai
     lp+loglikelihood(problem,v;coordinates,on_failure,_counts)
 end
 
-"""Jacobian-corrected prior density with respect to internal dz, without PBM
-solves. `logprior` instead returns the physical density at the same point."""
-function sampling_logprior(problem::EstimationProblem,z)
-    value=logprior(problem,z)
-    isfinite(value) ? value+_log_parameter_jacobian(problem,z) : value
-end
+"""Compatibility alias for logprior(problem,z). MAP and MCMC use the same
+inference-coordinate density; this function adds NO further Jacobian."""
+sampling_logprior(problem::EstimationProblem,z)=logprior(problem,z)
 
-"""
-    sampling_logposterior(problem,z; on_failure=:throw)
+"""Compatibility alias for logposterior(problem,z), the common dz-density.
+Only an additional auxiliary sampling map adds another determinant."""
+sampling_logposterior(problem::EstimationProblem,z;on_failure=:throw,_counts=nothing)=
+    logposterior(problem,z;on_failure,_counts)
 
-Density with respect to INTERNAL coordinates dz:
-`logposterior(problem,z) + log|det DT(z)|`. All priors retain their physical
-probability law. An auxiliary sampling map adds its own determinant separately.
-This function is not the physical MAP objective.
-"""
-function sampling_logposterior(problem::EstimationProblem,z;on_failure=:throw,_counts=nothing)
-    value=logposterior(problem,z;on_failure,_counts)
-    isfinite(value) ? value+_log_parameter_jacobian(problem,z) : value
-end
-
-"""Physical likelihood, prior and posterior components at an internal vector
-(or an ordered physical vector with `coordinates=:physical`). The density's
-reference coordinates are always physical; no transform Jacobian is added."""
+"""Normalized likelihood and declared-coordinate prior/posterior components.
+Arguments are internal z by default, or ordered physical values with
+coordinates=:physical. Density coordinates always remain :inference."""
 function posterior_components(problem::EstimationProblem,z;coordinates=:inference,kwargs...)
     likelihood=loglikelihood(problem,z;coordinates,kwargs...);prior=logprior(problem,z;coordinates)
     (;loglikelihood=likelihood,logprior=prior,logposterior=likelihood+prior,
-      density_coordinates=:physical,argument_coordinates=coordinates,convention=:physical_map_v1)
+      density_coordinates=:inference,argument_coordinates=coordinates,convention=_MAP_CONVENTION)
 end
 
-const _MAP_CONVENTION=:physical_map_v1
+const _MAP_CONVENTION=:inference_map_v2
 
 """MAP output. `minimizer` contains internal coordinates; `parameters` and the
-reported component densities use the physical MAP convention. `convention`
+reported component densities use the declared inference-coordinate convention. `convention`
 prevents older coordinate-density MAP/uncertainty results being silently reused."""
 struct MAPResult{P,C,L}
     minimizer::Vector{Float64}
@@ -544,12 +530,12 @@ function _check_parameterization(problem,specs)
 end
 function _check_map_result(problem,result;_counts=nothing)
     isdefined(result,:convention) && result.convention===_MAP_CONVENTION || throw(ArgumentError(
-        "MAP result has an old or unspecified density convention. Refit the physical posterior; do not relabel an earlier z-density mode or its uncertainty. Analytical/manual results must declare convention=:physical_map_v1 and pass the same checks."))
+        "MAP result has an old or unspecified density convention. Refit under the declared transforms; do not relabel a physical-density or unversioned MAP/covariance. Analytical/manual results must declare convention=:inference_map_v2 and pass the same checks."))
     _check_parameterization(problem,result.coordinates)
     parts=posterior_components(problem,result.minimizer;_counts)
     all(isapprox(a,b;rtol=1e-10,atol=1e-8) for (a,b) in
         ((parts.loglikelihood,result.loglikelihood),(parts.logprior,result.logprior),
-         (parts.logposterior,result.logposterior))) || throw(ArgumentError("MAP result does not match this physical posterior at its center"))
+         (parts.logposterior,result.logposterior))) || throw(ArgumentError("MAP result does not match this inference-coordinate posterior at its center"))
     nothing
 end
 
@@ -595,9 +581,9 @@ the HMC inverse mass matrix in sampling coordinates (inference coordinates by de
 symmetric positive definite and is used only for tuning, not returned as a
 posterior uncertainty estimate. A tuple/vector of one such matrix per chain
 allows different initial tuning, with independent adaptation. Neither form can
-be combined with `laplace` initialization. A supplied physical Laplace covariance
-is locally converted through inverse parameter/map Jacobians for tuning and
-initialization; it remains distinct from sampler-coordinate covariance estimates.
+be combined with `laplace` initialization. A supplied Laplace covariance already uses inference coordinates and is used
+directly. Only an additional auxiliary sampling map requires a local Jacobian
+conversion for tuning; that conversion is not a new posterior approximation.
 An optional `sampling_map=(to_sampler,from_sampler,logabsdetjac,label)` changes
 only auxiliary sampler coordinates; logabsdetjac is the log absolute determinant
 of the Jacobian of from_sampler.

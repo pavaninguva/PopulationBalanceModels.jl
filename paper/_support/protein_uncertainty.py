@@ -49,6 +49,10 @@ def display(z, meta):
 
 def approximation_coordinates(report):
     convention = report.get('convention')
+    if convention == 'inference_map_v2':
+        if report.get('coordinates') != 'inference':
+            raise ValueError('Declared-coordinate approximation lacks inference covariance coordinates')
+        return 'inference'
     if convention == 'physical_map_v1':
         if report.get('coordinates') != 'physical':
             raise ValueError('Physical-MAP approximation lacks physical covariance coordinates')
@@ -360,7 +364,7 @@ def main(argv=None):
     configure(require_dvipng=False)
     for model in ('cnt','cnt_grd') if args.model=='both' else (args.model,):
         comparison(model,args.approximation,tables=args.tables)
-    caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (a) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (b) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the selected MAP under its recorded density convention. Physical\_map\_v1 reports use physical-posterior curvature; older reports retain their original inference-coordinate calculation. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
+    caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (a) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (b) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the selected MAP under its recorded density convention. Inference\_map\_v2 reports use the declared-coordinate posterior; physical\_map\_v1 reports and older unversioned analyses retain their producer convention. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
     if args.approximation=='gauss_newton':
         caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (a) A joint Gaussian in the coordinates recorded by its producer: historical reports use the inference-density MAP and transformed-prior curvature; physical\_map\_v1 reports use the physical MAP, physical sensitivities and physical-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (b) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
         if args.tables:

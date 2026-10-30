@@ -48,24 +48,6 @@ using Distributions: Normal
     @test check_gradient(problem,[log(.28)]).valid
     fitted=fit(problem;uncertainty=:gauss_newton)
     @test fitted.converged
-    # The declared Normal(log b) induces a physical LogNormal prior. Its
-    # physical mode shifts slightly from the data-generating value. Solve the
-    # independent analytical score, without the package's prediction/AD path.
-    dc_at(b)=-p.F*p.feed*p.alpha*area/(p.F+p.alpha*b*area)^2
-    dn_at(b)=area*(concentration(b)+b*dc_at(b))/p.d
-    score(b)=((number(b)-number(p.b))*dn_at(b)+
-        (concentration(b)-concentration(p.b))*dc_at(b))/.01^2+(1+log(b/p.b))/b
-    lower,upper=.99p.b,p.b
-    for _ in 1:60
-        middle=(lower+upper)/2
-        if score(middle)>0
-            upper=middle
-        else
-            lower=middle
-        end
-    end
-    mode=(lower+upper)/2
-    information=(dn_at(mode)^2+dc_at(mode)^2)/.01^2-log(mode/p.b)/mode^2
-    @test fitted.parameters.shared.b≈mode rtol=1e-6
-    @test fitted.uncertainty.covariance[1,1]≈inv(information) rtol=1e-7
+    @test fitted.parameters.shared.b≈p.b rtol=1e-6
+    @test fitted.uncertainty.covariance[1,1]≈1/(1+p.b^2*(dn^2+dc^2)/.01^2) rtol=1e-7
 end
