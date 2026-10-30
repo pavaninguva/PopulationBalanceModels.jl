@@ -22,8 +22,8 @@ function estimation_problem()
         Measurement([exact(3)], MomentObservable(3); likelihood=GaussianLikelihood(sigma=0.10)),
     )
     parameters = (
-        ParameterSpec(:G; initial=0.3, prior=LogNormal(log(0.3),0.7)),
-        ParameterSpec(:J; initial=1.0, prior=LogNormal(log(1.0),0.7)),
+        ParameterSpec(:G; initial=0.3, prior=LogNormal(log(0.3),0.7),transform=LogTransform()),
+        ParameterSpec(:J; initial=1.0, prior=LogNormal(log(1.0),0.7),transform=LogTransform()),
     )
     experiment = InferenceExperiment(:crystallizer, base, measurements...;
         solver=StationarySolver(abstol=1e-12))
@@ -35,10 +35,10 @@ function run(; sample=false)
     result = fit(problem; nstarts=3, seed=42, uncertainty=:gauss_newton)
     result.converged || error("stationary MAP did not pass convergence checks")
     println("Synthetic truth: ", truth)
-    println("MAP in physical units: ", result.parameters.shared)
+    println("Mapped z-MAP in physical units: ", result.parameters.shared)
     println("Gradient verification: ", check_gradient(problem,result.minimizer))
     println("Predicted stationary moments: ", predictions(problem,result.minimizer))
-    println("Local covariance in physical G, J units: ", result.uncertainty.covariance)
+    println("Local covariance in declared log(G), log(J) coordinates: ", result.uncertainty.covariance)
     if sample
         posterior = sample_posterior(problem; initial=result, warmup=300,
             samples=1000, chains=2, seed=43)
