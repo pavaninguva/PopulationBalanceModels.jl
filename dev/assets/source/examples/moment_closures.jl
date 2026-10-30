@@ -1,18 +1,33 @@
+module MomentClosures
 using PopulationBalanceModels
 
-model=PBMModel(
-    growth=Growth(PolynomialRate((0.2,0.01))),
-    aggregation=Aggregation(ConstantKernel(0.05)))
-initial=[1.0,1.0,2.0,6.0] # exponential density; shared raw moments
-
-for (family,basis,u0) in ((ExactClosure(),MomentSet(0:3),initial),
-        (QMOM(2),MomentSet(0:3),initial),
-        (LogNormalClosure(),MomentSet(0:2),initial[1:3]))
-    # Exact growth integration can coexist with a family's default collision rule.
-    op=compile(model,basis;method=family,
-        methods=TermMethods(growth=ExactMomentRule()))
-    solution=simulate(PBMProblem(op,u0,(0.0,0.2));dt=0.002)
-    println((family=typeof(family),methods=term_methods(op),mu2=solution.u[end][3]))
+"""Quadratic growth: known lower equations and a reconstructed fourth moment."""
+function run_mixed(;a=0.1)
+    model = PBMModel(
+        growth=Growth(PolynomialRate((0.,0.,(p,t,ctx)->p.a))),
+        primary=Nucleation((p,t,ctx)->p.J,0.),
+    )
+    basis = MomentSet(0:3; coordinate=:volume)
+    operator = compile(model,basis; moment_method=QMOM())
+    initial = [1.,1.,2.,6.]
+    problem = PBMProblem(operator,initial,(0.,0.02); p=(a=a,J=0.01))
+    derivative = zero(problem.u0)
+    rhs!(derivative,problem.u0,operator,problem.p,0.)
+    @assert vec(derivative) ≈ [0.01,2a,12a,60a]
+    solution = simulate(problem; method=SSPRK33(),dt=0.001)
+    println("Resolved family: ",moment_plan(operator).family)
+    for equation in moment_plan(operator).terms.growth
+        println("Growth M",equation.order,": ",equation.treatment,
+                "; missing moments = ",equation.missing)
+    end
+    println("Initial moment rates: ",vec(derivative))
+    println("Final moments: ",vec(last(solution.u)))
+    # The exponential initial density has true M4=24. Two-node QMOM gives 20;
+    # the closed lower equations do not make this full trajectory exact.
+    (;problem,solution)
 end
-# The first three equations close for these laws, so this checks shared moment
-# bookkeeping. General nonlinear laws require an independent closure study.
+
+if abspath(PROGRAM_FILE)==@__FILE__
+    run_mixed()
+end
+end

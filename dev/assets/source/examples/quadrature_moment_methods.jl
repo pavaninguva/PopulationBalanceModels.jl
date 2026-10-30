@@ -19,7 +19,7 @@ function run_comparison(;output=joinpath(@__DIR__,"..","docs","src","assets","qu
             else
                 state=raw
             end
-            op=compile(model,basis;method);problem=PBMProblem(op,state,(0.,2.))
+            op=compile(model,basis;moment_method=method);problem=PBMProblem(op,state,(0.,2.))
             sol=simulate(problem;dt=.005,saveat=times)
             # Save a smooth density from EQMOM's declared kernel at final time.
             if method isa EQMOM
