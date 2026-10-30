@@ -278,20 +278,30 @@ characteristics; its near-roundoff error is specific to this compatible problem.
 
 ## Minimal run and full reproduction
 
-Run this block from the repository root. It constructs and solves one problem;
-including a driver does not run its CSV exports.
+The [full comparison driver](../assets/source/examples/inguva_braatz_case2.jl)
+also runs refinement and the eligible characteristic method. Follow the
+[shared setup guide](../verification.md) to retain its directory layout.
+
+### Complete script
+
+Run from the repository root. The recipe supplies the kinetic parameters and
+exact bin integrals; the remaining lines declare and solve the two-coordinate model.
 
 ```julia
 using PopulationBalanceModels
 include("examples/inguva_braatz_case2.jl")
-problem = InguvaBraatzCase2.problem(50; scheme=WENO5(epsilon=1e-12))
-dt = suggest_dt(problem.operator, problem.u0, problem.p, 0.0; cfl=0.4)
+recipe = InguvaBraatzCase2
+p = recipe.parameters()
+grid = Grid2D(range(0.0, 2.0; length=51), range(0.0, 2.0; length=51))
+model = PBMModel(growth=Growth2D(recipe.growth_rate))
+boundary = SizeBC(OpenBoundary(), NoFlux())
+operator = compile(model, grid; methods=TermMethods(growth=WENO5(epsilon=1e-12)),
+    bc=SizeBC2D(x=boundary, y=boundary))
+problem = PBMProblem(operator, recipe.reference(grid, 0.0, p), (0.0, 1.0); p)
+dt = suggest_dt(operator, problem.u0, p, 0.0; cfl=0.4)
 solution = simulate(problem; dt, saveat=[1.0], check_nonnegative=false)
-reference = InguvaBraatzCase2.reference(problem.operator.grid, 1.0, problem.p)
+reference = recipe.reference(grid, 1.0, p)
 L1_error = sum(abs, last(solution.u) - reference)
+minimum_density = minimum(density(grid, last(solution.u)))
+@show L1_error minimum_density
 ```
-
-Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
-to retain their directory layout and plotting environment.
-
-- [inguva_braatz_case2.jl](../assets/source/examples/inguva_braatz_case2.jl)

@@ -33,7 +33,9 @@ moments can therefore have quadrature error even when bin numbers are exact.
 
 A [MomentSet](moment_methods.md) declares the tracked moment basis. Raw-moment
 methods evolve those moments; DQMOM evolves weights and weighted abscissas and
-recovers the moments through `moment_value`. The basis alone does not prescribe
+recovers the moments through `moment_value`. Select the family with
+`moment_method=QMOM()` during moment compilation; omitted node counts are inferred
+from the requested basis. The basis alone does not prescribe
 the solver-state layout. [Grid2D](case_studies/transport.md) instead stores
 integrated numbers over rectangular cells in two internal coordinates.
 

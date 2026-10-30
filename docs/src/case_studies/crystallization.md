@@ -327,19 +327,45 @@ consistently specified numerical benchmark.
 
 ## Minimal run and full reproduction
 
-Run this block from the repository root. It constructs and solves one problem;
-including a driver does not run its CSV exports.
+The [physical recipe](../assets/source/examples/papers/gunawan2004_case2.jl)
+supplies the kinetic callbacks and initial-bin integrals. The
+[full comparison driver](../assets/source/examples/cooling_crystallization_benchmark.jl)
+adds the reference calculation and error tables. Follow the
+[shared setup guide](../verification.md) to retain their directory layout.
+
+### Complete script
+
+Run from the repository root. This assembles the same physical terms and
+discrete solute exchange without running the benchmark's export machinery.
 
 ```julia
 using PopulationBalanceModels
 include("examples/papers/gunawan2004_case2.jl")
 recipe = Gunawan2004Case2
-grid = Grid1D(sort!(unique(vcat(collect(0.0:2.0:1600.0), 180.5, 210.5))))
-problem = recipe.build(; grid, initial_density=recipe.benchmark_initial_density,
-    c0=recipe.solubility(recipe.temperature(0.0)), scheme=MUSCL())
-solution = simulate(problem; method=SSPRK33(), dt=0.1, saveat=0.0:100.0:1000.0)
-concentration = [bulk(problem, u, :c) for u in solution.u]
-```
+p = recipe.parameters()
+edges = sort!(unique(vcat(collect(0.0:2.0:1600.0), 180.5, 210.5)))
+grid = Grid1D(edges; coordinate=:length)
+model = PBMModel(
+    growth=Growth(recipe.growth_rate),
+    nucleation=Nucleation(recipe.nucleation_rate, 0.0),
+)
+methods = TermMethods(growth=MUSCL(),
+    by_term=(nucleation=BoundaryInjection(:left),))
+operator = compile(model, grid; methods, bc=SizeBC())
+exchange = ConservativeExchange(:crystals, :c, (L, p, t, ctx)->p.rho * L^3;
+    mechanisms=(:growth, :nucleation))
+system = PBMSystem((crystals=operator,);
+    fields=(p, t)->(T=recipe.temperature(t),),
+    exchanges=(exchange,), nonnegative_bulk=(:c,))
 
-Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
-to retain their directory layout and plotting environment.
+initial = recipe.initial_counts(grid, recipe.benchmark_initial_density)
+c0 = recipe.solubility(recipe.temperature(0.0))
+problem = PBMProblem(system, (crystals=initial,), (0.0, 1000.0);
+    bulk0=(c=c0,), p)
+solution = simulate(problem; method=SSPRK33(), dt=0.1,
+    saveat=0.0:100.0:1000.0)
+concentration = [bulk(problem, u, :c) for u in solution.u]
+material = [bulk(problem, u, :c) +
+    p.rho * moment(grid, population(problem, u, :crystals), 3) for u in solution.u]
+@show last(concentration) maximum(abs.(material .- first(material)))
+```

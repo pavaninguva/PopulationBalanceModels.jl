@@ -74,7 +74,7 @@ function _validate_measure_operator(op::CompiledSystem,m)
                 throw(ArgumentError("fixed-rank QMOM cannot handle boundary rank loss; select RankAdaptiveQMOM"))
             for item in pop.prepared
                 item.term isa Union{Growth,Nucleation,Death,Dilution,Aggregation,Breakage} || throw(ArgumentError("MeasureEuler has no positive-measure rule for $(typeof(item.term))"))
-                item.method isa Union{ExactMomentRule,QuadratureMomentRule} || throw(ArgumentError("custom weak forms require their own admissible evolution rule"))
+                item.method isa Union{ExactMomentRule,QuadratureMomentRule,_AutomaticMomentRule} || throw(ArgumentError("custom weak forms require their own admissible evolution rule"))
             end
         elseif pop isa CompiledPBM
             any(item->item.term isa SizeDiffusion,pop.prepared) && throw(ArgumentError("SizeDiffusion requires a residual RK integrator; MeasureEuler diffusion splitting is not implemented"))

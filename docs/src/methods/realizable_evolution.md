@@ -22,13 +22,13 @@ model = PBMModel(
     growth=Growth((L,p,t,ctx)->0.8),
     nuclei=Nucleation((p,t,ctx)->1.7, 0.0),
 )
-op = compile(model, basis; closure=RankAdaptiveQMOM(3))
+op = compile(model, basis; moment_method=RankAdaptiveQMOM())
 problem = PBMProblem(op, zeros(6), (0.0,1.0))
 solution = simulate(problem; dt=0.05, method=MeasureEuler())
 report = diagnostics(solution)
 ```
 
-The selected term rules remain visible through `term_methods(op)`. The policy
+The selected moment contributions remain visible through `moment_plan(op)`. The policy
 uses the physical growth and event laws in those terms. A positive-measure
 update is a different **time discretization** from Euler applied to their raw
 moment residual; these have the same consistent first-order weak limit in the
@@ -38,7 +38,7 @@ supported scope. Custom weak forms need their own admissible evolution rule.
 |:--|:--|:--|:--|:--|
 | `RankAdaptiveQMOM(N)` | Growth, point nucleation, death, dilution, aggregation, discrete daughter breakage | Yes | Atomic hitting/removal | Yes, without size-boundary events |
 | `QMOM(N)` | Same mechanisms while full rank remains admissible | Yes for positive-growth age quadrature that produces full rank | Rejected; removal can reduce rank | Yes while selected closure remains admissible |
-| `ExactClosure` | Same supported mechanisms, with explicitly supplied `reconstruction=RankAdaptiveQMOM(N)` and exactly `2N` tracked moments | Yes | Through that declared atomic reconstruction | Yes, with explicit reconstruction |
+| `ExactClosure` | Same supported mechanisms, with explicitly supplied `reconstruction=RankAdaptiveQMOM(N)` and exactly `2N` tracked moments | Yes | Legacy family aliases retain this declared atomic treatment; canonical exact-only compilation rejects unresolved boundaries | Yes, with explicit reconstruction |
 | Gamma `EQMOM` | Rejected by this policy | No guarantee from this policy | No boundary implementation | No guarantee from this policy |
 | `LogNormalClosure` | Rejected by this policy | No guarantee from this policy | No boundary implementation | No guarantee from this policy |
 | `DQMOM` | Rejected by this policy | Unsupported | Unsupported, including node collisions | Unsupported |

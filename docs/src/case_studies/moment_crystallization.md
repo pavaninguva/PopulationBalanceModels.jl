@@ -460,20 +460,32 @@ This retains separate timestep and reconstruction-quadrature checks.
 
 ## Minimal run and full reproduction
 
-Run this block from the repository root. It constructs and solves one problem;
-including a driver does not run its CSV exports.
+The [full benchmark driver](../assets/source/examples/qamar_moment_benchmarks.jl)
+contains the other families, pulse calculation and reporting. Follow the
+[shared setup guide](../verification.md) to retain its directory layout.
+
+### Complete script
+
+Run from the repository root. This assembles the analytical aggregation–fragmentation
+example with three-node QMOM; it does not run the other benchmark configurations.
 
 ```julia
 using PopulationBalanceModels
 include("examples/qamar_moment_benchmarks.jl")
 benchmark = QamarMomentBenchmarks
-problem = benchmark.problem4(; method=QMOM(3))
+volume = AdditiveCoordinate(x->x^3, cbrt)
+model = PBMModel(
+    aggregation=Aggregation(ConstantKernel(1.0); coordinate_map=volume),
+    breakage=Breakage((x, p, t, ctx)->x^3, UniformVolumeDaughters();
+        coordinate_map=volume),
+)
+basis = MomentSet(0:5; coordinate=:length)
+operator = compile(model, basis; moment_method=QMOM())
+problem = PBMProblem(operator, benchmark.exact4(0.0), (0.0, 50.0))
 solution = simulate(problem; method=SSPRK33(), dt=0.02, saveat=0.0:1.0:50.0)
-M1 = [moment(problem.operator.grid, vec(u), 1) for u in solution.u]
+M1 = [moment_value(operator.closure, basis, u, 1) for u in solution.u]
+M3 = [moment_value(operator.closure, basis, u, 3) for u in solution.u]
 reference = [benchmark.exact4(t)[2] for t in solution.t]
+@show maximum(abs.((M1 .- reference) ./ reference))
+@show maximum(abs.(M3 ./ first(M3) .- 1.0))
 ```
-
-Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
-to retain their directory layout and plotting environment.
-
-- [qamar_moment_benchmarks.jl](../assets/source/examples/qamar_moment_benchmarks.jl)

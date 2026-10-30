@@ -336,8 +336,15 @@ SVG figures. Rebuild Documenter after changing the figures.
 
 ## Minimal run and full reproduction
 
-Run this block from the repository root. It constructs and solves one problem;
-including a driver does not run its CSV exports.
+The [full driver](../assets/source/examples/estimate_size_dependent_growth.jl)
+adds uncertainty calculations, sampling and numerical-refinement comparisons.
+Use an environment with Optim and the checkout developed into it; see the
+[shared setup guide](../verification.md).
+
+### Complete script
+
+Run from the repository root. This generates the declared synthetic observations
+and performs a MAP fit, without sampling or writing benchmark outputs.
 
 ```julia
 using PopulationBalanceModels, Optim
@@ -345,11 +352,9 @@ include("examples/estimate_size_dependent_growth.jl")
 study = EstimateSizeDependentGrowth
 data = study.synthetic_measurements(; seed=2022)
 problem = study.estimation_problem(data; prior=:lognormal)
-fitted = fit(problem; maxiters=200)
+fitted = fit(problem; nstarts=3, seed=22, maxiters=500)
+fitted.converged || error("MAP did not converge; inspect the fit diagnostics")
 parameters = physical_parameters(problem, fitted.minimizer)
+predicted = predictions(problem, fitted.minimizer)
+@show fitted.converged parameters
 ```
-
-Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
-to retain their directory layout and plotting environment.
-
-- [estimate_size_dependent_growth.jl](../assets/source/examples/estimate_size_dependent_growth.jl)

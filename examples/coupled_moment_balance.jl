@@ -6,7 +6,7 @@ birth=Nucleation((p,t,ctx)->p.J,0.1)
 aggregation=Aggregation(ConstantKernel((p,t,ctx)->p.K))
 fragmentation=Breakage(PolynomialRate((0.03,)),SelfSimilarDaughters((0.5,),(2.0,)))
 model=PBMModel(growth+birth+aggregation+fragmentation)
-op=compile(model,moments;closure=ExactClosure())
+op=compile(model,moments;moment_method=ExactClosure())
 system=PBMSystem((particles=op,);
     exchanges=(MomentExchange(:particles,:c,1),),nonnegative_bulk=(:c,))
 μ0=[1.0,1.0,2.0,6.0] # unit exponential density on the positive volume axis
@@ -17,10 +17,10 @@ final=stateview(problem,solution.u[end])
 println((moments=final.populations.particles,solute=final.bulk.c,
     conserved=final.bulk.c+moment(moments,final.populations.particles,1)))
 
-# Non-polynomial laws require an explicit closure. QMOM approximates their
+# Generic laws use the selected reconstruction. QMOM approximates their
 # weak-form integrals using a positive quadrature reconstruction at each stage.
 qop=compile(PBMModel(Growth((x,p,t,ctx)->0.1*sqrt(x))),moments;
-    closure=QuadratureClosure(2))
+    moment_method=QMOM())
 qproblem=PBMProblem(qop,μ0,(0.0,0.1))
 qsolution=simulate(qproblem;dt=0.001)
 println((quadrature=quadrature(moments,qsolution.u[end]),))

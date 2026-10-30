@@ -556,8 +556,20 @@ visible; it does not alter a state. The raw histories, selected PSD snapshots, i
 
 ## Minimal run and full reproduction
 
-Run this block from the repository root. It constructs and solves one problem;
-including a driver does not run its CSV exports.
+The [long-time driver](../assets/source/examples/shin_lnp_long_time.jl),
+[model assembly](../assets/source/examples/shin_lnp_reproduction.jl), and
+[physical recipe](../assets/source/examples/papers/cej2025_lnp.jl) preserve the
+full reconstruction. Follow the [shared setup guide](../verification.md) and
+include OrdinaryDiffEqRosenbrock, ADTypes and SciMLBase in that environment.
+
+This 10-µs native run does not regenerate the historical long-time figures.
+Their reproduction limit is stated above; no clipping or relaxed deposition
+checks are applied. Including the driver defines its functions without running
+its benchmark or writing files.
+
+### Complete script
+
+Run from the repository root:
 
 ```julia
 using PopulationBalanceModels
@@ -567,15 +579,5 @@ problem = remake(ShinLNPLongTime.make_problem(; bins=80, FRR=3.0);
     tspan=(0.0, 1e-5))
 solution = simulate(problem; method=SSPRK33(), dt=1e-8, saveat=[0.0, 1e-5])
 free_lipid = [bulk(problem, u, :lipid) for u in solution.u]
+@show last(free_lipid)
 ```
-
-This 10-µs native run does not regenerate the historical long-time figures.
-Their reproduction limit is stated above; no clipping or relaxed deposition
-checks are applied.
-
-Full sources are linked below. Follow the [shared setup and reproduction guide](../verification.md)
-to retain their directory layout and plotting environment.
-
-- [shin_lnp_long_time.jl](../assets/source/examples/shin_lnp_long_time.jl)
-- [shin_lnp_reproduction.jl](../assets/source/examples/shin_lnp_reproduction.jl)
-- [papers/cej2025_lnp.jl](../assets/source/examples/papers/cej2025_lnp.jl)

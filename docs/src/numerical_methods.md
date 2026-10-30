@@ -55,12 +55,12 @@ increments do not imply an independent joint population; see the
 [coefficient, boundary and coupling contract](methods/dispersion.md).
 
 MomentSet declares the tracked moment basis. Compilation selects a moment
-method separately from each term's weak-form rule.
-ExactClosure uses ExactMomentRule for supported polynomial/closed terms.
-QMOM (QuadratureClosure), RankAdaptiveQMOM, Gamma EQMOM, DQMOM and LogNormalClosure use QuadratureMomentRule by
-default, with exact rules available for eligible named terms. A closure must
-provide any missing higher moments; neither a requested moment order nor a
-quadrature rule creates an unavailable closure. DQMOM evolves positive weights
+family with `moment_method` and prepares each equation automatically: tracked
+analytical contributions use the state directly; missing moments and generic
+population integrals use the selected family. No per-term rule selection is
+required. `moment_plan` reports those choices. `ExactClosure` is an optional
+strict analytical-only request. A closure must provide any missing higher
+moments; a requested order never adds an unavailable state. DQMOM evolves positive weights
 and weighted abscissas; the other families evolve raw moments. See
 [Moment methods](moment_methods.md) for support and realizability restrictions.
 

@@ -3,9 +3,13 @@
 entities. Their contributions can be differential or integral operators, sources
 or sinks. Direct bin-integrated discretizations and moment representations pass
 through compatibility checks and reusable numerical preparation. DQMOM uses
-weights and weighted abscissas rather than raw-moment state entries. Optional
-population/bulk coupling and prescribed axial advection--dispersion precede
-transient or stationary problem construction. Initial conditions and a time span
+weights and weighted abscissas rather than raw-moment state entries. A solid path
+connects compilation directly to transient or stationary problem construction.
+Dashed side inputs denote optional population/bulk coupling through
+\texttt{PBMSystem} and optional prescribed reactor transport through
+\texttt{AxialDispersion}. These are separate additions that can be combined for
+eligible models; neither is required for a standalone population.
+Initial conditions and a time span
 belong to the transient branch; a numerical guess belongs to the stationary
 branch. Observation operators connect eligible transient and stationary forward calculations to
 MAP estimation and optional sensitivity-based Gauss--Newton, full-Hessian
@@ -19,7 +23,7 @@ data. Scenario setup varies physical inputs; Monte Carlo propagation and
 non-intrusive polynomial chaos supply output means, covariance, quantiles and
 event probabilities, with independent full-model validation of the surrogate.
 MC preserves declared joint inputs or posterior draws. PCE uses independent
-normal/uniform reference coordinates with an explicit physical-input map;
+normal, uniform or beta reference coordinates with an explicit physical-input map;
 an arbitrary posterior does not automatically define a PCE basis. This does not
 imply universal compatibility of the displayed methods. (b) Required dependencies,
 optional extension roles and separate development/figure tools, checked against

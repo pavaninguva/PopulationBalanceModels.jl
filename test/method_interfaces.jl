@@ -86,7 +86,7 @@ end
         rhs!(a,μ,mixed,(;),0.0); rhs!(b,μ,exact,(;),0.0)
         @test a≈b rtol=1e-12
         @test term_methods(mixed).growth isa ExactMomentRule
-        @test term_methods(mixed).agg isa QuadratureMomentRule
+        @test all(e->e.treatment==:analytical,moment_plan(mixed).terms.agg)
         @test_throws ArgumentError compile(model,g;method=ExactClosure(),methods=TermMethods(aggregation=QuadratureMomentRule()))
         logg=MomentSet(0:2); initial=reshape([1.0,exp(0.125),exp(0.5)],:,1)
         lm=compile(PBMModel(Growth((x,p,t,c)->sqrt(x))),logg;method=LogNormalClosure())

@@ -10,20 +10,36 @@ _system_population(::CompiledMomentPBM)=true
 
 
 """
-    compile(model, MomentSet(0:K); closure=ExactClosure(), fields=...)
+    compile(model, MomentSet(0:K); moment_method=nothing, fields=...)
 
-Exact rules: polynomial growth/removal, constant-kernel aggregation in additive
-coordinates, self-similar polynomial-rate breakage, point creation, MomentSource.
-QMOM additionally evaluates general growth, removal, aggregation and breakage
-through their weak forms. It does not infer source integrals or boundary losses.
+Evaluate each supported contribution analytically from tracked moments, using
+the selected reconstruction only for missing moments or generic population
+integrals. `QMOM()` and other node-based specifications infer resolution from
+the basis. Without a keyword, closed supported models use ExactClosure;
+otherwise compatible bases use RankAdaptiveQMOM. Odd raw-moment counts never
+silently select an assumed density. Inspect `moment_plan(operator)`.
+
+`moment_method=ExactClosure()` strictly requires analytical evolution. Legacy
+`method`/`closure` aliases and explicit TermMethods overrides remain available;
+supply only one family keyword. Boundary events still require MeasureEuler.
 """
-function compile(model::PBMModel,g::MomentSet;closure=ExactClosure(),method=nothing,methods=TermMethods(),fields=_emptyfields,boundary=MomentBoundary(),evolution=nothing)
+function compile(model::PBMModel,g::MomentSet;moment_method=nothing,closure=nothing,method=nothing,methods=TermMethods(),fields=_emptyfields,boundary=MomentBoundary(),evolution=nothing)
     _validate_size_diffusion(model,g,nothing,BatchDomain(),evolution)
     evolution===nothing || throw(ArgumentError("direct sectional HOC/characteristic evolution requires Grid1D or Grid2D bin integrals; moment populations use their moment integration policies"))
     boundary isa MomentBoundary || throw(ArgumentError("boundary must be MomentBoundary"))
-    selected=method===nothing ? closure : method
-    selected isa AbstractMomentMethod || throw(ArgumentError("invalid moment method"))
+    choices=filter(!isnothing,(moment_method,method,closure))
+    length(choices)<=1 || throw(ArgumentError("conflicting moment-family keywords: supply only moment_method (legacy aliases: method or closure)"))
     methods isa TermMethods || throw(ArgumentError("methods must be TermMethods"))
+    _validate_plan(methods,model)
+    residual_boundary=boundary.left===:error && boundary.right===:error && boundary.lower==0 && isinf(boundary.upper)
+    selected=isempty(choices) ? (residual_boundary ? _default_moment_method(model,g,methods) :
+        _resolve_moment_method(RankAdaptiveQMOM(),g)) : only(choices)
+    selected isa AbstractMomentMethod || throw(ArgumentError("invalid moment method"))
+    selected=_resolve_moment_method(selected,g)
+    # Legacy ExactClosure + explicit MeasureEuler reconstruction remains usable
+    # for event policies. The canonical exact-only request cannot certify a trace.
+    moment_method isa ExactClosure && !residual_boundary && throw(ArgumentError(
+        "ExactClosure cannot resolve the declared finite/absorbing moment boundary; no boundary trace is determined by global moments. Select RankAdaptiveQMOM with native MeasureEuler for supported boundary events"))
     validate_moment_method(selected,model,g)
     for term in model.terms
         if term isa Aggregation
@@ -33,13 +49,7 @@ function compile(model::PBMModel,g::MomentSet;closure=ExactClosure(),method=noth
             g.coordinate in (:volume,:mass) || throw(ArgumentError("breakage needs an additive coordinate or AdditiveCoordinate map"))
         end
     end
-    # A representation's method chooses the default weak-form rule; users may
-    # override any named term, e.g. exact affine growth alongside QMOM collisions.
-    rule=selected isa ExactClosure ? ExactMomentRule() : QuadratureMomentRule()
-    defaults=NamedTuple{Tuple(unique(mechanism.(model.terms)))}(Tuple(rule for _ in unique(mechanism.(model.terms))))
-    plan=TermMethods(;by_term=methods.by_term,merge(defaults,methods.defaults)...)
-    prepared=_prepare_terms(model,plan,g)
-    selected isa ExactClosure && any(item->item.method isa QuadratureMomentRule,prepared) && throw(ArgumentError("ExactClosure does not provide quadrature; select a reconstruction method"))
+    prepared=_prepare_moment_terms(model,g,selected,methods)
     CompiledMomentPBM(model,g,selected,fields,prepared,boundary)
 end
 
@@ -111,9 +121,14 @@ function _moment_terms!(dμ,μ,op,p,t,ctx;mechanisms=nothing)
     (b.left===:error && b.right===:error && b.lower==0 && isinf(b.upper)) ||
         throw(ArgumentError("moment boundary events require native MeasureEuler; no residual boundary trace is inferred"))
     q=_prepare_checked_moment_state(op.closure,op.grid,μ,p,t,ctx)
+    moments=_MomentView(op.closure,op.grid,μ,q)
     for item in op.prepared
         mechanisms!==nothing && !(mechanism(item.term) in mechanisms) && continue
-        moment_term!(dμ,μ,item.term,item.method,item.cache,op.closure,q,op,p,t,ctx)
+        if item.method isa _AutomaticMomentRule
+            _automatic_term!(dμ,μ,item,moments,op,p,t,ctx)
+        else
+            moment_term!(dμ,μ,item.term,item.method,item.cache.prepared,op.closure,q,op,p,t,ctx)
+        end
     end
 end
 function _check_admissible_state(op::CompiledMomentPBM,u)

@@ -1,17 +1,32 @@
 {
-  "revision": "a9edb6b69ddaa0210e9f8ea1f751650ffd5e749c",
+  "revision": "827a1bfab0c5b5a4576bc70ccc5bbcbd7054c338",
   "package_version": "0.4.0-DEV",
-  "renderer": "actual LaTeX",
+  "renderer": "Matplotlib text with a LaTeX equation",
+  "equation_renderer": "actual LaTeX",
+  "font_family": "DejaVu Sans",
+  "math_font": "Computer Modern equation; STIX rate symbols",
+  "preview": false,
   "dpi": 300,
+  "png_pixels": [
+    2160,
+    2640
+  ],
+  "png_dpi": [
+    299.9994,
+    299.9994
+  ],
   "width_inches": 7.2,
   "height_inches": 8.8,
   "project_sha256": "45027810ea5e976bd31b1b411cb446ad199f91e2b046a21cf0658b9eef1ba473",
-  "generator_sha256": "c55efdc7ab77d4ab07e6b1de8f2263f051015186e72826ce9bbaba7ddf93726a",
+  "generator_sha256": "fb539217bca155ac318aba80b7d2c06804ee0c56e29858473829a4a1d0d223cc",
+  "png_sha256": "46412b9d312fbc94992308a2e3c163d3f7e4f795ad59dda8295aa88be6a3d3a1",
   "uq_source_sha256": {
     "src/uq/inputs.jl": "789b05eedae835810b19c50efe5f54564b3981e73d803009e1084f4f3d5fcfaa",
     "src/uq/propagation.jl": "5e6e17b79d59b19c4131b4bdcd4729c79f5d35b3f66fe928165507d80ca684cd",
-    "src/uq/polynomial_chaos.jl": "42689162fa179f32aef597d8e77c73277edeebacc335d37e5ac7ed863c8b7227"
+    "src/uq/polynomial_chaos.jl": "de504c483b6b877c89cef276459376ad99eb624b150f702b2a17984cbe0e85f5",
+    "src/uq/bases.jl": "a6b719332aef4aea05660f0e18e814f054a2816206ead67180d9a4375dd8f115",
+    "src/uq/refinement.jl": "f82516688afaa64e73a3cceb4b221d813fd107a950811ea309ff38f25b32d8f6"
   },
-  "dirty_state": " M CHANGELOG.md\n M docs/src/development.md\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/figures/00_architecture/section2_architecture_revised.png\n",
-  "scope": "Conceptual glyph; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; PCE requires independent normal/uniform reference marginals; representation, root-branch and derivative restrictions apply"
+  "dirty_state": " M CHANGELOG.md\n M docs/src/assets/architecture/section2_architecture_revised.png\n M docs/src/development.md\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/figures/00_architecture/section2_architecture_revised.json\n M paper/figures/00_architecture/section2_architecture_revised.png\n",
+  "scope": "Conceptual glyph; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply"
 }

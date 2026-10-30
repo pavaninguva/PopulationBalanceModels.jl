@@ -7,6 +7,8 @@ const PBM=PopulationBalanceModels
 # Gaussian moment inversion uses eigensystems that do not support Dual entries.
 # This is a nonlinear Jacobian choice, not a change of closure/physical equations.
 _quadrature_residual(op)=false
+# Even a fully analytical evolution plan must validate the explicitly selected
+# family. Its inversion can still require finite-difference state Jacobians.
 _quadrature_residual(op::PBM.CompiledMomentPBM)=!(op.closure isa PBM.ExactClosure)
 _quadrature_residual(op::PBM.CompiledSystem)=any(_quadrature_residual,values(op.system.populations))
 _quadrature_residual(op::Union{PBM.CompiledAxial,PBM.CompiledAxialSystem})=any(_quadrature_residual,op.local_operators)

@@ -1,4 +1,4 @@
-"""Contiguous raw moments μ[0],…,μ[K] on the nonnegative internal coordinate."""
+"""Tracked basis μ[0],…,μ[K] on one nonnegative internal coordinate. The selected moment method determines state storage: raw moments or, for DQMOM, weights and weighted abscissas. Compilation never adds orders or initial moments."""
 struct MomentSet <: AbstractMomentBasis
     orders::Vector{Int}
     coordinate::Symbol

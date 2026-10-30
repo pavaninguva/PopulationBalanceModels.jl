@@ -47,6 +47,7 @@ end
 
 """Recover n-node Gaussian quadrature from moments 0:2n-1 using scaled Hankel matrices."""
 function quadrature(g::MomentSet,u,closure::QuadratureClosure=QuadratureClosure(length(g)÷2))
+    closure.nodes===nothing && return quadrature(g,u,_resolve_moment_method(closure,g))
     n=closure.nodes; μ=vec(u)
     length(g)==length(μ)==2n || throw(DimensionMismatch("quadrature needs 2n moments"))
     if iszero(μ[1])

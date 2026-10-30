@@ -1,5 +1,5 @@
 """
-    RankAdaptiveQMOM(max_nodes; rtol=1e-8)
+    RankAdaptiveQMOM([max_nodes]; rtol=1e-8)
 
 Evolve moments 0:2max_nodes-1 and use the smallest nonnegative quadrature that
 reconstructs ALL tracked moments to the requested scaled tolerance. The number
@@ -8,14 +8,19 @@ unresolved/nonrealizable inputs are rejected, not projected onto another vector.
 `quadrature` reports `rank` and the scaled `moment_error`.
 """
 struct RankAdaptiveQMOM <: AbstractMomentClosure
-    max_nodes::Int
+    max_nodes::Union{Nothing,Int}
     rtol::Float64
+    function RankAdaptiveQMOM(;rtol=1e-8)
+        0<rtol<1 || throw(ArgumentError("0<rtol<1 required"))
+        new(nothing,rtol)
+    end
     function RankAdaptiveQMOM(n::Integer;rtol=1e-8)
         n>=1 && 0<rtol<1 || throw(ArgumentError("positive node count and 0<rtol<1 required"))
         new(n,rtol)
     end
 end
 function validate_moment_method(m::RankAdaptiveQMOM,model,g::MomentSet)
+    m.max_nodes===nothing && return validate_moment_method(_resolve_moment_method(m,g),model,g)
     length(g)==2m.max_nodes || throw(ArgumentError("RankAdaptiveQMOM needs moments 0:2max_nodes-1"))
 end
 function _normalized_moments(g,u)
@@ -44,6 +49,7 @@ function _adaptive_quadrature(v,max_nodes,rtol)
     throw(NumericalFailure("no quadrature resolves every tracked moment at the requested tolerance; no moments were repaired"))
 end
 function quadrature(g::MomentSet,u,m::RankAdaptiveQMOM)
+    m.max_nodes===nothing && return quadrature(g,u,_resolve_moment_method(m,g))
     mu,scale,v=_normalized_moments(g,u)
     length(mu)==2m.max_nodes || throw(DimensionMismatch("adaptive QMOM needs 2max_nodes moments"))
     iszero(mu[1]) && return (nodes=Float64[],weights=Float64[],rank=0,moment_error=0.0)
@@ -52,7 +58,7 @@ function quadrature(g::MomentSet,u,m::RankAdaptiveQMOM)
 end
 
 """
-    EQMOM(nodes; kernel=:gamma, secondary_nodes=12, rtol=1e-7, maxiters=80)
+    EQMOM([nodes]; kernel=:gamma, secondary_nodes=12, rtol=1e-7, maxiters=80)
 
 One-coordinate Gamma extended QMOM using moments 0:2nodes. A mixture of `nodes`
 Gamma kernels has nonnegative means and a common scale (width) parameter.
@@ -63,10 +69,16 @@ primary inversion. Only the Gamma kernel is implemented. Not every realizable
 moment vector admits this kernel representation; failures are explicit.
 """
 struct EQMOM <: AbstractMomentClosure
-    nodes::Int
-    secondary_nodes::Int
+    nodes::Union{Nothing,Int}
+    secondary_nodes::Union{Nothing,Int}
     rtol::Float64
     maxiters::Int
+    function EQMOM(;kernel=:gamma,secondary_nodes=nothing,rtol=1e-7,maxiters=80)
+        kernel===:gamma || throw(ArgumentError("EQMOM currently implements the Gamma kernel only"))
+        (secondary_nodes===nothing || (secondary_nodes isa Integer && secondary_nodes>=2)) &&
+            0<rtol<1 && maxiters>=30 || throw(ArgumentError("invalid EQMOM secondary quadrature or inversion tolerance"))
+        new(nothing,secondary_nodes,rtol,maxiters)
+    end
     function EQMOM(n::Integer;kernel=:gamma,secondary_nodes=max(12,n+1),rtol=1e-7,maxiters=80)
         kernel===:gamma || throw(ArgumentError("EQMOM currently implements the Gamma kernel only"))
         n>=1 && secondary_nodes>=n+1 && 0<rtol<1 && maxiters>=30 ||
@@ -75,6 +87,7 @@ struct EQMOM <: AbstractMomentClosure
     end
 end
 function validate_moment_method(m::EQMOM,model,g::MomentSet)
+    m.nodes===nothing && return validate_moment_method(_resolve_moment_method(m,g),model,g)
     length(g)==2m.nodes+1 || throw(ArgumentError("Gamma EQMOM needs moments 0:2nodes"))
 end
 
@@ -137,6 +150,7 @@ function _gamma_primary_precise(mu,m)
     end
 end
 function _gamma_primary(g,u,m)
+    m.nodes===nothing && return _gamma_primary(g,u,_resolve_moment_method(m,g))
     mu,scale,v=_normalized_moments(g,u)
     length(mu)==2m.nodes+1 || throw(DimensionMismatch("EQMOM needs 2nodes+1 moments"))
     iszero(mu[1]) && return (nodes=Float64[],weights=Float64[],width=0.0,rank=0,moment_error=0.0,inversion_precision=53)
@@ -171,6 +185,7 @@ function _gamma_primary(g,u,m)
       primary.rank,moment_error=error,inversion_precision=53)
 end
 function quadrature(g::MomentSet,u,m::EQMOM)
+    m.nodes===nothing && return quadrature(g,u,_resolve_moment_method(m,g))
     primary=_gamma_primary(g,u,m);x=Float64[];w=Float64[]
     for (xi,wi) in zip(primary.nodes,primary.weights)
         if iszero(primary.width) || iszero(xi)

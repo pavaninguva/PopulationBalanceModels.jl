@@ -188,6 +188,7 @@ include("axial.jl")
 
 include("li_supplement.jl")
 include("extended_moments.jl")
+include("moment_compilation.jl")
 include("axial_system.jl")
 include("qamar_moments.jl")
 

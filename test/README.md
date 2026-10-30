@@ -13,7 +13,7 @@ Files are grouped by behaviour, rather than by development milestone:
 |:--|:--|
 | Physical terms and coupling | `sources_moments.jl`, `systems.jl`, `papers.jl`, `size_diffusion.jl`, `tensor_diffusion.jl` |
 | Transport and time methods | `transport_integrators.jl`, `nonuniform_weno.jl`, `compact_finite_volume.jl`, `tensor.jl` |
-| Moment representations and accounting | `extended_moments.jl`, `measure_evolution.jl`, `qamar_moments.jl` |
+| Moment representations and accounting | `moment_compilation.jl`, `extended_moments.jl`, `measure_evolution.jl`, `qamar_moments.jl` |
 | Axial and stationary balances | `axial.jl`, `axial_system.jl`, `stationary.jl` |
 | Calibration, Bayesian targets and derivatives | `uncertainty.jl`, `bayesian.jl`, `differentiation.jl`, `isothermal_protein.jl` |
 | Data-free forward UQ and milling physics | `forward_uq.jl`, `pce_construction.jl`, `milling_model.jl`; optional BDF adapter: `milling_integration.jl` |

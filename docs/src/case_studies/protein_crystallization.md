@@ -315,3 +315,33 @@ likelihood are in the [downloadable example](../assets/source/examples/isotherma
 [the paper driver](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/paper/protein)
 adds reporting, figures and saved provenance. Plotting the data alone needs no fit:
 `python paper/protein/plot.py --data-only`.
+
+### Complete script
+
+Run from the repository root in an environment with Optim and the checkout
+developed into it, such as `julia --project=docs`. This fits CNT using calibration
+data only, freezes its parameters, then predicts the later observations. Set
+`model = :cnt_grd` to fit the constant-diffusion extension instead. The fit can
+take several minutes; this script performs neither MCMC nor file exports.
+
+```julia
+using PopulationBalanceModels, Optim
+include("examples/isothermal_protein_crystallization.jl")
+recipe = IsothermalProteinCrystallization
+
+model = :cnt
+data = recipe.load_data()
+estimation = recipe.estimation_problem(; data, model, bins=200)
+fitted = recipe.fit_model(estimation)
+fitted.converged || error("MAP did not converge; inspect the fit diagnostics")
+theta = physical_parameters(estimation, fitted.minimizer, :batch)
+
+# Predictions use frozen calibration parameters, including at held-out times.
+p = merge(recipe.parameters(), theta)
+solution = recipe.forward(p; model, bins=200,
+    times=[0.0, 74.0, 180.0, 420.0, 660.0])
+problem = solution.problem
+concentration = [bulk(problem, u, :c) for u in solution.u]
+crystals = population(problem, last(solution.u), :crystals)
+@show theta concentration
+```

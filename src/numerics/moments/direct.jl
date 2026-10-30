@@ -1,5 +1,5 @@
 """
-    DQMOM(nodes; condition_limit=1e12)
+    DQMOM([nodes]; condition_limit=1e12)
 
 One-coordinate direct quadrature method of moments, evolving weights w and
 weighted abscissas q=w*x. Uses a scaled confluent Vandermonde solve to match
@@ -9,25 +9,32 @@ empty populations and node collisions are rejected rather than regularized.
 The method is for batch/coupled local balances, not spatial DQMOM transport.
 """
 struct DQMOM <: AbstractDirectMomentMethod
-    nodes::Int
+    nodes::Union{Nothing,Int}
     condition_limit::Float64
+    function DQMOM(;condition_limit=1e12)
+        isfinite(condition_limit) && condition_limit>1 || throw(ArgumentError("invalid DQMOM condition limit"))
+        new(nothing,condition_limit)
+    end
     function DQMOM(n::Integer;condition_limit=1e12)
         n>=1 && isfinite(condition_limit) && condition_limit>1 || throw(ArgumentError("invalid DQMOM node count or condition limit"))
         new(n,condition_limit)
     end
 end
 function validate_moment_method(m::DQMOM,model,g::MomentSet)
+    m.nodes===nothing && return validate_moment_method(_resolve_moment_method(m,g),model,g)
     length(g)==2m.nodes || throw(ArgumentError("DQMOM needs a MomentSet with orders 0:2nodes-1"))
 end
-moment_state_length(m::DQMOM,g)=2m.nodes
+moment_state_length(m::DQMOM,g)=2*_resolve_moment_method(m,g).nodes
 """Pack positive quadrature weights and weighted abscissas as a DQMOM initial state. The state is NOT a vector of raw moments."""
 function quadrature_state(m::DQMOM,nodes,weights)
+    m.nodes===nothing && return quadrature_state(DQMOM(length(nodes);condition_limit=m.condition_limit),nodes,weights)
     length(nodes)==length(weights)==m.nodes || throw(DimensionMismatch("one node and weight per DQMOM component required"))
     state=vcat(collect(weights),weights.*nodes)
     validate_moment_state(m,MomentSet(0:2m.nodes-1),state)
     state
 end
 function quadrature(g::MomentSet,u,m::DQMOM)
+    m.nodes===nothing && return quadrature(g,u,_resolve_moment_method(m,g))
     length(u)==2m.nodes || throw(DimensionMismatch("DQMOM state length mismatch"))
     w=view(vec(u),1:m.nodes)
     all(isfinite,u) && all(>(0),w) || throw(NumericalFailure("DQMOM weights must be finite and strictly positive; empty/rank-changing states need another moment family"))
@@ -36,6 +43,7 @@ function quadrature(g::MomentSet,u,m::DQMOM)
     (;nodes,weights=collect(w))
 end
 function _direct_matrix(m,g,u)
+    m=_resolve_moment_method(m,g)
     q=quadrature(g,u,m)
     all(isfinite,u) && all(>=(0),q.nodes) || throw(NumericalFailure("invalid DQMOM state"))
     scale=sum(q.weights.*q.nodes)/sum(q.weights)
@@ -56,6 +64,7 @@ function check_moment_state(m::DQMOM,g,u,tolerance)
     nothing
 end
 function moment_value(m::DQMOM,g,u,k)
+    m.nodes===nothing && return moment_value(_resolve_moment_method(m,g),g,u,k)
     k in g.orders || throw(ArgumentError("moment $k is not tracked"))
     k==0 && return sum(view(vec(u),1:m.nodes))
     k==1 && return sum(view(vec(u),m.nodes+1:2m.nodes))
@@ -63,6 +72,7 @@ function moment_value(m::DQMOM,g,u,k)
     sum(q.weights.*q.nodes.^k)
 end
 function moment_rate(m::DQMOM,g,u,du,k)
+    m.nodes===nothing && return moment_rate(_resolve_moment_method(m,g),g,u,du,k)
     k in g.orders || throw(ArgumentError("moment $k is not tracked"))
     q=quadrature(g,u,m);n=m.nodes
     sum((1-k)*q.nodes[i]^k*du[i]+(k==0 ? zero(eltype(du)) : k*q.nodes[i]^(k-1)*du[n+i]) for i in 1:n)

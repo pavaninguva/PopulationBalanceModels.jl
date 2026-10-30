@@ -362,3 +362,37 @@ For focused tests, use `julia --project=. test/forward_uq.jl`,
 `test/milling_integration.jl` and `test/milling_forward.jl`.
 The [general UQ guide](../uncertainty_quantification.md) explains the reusable
 interface; [verification instructions](../verification.md) describe environments.
+
+## Complete script
+
+Run from the repository root in the milling environment prepared above. This
+small example uses 40 pivots, 32 MC realizations, 16 independent validation
+solves, and 12/32 training solves for PCE degrees one/two: 92 full solves in
+total. It demonstrates the workflow, not convergence or the retained 12,000-run
+study. The included module supplies the physical model and segmented BDF solver;
+it does not run its production driver or write exports.
+
+```julia
+using PopulationBalanceModels
+include("examples/milling_uncertainty.jl")
+recipe = MillingUncertainty
+
+times = [1.0, 5.0, 29.9, 30.0, 31.0, 60.0, 200.0]
+problem = recipe.problem(bins=40, times=times)
+mc = propagate(problem, MonteCarlo(32; seed=2018255); max_solves=32)
+mc_summary = uq_summary(mc; covariance=false)
+
+validation = propagate(problem, MonteCarlo(16; seed=2018256); max_solves=16)
+box = hcat(fill(-2.0, 4), fill(2.0, 4))
+surrogates = Dict()
+for (degree, samples, seed) in ((1, 12, 2018257), (2, 32, 2018258))
+    design = pce_design(problem.inputs; n=samples, seed=seed, bounds=box)
+    pce = fit_pce(problem, PolynomialChaos(degree);
+        design=design, validation=validation, max_solves=samples)
+    draws = evaluate_pce(pce, MonteCarlo(10_000; seed=2018259))
+    surrogates[degree] = (pce=pce, summary=uq_summary(draws; covariance=false))
+end
+@show mc_summary.mean.d50
+@show uq_summary(surrogates[1].pce).mean.d50
+@show uq_summary(surrogates[2].pce).mean.d50
+```

@@ -39,8 +39,8 @@
             3*(0.2*5+0.1*14)+0.3*0.4^3+3*0.5*2*5+0.2*(0.25-1)*14]
         @test vec(dμ)≈expected
         @test moment(g,vec(μ),3)==14.0
-        @test_throws ArgumentError compile(PBMModel(Growth(PolynomialRate((0.0,0.0,1.0)))),g)
-        @test_throws ArgumentError compile(PBMModel(Growth((x,p,t,c)->sqrt(x))),g)
+        @test_throws ArgumentError compile(PBMModel(Growth(PolynomialRate((0.0,0.0,1.0)))),g;moment_method=ExactClosure())
+        @test_throws ArgumentError compile(PBMModel(Growth((x,p,t,c)->sqrt(x))),g;moment_method=ExactClosure())
         @test_throws ArgumentError compile(PBMModel(Birth((x,p,t,c)->exp(-x))),g)
         @test_throws ArgumentError MomentSet([0,2])
         @test !realizability(g,[1.0,1.0,0.5,0.2]).valid

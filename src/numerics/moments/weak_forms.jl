@@ -1,19 +1,7 @@
 function _needed_moments(term,k)
-    if term isa Growth && term.rate isa AffineGrowth
-        return k==0 ? Int[] : [k-1,k]
-    elseif term isa Growth && term.rate isa PolynomialRate
-        k==0 && return Int[]
-        return [k+j-2 for (j,a) in enumerate(term.rate.coefficients) if !(a isa Number && iszero(a))]
-    elseif term isa Union{Death,Dilution} && term.rate isa PolynomialRate
-        return [k+r-1 for (r,a) in enumerate(term.rate.coefficients) if !(a isa Number && iszero(a))]
-    elseif term isa Aggregation && term.kernel isa ConstantKernel && term.coordinate_map===nothing
-        return k==0 ? [0] : collect(1:k-1)
-    elseif term isa Breakage && term.rate isa PolynomialRate && term.daughters isa SelfSimilarDaughters
-        return [k+r-1 for (r,a) in enumerate(term.rate.coefficients) if !(a isa Number && iszero(a))]
-    elseif term isa Union{Nucleation,MomentSource}
-        return Int[]
-    end
-    throw(ArgumentError("$(typeof(term)) has no exact moment rule; use a supported polynomial law, MomentSource, or QuadratureClosure"))
+    deps=moment_dependencies(term,k)
+    deps===nothing && throw(ArgumentError("no analytical rule is implemented for this rate-law declaration ($(typeof(term))), moment equation $k"))
+    collect(deps)
 end
 
 
@@ -32,32 +20,10 @@ end
 function _exact_moment_term!(dμ,μ,term,op,p,t,ctx)
     term isa Union{Nucleation,MomentSource} && return _moment_source!(dμ,μ,term,op,p,t,ctx)
     for k in op.grid.orders
-        if term isa Growth
-            k==0 && continue
-            coefficients=term.rate isa AffineGrowth ?
-                (_affine_coefficient(term.rate.offset,p),_affine_coefficient(term.rate.slope,p)) : term.rate.coefficients
-            for (j,a) in enumerate(coefficients)
-                a isa Number && iszero(a) && continue
-                dμ[k+1]+=k*_source_value(a,p,t,ctx)*μ[k+j-1]
-            end
-        elseif term isa Union{Death,Dilution}
-            for (j,a) in enumerate(term.rate.coefficients)
-                a isa Number && iszero(a) && continue
-                dμ[k+1]-=_nonnegative(_source_value(a,p,t,ctx),"exact removal coefficient")*μ[k+j]
-            end
-        elseif term isa Aggregation
-            K=_nonnegative(_source_value(term.kernel.rate,p,t,ctx),"aggregation coefficient")
-            dμ[k+1]+=k==0 ? -K*μ[1]^2/2 : K/2*sum((binomial(k,j)*μ[j+1]*μ[k-j+1] for j in 1:k-1);init=zero(eltype(μ)))
-        elseif term isa Breakage
-            daughters=term.daughters
-            coefficient=sum(daughters.counts[j]*daughters.ratios[j]^k for j in eachindex(daughters.ratios))-1
-            for (j,a) in enumerate(term.rate.coefficients)
-                a isa Number && iszero(a) && continue
-                dμ[k+1]+=coefficient*_nonnegative(_source_value(a,p,t,ctx),"exact breakage coefficient")*μ[k+j]
-            end
-        end
+        dμ[k+1]+=analytical_moment(term,k,j->μ[j+1],p,t,ctx)
     end
 end
+
 function _quadrature_term!(dμ,μ,term,op,p,t,ctx,q)
     term isa Union{Nucleation,MomentSource} && return _moment_source!(dμ,μ,term,op,p,t,ctx)
     x=q.nodes; w=q.weights

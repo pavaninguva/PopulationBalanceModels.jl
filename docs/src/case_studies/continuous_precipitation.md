@@ -360,21 +360,10 @@ they are not used for these errors or figures.
 
 ## Minimal run and full reproduction
 
-From a checkout with the [standard environment](../verification.md), this small
-native calculation demonstrates the same model assembly without running a
-production refinement study:
-
-```julia
-using PopulationBalanceModels
-include("examples/continuous_precipitation.jl")
-problem = ContinuousPrecipitation.build(nx=50,nz=50,mesh=:log,
-    scheme=WENO5(),axial_scheme=MUSCL(),tf=5.)
-solution = ContinuousPrecipitation.advance(problem,[5.];method=RK4())
-```
-
-This small builder uses the equivalent generic `ConservativeExchange` route;
-the production wrapper reuses its physical terms and numerical preparation with
-the stage-derivative bulk balance shown above.
+The complete script below uses the equivalent generic `ConservativeExchange`
+route; the production wrapper reuses its physical terms and numerical preparation
+with the stage-derivative bulk balance shown above. Use the
+[standard environment](../verification.md) from a checkout.
 
 For the complete study, including the numerical reference and its time check:
 
@@ -396,3 +385,44 @@ production data. Plotting reads validated results and saves only 300-dpi PNGs,
 shared by the paper and this page. It never reruns a simulation. The full driver
 is `paper/precipitation/run.jl`; the physical builder is
 [examples/continuous_precipitation.jl](../assets/source/examples/continuous_precipitation.jl).
+
+### Complete script
+
+Run from the repository root. This demonstrates startup on 50 logarithmic size
+bins and 50 axial cells to 5 s, rather than running the production refinement
+study. The recipe's checked explicit controller selects each RK4 step.
+
+```julia
+using PopulationBalanceModels
+include("examples/continuous_precipitation.jl")
+recipe = ContinuousPrecipitation
+p = recipe.parameters()
+nx, nz = 50, 50
+
+edges = exp.(range(log(p.xc), log(p.xmax); length=nx+1))
+grid = Grid1D(edges; coordinate=:length)
+model = PBMModel(
+    growth=Growth(recipe.growth),
+    primary_secondary=Nucleation(recipe.nucleation, first(edges)),
+)
+methods = TermMethods(growth=WENO5(),
+    by_term=(primary_secondary=BoundaryInjection(:left),))
+operator = compile(model, grid; methods)
+exchange = ConservativeExchange(:crystals, :c,
+    (x, p, t, ctx)->1e12 * p.rho * p.kv * x^3)
+system = PBMSystem((crystals=operator,);
+    exchanges=(exchange,), nonnegative_bulk=(:c,))
+local_problem = PBMProblem(system, (crystals=zeros(nx),), (0.0, 5.0);
+    bulk0=(c=0.0,), p)
+
+axial_grid = AxialGrid(range(0.0, p.L; length=nz+1))
+reactor = AxialDispersion(axial_grid;
+    velocity=p.Q / (p.area * p.porosity), dispersion=p.Dax,
+    inlet=(p, t)->(populations=(crystals=zeros(nx),), bulk=(c=p.cfeed,)))
+problem = axial_problem(local_problem, reactor; axial_scheme=MUSCL())
+solution = recipe.advance(problem, [0.0, 5.0]; method=RK4())
+
+concentration = bulk(problem, last(solution.u), :c)
+number_density = 1e12 .* density(grid, population(problem, last(solution.u), :crystals))
+@show extrema(concentration) extrema(number_density)
+```

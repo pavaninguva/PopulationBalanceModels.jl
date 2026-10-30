@@ -131,19 +131,8 @@ and degradation, while binary partition itself conserves it. The
 [coupling guide](../coupled_systems.md) explains the reusable exchange and
 cumulative-accounting interfaces.
 
-A complete minimal run, including those balances, is:
-
-```julia
-include("examples/stem_cell_population.jl")
-using .StemCellPopulation
-
-self = solve_case(bins=600, tf=200.0, differentiation=false)
-diff = solve_case(bins=600, tf=200.0, differentiation=true)
-last_self = state_summary(self.problem, last(self.u), last(self.t))
-last_diff = state_summary(diff.problem, last(diff.u), last(diff.t))
-@show last_self.stem last_diff.stem last_diff.differentiated
-@show last_self.cargo_balance last_diff.cargo_balance
-```
+The [complete script](#Complete-script) at the end solves both cohorts and
+reads these balances from the returned states.
 
 The native solver uses MUSCL cargo transport, fixed-pivot division and
 `SSPRK33()`. The step is the smaller of 0.05 and `suggest_dt(...; cfl=0.35)`,
@@ -303,3 +292,31 @@ ensemble; this deterministic sectional calculation is an adaptation of their
 synthetic model, rather than a reproduction of a particular random realization.
 The [authors' code](https://github.com/aedanbrown/Single-cell_Growth_and_Division_Functions_hPSCs/tree/64a069491d4895aaa6b8a3f5476dc997877f728f)
 and the paper's supplement specify the source functions and initialization.
+
+## Complete script
+
+Run from the repository root with the [standard environment](../verification.md).
+The [model recipe](../assets/source/examples/stem_cell_population.jl) supplies
+the rates, beta daughters and coupled counters defined above; the
+[full study helper](../assets/source/examples/support/stem_cell_study.jl) adds
+refinement and exports. Including the recipe does not run that study.
+
+```julia
+using PopulationBalanceModels
+include("examples/stem_cell_population.jl")
+recipe = StemCellPopulation
+
+results = Dict()
+for (name, differentiation) in ((:self_renewal, false), (:differentiation, true))
+    problem = recipe.build_problem(bins=600, tf=200.0;
+        differentiation=differentiation)
+    dt = min(0.05, suggest_dt(problem.operator, problem.u0, problem.p, 0.0;
+        cfl=0.35))
+    solution = simulate(problem; method=SSPRK33(), dt,
+        saveat=0.0:10.0:200.0, negative_tolerance=0.0)
+    summary = recipe.state_summary(problem, last(solution.u), last(solution.t))
+    results[name] = (problem=problem, solution=solution, summary=summary)
+    @show name summary.stem summary.differentiated
+    @show summary.number_balance summary.cargo_balance
+end
+```

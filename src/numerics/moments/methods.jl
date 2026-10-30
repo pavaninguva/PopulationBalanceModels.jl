@@ -1,8 +1,9 @@
-"""Require an exactly closed supported moment system; reject missing moments."""
+"""Require analytical moment evolution without reconstruction; use `moment_method=ExactClosure()`. This does not make time integration exact."""
 struct ExactClosure <: AbstractMomentClosure end
-"""One-coordinate QMOM with n positive quadrature nodes and moments 0:2n-1."""
+"""One-coordinate QMOM. `QMOM()` infers n from orders 0:2n-1 at compilation; `QMOM(n)` selects n explicitly. Reconstruction does not uniquely determine a continuous distribution."""
 struct QuadratureClosure <: AbstractMomentClosure
-    nodes::Int
+    nodes::Union{Nothing,Int}
+    QuadratureClosure()=new(nothing)
     function QuadratureClosure(n::Integer)
         n>=1 || throw(ArgumentError("at least one quadrature node is needed"))
         new(n)
@@ -26,14 +27,13 @@ default_method(term,::MomentSet)=ExactMomentRule()
 validate_moment_method(::AbstractMomentMethod,model,g)=throw(ArgumentError("extend validate_moment_method for this moment family"))
 validate_moment_method(::ExactClosure,model,g::MomentSet)=nothing
 function validate_moment_method(m::QuadratureClosure,model,g::MomentSet)
+    m.nodes===nothing && return validate_moment_method(_resolve_moment_method(m,g),model,g)
     length(g)==2m.nodes || throw(ArgumentError("QMOM needs exactly moments 0:2n-1"))
 end
 function validate_moment_method(::LogNormalClosure,model,g::MomentSet)
     g.orders==[0,1,2] || throw(ArgumentError("LogNormalClosure requires moments 0:2"))
 end
 function prepare_term(term,::ExactMomentRule,g::MomentSet;kwargs...)
-    term isa Breakage && (!(term.daughters isa SelfSimilarDaughters) || term.coordinate_map!==nothing || term.daughters.measure_order!=1) &&
-        throw(ArgumentError("exact breakage currently uses an additive raw coordinate and measure_order=1"))
     for k in g.orders,dep in _needed_moments(term,k)
         dep in g.orders || throw(ArgumentError("moment equation $k needs untracked moment $dep; select another weak-form rule or closure"))
     end

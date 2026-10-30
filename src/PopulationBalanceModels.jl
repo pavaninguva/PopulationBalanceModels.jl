@@ -18,6 +18,7 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        RankAdaptiveQMOM, EQMOM, DQMOM, quadrature_state,
        reconstructed_density, reconstructed_bins,
        validate_moment_method, prepare_moment_state, moment_term!,
+       moment_plan, moment_dependencies, analytical_moment, supports_moment_integral, reconstructed_moment,
        moment_state_length, moment_value, moment_rate, validate_moment_state, check_moment_state,
        DistributedNucleation, Dilution, AdditiveCoordinate,
        IntegratedBirth, IntegratedNucleation, GaussianNucleation,
@@ -93,6 +94,7 @@ include("numerics/moments/weak_forms.jl")
 include("numerics/moments/inversion.jl")
 include("numerics/moments/adaptive_extended.jl")
 include("numerics/moments/direct.jl")
+include("numerics/moments/automatic.jl")
 include("coupling/moment_exchange.jl")
 include("compilation/tensor.jl")
 include("numerics/tensor/transport_sources.jl")

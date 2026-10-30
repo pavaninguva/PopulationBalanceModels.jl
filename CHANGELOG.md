@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added canonical `moment_method` selection with inferred node counts and per-equation analytical/reconstruction planning. `moment_plan` exposes dependencies, family/state layout and closure requirements; legacy family keywords and deliberate weak-form overrides remain supported. Generic callbacks retain their integral route, while known formulas use tracked moments directly and reconstruct only missing orders. Strict ExactClosure rejects unresolved boundaries. Direct-discretization algorithms and retained numerical results are unchanged.
+
+- Clarified optional bulk coupling and axial transport in the architecture schematic, restored sans-serif lettering with a LaTeX equation, organized its physical-process labels, and updated its PCE basis coverage.
+
 - Reduced the growth paper selection to profiles/work–precision with in-panel legends and CFL labels; moved the precipitation outlet legend and clarified reference labels. Added a compact milling forward/MC/PCE paper workflow from retained production curves, preserving original producers. Archived the retired moments paper case and extra growth figures; documentation moment studies remain available.
 - Added beta/Jacobi reference inputs, a public probability-orthonormal recurrence interface and Gaussian-quadrature PCE projection. Added explicit validation acceptance and a budgeted refinement workflow that selects only after successive accuracy and mean/variance stability checks; existing regression and MC interfaces remain usable. No runtime dependencies added.
 - Reject surrogate-generated `UQResult`s as PCE training/validation references, preventing a surrogate from validating itself as if it were a full-model calculation.

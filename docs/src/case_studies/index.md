@@ -51,7 +51,8 @@ full-horizon replay and measurement conventions. These qualifications stay
 beside the relevant inputs and figures. The [axial reactor tutorial](../axial_reactors.md)
 adds a physical position coordinate to an intrinsic growth model.
 
-Each page ends with a minimal calculation and links to its full reproduction
-driver. Use the [common reproduction setup](../verification.md#Examples-and-figures)
+Each page ends with a complete, compact script, with links to its full reproduction
+driver just above. The scripts reuse the physical recipes without their reporting
+and export loops. Use the [common reproduction setup](../verification.md#Examples-and-figures)
 to keep recipes, data and plotting helpers together. Figure-specific assumptions,
 reference qualifications and numerical limits stay beside the results they affect.
