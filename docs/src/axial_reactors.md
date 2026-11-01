@@ -70,45 +70,77 @@ positions in m, and time in seconds.
 
 ```@example axial
 using PopulationBalanceModels
+using Distributions: Normal, pdf
 sizes = Grid1D(range(0.0,2.0;length=41);coordinate=:length)
 zgrid = AxialGrid(range(0.0,1.0;length=31))
-feed = exp.(-((sizes.centers.-0.3)./0.08).^2).*sizes.widths
+p = (seed_concentration=1.0, seed_mean=0.3, seed_std=0.08, growth_rate=0.08)
+inlet = DensityInlet((L,p,t) -> p.seed_concentration *
+    pdf(Normal(p.seed_mean,p.seed_std),L); quadrature=GaussLegendre(4))
 reactor = AxialDispersion(zgrid;
     velocity=0.2, dispersion=0.005,
-    inlet=(p,t)->feed,
+    inlet=inlet,
 )
-model = PBMModel(growth=Growth(AffineGrowth(0.08,0.0)))
+model = PBMModel(growth=Growth((L,p,t,ctx)->p.growth_rate))
 operator = compile(model,sizes;
-    domain=reactor, methods=TermMethods(growth=MUSCL()),
+    domain=reactor, axial_scheme=MUSCL(),
+    methods=TermMethods(growth=Upwind()),
     bc=SizeBC(OpenBoundary(),OpenBoundary()),
 )
 N0 = zeros(length(sizes),length(zgrid))
-problem = PBMProblem(operator,N0,(0.0,5.0))
-dt = suggest_dt(operator,N0,(;),0.0;cfl=0.4)
+problem = PBMProblem(operator,N0,(0.0,5.0);p)
+dt = suggest_dt(operator,N0,p,0.0;cfl=0.25)
 solution = simulate(problem;method=SSPRK33(),dt,saveat=[0.0,1.0,3.0,5.0])
 final_at_outlet = axial_population(operator,solution.u[end],length(zgrid))
 number_concentration(sizes,final_at_outlet)
 ```
 
-`inlet(p,t)` returns intrinsic **bin concentrations**, not density values or
-number rates. Integrate a measured feed density over its size bins before
-returning it. The implementation multiplies by velocity exactly once.
-Callbacks can depend on parameters and time. There is no implicit conversion
-between number- and material-weighted feed distributions.
+Here `seed_concentration` is particles/m³ of feed fluid, `seed_mean` and
+`seed_std` are in mm, and `growth_rate` is mm/s. The inlet density has units
+particles/(m³ mm). Its bin concentrations are
 
-The full runnable example uses 80 size bins and 60 axial cells:
+```math
+N_{i,\mathrm{in}}(p,t)=\int_{a_i}^{a_{i+1}} f_{\mathrm{in}}(a,p,t)\,da.
+```
 
-![Growth during startup of an axially dispersed tube](assets/axial_growth/solution.png)
+`DensityInlet` is an explicit continuous-density declaration. Compilation
+prepares Gauss–Legendre nodes/weights in each intrinsic bin; density values use
+the **current** parameters and time at every RHS stage. It also works without a
+Growth term. Negative/nonfinite evaluated densities are rejected. Increase the
+quadrature order independently when a narrow or complicated profile is unresolved.
 
-Particles travel downstream and grow toward larger sizes. Dispersion spreads
-the startup front. The axial advection discretization also introduces numerical
-diffusion, which must be assessed separately from the specified physical
-``D_z`` by refining the axial grid.
+There is no automatic renormalization: the Gaussian tail outside the represented
+domain is omitted. If the feed instead conditions on that domain, explicitly
+use `pdf(truncated(Normal(...),lower,upper),L)` and import `truncated` from
+Distributions. That changes the physical feed assumption.
+
+A bare `inlet=(p,t)->bin_concentrations` retains its original meaning: return
+already integrated bin concentrations as a vector (or supported tensor array),
+not density samples or particle rates. `inlet=nothing` gives zero feed. In both
+forms, the Danckwerts influx is **velocity times bin concentration**, exactly
+once; dispersion does not add a second independently prescribed inlet flux.
+
+`methods` chooses intrinsic mechanisms; `axial_scheme` independently chooses
+physical axial advection, defaulting to Upwind. No PBMSystem is needed here.
+Native stage checks remain enabled. The chosen step is conservative for this
+example; refine it rather than treating an Upwind-based recommendation as a
+positivity guarantee for higher-order reconstruction.
+
+The short [complete example](assets/source/examples/axially_dispersed_growth.jl)
+solves without writing files by default:
 
 ```sh
 julia --project=. examples/axially_dispersed_growth.jl
-python docs/benchmarks/plot_transport_comparisons.py axial --usetex
+# Optional fresh CSV output; retained documentation assets are not overwritten.
+julia --project=. -e 'include("examples/axially_dispersed_growth.jl"); AxiallyDispersedGrowth.run(output="/tmp/axial-density-inlet")'
 ```
+
+![Retained axial growth illustration](assets/axial_growth/solution.png)
+
+Particles travel downstream and grow toward larger sizes. Dispersion spreads
+the startup front. This retained illustration comes from the original Upwind,
+bin-vector feed example; it has not been regenerated for the density-inlet/MUSCL
+example above. Numerical smearing and physical dispersion must be assessed
+separately by refinement.
 
 ## Two intrinsic coordinates and local physics
 
@@ -120,7 +152,7 @@ sizes = Grid2D(0.0:0.1:1.0,0.0:0.2:2.0)
 zgrid = AxialGrid(0.0:0.1:1.0)
 reactor = AxialDispersion(zgrid;velocity=0.2,dispersion=0.01)
 model = PBMModel(growth=Growth2D((0.03,0.02)))
-operator = compile(model,sizes;domain=reactor,bc=SizeBC2D())
+operator = compile(model,sizes;domain=reactor,axial_scheme=MUSCL(),bc=SizeBC2D())
 N0 = zeros(length(sizes),length(zgrid))
 problem = PBMProblem(operator,N0,(0.0,1.0))
 size(axial_population(operator,problem.u0,1))
@@ -128,7 +160,12 @@ size(axial_population(operator,problem.u0,1))
 
 Each state column flattens the tensor bins in Julia's column-major order.
 `axial_population` restores the ``(n_1,n_2)`` view without copying it. A tensor
-feed may return that matrix shape or a flattened vector.
+feed may return that matrix shape or a flattened vector. For a continuous feed,
+use the coordinate-tuple convention, for example
+`DensityInlet((xy,p,t)->p.amplitude*(1+xy[1])*(1+xy[2]))` with an explicit
+`p=(amplitude=1.0,)` supplied to PBMProblem. Quadrature is tensor-product, with
+`GaussLegendre(q)` using q points **per axis**. The result integrates over both
+intrinsic widths, with no extra axial-width factor.
 
 Intrinsic mechanisms use their existing sectional interfaces: growth, local
 sources and removal, and, for 1D intrinsic grids, supported nucleation and
@@ -154,7 +191,9 @@ solute = bulk(problem,problem.u0,:c)                      # one value per cell
 local_state = axial_stateview(problem,problem.u0,1)
 ```
 
-The inlet must provide every local population and bulk value, either as those
+DensityInlet currently targets standalone Grid1D/Grid2D populations and is
+rejected for the coupled route, including raw moments and named population
+feeds. The inlet must provide every local population and bulk value, either as those
 named tuples or as the complete packed vector. Initial values repeat the local
 problem unless an explicit `initial` matrix is given. Named population and bulk
 accessors return views; every column is a complete local coupled state.
@@ -179,14 +218,17 @@ repairing moments silently.
 For adjacent axial cells, the face flux is
 
 ```math
-J_{i,c+1/2}=uN_{i,c}
+J_{i,c+1/2}=uN^{\mathrm{face}}_{i,c+1/2}
 -D_z\frac{N_{i,c+1}-N_{i,c}}{z_{c+1}-z_c},\qquad
 \frac{dN_{i,c}}{dt}=R_{i,c}
 +\frac{J_{i,c-1/2}-J_{i,c+1/2}}{\Delta z_c}.
 ```
 
-The single-population adapter uses first-order upwind advection. The coupled
-adapter selects its reconstruction with `axial_scheme`: Upwind, MUSCL, VanLeer,
+Both adapters use the same reconstruction preparation and face-flux routine.
+Select `axial_scheme` in `compile(...;domain=reactor,axial_scheme=...)` for a
+standalone grid, or in `axial_problem(...;axial_scheme=...)` for a system.
+Upwind gives ``N^{\mathrm{face}}_{i,c+1/2}=N_{i,c}`` for positive velocity.
+Upwind is the default; Upwind, MUSCL, VanLeer,
 WENO3 and WENO5 support fixed nonuniform axial meshes; Centered and LinearUpwind
 require uniform spacing. WENO5 prepares the same cell-average reconstruction as
 [intrinsic growth](methods/growth.md), with at least six axial cells.
@@ -205,7 +247,9 @@ Explicit time stepping must resolve both intrinsic mechanisms and axial
 transport. On a uniform axial mesh, the axial contribution to the forward-Euler
 outgoing rate is ``u/\Delta z+2D_z/\Delta z^2`` in interior cells.
 For the single-population adapter, `suggest_dt` combines it with local intrinsic transport/source bounds; it is
-still only a heuristic for limited or unlimited high-order intrinsic schemes.
+still only a local recommendation. It neither adapts `simulate` nor bounds
+future coefficients, and is not a positivity guarantee for higher-order axial or
+intrinsic reconstruction. WENO has no positivity limiter.
 All residual-based native time methods and the optional SciML residual adapter
 can advance this system. Stiff diffusion on fine axial meshes may make an
 external implicit solver more practical.

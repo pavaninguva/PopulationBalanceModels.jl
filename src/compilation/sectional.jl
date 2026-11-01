@@ -10,13 +10,15 @@ end
 
 """
     compile(model, grid; methods=TermMethods(), growth_scheme=Upwind(), bc=SizeBC(),
-            domain=BatchDomain(), fields=(cell,t)->(;), evolution=nothing, p=(;))
+            domain=BatchDomain(), axial_scheme=Upwind(), fields=(cell,t)->(;), evolution=nothing, p=(;))
 
 Prepare a conservative sectional operator. Callback context contains `grid`,
 `N` (the local bin concentrations), `cell`, and `fields` (prescribed conditions).
 Methods select numerical treatment by mechanism class or individual term name.
 Named choices in `methods.by_term` take precedence over class choices. Collision
 deposition is evaluated during each residual call.
+With `domain=AxialDispersion(...)`, `axial_scheme` independently selects physical
+axial advection; `methods` still selects intrinsic-coordinate mechanisms.
 
 Alternatively, `evolution=Inguva2022()` compiles eligible homogeneous affine
 growth as a direct characteristic update. Supply p for named coefficients;
@@ -24,13 +26,14 @@ the compiler checks the physical mesh, growth form and boundaries. Residual
 term methods cannot be combined with that complete transport update.
 """
 function compile(model::PBMModel, grid::Grid1D; growth_scheme=Upwind(), bc=SizeBC(),
-                 domain=BatchDomain(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple())
+                 domain=BatchDomain(),axial_scheme=Upwind(),fields=_emptyfields,methods=TermMethods(),evolution=nothing,p=NamedTuple())
     growth_scheme isa AbstractReconstruction || throw(ArgumentError("unsupported growth scheme"))
     bc isa SizeBC || throw(ArgumentError("bc must be SizeBC"))
     _validate_size_diffusion(model,grid,bc,domain,evolution)
     bc.right isa AbsorbingZero && throw(ArgumentError("AbsorbingZero is a left boundary"))
     bc.left isa AbsorbingZero && first(grid.edges)!=0 && throw(ArgumentError("AbsorbingZero requires a zero left edge"))
-    domain isa BatchDomain || return _compile_axial(model,grid,domain;growth_scheme,bc,fields,methods,evolution,p)
+    domain isa BatchDomain || return _compile_axial(model,grid,domain;growth_scheme,bc,fields,methods,evolution,p,axial_scheme)
+    axial_scheme isa Upwind || throw(ArgumentError("axial_scheme requires an AxialDispersion domain; select intrinsic growth through TermMethods"))
     evolution!==nothing && bc.left isa AbsorbingZero && throw(ArgumentError("AbsorbingZero requires residual sectional transport, not a direct evolution method"))
     evolution===nothing || return _compile_evolution(model,grid,evolution,bc,p;fields,methods)
     methods isa TermMethods || throw(ArgumentError("methods must be TermMethods"))

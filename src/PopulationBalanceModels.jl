@@ -24,7 +24,7 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        IntegratedBirth, IntegratedNucleation, GaussianNucleation,
        Grid2D, Growth2D, Nucleation2D, SizeBC2D, ForwardEuler, SSPRK22, SSPRK33, RK4, SSPRK54, HOCADI, ExactShift,
        Centered, LinearUpwind, VanLeer, WENO3, LaxWendroff, BeamWarming,
-       AxialGrid, AxialDispersion, axial_problem, axial_stateview, axial_population, axial_fluxes,
+       AxialGrid, AxialDispersion, DensityInlet, axial_problem, axial_stateview, axial_population, axial_fluxes,
        AffineGrowth, ExponentialGrowth, SeparableGrowth2D, TimeScaledGrowth,
        PrescribedRate, HOCGrowthLaw, HOCFiniteVolume, Inguva2022, InguvaBraatz2023,
        characteristic_grid, characteristic_density,

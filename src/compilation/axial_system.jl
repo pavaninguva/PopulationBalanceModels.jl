@@ -26,11 +26,8 @@ function axial_problem(local_problem::PBMProblem{<:CompiledSystem},domain::Axial
     PBMProblem(op,u,local_problem.tspan;p=local_problem.p)
 end
 function _compile_axial_system(localop::CompiledSystem,domain::AxialDispersion,axial_scheme)
-    axial_scheme isa AbstractReconstruction || throw(ArgumentError("axial_scheme must be a residual reconstruction"))
-    _validate_reconstruction(axial_scheme,domain.grid)
-    periodic=domain.boundary===:periodic
-    bc=periodic ? SizeBC(Periodic(),Periodic()) : SizeBC()
-    reconstruction=_prepare_reconstruction(axial_scheme,domain.grid,bc)
+    domain.inlet isa DensityInlet && throw(ArgumentError("DensityInlet supports standalone Grid1D/Grid2D axial populations only; coupled axial_problem needs a packed or named population/bulk inlet"))
+    reconstruction=_prepare_axial_reconstruction(axial_scheme,domain)
     any(pop->any(term->term isa SizeDiffusion,pop.model.terms),values(localop.system.populations)) &&
         throw(ArgumentError("SizeDiffusion is currently supported in batch populations only, not axial adapters"))
     all(values(localop.system.populations)) do op
@@ -61,10 +58,12 @@ axial_stateview(op::CompiledAxialSystem,u,cell::Integer)=stateview(op.local_oper
 function _packed_inlet(op::CompiledAxialSystem,p,t)
     d=op.domain;s=first(op.local_operators)
     feed=d.inlet===nothing ? zeros(s.physical_length) : d.inlet(p,t)
+    feed isa DensityInlet && throw(ArgumentError("DensityInlet is not a packed coupled-system inlet; supply bin concentrations and bulk values"))
     if feed isa NamedTuple
         Set(keys(feed))==Set((:populations,:bulk)) || throw(ArgumentError("inlet needs populations and bulk NamedTuples"))
         Set(keys(feed.populations))==Set(keys(s.ranges)) && Set(keys(feed.bulk))==Set(keys(s.bulk_indices)) ||
             throw(ArgumentError("inlet population and bulk names must match the local system"))
+        any(x->x isa DensityInlet,values(feed.populations)) && throw(ArgumentError("DensityInlet supports standalone axial populations only; named coupled feeds must contain bin concentrations or supported moment states"))
         all(name->length(getproperty(feed.populations,name))==length(getproperty(s.ranges,name)),keys(s.ranges)) ||
             throw(DimensionMismatch("inlet population length mismatch"))
         feed=vcat((vec(getproperty(feed.populations,name)) for name in keys(s.ranges))...,
@@ -83,25 +82,13 @@ function _packed_inlet(op::CompiledAxialSystem,p,t)
     feed
 end
 function axial_fluxes(op::CompiledAxialSystem,u,p,t)
-    d=op.domain;g=d.grid;n=length(g);v=d.velocity;D=d.dispersion
+    d=op.domain;n=length(d.grid);v=d.velocity
     size(u)==(first(op.local_operators).length,n) || throw(DimensionMismatch("axial state size mismatch"))
-    F=zero(similar(u,size(u,1),n+1));periodic=d.boundary===:periodic
-    for i in 1:first(op.local_operators).physical_length
-        row=view(u,i,:)
-        for c in 2:n
-            F[i,c]=v*_face_density(row,c,op.reconstruction,v,periodic,g)-D*(row[c]-row[c-1])/(g.centers[c]-g.centers[c-1])
-        end
-        if periodic
-            F[i,1]=v*_face_density(row,1,op.reconstruction,v,true,g)-D*(row[1]-row[end])/((first(g.widths)+last(g.widths))/2)
-            F[i,end]=F[i,1]
-        elseif d.boundary===:closed
-            F[i,1]=0;F[i,end]=0
-        else
-            F[i,end]=v*row[end]
-        end
-    end
+    feed=d.boundary===:danckwerts ? _packed_inlet(op,p,t) : nothing
+    T=_axial_flux_type(u,d,feed)
+    F=zero(similar(u,T,size(u,1),n+1))
+    _axial_row_fluxes!(F,u,d,op.reconstruction,first(op.local_operators).physical_length)
     if d.boundary===:danckwerts
-        feed=_packed_inlet(op,p,t)
         F[1:first(op.local_operators).physical_length,1].=v.*feed
     end
     all(isfinite,F) || throw(NumericalFailure("nonfinite axial system flux"))

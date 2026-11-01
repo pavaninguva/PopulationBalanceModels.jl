@@ -4,6 +4,21 @@ import Distributions
 include("size_diffusion_integration.jl")
 include("isothermal_protein_optim.jl")
 
+@testset "Standalone axial density feeds through the SciML residual" begin
+    z=AxialGrid([0.,0.04,0.12,0.3,0.55,0.8,1.])
+    for g in (Grid1D([0.,0.2,1.]),Grid2D([0.,0.2,1.],[0.,0.3,1.]))
+        inlet=DensityInlet((x,p,t)->p.feed*(1+t);quadrature=GaussLegendre(3))
+        reactor=AxialDispersion(z;velocity=0.2,dispersion=0.001,inlet)
+        op=compile(PBMModel(),g;domain=reactor,axial_scheme=MUSCL())
+        pb=PBMProblem(op,zeros(length(g),length(z)),(0.,0.05);p=(feed=2.,))
+        external=SciMLBase.solve(odeproblem(pb),Tsit5();reltol=1e-10,abstol=1e-12)
+        native=simulate(pb;dt=0.0002,method=RK4())
+        @test SciMLBase.successful_retcode(external)
+        @test external.u[end]≈native.u[end] rtol=1e-8 atol=2e-12
+        @test minimum(native.u[end])>=0
+    end
+end
+
 @testset "PCE wraps checked SciML simulations without another solver interface" begin
     g = Grid1D([0.,.4,1.])
     op = compile(PBMModel(Death((x,p,t,c) -> p.k)),g)

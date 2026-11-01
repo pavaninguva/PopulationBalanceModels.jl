@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Standalone Grid1D/Grid2D axial compilation accepts `axial_scheme`, sharing reconstruction and conservative face fluxes with `axial_problem`. New `DensityInlet` prepares intrinsic-bin Gauss quadrature and evaluates current parameters/time without renormalizing domain tails. Existing discretized feeds and coupled-system inlet contracts are preserved; continuous density inlets initially support standalone grids only.
+
 - **Declared-coordinate inference (`inference_map_v2`):** ParameterSpec requires a physical initial guess, physical prior and explicit transform (including identity). MAP, Laplace, Gauss–Newton and MCMC share one Jacobian-corrected z-density; local Gaussian covariance and draws use z. This supersedes interim `physical_map_v1` and automatic-transform declarations. Older MAP/covariance objects require recomputation; retained data and producer manifests remain unchanged. Legacy tagged priors preserve their probability laws.
 
 - Added canonical `moment_method` selection with inferred node counts and per-equation analytical/reconstruction planning. `moment_plan` exposes dependencies, family/state layout and closure requirements; legacy family keywords and deliberate weak-form overrides remain supported. Generic callbacks retain their integral route, while known formulas use tracked moments directly and reconstruct only missing orders. Strict ExactClosure rejects unresolved boundaries. Direct-discretization algorithms and retained numerical results are unchanged.
