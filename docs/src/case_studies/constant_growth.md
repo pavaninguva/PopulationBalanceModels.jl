@@ -208,9 +208,10 @@ julia --project=docs docs/make.jl
 
 ### Complete script
 
-The script defines the Gaussian, its exact bin integrals, and all seven
-space/time pairings before assembling and solving each problem. Signed
-undershoots are retained. It performs no timing study or file export.
+The script defines the Gaussian and its exact bin integrals, then runs one
+MUSCL + SSPRK33 calculation and checks its integrated density error. The seven
+method pairings, signed-undershoot diagnostics and timings remain in the linked
+comparison driver. The tutorial retains the native nonnegativity checks.
 
 [Download this standalone script](../assets/source/tutorials/constant_growth.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -219,9 +220,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=. docs/src/assets/source/tutorials/constant_growth.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

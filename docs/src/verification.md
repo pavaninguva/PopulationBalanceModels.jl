@@ -14,6 +14,7 @@ Use Julia 1.10 or later. The package in these commands is the checkout:
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
 julia --project=docs -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
 julia --project=docs test/docs_reference.jl
+julia --project=docs test/case_study_scripts.jl
 julia --project=docs docs/make.jl
 python test/docs_links.py docs/build
 git diff --check
@@ -48,13 +49,14 @@ Enzyme stacks have recorded loading failures; they are not numerical test passes
 ## Examples and figures
 
 Each case page ends with a standalone tutorial, available as a download after
-building the docs. Its physical definitions come from marked sections of the
-maintained example sources, not from a second model implementation. It shows
-those definitions before calling the problem builder. Reporting and benchmark
-drivers remain separate. `julia --project=docs test/case_study_scripts.jl` checks
-assembly, syntax and initial-state/residual equivalence without fitting or
-advancing production cases; the milling constructor additionally needs its
-documented optional environment.
+building the docs. It shows physical rates, inputs, model assembly and one
+calculation. Rate definitions follow the maintained sources. Numerical
+preparation and controllers are imported where needed and linked beside the
+script. Reporting and benchmark drivers remain separate.
+`julia --project=docs test/case_study_scripts.jl` checks syntax, initial states,
+residuals and inference equivalence without fitting or advancing production
+cases. The full constructor check, including milling/Sundials, uses the
+prepared paper environment: `julia --project=paper test/case_study_scripts.jl`.
 
 Including an example module defines its builders; executing the script invokes its driver.
 Download supporting files with their directories intact, or use a checkout.

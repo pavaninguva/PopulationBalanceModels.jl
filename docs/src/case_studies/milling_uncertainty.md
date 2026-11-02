@@ -365,20 +365,25 @@ interface; [verification instructions](../verification.md) describe environments
 
 ## Complete script
 
-The displayed model includes the feed distribution, volume-additive daughter
-measure and its conservative projection, breakage law, algebraic screen,
-material accounting and instantaneous outlet median. The UQ declaration then
-shows the four-input map, scenario rebuild, solver and output meaning.
+The script defines the feed, breakage coefficients, algebraic screen, material
+accounting, input law, scenario rebuild and one MC/PCE calculation. The cached
+`MillingHazard` evaluates ``S(v,t)=\alpha\,\mathrm{RPM}(t)(v/v_{\rm ref})^\gamma``.
+The [model helpers](../assets/source/examples/support/milling_model.jl) supply its
+prepared conservative daughter projection and outlet-CDF integration. The
+daughter law and outlet volume-median convention are specified above; the
+numerical projection and quantile-search implementations are not repeated here.
 
-The one external include is the checked **numerical BDF adapter**, not a
-hidden physical model: it advances the shown package residual in mass
-coordinates and restarts exactly at the 30-s speed change. Its
-[complete source](../assets/source/examples/support/milling_solver.jl) is
-provided separately. Run in the milling environment prepared above.
+The checked [BDF adapter](../assets/source/examples/support/milling_solver.jl)
+advances this package residual in mass coordinates and restarts exactly at the
+30-s speed change. It is imported separately and retains its completion and
+nonnegativity checks. Run in the milling environment prepared above.
 
-The small demonstration uses 40 pivots, 32 MC solves, 16 validation solves and
-12/32 PCE training solves: 92 full solves, rather than the production
-12,000-realization study. The much cheaper surrogate draws require no PBM solves.
+This small demonstration uses 40 pivots, 16 MC solves, 8 validation solves and
+12 first-order PCE training solves: 36 full solves. It is separate from the
+production 12,000-realization study and the degree-two comparison. Surrogate
+draws require no further PBM solves. The script propagates them only if the
+independent validation passes; otherwise it reports the errors and requests
+degree/design refinement. A small first-order design is not assumed accurate.
 
 [Download this standalone script](../assets/source/tutorials/milling_uncertainty.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -387,9 +392,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=examples/environments/milling docs/src/assets/source/tutorials/milling_uncertainty.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

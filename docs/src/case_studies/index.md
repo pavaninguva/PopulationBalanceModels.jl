@@ -51,12 +51,19 @@ full-horizon replay and measurement conventions. These qualifications stay
 beside the relevant inputs and figures. The [axial reactor tutorial](../axial_reactors.md)
 adds a physical position coordinate to an intrinsic growth model.
 
-Each page ends with a downloadable tutorial script. It shows the rate laws,
-initial conditions, boundaries, model assembly and coupling; estimation cases
-also show observations, priors and likelihoods. The definitions are extracted
-from the maintained examples, followed by a short run block, so readers do not
-need to open a hidden model recipe. More involved models need longer scientific
-code, but reporting and export loops stay in the linked reproduction drivers.
+Each page ends with a complete downloadable tutorial: one configuration,
+physical rates, initial/boundary conditions, assembly and a solve. Estimation
+cases also show observations, priors and likelihoods; the milling example adds
+one MC/PCE calculation. Comparisons and reporting/export loops stay in the full
+reproduction drivers.
+
+Where a calculation still needs numerical preparation or a custom checked
+solver, the script imports that helper explicitly and the page links its source.
+This includes daughter quadrature, DLVO preparation and the existing coupled
+timestep controllers. The helper's physical meaning and restrictions are stated
+beside the code. These are existing example components, not additional package
+APIs or automatic solver guarantees.
+
 Use the [common setup](../verification.md#Examples-and-figures) for dependencies
-and the original data. Retained figures and full benchmark campaigns are separate
-from these minimal scripts; their numerical qualifications remain beside them.
+and the original data. Retained figures and production campaigns are separate
+from the tutorials; their numerical qualifications remain beside them.

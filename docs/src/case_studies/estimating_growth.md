@@ -374,8 +374,10 @@ Use an environment with Optim and the checkout developed into it; see the
 
 The continuous density and bin-integral reference, synthetic observation
 process, forward-model assembly, observable, likelihood, physical priors and
-explicit inference transforms are included below. The final call performs a
-MAP fit; it does not sample or overwrite the retained Bayesian results.
+explicit inference transforms are included below. It fixes the analytical
+forward calculation; numerical-backend switches and their refinement loops stay
+in the full reproduction driver. The final call performs one MAP fit and does
+not sample or overwrite retained Bayesian results.
 
 [Download this standalone script](../assets/source/tutorials/estimating_growth.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -384,9 +386,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=docs docs/src/assets/source/tutorials/estimating_growth.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

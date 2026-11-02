@@ -38,7 +38,9 @@ estimation example. Long benchmark/reproduction commands are separate.
 
 `julia --project=docs test/case_study_scripts.jl` assembles all ten standalone
 case-study scripts and checks their initial conditions, rates and inference
-declarations against the maintained builders. It does not call their `main`
+declarations against the maintained builders. Protein additionally checks the
+full-covariance versus whitened likelihood normalizer, posterior gradients and
+a short conservative-coupling calculation. It does not call tutorial `main`
 entry points. The full check, including the milling/Sundials constructor, can
 run in the prepared paper environment with
 `julia --project=paper test/case_study_scripts.jl`. Generated scripts are also

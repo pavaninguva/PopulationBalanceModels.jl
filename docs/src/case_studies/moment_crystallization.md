@@ -472,11 +472,12 @@ contains the other families, pulse calculation and reporting. Follow the
 
 ### Complete script
 
-The additive coordinate, collision laws, analytical moments, required bases
-and DQMOM state conversion are explicit below. The final call runs one
-three-node QMOM calculation. Use `main(method=...)` to examine another supported
-family. The script labels lognormal M3 as reconstructed and shows its initial
-material mismatch; it does not regenerate the method-comparison assets.
+The script fixes one formulation: three-node QMOM with orders 0:5. Its physical
+terms, initial moments, compilation and solve are explicit. The last two calls
+read the number and conserved material moment through observation operators.
+The family comparisons and DQMOM state conversion are explained above and
+implemented in the linked full driver; this first calculation needs no
+family-selection or reconstruction helper.
 
 [Download this standalone script](../assets/source/tutorials/moment_crystallization.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -485,9 +486,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=. docs/src/assets/source/tutorials/moment_crystallization.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

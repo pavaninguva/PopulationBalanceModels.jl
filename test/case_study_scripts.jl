@@ -1,4 +1,4 @@
-using Test, PopulationBalanceModels
+using Test, PopulationBalanceModels, LinearAlgebra
 include("../docs/case_study_scripts.jl")
 include("fixtures/example_modules.jl")
 
@@ -38,6 +38,13 @@ end
         path=joinpath(folder,"source.jl")
         write(path,"# tutorial:start model\nx = 1\n# tutorial:end model\n")
         @test CaseStudyScripts.sections(path)["model"]=="x = 1\n"
+        write(path,"# tutorial:start model\nmodule Fixture\nconst scale = 2\n\"\"\"A reference docstring.\"\"\"\nfunction rate(x)\n    x^2\nend\nunused() = error(\"must not run\")\nend\n# tutorial:end model\n")
+        selected=CaseStudyScripts.definitions("source.jl","model",(:scale,:rate);root=folder)
+        @test occursin("const scale = 2",selected)
+        @test occursin("function rate(x)\n    x^2\nend",selected)
+        @test !occursin("unused",selected)
+        @test !occursin("reference docstring",selected)
+        @test_throws ErrorException CaseStudyScripts.definitions("source.jl","model",(:missing,);root=folder)
         for content in ("# tutorial:end model\n", "# tutorial:start model\n",
                 "# tutorial:start a\n# tutorial:start b\n",
                 "# tutorial:start a\n# tutorial:end b\n",
@@ -55,7 +62,7 @@ end
     scope=load_tutorial(:constant_growth);case=construct(scope)
     @test case.initial==ConstantGrowthMethods.gaussian_counts(case.grid,0.)
     @test case.reference==ConstantGrowthMethods.gaussian_counts(case.grid,4.)
-    @test Base.invokelatest(getfield(scope,:combinations))==ConstantGrowthMethods.combinations()
+    @test case.grid.coordinate===:length
 
     _load_example(:Gunawan2004Case2,"papers/gunawan2004_case2.jl")
     scope=load_tutorial(:crystallization);pb=construct(scope)
@@ -66,13 +73,10 @@ end
 
     _load_example(:QamarMomentBenchmarks,"qamar_moment_benchmarks.jl")
     scope=load_tutorial(:moment_crystallization)
-    for method in (QMOM(),DQMOM(),LogNormalClosure())
-        pb=construct(scope;method)
-        same_initial_rates(pb,QamarMomentBenchmarks.problem4(;method))
-        initial_M3=Base.invokelatest(getfield(scope,:reported_moment),pb.operator,pb.u0,3)
-        expected=method isa LogNormalClosure ? pb.u0[1]*(pb.u0[3]/pb.u0[2])^3 : 0.001
-        @test initial_M3≈expected
-    end
+    pb=construct(scope)
+    same_initial_rates(pb,QamarMomentBenchmarks.problem4(;method=QMOM()))
+    @test pb.operator.grid.orders==collect(0:5)
+    @test only(observe(MomentObservable(3),PBMSolution([0.],[pb.u0],pb,0)))≈0.001
 
     _load_example(:ContinuousPrecipitation,"continuous_precipitation.jl")
     scope=load_tutorial(:continuous_precipitation);pb=construct(scope;nx=8,nz=6)
@@ -130,9 +134,28 @@ if Base.find_package("Optim")!==nothing
             @test z==initial_coordinates(ref)
             @test logprior(ep,z)==logprior(ref,z)
             @test length(only(ep.experiments).measurements)==4
-            @test [m.data for m in only(ep.experiments).measurements]==
-                [m.data for m in only(ref.experiments).measurements]
+            tutorial=only(ep.experiments).measurements
+            retained=only(ref.experiments).measurements
+            @test tutorial[1].data==retained[1].data
+            logdet=0.0
+            for (a,b) in zip(tutorial[2:end],retained[2:end])
+                L=IsothermalProteinCrystallization.cdf_factor(b.observable.points)
+                @test a.data≈L*b.data atol=2e-14 rtol=0
+                @test a.likelihood.covariance≈0.03^2*(L*L') atol=1e-18
+                @test a.times==b.times && a.observable.window==b.observable.window
+                logdet+=sum(log,diag(L))
+            end
             same_initial_rates(only(ep.experiments).problem,only(ref.experiments).problem)
+            # A full covariance and externally whitened residuals describe the
+            # same posterior law. Restore the KNOWN determinant constant when
+            # comparing their normalized log densities, never refit a noise scale.
+            @test logposterior(ep,z)≈logposterior(ref,z)-logdet atol=2e-7 rtol=1e-10
+            @test posterior_gradient(ep,z)≈posterior_gradient(ref,z) rtol=2e-7 atol=1e-6
+            pb=only(ep.experiments).problem
+            short=Base.invokelatest(IsothermalProteinCrystallization.cfl_solve,pb,[0.,1.])
+            g=pb.operator.system.populations.crystals.grid
+            inventory(u)=bulk(pb,u,:c)+pb.p.rho*pb.p.kv*moment(g,population(pb,u,:crystals),3)
+            @test maximum(abs(inventory(u)-inventory(pb.u0)) for u in short.u)<1e-12
         end
     end
 else

@@ -135,8 +135,10 @@ by occupancy and domain extension. See the [diffusion contract](../methods/dispe
 
 ## Assemble and calibrate the batch
 
-The short example uses the same model builder and likelihood as the reproduction
-driver. `grd_strength` is retained as the Julia keyword; it now means D0 in μm²/min.
+The model uses ordinary package terms and conservative solute exchange.
+`grd_strength` is retained as the Julia keyword; it means D0 in μm²/min.
+The complete script below defines the kinetic laws and priors. This assembly
+uses the maintained callbacks and their interval-bound guard:
 
 ```julia
 using PopulationBalanceModels, Optim
@@ -144,24 +146,18 @@ include("examples/isothermal_protein_crystallization.jl")
 const I = IsothermalProteinCrystallization
 
 p = I.parameters(grd_strength=0.01)
-problem = I.build(p=p,model=:cnt_grd,bins=200)
-solution = I.forward(p;model=:cnt_grd,bins=200)
-
-estimation = I.estimation_problem(model=:cnt_grd,bins=200)
-fitted = I.fit_model(estimation) # three calibration-only starts
-fitted.converged || error("Inspect the MAP diagnostics")
-physical_parameters(estimation,fitted.minimizer,:batch)
-```
-
-Inside `build`, the physical terms are ordinary package components:
-
-```julia
+grid = Grid1D(range(0.0,50.0;length=201);coordinate=:length)
 terms = (
-    growth=Growth(PolynomialRate(((p,t,ctx)->I.growth_rate(p,ctx.bulk.c),))),
-    primary=Nucleation((p,t,ctx)->I.nucleation_rate(p,ctx.bulk.c),0.0),
-    dispersion=SizeDiffusion(PolynomialRate(((p,t,ctx)->p.grd_strength,))),
+    growth=Growth((L,p,t,ctx)->I.growth_rate(p,I.stage_concentration(p,ctx))),
+    primary=Nucleation((p,t,ctx)->I.nucleation_rate(p,I.stage_concentration(p,ctx)),0.0),
+    dispersion=SizeDiffusion((L,p,t,ctx)->p.grd_strength),
 )
 methods = TermMethods(growth=MUSCL(),by_term=(primary=BoundaryInjection(:left),))
+operator = compile(PBMModel(;terms...),grid;methods,bc=SizeBC())
+exchange = ConservativeExchange(:crystals,:c,(L,p,t,ctx)->p.rho*p.kv*L^3)
+system = PBMSystem((crystals=operator,);exchanges=(exchange,),nonnegative_bulk=(:c,))
+problem = PBMProblem(system,(crystals=zeros(length(grid)),),(0.0,660.0);
+    bulk0=(c=p.c0,),p)
 ```
 
 A `PBMSystem` couples this population to concentration. Bin states are physical
@@ -195,8 +191,12 @@ CDF supplies 22 interior ordinates with covariance
 \Sigma_{ij}=0.03^2\exp[-|L_i-L_j|/(2\ \mu{\rm m})].
 ```
 
-The normalization endpoints are excluded. Linear whitening retains the known
-determinant constant; full Gaussian normalizers are reported. These error
+The normalization endpoints are excluded. In the tutorial,
+`GaussianLikelihood(covariance=...)` performs whitening and normalization
+internally. The retained reproduction driver whitens data and predictions
+explicitly and records the known determinant correction. Both describe the
+same correlated-error posterior law; their reported log densities must be
+compared with that constant included. These error
 scales and the correlation length are modelling assumptions, not experimental
 uncertainties learned from these readings. No noise parameter is fitted.
 Conditional d10/d50/d90 come from those same CDFs and are **not** independent
@@ -331,10 +331,14 @@ adds reporting, figures and saved provenance. Plotting the data alone needs no f
 
 ### Complete script
 
-The script includes the original-data loader, CNT laws and units, optional
-constant GRD, same-stage solute balance, fixed-error observation model, priors
-and calibration-only starts. No model or likelihood is hidden in an imported
-recipe. `main(model=:cnt)` fits CNT and freezes it before the later prediction;
+The script shows CNT laws and units, optional constant GRD,
+`ConservativeExchange`, fixed-error measurements and physical priors. CSV
+selection, the checked interval solver and the three calibration-only starts are
+imported from the [maintained example](../assets/source/examples/isothermal_protein_crystallization.jl).
+Those helpers do not choose new observations, priors or physical terms.
+The interval controller still bounds current-stage coefficients; a single
+initial `suggest_dt` call is insufficient for this coupled calculation.
+`main(model=:cnt)` fits CNT and freezes it before the later prediction;
 use `main(model=:cnt_grd)` for the extension. These fits can take several
 minutes. There is no MCMC or file export here; the retained posterior figures
 are not recomputed by this minimal calculation.
@@ -346,9 +350,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=docs docs/src/assets/source/tutorials/protein_crystallization.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

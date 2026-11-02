@@ -335,10 +335,11 @@ adds the reference calculation and error tables. Follow the
 
 ### Complete script
 
-The temperature and solubility laws, kinetics, chosen initial density,
-bin integration and discrete solute exchange are all defined below. The
-10-second run is a wiring calculation; the full 1000-second refinement study
-and its retained results remain separate.
+The temperature and solubility laws, kinetics, chosen initial density and
+`ConservativeExchange` assembly are defined below. The only imported helper is
+the recipe's [bin-integration function](../assets/source/examples/papers/gunawan2004_case2.jl),
+which integrates that stated density without changing it. The 10-second run
+checks the coupling; the full 1000-second refinement study remains separate.
 
 [Download this standalone script](../assets/source/tutorials/crystallization.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -347,9 +348,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=. docs/src/assets/source/tutorials/crystallization.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

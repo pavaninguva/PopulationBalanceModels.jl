@@ -284,10 +284,12 @@ also runs refinement and the eligible characteristic method. Follow the
 
 ### Complete script
 
-Both directional growth laws, the Gaussian and its characteristic bin
-integrals, boundaries and numerical assembly are defined below. The final
-solve reports the integrated error and signed undershoot; it does not run
-the spatial refinement/export driver.
+Both directional growth laws, the Gaussian bin integrals, boundaries and
+numerical assembly are defined below. The final call runs one WENO5 + SSPRK33
+configuration and reads total number as a joint moment of order (0,0). The
+refinement, distribution-error and signed-undershoot comparisons remain in the
+linked full driver. The diagnostic solve retains its explicitly disabled
+nonnegativity check so signed WENO undershoots stay visible.
 
 [Download this standalone script](../assets/source/tutorials/transport.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -296,9 +298,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=. docs/src/assets/source/tutorials/transport.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

@@ -569,9 +569,11 @@ its benchmark or writing files.
 
 ### Complete script
 
-The displayed module contains the physical laws, source normalization,
-material exchange and explicit inputs. The following reconstruction specifies
-the solubility and DLVO assumptions and starts with no particles. This is the
+The script contains the physical laws, source normalization, model assembly,
+material exchange and explicit inputs. DLVO quadrature and per-mechanism
+accounting use the linked [material helpers](../assets/source/examples/papers/cej2025_lnp.jl),
+whose implementation is separate from the model definition. The reconstruction
+specifies the solubility and DLVO assumptions and starts with no particles. This is the
 checked 10-µs native startup example, not a claim of full-horizon reproduction.
 It needs only the package and Julia standard libraries; the separate long-time
 workflow still needs its external stiff solver. No strict checks are relaxed.
@@ -583,9 +585,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=. docs/src/assets/source/tutorials/nanoparticles.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

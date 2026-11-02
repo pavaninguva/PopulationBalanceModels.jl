@@ -26,6 +26,15 @@ test. It needs only the ordinary package dependencies.
 calibration with Optim, implicit sensitivities and local uncertainty; optional
 sampling uses AdvancedHMC and MCMCDiagnosticTools.
 
+For a physical case study, begin with its **complete tutorial script** at the
+end of the manual page. It shows one configuration and the model definition;
+the larger files in the table below are reproduction drivers. Tutorials import
+only explicitly identified data/numerical helpers where necessary. They do not
+run benchmark grids, production fitting/sampling or export loops implicitly.
+The estimation tutorials fit only when their `main()` is run; merely including
+one defines the calculation. Generated downloads live under
+`docs/src/assets/source/tutorials/` after building the manual.
+
 ## Manual case studies
 
 | Calculation | Driver | Walkthrough |

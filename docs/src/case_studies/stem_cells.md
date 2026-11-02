@@ -131,8 +131,9 @@ and degradation, while binary partition itself conserves it. The
 [coupling guide](../coupled_systems.md) explains the reusable exchange and
 cumulative-accounting interfaces.
 
-The [complete script](#Complete-script) at the end solves both cohorts and
-reads these balances from the returned states.
+The [complete script](#Complete-script) at the end solves one short transient
+with differentiation. The full driver compares the two cohorts and checks both
+balances.
 
 The native solver uses MUSCL cargo transport, fixed-pivot division and
 `SSPRK33()`. The step is the smaller of 0.05 and `suggest_dt(...; cfl=0.35)`,
@@ -295,11 +296,14 @@ and the paper's supplement specify the source functions and initialization.
 
 ## Complete script
 
-Cargo dynamics, division and differentiation hazards, the two-daughter
-quadrature, initial bin probabilities and historical counters are defined
-below. The final calls solve short 20-model-time transients with and without
-differentiation, not the full balanced-growth/refinement study. The counters
-remain historical records, not another proliferating population.
+Cargo dynamics, division and differentiation hazards, model assembly and
+historical counters are defined below. Two
+[numerical helpers](../assets/source/examples/stem_cell_population.jl) prepare
+the stated Beta(40,40) two-daughter rule and the exact truncated-Normal initial
+bin integrals. Their quadrature implementation is separate from the physical
+definition. The final call solves one 20-model-time transient with
+differentiation; use `tutorial_problem(differentiation=false)` for the other
+cohort. The full balanced-growth/refinement study remains separate.
 
 [Download this standalone script](../assets/source/tutorials/stem_cells.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -308,9 +312,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=. docs/src/assets/source/tutorials/stem_cells.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown

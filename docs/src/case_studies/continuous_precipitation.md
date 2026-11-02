@@ -119,11 +119,8 @@ model = PBMModel(
 )
 operator = compile(model,grid;methods=TermMethods(
     growth=WENO5(),by_term=(primary_secondary=BoundaryInjection(:left),)))
-cubes = grid.centers.^3
-bulk_balance(ctx,p,t) = (c=-sum((1e12*p.rho*p.kv*cubes[i]) *
-    ctx.derivatives.crystals[i] for i in eachindex(cubes)),)
-system = PBMSystem((crystals=operator,);bulk_rhs=bulk_balance,
-    nonnegative_bulk=(:c,))
+exchange = ConservativeExchange(:crystals,:c,(x,p,t,ctx)->1e12*p.rho*p.kv*x^3)
+system = PBMSystem((crystals=operator,);exchanges=(exchange,),nonnegative_bulk=(:c,))
 local_problem = PBMProblem(system,(crystals=zeros(length(grid)),),(0.,200.);
     bulk0=(c=0.,),p)
 reactor = AxialDispersion(AxialGrid(range(0.,p.L;length=nz+1));
@@ -137,12 +134,11 @@ For numerical scaling the internal particle counts are divided by ``10^{12}``.
 The rate divides by that scale, the mass callback multiplies by it, and exported
 densities restore physical units. This changes no physical coefficient.
 
-The bulk balance subtracts the **current-stage resolved discrete** crystal-mass
-increase from solute. For this closed growth/nucleation model it is equivalent to
-`ConservativeExchange(:crystals,:c,(x,p,t,ctx)->1e12*p.rho*p.kv*x^3)`, without
-reevaluating the growth residual. The reproduction tests compare these two
-normal `PBMSystem` routes. Use one of them, not both. A total-derivative balance
-would need revisiting if particle escape or other removal mechanisms were added.
+`ConservativeExchange` subtracts the **current-stage resolved discrete**
+crystal-mass increase from solute. Its selected growth and nucleation mechanisms
+account for the represented material once. An explicit bulk callback is an
+alternative for a differently defined balance; it must not subtract the same
+exchange a second time. The reproduction tests compare these two routes.
 This balances material cell by cell before axial fluxes are
 added. At finite resolution it differs from separately quadraturing the continuum
 sink above, including the mass assigned to the first bin. On coarse uniform size meshes,
@@ -390,9 +386,12 @@ is `paper/precipitation/run.jl`; the physical builder is
 
 The rates, population scaling, discrete solute exchange, reactor feed and
 independent size/axial methods are explicit below. This runs startup to 5 s on
-50 logarithmic size bins and 50 axial cells. The checked RK4 step controller
-is included so its restrictions are visible; the production reference and
-refinement campaigns are separate.
+50 logarithmic size bins and 50 axial cells. The unchanged
+[RK4 step controller](../assets/source/examples/continuous_precipitation.jl)
+is imported separately: it enforces the study's transport/depletion step policy
+and native stage checks. `suggest_dt` alone does not bound future bulk depletion;
+the package has no automatic controller for this calculation. The production
+reference and refinement campaigns remain separate.
 
 [Download this standalone script](../assets/source/tutorials/continuous_precipitation.jl).
 Run it from a checkout with the package developed into the selected environment:
@@ -401,9 +400,8 @@ Run it from a checkout with the package developed into the selected environment:
 julia --project=. docs/src/assets/source/tutorials/continuous_precipitation.jl
 ```
 
-The code is assembled from marked sections of the maintained examples; those
-same definitions are used by the reproduction drivers above. Model equations
-and assumptions have not been changed for this presentation.
+Physical definitions follow the maintained examples. Numerical helpers and full
+reproduction sources are linked above; this tutorial writes no retained results.
 
 ```@eval
 using Markdown
