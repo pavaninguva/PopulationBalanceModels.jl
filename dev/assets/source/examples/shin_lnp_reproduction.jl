@@ -12,6 +12,7 @@ function figure4_saveat()
     sort!(unique(vcat(0.0,logtimes,snapshots)))
 end
 
+# tutorial:start initial_conditions
 """Figure 4 setup: no particles initially, nonzero dissolved lipid, seconds internally."""
 function figure4_problem(;grid,kwargs...)
     inputs=(;kwargs...)
@@ -22,6 +23,8 @@ function figure4_problem(;grid,kwargs...)
     options=merge(defaults,inputs,(initial_distribution=zeros(length(grid)),))
     CEJ2025LNP.build(;grid,options...)
 end
+
+# tutorial:end initial_conditions
 
 """
     run_case(problem; dt, saveat, provenance, output)

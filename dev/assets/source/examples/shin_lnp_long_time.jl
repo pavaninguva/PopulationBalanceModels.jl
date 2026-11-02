@@ -13,6 +13,7 @@ include("shin_lnp_reproduction.jl")
 using .ShinLNPReproduction
 const material=ShinLNPReproduction.CEJ2025LNP
 
+# tutorial:start reconstruction
 """Mass-solubility interpolation inferred from two approximate S values reported in the text, not independent solubility measurements."""
 function reconstructed_solubility(w,T)
     # FRR=3, organic=7 kg/m³, S≈240; FRR=5, organic=10 kg/m³, S≈600.
@@ -45,6 +46,8 @@ function make_problem(;bins=120,FRR=3.0,scheme=Upwind(),diameter_limits=(1e-9,5e
         nucleation_width=1e-9,nucleation_normalization=:total_rate,
         overflow=:discard,track_consumption=true,scheme)
 end
+
+# tutorial:end reconstruction
 
 """Scale particle counts and bulk concentrations before stiff integration; return physical states without clipping."""
 function stiff_solve(problem,times;reltol=1e-7,max_evaluations=2_000_000)

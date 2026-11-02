@@ -45,35 +45,110 @@ problem = axial_problem(local_problem,reactor;axial_scheme=MUSCL())</code></pre>
 julia --project=paper paper/precipitation/run.jl
 python paper/precipitation/plot.py
 python test/paper_data.py --case 3
-julia --project=docs docs/make.jl</code></pre><p>Focused model, source, exchange and preconditioner checks use <code>julia --project=paper test/paper_precipitation.jl</code>. The nonuniform WENO tests are in <code>test/nonuniform_weno.jl</code>, with the usual package test environment.</p><p>The production run is expensive and resumes matching completed configurations. <code>--smoke</code> writes a separate small study under <code>.cache/paper/</code>; it does not replace production data. Plotting reads validated results and saves only 300-dpi PNGs, shared by the paper and this page. It never reruns a simulation. The full driver is <code>paper/precipitation/run.jl</code>; the physical builder is <a href="../../assets/source/examples/continuous_precipitation.jl">examples/continuous_precipitation.jl</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>Run from the repository root. This demonstrates startup on 50 logarithmic size bins and 50 axial cells to 5 s, rather than running the production refinement study. The recipe&#39;s checked explicit controller selects each RK4 step.</p><pre><code class="language-julia hljs">using PopulationBalanceModels
-include(&quot;examples/continuous_precipitation.jl&quot;)
-recipe = ContinuousPrecipitation
-p = recipe.parameters()
-nx, nz = 50, 50
+julia --project=docs docs/make.jl</code></pre><p>Focused model, source, exchange and preconditioner checks use <code>julia --project=paper test/paper_precipitation.jl</code>. The nonuniform WENO tests are in <code>test/nonuniform_weno.jl</code>, with the usual package test environment.</p><p>The production run is expensive and resumes matching completed configurations. <code>--smoke</code> writes a separate small study under <code>.cache/paper/</code>; it does not replace production data. Plotting reads validated results and saves only 300-dpi PNGs, shared by the paper and this page. It never reruns a simulation. The full driver is <code>paper/precipitation/run.jl</code>; the physical builder is <a href="../../assets/source/examples/continuous_precipitation.jl">examples/continuous_precipitation.jl</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The rates, population scaling, discrete solute exchange, reactor feed and independent size/axial methods are explicit below. This runs startup to 5 s on 50 logarithmic size bins and 50 axial cells. The checked RK4 step controller is included so its restrictions are visible; the production reference and refinement campaigns are separate.</p><p><a href="../../assets/source/tutorials/continuous_precipitation.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=. docs/src/assets/source/tutorials/continuous_precipitation.jl</code></pre><p>The code is assembled from marked sections of the maintained examples; those same definitions are used by the reproduction drivers above. Model equations and assumptions have not been changed for this presentation.</p><pre><code class="language-julia hljs"># Minimal continuous precipitation tutorial.
+# Generated from maintained scientific source sections and a short run block.
+# No benchmark exports or retained files are written. See the case-study page.
 
-edges = exp.(range(log(p.xc), log(p.xmax); length=nx+1))
-grid = Grid1D(edges; coordinate=:length)
-model = PBMModel(
-    growth=Growth(recipe.growth),
-    primary_secondary=Nucleation(recipe.nucleation, first(edges)),
-)
-methods = TermMethods(growth=WENO5(),
-    by_term=(primary_secondary=BoundaryInjection(:left),))
-operator = compile(model, grid; methods)
-exchange = ConservativeExchange(:crystals, :c,
-    (x, p, t, ctx)-&gt;1e12 * p.rho * p.kv * x^3)
-system = PBMSystem((crystals=operator,);
-    exchanges=(exchange,), nonnegative_bulk=(:c,))
-local_problem = PBMProblem(system, (crystals=zeros(nx),), (0.0, 5.0);
-    bulk0=(c=0.0,), p)
+using PopulationBalanceModels
 
-axial_grid = AxialGrid(range(0.0, p.L; length=nz+1))
-reactor = AxialDispersion(axial_grid;
-    velocity=p.Q / (p.area * p.porosity), dispersion=p.Dax,
-    inlet=(p, t)-&gt;(populations=(crystals=zeros(nx),), bulk=(c=p.cfeed,)))
-problem = axial_problem(local_problem, reactor; axial_scheme=MUSCL())
-solution = recipe.advance(problem, [0.0, 5.0]; method=RK4())
+# From examples/continuous_precipitation.jl (model).
+&quot;&quot;&quot;Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³.&quot;&quot;&quot;
+parameters() = (cfeed=9.,ceq=.4,rho=1200.,kv=.524,kp=5.,u=10.,kb=4e8,b=2.,
+    kg=7e-6,xc=1e-6,xmax=900e-6,Q=1.67e-7,area=1.46e-4,porosity=.21,L=.47,Dax=4.2e-5)
+supersaturation(p,ctx) = max(ctx.bulk.c/p.ceq-1,zero(ctx.bulk.c))
+growth(x,p,t,ctx) = p.kg*supersaturation(p,ctx)
 
-concentration = bulk(problem, last(solution.u), :c)
-number_density = 1e12 .* density(grid, population(problem, last(solution.u), :crystals))
-@show extrema(concentration) extrema(number_density)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../moment_crystallization/">« Aggregation and nucleation with moments</a><a class="docs-footer-nextpage" href="../protein_crystallization/">Isothermal protein crystallization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Sunday 1 November 2026 17:17">Sunday 1 November 2026</span>. Using Julia version 1.10.12.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+function nucleation(p,t,ctx)
+    s = supersaturation(p,ctx)
+    solid = 1e12*p.rho*p.kv*moment(ctx.grid,ctx.N,3)
+    (p.kp*s^p.u + p.kb*s^p.b*solid)/1e12
+end
+
+&quot;&quot;&quot;Closed size domain and discrete solute exchange; both phases move axially.&quot;&quot;&quot;
+function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=parameters(),tf=200.)
+    mesh in (:log,:uniform) || throw(ArgumentError(&quot;mesh must be :log or :uniform&quot;))
+    edges = mesh === :log ? exp.(range(log(p.xc),log(p.xmax);length=nx+1)) :
+        collect(range(p.xc,p.xmax;length=nx+1))
+    grid = Grid1D(edges;coordinate=:length)
+    model = PBMModel(
+        growth=Growth(rate=growth),
+        primary_secondary=Nucleation(rate=nucleation,size=first(edges)),
+    )
+    methods = TermMethods(growth=scheme,
+        by_term=(primary_secondary=BoundaryInjection(:left),))
+    operator = compile(model,grid;methods)
+    exchange = ConservativeExchange(:crystals,:c,(x,p,t,ctx)-&gt;1e12*p.rho*p.kv*x^3)
+    system = PBMSystem((crystals=operator,);nonnegative_bulk=(:c,),exchanges=(exchange,))
+    local_problem = PBMProblem(system,(crystals=zeros(nx),),(0.,tf);bulk0=(c=0.,),p)
+    z = AxialGrid(range(0.,p.L;length=nz+1))
+    reactor = AxialDispersion(z;velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
+        inlet=(p,t)-&gt;(populations=(crystals=zeros(nx),),bulk=(c=p.cfeed,)))
+    axial_problem(local_problem,reactor;axial_scheme)
+end
+
+# From examples/continuous_precipitation.jl (controller).
+# Native explicit RK with a state-dependent explicit step bound. This controller is
+# a benchmark driver, not an adaptive-error solver or a differentiable schedule.
+function advance(problem,times;fraction=.3,method=RK4(),progress=false)
+    times = collect(times)
+    isfinite(fraction) &amp;&amp; 0 &lt; fraction &lt;= 1 || throw(ArgumentError(&quot;fraction must be in (0,1]&quot;))
+    method isa PopulationBalanceModels.AbstractExplicitRK || throw(ArgumentError(&quot;advance requires a native explicit Runge–Kutta method&quot;))
+    all(isfinite,times) &amp;&amp; issorted(times) &amp;&amp; all(t-&gt;first(problem.tspan)&lt;=t&lt;=last(problem.tspan),times) ||
+        throw(ArgumentError(&quot;output times must be finite, sorted and inside the problem time span&quot;))
+    u = copy(problem.u0)
+    t = first(problem.tspan)
+    operator = problem.operator
+    grid = first(operator.local_operators).system.populations.crystals.grid
+    p = problem.p
+    dz,dx = minimum(operator.domain.grid.widths),minimum(grid.widths)
+    transport = operator.domain.velocity/dz + 2p.Dax/dz^2
+    cache = ntuple(_-&gt;similar(u),6)
+    du = similar(u)
+    states = typeof(u)[]
+    steps = 0
+    for target in times
+        while t &lt; target
+            rhs!(du,u,operator,p,t)
+            maxG = p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
+            h = fraction/(transport+maxG/dx+eps())
+            for j in axes(u,2)
+                c,dc = bulk(problem,u,:c)[j],bulk(problem,du,:c)[j]
+                dc &lt; 0 &amp;&amp; (h = min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
+            end
+            h = min(h,target-t,.25)
+            h &gt; 1e-12 || throw(NumericalFailure(&quot;precipitation step collapsed; inspect the state&quot;))
+            PopulationBalanceModels._rk_step!(u,cache,problem,t,h,method,true,1e-8)
+            PopulationBalanceModels._check_problem_state(problem,u,1e-8)
+            t = h == target-t ? target : t+h
+            steps += 1
+        end
+        push!(states,copy(u))
+        if progress
+            println(&quot;  t = &quot;,target,&quot; s; &quot;,steps,&quot; steps&quot;)
+            flush(stdout)
+        end
+    end
+    PBMSolution(times,states,problem,steps)
+end
+
+function tutorial_problem(; nx=50, nz=50)
+    # Log size bins on [1,900] µm, uniform physical reactor cells.
+    # Size and axial reconstruction are deliberately selected separately.
+    build(; nx, nz, mesh=:log, scheme=WENO5(), axial_scheme=MUSCL(), tf=5.0)
+end
+
+function main()
+    problem = tutorial_problem()
+    # The controller above bounds the next explicit RK4 step; it is not an
+    # adaptive-error solver or an unconditional positivity guarantee for WENO.
+    solution = advance(problem, [0.0, 5.0]; method=RK4())
+    grid = first(problem.operator.local_operators).system.populations.crystals.grid
+    physical_density = 1e12 .* density(grid, population(problem, last(solution.u), :crystals))
+    @show extrema(bulk(problem, last(solution.u), :c)) extrema(physical_density)
+    solution
+end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../moment_crystallization/">« Aggregation and nucleation with moments</a><a class="docs-footer-nextpage" href="../protein_crystallization/">Isothermal protein crystallization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 17:29">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

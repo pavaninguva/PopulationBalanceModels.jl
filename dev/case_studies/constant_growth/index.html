@@ -26,30 +26,82 @@ E_{\mathrm{RMS}}=\left[
 \qquad f(a,t)=f(a-0.1t,0)\]</p><p>with periodic continuation. Both initialization and comparison again use exact bin integrals.</p><p><img src="../../assets/constant_growth/smooth_refinement.png" alt="L1 and RMSE for smooth periodic transport"/></p><p>Rather than placing arbitrarily anchored <span>$h^2$</span> and <span>$h^5$</span> lines on these plots, we calculate the observed order from each pair of grids:</p><p class="math-container">\[p_{\mathrm{obs}}=
 \frac{\log[E(N)/E(2N)]}{\log2}.\]</p><p><img src="../../assets/constant_growth/observed_orders.png" alt="Measured orders in both error norms"/></p><p>The purple dashed HOC + midpoint curves have measured RMSE orders 2.019, 2.005, 2.001 and 2.000 on the 40–640-bin grids. At the shared <span>$C=0.5$</span>, temporal error limits this complete method to second order; this plot does not isolate its fourth-order spatial reconstruction.</p><p>WENO3 + SSPRK33 has measured RMSE orders 1.73, 2.28, 3.34, 4.27 on the successive 40–640-bin refinements. Third-order face reconstruction does not ensure an immediate third-order curve: nonlinear weights near extrema and the third-order time update both contribute at these resolutions. The fixed WENO weight parameter also changes its importance as the mesh is refined. The final slope above three is finite-range behaviour, not evidence for a higher formal order.</p><p>Upwind approaches first order. MUSCL approaches second order in <span>$L^1$</span> but about 1.8 in RMSE here, because limiting near smooth extrema affects the norms differently. WENO5 with SSPRK33 approaches third order as time error dominates. RK4 gives much smaller errors on this mesh range; its observed slopes above five are finite-range behaviour, not proof of a new order or of fifth-order space–time accuracy. At sufficiently fine resolution, fourth-order temporal error can dominate that pairing too. The characteristic shift is at roundoff, where an inferred convergence order is meaningless.</p><h2 id="Measure-computation-time-once"><a class="docs-heading-anchor" href="#Measure-computation-time-once">Measure computation time once</a><a id="Measure-computation-time-once-1"></a><a class="docs-heading-anchor-permalink" href="#Measure-computation-time-once" title="Permalink"></a></h2><p><img src="../../assets/constant_growth/timings.png" alt="Single-run elapsed time and error versus time, including Inguva2022"/></p><p>Each configuration has <strong>one measured integration</strong>. Small, separate warmups pass the selected time method explicitly, matching the measured call; the benchmark-sized problem is not run three times. Timings include stepping, residual evaluation and allocations, and exclude compilation, file output and plotting. A full garbage collection before each timer prevents earlier configurations&#39; garbage being charged to the next method; allocation bytes and in-solve GC time are exported too. They have no averaging or repeatability bands and will vary between runs and machines. The retained timings were measured together in the benchmark run; <a href="../../assets/constant_growth/inputs.txt">inputs.txt</a> records the Julia version, CPU and thread counts.</p><p>Raw results are in <a href="../../assets/constant_growth/errors.csv">errors.csv</a> and <a href="../../assets/constant_growth/smooth_errors.csv">smooth_errors.csv</a>. They also retain negative number, total-number drift and actual step counts.</p><h2 id="Minimal-run-and-full-reproduction"><a class="docs-heading-anchor" href="#Minimal-run-and-full-reproduction">Minimal run and full reproduction</a><a id="Minimal-run-and-full-reproduction-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-run-and-full-reproduction" title="Permalink"></a></h2><p>The first calculation above is a complete minimal run. To reproduce the full comparison, use a checkout with the <a href="../../verification/">standard environment</a>:</p><pre><code class="language-sh hljs">julia --project=. examples/constant_growth_methods.jl
 python docs/benchmarks/plot_transport_comparisons.py constant --usetex
-julia --project=docs docs/make.jl</code></pre><ul><li><a href="../../assets/source/examples/constant_growth_methods.jl">Complete comparison driver</a>.</li><li><a href="../../assets/source/examples/support/constant_growth_benchmark.jl">Benchmark/export helpers</a>.</li></ul><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>Run from the repository root. This solves the Gaussian problem with each pairing and prints its error; the full driver above adds refinement, timings and exports. Signed undershoots are retained for this diagnostic comparison.</p><pre><code class="language-julia hljs">using PopulationBalanceModels
-include(&quot;examples/constant_growth_methods.jl&quot;)
-benchmark = ConstantGrowthMethods
+julia --project=docs docs/make.jl</code></pre><ul><li><a href="../../assets/source/examples/constant_growth_methods.jl">Complete comparison driver</a>.</li><li><a href="../../assets/source/examples/support/constant_growth_benchmark.jl">Benchmark/export helpers</a>.</li></ul><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The script defines the Gaussian, its exact bin integrals, and all seven space/time pairings before assembling and solving each problem. Signed undershoots are retained. It performs no timing study or file export.</p><p><a href="../../assets/source/tutorials/constant_growth.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=. docs/src/assets/source/tutorials/constant_growth.jl</code></pre><p>The code is assembled from marked sections of the maintained examples; those same definitions are used by the reproduction drivers above. Model equations and assumptions have not been changed for this presentation.</p><pre><code class="language-julia hljs"># Minimal constant growth tutorial.
+# Generated from maintained scientific source sections and a short run block.
+# No benchmark exports or retained files are written. See the case-study page.
 
-model = PBMModel(growth=Growth(AffineGrowth(0.1, 0.0)))
-grid = Grid1D(range(0.0, 1.0; length=201); coordinate=:length)
-boundary = SizeBC(OpenBoundary(), OpenBoundary())
-initial = benchmark.gaussian_counts(grid, 0.0)
-reference = benchmark.gaussian_counts(grid, 4.0)
+using PopulationBalanceModels
+using Distributions: Normal, cdf, ccdf
 
-for (name, time_name, scheme, time_method) in benchmark.combinations()
-    operator = if scheme === nothing
-        compile(model, grid; evolution=time_method, bc=boundary)
-    else
-        compile(model, grid; methods=TermMethods(growth=scheme), bc=boundary)
+# From examples/constant_growth_methods.jl (velocity).
+const growth = 0.1
+
+# From examples/constant_growth_methods.jl (gaussian).
+const gaussian_height = 100.0
+const gaussian_center = 0.2
+const gaussian_width = 0.03 # standard deviation, independent of bin width
+const gaussian_profile = Normal(gaussian_center,gaussian_width)
+gaussian_density(a) = 0 &lt;= a &lt;= 1 ?
+    gaussian_height*exp(-0.5*((a-gaussian_center)/gaussian_width)^2) : 0.0
+
+&quot;&quot;&quot;Exact bin numbers for a Gaussian initially on [0,1], with zero inflow.
+Use survival probabilities above the centre to retain small Gaussian tails.
+&quot;&quot;&quot;
+function gaussian_counts(grid,t)
+    shift = growth*t
+    scale = gaussian_height*gaussian_width*sqrt(2pi)
+    map(grid.edges[1:end-1],grid.edges[2:end]) do a,b
+        lo,hi = max(a-shift,0.0),min(b-shift,1.0)
+        hi &lt;= lo &amp;&amp; return 0.0
+        fraction = lo &gt;= gaussian_center ?
+            ccdf(gaussian_profile,lo)-ccdf(gaussian_profile,hi) :
+            cdf(gaussian_profile,hi)-cdf(gaussian_profile,lo)
+        scale*fraction
     end
-    problem = PBMProblem(operator, initial, (0.0, 4.0))
-    CFL = time_method isa Inguva2022 ? 1.0 : 0.5
-    dt = CFL * first(grid.widths) / 0.1
-    solution = simulate(problem; method=time_method, dt,
-        saveat=[4.0], check_nonnegative=false)
+end
 
-    error = (vec(last(solution.u)) .- reference) ./ grid.widths
-    L1 = sum(grid.widths .* abs.(error))
-    RMSE = sqrt(sum(grid.widths .* error.^2) / sum(grid.widths))
-    @show name time_name CFL L1 RMSE
-end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Overview</a><a class="docs-footer-nextpage" href="../crystallization/">Batch cooling crystallization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Sunday 1 November 2026 17:17">Sunday 1 November 2026</span>. Using Julia version 1.10.12.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+# From examples/constant_growth_methods.jl (pairings).
+# Each tuple names a size reconstruction and time method. A complete space–time
+# update has no separate reconstruction. Inguva2022 requires C=1.
+combinations() = [
+    (&quot;upwind&quot;, &quot;euler&quot;, Upwind(), ForwardEuler()),
+    (&quot;muscl&quot;, &quot;ssprk33&quot;, MUSCL(), SSPRK33()),
+    (&quot;weno3&quot;, &quot;ssprk33&quot;, WENO3(), SSPRK33()),
+    (&quot;weno5&quot;, &quot;ssprk33&quot;, WENO5(), SSPRK33()),
+    (&quot;weno5&quot;, &quot;rk4&quot;, WENO5(), RK4()),
+    (&quot;hoc&quot;, &quot;midpoint&quot;, nothing, HOCFiniteVolume()),
+    (&quot;inguva2022&quot;, &quot;coupled&quot;, nothing, Inguva2022()),
+]
+
+function tutorial_problem(; bins=200)
+    grid = Grid1D(range(0.0, 1.0; length=bins+1); coordinate=:length)
+    model = PBMModel(growth=Growth(AffineGrowth(growth, 0.0)))
+    boundary = SizeBC(OpenBoundary(), OpenBoundary())
+    (; grid, model, boundary, initial=gaussian_counts(grid, 0.0),
+       reference=gaussian_counts(grid, 4.0))
+end
+
+function main()
+    case = tutorial_problem()
+    for (name, time_name, scheme, time_method) in combinations()
+        operator = scheme === nothing ?
+            compile(case.model, case.grid; evolution=time_method, bc=case.boundary) :
+            compile(case.model, case.grid;
+                methods=TermMethods(growth=scheme), bc=case.boundary)
+        problem = PBMProblem(operator, case.initial, (0.0, 4.0))
+        CFL = time_method isa Inguva2022 ? 1.0 : 0.5
+        dt = CFL * first(case.grid.widths) / growth
+        # Signed diagnostic comparison: expose undershoots rather than clipping.
+        solution = simulate(problem; method=time_method, dt,
+            saveat=[4.0], check_nonnegative=false)
+        error = (vec(last(solution.u)) .- case.reference) ./ case.grid.widths
+        L1 = sum(case.grid.widths .* abs.(error))
+        RMSE = sqrt(sum(case.grid.widths .* error.^2) / sum(case.grid.widths))
+        @show name time_name CFL L1 RMSE minimum(density(case.grid, last(solution.u)))
+    end
+end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Overview</a><a class="docs-footer-nextpage" href="../crystallization/">Batch cooling crystallization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 17:29">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

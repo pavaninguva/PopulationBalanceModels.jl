@@ -3,7 +3,7 @@ using Printf
 
 function run_realizable_axial_transport()
     basis=MomentSet(0:3;coordinate=:length)
-    op=compile(PBMModel(),basis;closure=RankAdaptiveQMOM(2;rtol=1e-10))
+    op=compile(PBMModel(),basis;moment_method=RankAdaptiveQMOM(2;rtol=1e-10))
     localpb=PBMProblem(PBMSystem((particles=op,);nonnegative_bulk=(:solute,)),
         (particles=ones(4),),(0.,.3);bulk0=(solute=3.3,))
     z=AxialGrid([(i/30)^1.2 for i in 0:30])

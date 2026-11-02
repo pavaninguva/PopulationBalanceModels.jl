@@ -15,7 +15,7 @@ function dissolution_problem(kind;resolution=80,tspan=(0.0,2.2),rho_kv=0.7,c0=1.
         exchange=ConservativeExchange(:crystals,:solute,(L,p,t,ctx)->rho_kv*L^3)
     elseif kind===:moments
         basis=MomentSet(0:2resolution-1;coordinate=:length)
-        op=compile(model,basis;closure=RankAdaptiveQMOM(resolution;rtol=1e-10),
+        op=compile(model,basis;moment_method=RankAdaptiveQMOM(resolution;rtol=1e-10),
             boundary=MomentBoundary(left=:absorb))
         initial=[dissolution_reference(k,0.0) for k in basis.orders]
         exchange=MomentExchange(:crystals,:solute,3;factor=rho_kv)

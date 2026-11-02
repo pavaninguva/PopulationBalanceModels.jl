@@ -61,7 +61,7 @@ function build_moments(;p,c0,temperature_profile,tspan,initial_moments=zeros(5))
         growth=Growth(rate=PolynomialRate((growth_velocity,))),
         primary=Nucleation(rate=primary_rate,size=0.0),
         secondary=Nucleation(rate=secondary_rate,size=0.0))
-    operator=compile(model,MomentSet(0:4;coordinate=:length);method=ExactClosure())
+    operator=compile(model,MomentSet(0:4;coordinate=:length);moment_method=ExactClosure())
     system=PBMSystem((crystals=operator,);fields=(p,t)->(T=temperature_profile(t),),
         nonnegative_bulk=(:c,),exchanges=(MomentExchange(:crystals,:c,3;
             factor=(p,t,ctx)->p.material_factor,mechanisms=(:growth,)),))

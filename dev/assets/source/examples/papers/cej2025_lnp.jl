@@ -1,3 +1,4 @@
+# tutorial:start model
 module CEJ2025LNP
 using PopulationBalanceModels
 using LinearAlgebra
@@ -193,3 +194,4 @@ function mechanism_rates(op,N,p,t,fields,bulk)
     (;nucleation,growth,overflow)
 end
 end
+# tutorial:end model

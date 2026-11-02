@@ -30,20 +30,156 @@ julia --project=. examples/stem_cell_population.jl
 python docs/benchmarks/plot_stem_cells.py --usetex
 python test/stem_cell_results.py
 julia --project=. test/stem_cells.jl
-julia --project=docs docs/make.jl</code></pre><p>Plotting requires Python 3.11+, NumPy, Matplotlib and, for <code>--usetex</code>, LaTeX with dvipng. Omitting that flag uses MathText previews. The plotter checks the production configuration and numerical-source/data hashes. At this checkout that strict guard needs a separately justified compatibility review before a current-source redraw/replay can be certified; the retained figures above do not imply it has passed. Smoke exports cannot replace full-horizon results. See the <a href="../../verification/">verification guide</a> for setup and the distinction between retained integrity and replay.</p><p>The <a href="../../assets/source/examples/stem_cell_population.jl">model and minimal solver</a>, <a href="../../assets/source/examples/support/stem_cell_study.jl">reporting driver</a> and <a href="../../assets/source/plotting/plot_stem_cells.py">plotting script</a> preserve the full workflow. The <a href="../../assets/stem_cells/summary.csv">summary</a>, <a href="../../assets/stem_cells/refinement.csv">refinement table</a> and <a href="../../assets/stem_cells/run.toml">run manifest</a> record the actual configurations, timings, dependency versions and source hashes. Timings are one measured solve after a separate compilation warmup, including setup and saved-state checks, but excluding export and plotting; they have no repeatability error bars.</p><p>The focused tests check beta daughter moments against their analytic values and a binary division/differentiation cascade against an independent closed-form solution. Production checks separately halve the timestep, refine 300/600/1200 cargo bins, double daughter quadrature from 12 to 24 nodes, and extend the domain at unchanged bin width. The largest CDF changes over the saved times are:</p><table><tr><th style="text-align: left">Change from the displayed 600-bin calculation</th><th style="text-align: right">Self-renewal</th><th style="text-align: right">Differentiation</th></tr><tr><td style="text-align: left">1200 cargo bins</td><td style="text-align: right">0.0245</td><td style="text-align: right">0.0278</td></tr><tr><td style="text-align: left">Halved timestep controls</td><td style="text-align: right">0.0000191</td><td style="text-align: right">0.0000200</td></tr><tr><td style="text-align: left">24 daughter-quadrature nodes</td><td style="text-align: right">0.00761</td><td style="text-align: right">0.00727</td></tr><tr><td style="text-align: left">Domain extended from 120 to 160 a.u.</td><td style="text-align: right">0.0000167</td><td style="text-align: right">0.0000175</td></tr></table><p>These are absolute CDF fractions: 0.0278 is 2.78 percentage points. Distribution shape remains more grid-sensitive than concentration: the 600/1200-bin concentration differences stay below 0.013% and 0.070%, respectively. The plots illustrate the biology and accounting; they do not establish sub-percent convergence of the transient CDF. Domain extension also tightens the automatic step recommendation because the division hazard is larger at high cargo, so that row includes a temporal change comparable to the explicit timestep check.</p><p>All saved populations are nonnegative. The largest relative discrete cargo defect is <span>$4.4\times10^{-13}$</span>; daughter underflow is below <span>$3\times10^{-44}$</span> of the initial cell concentration and the upper boundary remains inactive. These discrete balance checks are separate from continuum accuracy. The original authors use a stochastic representative ensemble; this deterministic sectional calculation is an adaptation of their synthetic model, rather than a reproduction of a particular random realization. The <a href="https://github.com/aedanbrown/Single-cell_Growth_and_Division_Functions_hPSCs/tree/64a069491d4895aaa6b8a3f5476dc997877f728f">authors&#39; code</a> and the paper&#39;s supplement specify the source functions and initialization.</p><h2 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h2><p>Run from the repository root with the <a href="../../verification/">standard environment</a>. The <a href="../../assets/source/examples/stem_cell_population.jl">model recipe</a> supplies the rates, beta daughters and coupled counters defined above; the <a href="../../assets/source/examples/support/stem_cell_study.jl">full study helper</a> adds refinement and exports. Including the recipe does not run that study.</p><pre><code class="language-julia hljs">using PopulationBalanceModels
-include(&quot;examples/stem_cell_population.jl&quot;)
-recipe = StemCellPopulation
+julia --project=docs docs/make.jl</code></pre><p>Plotting requires Python 3.11+, NumPy, Matplotlib and, for <code>--usetex</code>, LaTeX with dvipng. Omitting that flag uses MathText previews. The plotter checks the production configuration and numerical-source/data hashes. At this checkout that strict guard needs a separately justified compatibility review before a current-source redraw/replay can be certified; the retained figures above do not imply it has passed. Smoke exports cannot replace full-horizon results. See the <a href="../../verification/">verification guide</a> for setup and the distinction between retained integrity and replay.</p><p>The <a href="../../assets/source/examples/stem_cell_population.jl">model and minimal solver</a>, <a href="../../assets/source/examples/support/stem_cell_study.jl">reporting driver</a> and <a href="../../assets/source/plotting/plot_stem_cells.py">plotting script</a> preserve the full workflow. The <a href="../../assets/stem_cells/summary.csv">summary</a>, <a href="../../assets/stem_cells/refinement.csv">refinement table</a> and <a href="../../assets/stem_cells/run.toml">run manifest</a> record the actual configurations, timings, dependency versions and source hashes. Timings are one measured solve after a separate compilation warmup, including setup and saved-state checks, but excluding export and plotting; they have no repeatability error bars.</p><p>The focused tests check beta daughter moments against their analytic values and a binary division/differentiation cascade against an independent closed-form solution. Production checks separately halve the timestep, refine 300/600/1200 cargo bins, double daughter quadrature from 12 to 24 nodes, and extend the domain at unchanged bin width. The largest CDF changes over the saved times are:</p><table><tr><th style="text-align: left">Change from the displayed 600-bin calculation</th><th style="text-align: right">Self-renewal</th><th style="text-align: right">Differentiation</th></tr><tr><td style="text-align: left">1200 cargo bins</td><td style="text-align: right">0.0245</td><td style="text-align: right">0.0278</td></tr><tr><td style="text-align: left">Halved timestep controls</td><td style="text-align: right">0.0000191</td><td style="text-align: right">0.0000200</td></tr><tr><td style="text-align: left">24 daughter-quadrature nodes</td><td style="text-align: right">0.00761</td><td style="text-align: right">0.00727</td></tr><tr><td style="text-align: left">Domain extended from 120 to 160 a.u.</td><td style="text-align: right">0.0000167</td><td style="text-align: right">0.0000175</td></tr></table><p>These are absolute CDF fractions: 0.0278 is 2.78 percentage points. Distribution shape remains more grid-sensitive than concentration: the 600/1200-bin concentration differences stay below 0.013% and 0.070%, respectively. The plots illustrate the biology and accounting; they do not establish sub-percent convergence of the transient CDF. Domain extension also tightens the automatic step recommendation because the division hazard is larger at high cargo, so that row includes a temporal change comparable to the explicit timestep check.</p><p>All saved populations are nonnegative. The largest relative discrete cargo defect is <span>$4.4\times10^{-13}$</span>; daughter underflow is below <span>$3\times10^{-44}$</span> of the initial cell concentration and the upper boundary remains inactive. These discrete balance checks are separate from continuum accuracy. The original authors use a stochastic representative ensemble; this deterministic sectional calculation is an adaptation of their synthetic model, rather than a reproduction of a particular random realization. The <a href="https://github.com/aedanbrown/Single-cell_Growth_and_Division_Functions_hPSCs/tree/64a069491d4895aaa6b8a3f5476dc997877f728f">authors&#39; code</a> and the paper&#39;s supplement specify the source functions and initialization.</p><h2 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h2><p>Cargo dynamics, division and differentiation hazards, the two-daughter quadrature, initial bin probabilities and historical counters are defined below. The final calls solve short 20-model-time transients with and without differentiation, not the full balanced-growth/refinement study. The counters remain historical records, not another proliferating population.</p><p><a href="../../assets/source/tutorials/stem_cells.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=. docs/src/assets/source/tutorials/stem_cells.jl</code></pre><p>The code is assembled from marked sections of the maintained examples; those same definitions are used by the reproduction drivers above. Model equations and assumptions have not been changed for this presentation.</p><pre><code class="language-julia hljs"># Minimal stem cells tutorial.
+# Generated from maintained scientific source sections and a short run block.
+# No benchmark exports or retained files are written. See the case-study page.
 
-results = Dict()
-for (name, differentiation) in ((:self_renewal, false), (:differentiation, true))
-    problem = recipe.build_problem(bins=600, tf=200.0;
-        differentiation=differentiation)
-    dt = min(0.05, suggest_dt(problem.operator, problem.u0, problem.p, 0.0;
-        cfl=0.35))
-    solution = simulate(problem; method=SSPRK33(), dt,
-        saveat=0.0:10.0:200.0, negative_tolerance=0.0)
-    summary = recipe.state_summary(problem, last(solution.u), last(solution.t))
-    results[name] = (problem=problem, solution=solution, summary=summary)
-    @show name summary.stem summary.differentiated
-    @show summary.number_balance summary.cargo_balance
-end</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../protein_crystallization/">« Isothermal protein crystallization</a><a class="docs-footer-nextpage" href="../nanoparticles/">Lipid nanoparticle formation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Sunday 1 November 2026 17:17">Sunday 1 November 2026</span>. Using Julia version 1.10.12.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+using PopulationBalanceModels
+using LinearAlgebra
+using Distributions: Normal, cdf, ccdf
+
+# From examples/stem_cell_population.jl (model).
+&quot;&quot;&quot;Brown et al. (2025), Eq. 7: net intracellular cargo change, in a.u./model time.&quot;&quot;&quot;
+cargo_rate(x, p, t, ctx) = (50 + x^2) / (100 + x^2) - 0.005x
+
+&quot;&quot;&quot;Division hazard (Eq. 6), not the daughter birth rate.&quot;&quot;&quot;
+division_rate(x, p, t, ctx) = (x / 100)^5
+
+&quot;&quot;&quot;Eq. 9: exit from the pluripotent cohort, not cell death or diffusivity.&quot;&quot;&quot;
+differentiation_rate(x, p, t, ctx) = p.differentiation ? 0.5 / (1 + 0.005exp(0.25x)) : zero(x)
+
+&quot;&quot;&quot;
+Positive Gauss–Jacobi quadrature of TWO expected daughters for r ~ Beta(q,q).
+A mother y gives daughters r*y and (1-r)*y. The symmetric marginal alone,
+with weights summing to two, supplies the deterministic binary-division PBM.
+The rule integrates ratio polynomials through degree 2*order-1 exactly in
+exact arithmetic. It conserves the additive cargo y, not y^3.
+&quot;&quot;&quot;
+function beta_daughters(; q=40.0, order=12)
+    isfinite(q) &amp;&amp; q &gt;= 1 || throw(ArgumentError(&quot;require finite q ≥ 1&quot;))
+    order isa Integer &amp;&amp; order &gt;= 2 || throw(ArgumentError(&quot;at least two daughter nodes required&quot;))
+    alpha = float(q) - 1
+    offdiagonal = [sqrt(k * (k + 2alpha) / ((2k + 2alpha)^2 - 1)) for k in 1:order-1]
+    rule = eigen(SymTridiagonal(zeros(order), offdiagonal))
+    ratios = (rule.values .+ 1) ./ 2
+    counts = 2 .* rule.vectors[1, :].^2
+    SelfSimilarDaughters(ratios, counts; measure_order=1)
+end
+
+&quot;&quot;&quot;Exact bin probabilities of Normal(50,0.5), truncated to [0,100].&quot;&quot;&quot;
+function initial_population(grid; concentration=1.0)
+    isfinite(concentration) &amp;&amp; concentration &gt; 0 || throw(ArgumentError(&quot;initial concentration must be positive&quot;))
+    normal = Normal(50.0, 0.5)
+    normalization = cdf(normal, 100.0) - cdf(normal, 0.0)
+    map(grid.edges[1:end-1], grid.edges[2:end]) do left, right
+        a, b = max(0.0, left), min(100.0, right)
+        b &lt;= a &amp;&amp; return 0.0
+        # Use the survival function in the right tail to avoid subtracting two ones.
+        probability = a &gt;= 50 ? ccdf(normal, a) - ccdf(normal, b) : cdf(normal, b) - cdf(normal, a)
+        concentration * probability / normalization
+    end
+end
+
+&quot;&quot;&quot;
+Build the native sectional PBM with coupled historical exit/count balances.
+The differentiated compartment records counts and cargo AT EXIT; it has no
+subsequent proliferation, death or protein dynamics. CumulativeAccounting
+separately records daughter underflow. This avoids the currently unsupported
+combination of population-transfer interactions and size-loss ledgers.
+
+The scalar synthesis_balance is a negative diagnostic counter supplied by
+ConservativeExchange from the selected discrete growth residual. It is not an
+extracellular nutrient concentration. No biological cargo reservoir is invented.
+&quot;&quot;&quot;
+function build_problem(; bins=600, xmax=120.0, tf=200.0, differentiation=false,
+                       daughter_order=12, concentration=1.0)
+    bins isa Integer &amp;&amp; bins &gt;= 20 || throw(ArgumentError(&quot;use at least 20 cargo bins&quot;))
+    100 &lt;= xmax &lt;= 180 || throw(ArgumentError(&quot;use 100 ≤ xmax ≤ 180; this case keeps R positive&quot;))
+    isfinite(tf) &amp;&amp; tf &gt; 0 || throw(ArgumentError(&quot;tf must be positive&quot;))
+    differentiation isa Bool || throw(ArgumentError(&quot;differentiation must be true or false&quot;))
+    grid = Grid1D(range(0.0, xmax; length=bins+1); coordinate=:oct4)
+    daughters = beta_daughters(order=daughter_order)
+    model = PBMModel(
+        expression=Growth(cargo_rate),
+        division=Breakage(division_rate, daughters; overflow=:discard,
+                          coordinate_map=AdditiveCoordinate(identity, identity)),
+        differentiation=Death(differentiation_rate),
+    )
+    operator = compile(model, grid; methods=TermMethods(growth=MUSCL()), bc=SizeBC())
+    function counters(ctx, p, t)
+        cells = ctx.populations.stem
+        divisions = sum(division_rate(x, p, t, ctx) * cells[i] for (i, x) in enumerate(grid.centers))
+        exits = sum(differentiation_rate(x, p, t, ctx) * cells[i] for (i, x) in enumerate(grid.centers))
+        exit_cargo = sum(x * differentiation_rate(x, p, t, ctx) * cells[i] for (i, x) in enumerate(grid.centers))
+        (divisions=divisions, differentiated_cells=exits, differentiated_cargo=exit_cargo)
+    end
+    system = PBMSystem((stem=operator,); bulk_rhs=counters,
+        exchanges=(ConservativeExchange(:stem, :synthesis_balance, (x,p,t,ctx)-&gt;x;
+                                         mechanisms=(:growth,)),),
+        accounting=(CumulativeAccounting(:stem; properties=(cargo=1,)),),
+        nonnegative_bulk=(:divisions, :differentiated_cells, :differentiated_cargo))
+    PBMProblem(system, (stem=initial_population(grid; concentration),), (0.0, float(tf));
+        p=(differentiation=differentiation,),
+        bulk0=(divisions=0.0, differentiated_cells=0.0,
+               differentiated_cargo=0.0, synthesis_balance=0.0))
+end
+
+&quot;&quot;&quot;Solve with MUSCL / fixed pivot / SSPRK33 and a combined static loss bound.
+All coefficients are autonomous and independent of the population and counters,
+so the initial suggest_dt bound applies for the entire trajectory. It is still
+a recommendation: native stage checks remain enabled, with zero negative tolerance.
+&quot;&quot;&quot;
+function solve_case(; maximum_dt=0.05, cfl=0.35, saveat=nothing, kwargs...)
+    isfinite(maximum_dt) &amp;&amp; maximum_dt &gt; 0 || throw(ArgumentError(&quot;maximum_dt must be positive&quot;))
+    0 &lt; cfl &lt;= 0.35 || throw(ArgumentError(&quot;use 0 &lt; cfl ≤ 0.35 for this case&quot;))
+    problem = build_problem(; kwargs...)
+    dt = min(maximum_dt, suggest_dt(problem.operator, problem.u0, problem.p, 0.0; cfl))
+    times = isnothing(saveat) ? range(0.0, last(problem.tspan); length=101) : saveat
+    simulate(problem; dt, saveat=times, method=SSPRK33(), negative_tolerance=0.0)
+end
+
+function state_summary(problem, state, time)
+    grid = problem.operator.system.populations.stem.grid
+    cells = population(problem, state, :stem)
+    initial = population(problem, problem.u0, :stem)
+    number = sum(cells)
+    cargo = moment(grid, cells, 1)
+    lost_number = cumulative(problem, state, :stem, :breakage_underflow)
+    lost_cargo = cumulative(problem, state, :stem, :breakage_underflow, :cargo)
+    upper_loss = cumulative(problem, state, :stem, :breakage_overflow)
+    divisions = bulk(problem, state, :divisions)
+    exits = bulk(problem, state, :differentiated_cells)
+    exit_cargo = bulk(problem, state, :differentiated_cargo)
+    synthesis = -bulk(problem, state, :synthesis_balance)
+    probabilities = conditional_cdf(grid, cells, grid.edges; window=(0.0, last(grid.edges)))
+    quantiles = cdf_quantiles(grid.edges, probabilities, [0.1, 0.5, 0.9])
+    (time=time, stem=number, differentiated=exits, mean_cargo=cargo/number,
+     q10=quantiles[1], q50=quantiles[2], q90=quantiles[3],
+     cargo=cargo, exit_cargo=exit_cargo, synthesized=synthesis, divisions=divisions,
+     lost_number=lost_number, lost_cargo=lost_cargo, upper_loss=upper_loss,
+     number_balance=number+exits+lost_number-sum(initial)-divisions,
+     cargo_balance=cargo+exit_cargo+lost_cargo-synthesis-moment(grid, initial, 1),
+     minimum_count=minimum(cells), upper_bin_fraction=last(cells)/number)
+end
+
+function tutorial_problem(; differentiation=false, bins=600)
+    # A short transient in synthetic model time, not the balanced-growth study.
+    build_problem(; bins, tf=20.0, differentiation)
+end
+
+function main()
+    for differentiation in (false, true)
+        problem = tutorial_problem(; differentiation)
+        dt = min(0.05, suggest_dt(problem.operator, problem.u0, problem.p, 0.0; cfl=0.35))
+        solution = simulate(problem; method=SSPRK33(), dt,
+            saveat=[0.0,10.0,20.0], negative_tolerance=0.0)
+        summary = state_summary(problem, last(solution.u), last(solution.t))
+        @show differentiation summary.stem summary.differentiated
+        @show summary.number_balance summary.cargo_balance
+    end
+end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../protein_crystallization/">« Isothermal protein crystallization</a><a class="docs-footer-nextpage" href="../nanoparticles/">Lipid nanoparticle formation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 17:29">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

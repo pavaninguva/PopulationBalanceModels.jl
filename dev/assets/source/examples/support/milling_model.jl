@@ -1,3 +1,4 @@
+# tutorial:start model
 module MillingModel
 using PopulationBalanceModels, LinearAlgebra
 import Distributions
@@ -213,3 +214,4 @@ function linear_system(pb)
 end
 
 end # module
+# tutorial:end model
