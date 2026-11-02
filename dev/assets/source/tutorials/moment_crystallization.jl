@@ -21,13 +21,18 @@ function tutorial_problem()
     PBMProblem(operator, initial, (0.0, 50.0))
 end
 
-function main()
+function main(; times=0.0:1.0:50.0)
     problem = tutorial_problem()
-    solution = simulate(problem; method=SSPRK33(), dt=0.02, saveat=0.0:1.0:50.0)
+    solver = ForwardSolver(SSPRK33(); dt=0.02)
+    solution = simulate(problem; solver, saveat=times)
     @show observe(MomentObservable(0), solution)
     @show observe(MomentObservable(3), solution) # Conserved material moment.
     solution
 end
+
+# Optional after import PythonPlot. Moment states do not imply a unique density.
+plot_results(solution) = plot_observable(solution, MomentObservable(0);
+    xlabel="Time (s)", ylabel="Total number")
 
 if abspath(PROGRAM_FILE) == @__FILE__
     main()

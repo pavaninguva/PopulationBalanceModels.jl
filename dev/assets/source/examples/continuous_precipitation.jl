@@ -39,52 +39,40 @@ end
 
 # tutorial:end model
 
-# tutorial:start controller
-# Native explicit RK with a state-dependent explicit step bound. This controller is
-# a benchmark driver, not an adaptive-error solver or a differentiable schedule.
-function advance(problem,times;fraction=.3,method=RK4(),progress=false)
-    times = collect(times)
+# tutorial:start bound
+# The model-specific bound combines transport and solute depletion. The package
+# owns the RK loop, output landing, stage checks, retry and solution construction.
+function precipitation_step_bound(problem,u,t;fraction=.3)
     isfinite(fraction) && 0 < fraction <= 1 || throw(ArgumentError("fraction must be in (0,1]"))
-    method isa PopulationBalanceModels.AbstractExplicitRK || throw(ArgumentError("advance requires a native explicit Runge–Kutta method"))
-    all(isfinite,times) && issorted(times) && all(t->first(problem.tspan)<=t<=last(problem.tspan),times) ||
-        throw(ArgumentError("output times must be finite, sorted and inside the problem time span"))
-    u = copy(problem.u0)
-    t = first(problem.tspan)
     operator = problem.operator
     grid = first(operator.local_operators).system.populations.crystals.grid
-    p = problem.p
     dz,dx = minimum(operator.domain.grid.widths),minimum(grid.widths)
-    transport = operator.domain.velocity/dz + 2p.Dax/dz^2
-    cache = ntuple(_->similar(u),6)
+    transport = operator.domain.velocity/dz + 2operator.domain.dispersion/dz^2
     du = similar(u)
-    states = typeof(u)[]
-    steps = 0
-    for target in times
-        while t < target
-            rhs!(du,u,operator,p,t)
-            maxG = p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
-            h = fraction/(transport+maxG/dx+eps())
-            for j in axes(u,2)
-                c,dc = bulk(problem,u,:c)[j],bulk(problem,du,:c)[j]
-                dc < 0 && (h = min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
-            end
-            h = min(h,target-t,.25)
-            h > 1e-12 || throw(NumericalFailure("precipitation step collapsed; inspect the state"))
-            PopulationBalanceModels._rk_step!(u,cache,problem,t,h,method,true,1e-8)
-            PopulationBalanceModels._check_problem_state(problem,u,1e-8)
-            t = h == target-t ? target : t+h
-            steps += 1
-        end
-        push!(states,copy(u))
-        if progress
-            println("  t = ",target," s; ",steps," steps")
-            flush(stdout)
-        end
+    rhs!(du,u,operator,problem.p,t)
+    p=problem.p
+    maxG = p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
+    h = fraction/(transport+maxG/dx+eps())
+    for j in axes(u,2)
+        c,dc = bulk(problem,u,:c)[j],bulk(problem,du,:c)[j]
+        # This retained allowance affects the step bound, never the state.
+        dc < 0 && (h = min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
     end
-    PBMSolution(times,states,problem,steps)
+    h
 end
+# tutorial:end bound
 
-# tutorial:end controller
+# Compatibility entry point for reproduction drivers. The walkthrough shows
+# the physical bound and configured solver directly, without importing this.
+function advance(problem,times;fraction=.3,method=RK4(),progress=false)
+    isfinite(fraction) && 0 < fraction <= 1 || throw(ArgumentError("fraction must be in (0,1]"))
+    bound=(pb,u,t)->precipitation_step_bound(pb,u,t;fraction)
+    solver=ForwardSolver(method;dt=.25,negative_tolerance=1e-8,
+        control=StepControl(;cfl=nothing,bound,min_dt=1e-12))
+    solution=simulate(problem;solver,saveat=times)
+    progress && println("  completed ",last(solution.t)," s; ",solution.steps," accepted steps")
+    solution
+end
 
 """Normalized outlet L1 difference, integrating both densities on their union grid."""
 function outlet_error(problem,u,reference,v)

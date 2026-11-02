@@ -16,6 +16,9 @@ function growth_rate(x,y,p,t,ctx)
     (p.offset[1]+p.slope[1]*x,p.offset[2]+p.slope[2]*y)
 end
 
+initial_density(x,y,p=parameters())=p.amplitude*exp(-0.5*((x-p.center[1])/p.width[1])^2-
+    0.5*((y-p.center[2])/p.width[2])^2)
+
 foot(x,t,b,s)=iszero(s) ? x-b*t : x*exp(-s*t)+b*expm1(-s*t)/s
 
 function axis_integrals(axis,t,b,s,center,width)
@@ -32,27 +35,38 @@ function reference(grid,t,p=parameters())
     p.amplitude.*(integrals[1]*integrals[2]')
 end
 
-function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters())
+function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters(),initial=nothing)
     grid=Grid2D(range(0,2;length=n+1),range(0,2;length=n+1))
     boundary=SizeBC(OpenBoundary(),NoFlux())
     model=PBMModel(growth=Growth2D(rate=growth_rate))
     operator=compile(model,grid;methods=TermMethods(growth=scheme),bc=SizeBC2D(x=boundary,y=boundary))
-    PBMProblem(operator,reference(grid,0.0,p),(0.0,FINAL_TIME);p)
+    # Keep explicit analytical bin integrals as the historical benchmark default.
+    # A physical description remains attached for parameter-dependent remake.
+    state=initial===nothing ? reference(grid,0.0,p) : initial
+    PBMProblem(operator,state,(0.0,FINAL_TIME);p)
 end
 
 function tutorial_problem(; bins=50)
-    # Exact initial Gaussian bin integrals; one WENO5 configuration.
-    problem(bins; scheme=WENO5(epsilon=1e-12), p=parameters())
+    # Explicit joint number density on [0,2]²; no inferred independence/normalization.
+    initial = InitialDensity((xy,p,t) -> initial_density(xy[1],xy[2],p);
+        support=((0.0,2.0),(0.0,2.0)))
+    problem(bins; scheme=WENO5(epsilon=1e-12), p=parameters(), initial)
 end
 
-function main()
-    pb = tutorial_problem()
+function main(; bins=50, times=[1.0])
+    pb = tutorial_problem(; bins)
     dt = suggest_dt(pb.operator, pb.u0, pb.p, 0.0; cfl=0.4)
     # Keep signed undershoots in this diagnostic comparison; no clipping.
-    solution = simulate(pb; method=SSPRK33(), dt, saveat=[1.0], check_nonnegative=false)
+    solver = ForwardSolver(SSPRK33(); dt, check_nonnegative=false)
+    solution = simulate(pb; solver, saveat=times)
     @show observe(MomentObservable((0,0)), solution)
     solution
 end
+
+# Optional after import PythonPlot. No implicit tensor marginal is selected.
+plot_results(solution) = plot_field(solution; orientation=:internal_x,
+    xlabel="First internal coordinate", ylabel="Second internal coordinate",
+    colorbar_label="Joint number density")
 
 if abspath(PROGRAM_FILE) == @__FILE__
     main()

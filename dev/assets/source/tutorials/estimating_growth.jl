@@ -24,6 +24,9 @@ const UNIFORM_BOUNDS=((0.05,1.0),(0.02,1.0))
 const LAW=AffineGrowth(:g0,:g1)
 
 initial_density(a)=50exp(-(a-CENTER)^2/0.0005)
+
+initial_profile()=InitialDistribution(Normal(CENTER,WIDTH);
+    total=INITIAL_NUMBER,truncation=:physical)
 # Independent closed-form reference for data generation, not a discretized solve.
 
 shift(t,p)=iszero(p.g1) ? p.g0*t : p.g0*expm1(p.g1*t)/p.g1
@@ -65,12 +68,13 @@ function tutorial_problem(; prior=:lognormal)
     model = PBMModel(growth=Growth(LAW))
     operator = compile(model, grid; evolution=Inguva2022(), p=TRUTH,
         bc=SizeBC(OpenBoundary(),OpenBoundary()))
-    base = PBMProblem(operator, exact_counts(grid.edges,0.0), (0.0,1.0); p=TRUTH)
+    base = PBMProblem(operator, initial_profile(), (0.0,1.0); p=TRUTH)
     observable = FunctionObservable((N,op,p,t) -> exact_density.(data.sizes,t,Ref(p)))
     measurement = Measurement(data.times, data.values, observable;
         likelihood=TruncatedGaussianLikelihood(sigma=data.noise), source=:density_measurements)
     # Closed-form forward values isolate estimation from transport error.
-    experiment = InferenceExperiment(:growth, base, measurement; solver=analytical_solver)
+    solver = analytical_solver # Deliberate exact forward reference, not an ODE wrapper.
+    experiment = InferenceExperiment(:growth, base, measurement; solver)
     distributions = prior === :lognormal ?
         (LogNormal(log(0.4),0.4), LogNormal(log(0.25),0.6)) :
         (Uniform(UNIFORM_BOUNDS[1]...), Uniform(UNIFORM_BOUNDS[2]...))
@@ -85,7 +89,16 @@ function main()
     fitted.converged || error("MAP failed; inspect the fit diagnostics")
     @show fitted.parameters.shared fitted.convention
     @show posterior_components(problem, fitted.minimizer)
-    predictions(problem, fitted.minimizer)
+    predicted = predictions(problem, fitted.minimizer) # Explicit forward work.
+    (; estimation=problem, fitted, predicted)
+end
+
+# Optional after import PythonPlot; predictions were computed explicitly in main.
+function plot_results(result)
+    fit_figure = plot_fit(result.estimation, result.predicted; abscissa=SIZES,
+        xlabel="Size coordinate", ylabel="Number density")
+    parameters = plot_parameters(result.estimation, result.fitted; coordinates=:physical)
+    (; fit_figure, parameters)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

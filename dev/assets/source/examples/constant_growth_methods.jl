@@ -22,6 +22,13 @@ const gaussian_height = 100.0
 const gaussian_center = 0.2
 const gaussian_width = 0.03 # standard deviation, independent of bin width
 const gaussian_profile = Normal(gaussian_center,gaussian_width)
+"""Physical translating Gaussian, restricted to its original [0,1] support.
+The height determines the untruncated total; excluded tails are not renormalized.
+"""
+gaussian_initial(t=0.0) = InitialDistribution(
+    Normal(gaussian_center+growth*t,gaussian_width);
+    total=gaussian_height*gaussian_width*sqrt(2pi),
+    support=(growth*t,1.0+growth*t),truncation=:physical)
 gaussian_density(a) = 0 <= a <= 1 ?
     gaussian_height*exp(-0.5*((a-gaussian_center)/gaussian_width)^2) : 0.0
 

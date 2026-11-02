@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 from plot_style import configure, export_figure, panel_letters, relative_percent
 
 ASSETS=Path(__file__).resolve().parents[1]/"src"/"assets"
-configure()
 
 def save_figure(fig,folder,name,vector=True):
     export_figure(fig,folder,name,vector=vector)
@@ -272,9 +271,9 @@ if __name__=="__main__":
     parser.add_argument("--usetex",action="store_true",help="Render with an installed LaTeX distribution instead of Matplotlib MathText.")
     parser.add_argument("--data-dir",type=Path)
     args=parser.parse_args()
-    configure(usetex=args.usetex)
-    if args.case=="illustrations":
-        illustrations()
-    else:
-        folder=args.data_dir or ASSETS/{"transport":"inguva_case2","cooling":"gunawan_example2","lnp":"shin_case","moments":"qamar_moments","temperature_moments":"moment_crystallization","estimation":"parameter_estimation"}[args.case]
-        {"transport":transport,"cooling":cooling,"lnp":lnp,"moments":moments,"temperature_moments":temperature_moments,"estimation":estimation}[args.case](folder)
+    with configure(usetex=args.usetex):
+        if args.case=="illustrations":
+            illustrations()
+        else:
+            folder=args.data_dir or ASSETS/{"transport":"inguva_case2","cooling":"gunawan_example2","lnp":"shin_case","moments":"qamar_moments","temperature_moments":"moment_crystallization","estimation":"parameter_estimation"}[args.case]
+            {"transport":transport,"cooling":cooling,"lnp":lnp,"moments":moments,"temperature_moments":temperature_moments,"estimation":estimation}[args.case](folder)

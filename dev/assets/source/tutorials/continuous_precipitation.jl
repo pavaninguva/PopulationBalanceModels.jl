@@ -3,9 +3,6 @@
 # No benchmark exports or retained files are written. See the case-study page.
 
 using PopulationBalanceModels
-# Existing RK4 controller: rate/depletion bounds and stage checks.
-include(joinpath(pkgdir(PopulationBalanceModels), "examples", "continuous_precipitation.jl"))
-using .ContinuousPrecipitation: advance
 
 # From examples/continuous_precipitation.jl (model).
 """Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³."""
@@ -42,23 +39,57 @@ function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=para
     axial_problem(local_problem,reactor;axial_scheme)
 end
 
+# From examples/continuous_precipitation.jl (bound).
+# The model-specific bound combines transport and solute depletion. The package
+# owns the RK loop, output landing, stage checks, retry and solution construction.
+function precipitation_step_bound(problem,u,t;fraction=.3)
+    isfinite(fraction) && 0 < fraction <= 1 || throw(ArgumentError("fraction must be in (0,1]"))
+    operator = problem.operator
+    grid = first(operator.local_operators).system.populations.crystals.grid
+    dz,dx = minimum(operator.domain.grid.widths),minimum(grid.widths)
+    transport = operator.domain.velocity/dz + 2operator.domain.dispersion/dz^2
+    du = similar(u)
+    rhs!(du,u,operator,problem.p,t)
+    p=problem.p
+    maxG = p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
+    h = fraction/(transport+maxG/dx+eps())
+    for j in axes(u,2)
+        c,dc = bulk(problem,u,:c)[j],bulk(problem,du,:c)[j]
+        # This retained allowance affects the step bound, never the state.
+        dc < 0 && (h = min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
+    end
+    h
+end
+
 function tutorial_problem(; nx=50, nz=50)
     # Log size bins on [1,900] µm, uniform physical reactor cells.
     # Size and axial reconstruction are deliberately selected separately.
     build(; nx, nz, mesh=:log, scheme=WENO5(), axial_scheme=MUSCL(), tf=5.0)
 end
 
-function main()
-    nz = 50
-    problem = tutorial_problem(; nz)
-    # The imported controller bounds each explicit RK4 step; it is not an
-    # adaptive-error solver or an unconditional positivity guarantee for WENO.
-    solution = advance(problem, [0.0, 5.0]; method=RK4())
+function main(; nx=50, nz=50, times=[0.0,5.0])
+    problem = tutorial_problem(; nx, nz)
+    # A physical transport/depletion bound, with package-owned trial/stage checks.
+    # This controls admissibility, not integration error; WENO has no limiter.
+    bound = (pb,u,t) -> precipitation_step_bound(pb,u,t; fraction=0.3)
+    solver = ForwardSolver(RK4(); dt=0.25, negative_tolerance=1e-8,
+        control=StepControl(; cfl=nothing, bound, min_dt=1e-12))
+    solution = simulate(problem; solver, saveat=times)
     @show extrema(bulk(problem, last(solution.u), :c))
     # Restore the population scaling when reporting particles/m³.
     outlet = CellObservable(PopulationMoment(:crystals, 0), nz)
     @show 1e12 .* observe(outlet, solution)
     solution
+end
+
+# Optional after import PythonPlot. Actual nonuniform size edges are retained.
+function plot_results(solution)
+    field = plot_field(solution; population=:crystals, orientation=:axial_x,
+        xlabel="Axial position (m)", ylabel="Size (m)", colorbar_label="Scaled number density")
+    outlet = plot_distribution(solution; population=:crystals,
+        cell=length(solution.problem.operator.domain.grid), times=[last(solution.t)],
+        xlabel="Size (m)", ylabel="Scaled number density")
+    (; field, outlet)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

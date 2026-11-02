@@ -110,4 +110,6 @@ if __name__=='__main__':
     parser.add_argument('--data-dir',type=Path,default=Path(__file__).resolve().parents[1]/'src/assets/shin_case')
     parser.add_argument('--comparison',type=Path)
     parser.add_argument('--usetex',action='store_true')
-    args=parser.parse_args();configure(usetex=args.usetex);plots(args.data_dir,args.comparison)
+    args=parser.parse_args()
+    with configure(usetex=args.usetex):
+        plots(args.data_dir,args.comparison)

@@ -102,27 +102,44 @@ function tutorial_problem(; bins=40)
     setup = (theta,base) -> build(theta; bins)
     # Instantaneous OUTLET volume median, not the resident number median.
     d50 = SystemObservable((state,op,p,t) -> MillingModel.outlet_median(p,state.populations.mill,t))
-    UQProblem(base, inputs; setup, solver=MillingSolver.solve, times,
+    # Retain the constrained material-coordinate reduction; generic external
+    # ForwardSolver has no reduced-state or CVODE-constraint declaration.
+    solver = MillingSolver.solve
+    UQProblem(base, inputs; setup, solver, times,
         outputs=(d50=d50,), output_coordinates=(d50=(units=:micrometre,
             weighting=:instantaneous_outlet_volume, interpolation=:linear_diameter_CDF),))
 end
 
-function main()
-    uq = tutorial_problem()
+function main(; bins=40, mc_samples=16, validation_samples=8, training_samples=12,
+              surrogate_draws=10_000)
+    uq = tutorial_problem(; bins)
+    solver = uq.solver
+    nominal = solver(uq.base, uq.times) # Same callable as the uncertainty calculation.
+    @show observe(uq.outputs.d50, nominal; index=findfirst(==(31.0),uq.times))
     # Demonstration budgets, not the retained 12,000-realization production run.
-    mc = propagate(uq, MonteCarlo(16; seed=2018255); max_solves=16)
-    validation = propagate(uq, MonteCarlo(8; seed=2018256); max_solves=8)
+    mc = propagate(uq, MonteCarlo(mc_samples; seed=2018255); max_solves=mc_samples)
+    validation = propagate(uq, MonteCarlo(validation_samples; seed=2018256); max_solves=validation_samples)
     box = hcat(fill(-2.0,4), fill(2.0,4)) # Training design, not a truncated input law.
-    design = pce_design(uq.inputs; n=12, seed=2018257, bounds=box)
-    pce = fit_pce(uq, PolynomialChaos(1); design, validation, max_solves=12)
+    design = pce_design(uq.inputs; n=training_samples, seed=2018257, bounds=box)
+    pce = fit_pce(uq, PolynomialChaos(1); design, validation, max_solves=training_samples)
     @show uq_summary(mc; covariance=false).mean.d50
     @show pce.validation.rmse pce.validation.passed
     if pce.validation.passed
-        cheap = evaluate_pce(pce, MonteCarlo(10_000; seed=2018259))
+        cheap = evaluate_pce(pce, MonteCarlo(surrogate_draws; seed=2018259))
         @show uq_summary(cheap; covariance=false).quantiles.d50
     else
         @warn "Refine the PCE degree/design before using its uncertainty summaries"
     end
+    (; nominal, mc, pce)
+end
+
+# Optional after import PythonPlot. MC output quantiles are not errors on the mean.
+function plot_results(result)
+    mc = plot_uq(result.mc; output=:d50,
+        xlabel="Time (s)", ylabel="Outlet volume median (micrometres)")
+    # PCE analytical moments do not define quantiles; label one output SD explicitly.
+    pce = plot_uq(result.pce; output=:d50, band=:sd,
+        xlabel="Time (s)", ylabel="Outlet volume median (micrometres)")
     (; mc, pce)
 end
 

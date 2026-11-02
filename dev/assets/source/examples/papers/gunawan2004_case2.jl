@@ -3,7 +3,7 @@ using PopulationBalanceModels
 
 export parameters,temperature,solubility,supersaturation,growth_rate,nucleation_rate,
        reported_initial_density,reported_seed_density,benchmark_initial_density,
-       initial_counts,build,build_moments,moment_rhs!
+       initial_counts,build,density_problem,build_moments,moment_rhs!
 
 # tutorial:start physics
 """Kinetic constants in µm, seconds, and g/g-water; size_factor has units µm⁻¹."""
@@ -57,6 +57,17 @@ factor follow the paper's V=integral(L^3*n) convention.
 """
 function build(;grid=Grid1D(range(0.0,1600.0;length=1601);coordinate=:length),
                 initial_density,c0,scheme=MUSCL(),tspan=(0.0,1000.0),p=parameters())
+    # Historical producer: preserve its explicit three-point projected state.
+    assemble_problem(grid,initial_counts(grid,initial_density);c0,scheme,tspan,p)
+end
+
+function density_problem(;grid,initial_density,c0,support=nothing,scheme=MUSCL(),
+                         tspan=(0.0,1000.0),p=parameters())
+    initial=InitialDensity((L,p,t)->initial_density(L);support,quadrature=GaussLegendre(3))
+    assemble_problem(grid,initial;c0,scheme,tspan,p)
+end
+
+function assemble_problem(grid,initial;c0,scheme,tspan,p)
     first(grid.edges)==0 || throw(ArgumentError("Gunawan boundary nucleation requires a grid starting at L=0"))
     model=PBMModel(growth=Growth(rate=growth_rate),nucleation=Nucleation(rate=nucleation_rate,size=0.0))
     methods=TermMethods(growth=scheme,by_term=(nucleation=BoundaryInjection(:left),))
@@ -65,8 +76,7 @@ function build(;grid=Grid1D(range(0.0,1600.0;length=1601);coordinate=:length),
         fields=(p,t)->(T=temperature(t),),nonnegative_bulk=(:c,),
         exchanges=(ConservativeExchange(:crystals,:c,(L,p,t,ctx)->p.rho*L^3;
             mechanisms=(:growth,:nucleation)),))
-    N0=initial_counts(grid,initial_density)
-    PBMProblem(system,(crystals=N0,),tspan;bulk0=(c=float(c0),),p)
+    PBMProblem(system,(crystals=initial,),tspan;bulk0=(c=float(c0),),p)
 end
 
 # tutorial:end assembly

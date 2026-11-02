@@ -141,12 +141,17 @@ function tutorial_problem(; bins=80)
     remake(make_problem(; bins, FRR=3.0); tspan=(0.0, 1e-5))
 end
 
-function main()
-    problem = tutorial_problem()
-    solution = simulate(problem; method=SSPRK33(), dt=1e-8, saveat=[0.0,1e-5])
+function main(; bins=80, times=[0.0,1e-5])
+    problem = tutorial_problem(; bins)
+    solver = ForwardSolver(SSPRK33(); dt=1e-8)
+    solution = simulate(problem; solver, saveat=times)
     @show bulk(problem, last(solution.u), :lipid)
     solution
 end
+
+# Optional after import PythonPlot; the short startup only, not a full-horizon claim.
+plot_results(solution) = plot_observable(solution, BulkObservable(:lipid);
+    xlabel="Time (s)", ylabel="Dissolved lipid concentration")
 
 if abspath(PROGRAM_FILE) == @__FILE__
     main()

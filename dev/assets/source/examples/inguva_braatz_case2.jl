@@ -32,12 +32,15 @@ function reference(grid,t,p=parameters())
     end
     p.amplitude.*(integrals[1]*integrals[2]')
 end
-function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters())
+function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters(),initial=nothing)
     grid=Grid2D(range(0,2;length=n+1),range(0,2;length=n+1))
     boundary=SizeBC(OpenBoundary(),NoFlux())
     model=PBMModel(growth=Growth2D(rate=growth_rate))
     operator=compile(model,grid;methods=TermMethods(growth=scheme),bc=SizeBC2D(x=boundary,y=boundary))
-    PBMProblem(operator,reference(grid,0.0,p),(0.0,FINAL_TIME);p)
+    # Keep explicit analytical bin integrals as the historical benchmark default.
+    # A physical description remains attached for parameter-dependent remake.
+    state=initial===nothing ? reference(grid,0.0,p) : initial
+    PBMProblem(operator,state,(0.0,FINAL_TIME);p)
 end
 
 # tutorial:end model

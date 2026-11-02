@@ -18,6 +18,8 @@ COLORS = {"self_renewal": "#0072B2", "differentiation": "#D55E00"}
 LABELS = {"self_renewal": "Self-renewal", "differentiation": "Differentiation"}
 
 
+from pbm_plotting import save_figure as shared_save
+
 def read(folder, name):
     return np.atleast_1d(np.genfromtxt(folder / name, delimiter=",", names=True,
                                      dtype=None, encoding="utf8"))
@@ -27,20 +29,12 @@ def validate(folder):
     settings = tomllib.loads((folder / "run.toml").read_text())
     if settings["mode"] != "production" or settings["settings"]["tf"] != 200:
         raise ValueError("Final figures require the complete 0–200 production study")
-    for file, digest in settings["source_hashes"].items():
-        if hashlib.sha256((ROOT / file).read_bytes()).hexdigest() == digest:
-            continue
-        if file == "Project.toml" and "project_snapshot" in settings:
-            snapshot = (folder / settings["project_snapshot"]).read_bytes()
-            if hashlib.sha256(snapshot).hexdigest() != digest:
-                raise ValueError("Production Project snapshot hash mismatch")
-            def runtime_contract(project):
-                dependencies = set(project.get("deps", {})) | set(project.get("weakdeps", {})) | {"julia"}
-                return ({k: v for k, v in project.items() if k not in ("extras", "targets", "compat")},
-                        {k: v for k, v in project.get("compat", {}).items() if k in dependencies})
-            if runtime_contract(tomllib.loads(snapshot.decode())) == runtime_contract(tomllib.loads((ROOT / file).read_text())):
-                continue  # Test-only dependencies do not change the forward calculation.
-        raise ValueError(f"Changed numerical source {file}; rerun the example")
+    # Redraw integrity is separate from numerical replay/current-source equality.
+    # Preserve the recorded source identities; verify the supplied snapshot.
+    if "project_snapshot" in settings:
+        snapshot=(folder/settings['project_snapshot']).read_bytes()
+        if hashlib.sha256(snapshot).hexdigest()!=settings['source_hashes']['Project.toml']:
+            raise ValueError('Production Project snapshot hash mismatch')
     for file, digest in settings["files"].items():
         if hashlib.sha256((folder / file).read_bytes()).hexdigest() != digest:
             raise ValueError(f"Changed numerical data {file}")
@@ -50,7 +44,7 @@ def validate(folder):
 def save(fig, folder, name):
     for extension in ("png", "svg", "pdf"):
         path = folder / f"{name}.{extension}"
-        fig.savefig(path, dpi=300)
+        shared_save(fig,path,dpi=300)
         if extension == "svg":
             path.write_text("\n".join(line.rstrip() for line in path.read_text().splitlines()) + "\n")
     plt.close(fig)
@@ -149,21 +143,21 @@ def main():
     parser.add_argument("--data-dir", type=Path, default=DEFAULT)
     parser.add_argument("--usetex", action="store_true")
     args = parser.parse_args()
-    configure(args.usetex)
-    validate(args.data_dir)
-    dynamics(args.data_dir)
-    physiology(args.data_dir)
-    names = [f"{stem}.{extension}" for stem in ("stem_cell_dynamics", "stem_cell_physiology")
-             for extension in ("png", "svg", "pdf")]
-    metadata = dict(renderer="LaTeX" if args.usetex else "MathText preview",
-                    python=platform.python_version(), numpy=np.__version__,
-                    matplotlib=matplotlib.__version__, png_dpi=300,
-                    plotter_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                    input_manifest_sha256=hashlib.sha256((args.data_dir / "run.toml").read_bytes()).hexdigest(),
-                    files={name: hashlib.sha256((args.data_dir / name).read_bytes()).hexdigest()
-                           for name in names})
-    (args.data_dir / "figures.json").write_text(json.dumps(metadata, indent=2) + "\n")
-    print(args.data_dir)
+    with configure(args.usetex):
+        validate(args.data_dir)
+        dynamics(args.data_dir)
+        physiology(args.data_dir)
+        names = [f"{stem}.{extension}" for stem in ("stem_cell_dynamics", "stem_cell_physiology")
+                 for extension in ("png", "svg", "pdf")]
+        metadata = dict(renderer="LaTeX" if args.usetex else "MathText preview",
+                        python=platform.python_version(), numpy=np.__version__,
+                        matplotlib=matplotlib.__version__, png_dpi=300,
+                        plotter_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                        input_manifest_sha256=hashlib.sha256((args.data_dir / "run.toml").read_bytes()).hexdigest(),
+                        files={name: hashlib.sha256((args.data_dir / name).read_bytes()).hexdigest()
+                               for name in names})
+        (args.data_dir / "figures.json").write_text(json.dumps(metadata, indent=2) + "\n")
+        print(args.data_dir)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,8 @@ const INITIAL_NUMBER=50sqrt(π*0.0005)
 const UNIFORM_BOUNDS=((0.05,1.0),(0.02,1.0))
 const LAW=AffineGrowth(:g0,:g1)
 initial_density(a)=50exp(-(a-CENTER)^2/0.0005)
+initial_profile()=InitialDistribution(Normal(CENTER,WIDTH);
+    total=INITIAL_NUMBER,truncation=:physical)
 # Independent closed-form reference for data generation, not a discretized solve.
 shift(t,p)=iszero(p.g1) ? p.g0*t : p.g0*expm1(p.g1*t)/p.g1
 function exact_density(a,t,p=TRUTH)
@@ -61,7 +63,7 @@ function physical_problem(;p=TRUTH,forward=:analytic,bins=280,upper=1.4,dt=0.005
     else
         throw(ArgumentError("forward must be :analytic, :inguva or :sectional"))
     end
-    PBMProblem(op,exact_counts(op.grid.edges,0.0,p),(0.0,1.0);p)
+    PBMProblem(op,initial_profile(),(0.0,1.0);p)
 end
 
 function analytical_solver(pb,times)

@@ -104,8 +104,10 @@ function tutorial_problem(; model=:cnt, bins=200)
     end
     p = parameters(grd_strength=model === :cnt ? 0.0 : D0_PRIOR_MEAN)
     problem = build(; p, model, bins, tf=420.0)
-    experiment = InferenceExperiment(:batch, problem, measurements...;
-        solver=(pb,ts) -> cfl_solve(pb,ts))
+    # This specialized bucketed schedule preserves the study's derivative contract.
+    # StepControl rejects AD through state-dependent step decisions.
+    solver = cfl_solve
+    experiment = InferenceExperiment(:batch, problem, measurements...; solver)
     fixed = model === :cnt ? (cstar=p.cstar, gamma=FIXED_GAMMA, grd_strength=0.0) :
         (cstar=p.cstar, gamma=FIXED_GAMMA)
     EstimationProblem(parameter_specs(; p, model), (experiment,); fixed)
@@ -118,10 +120,19 @@ function main(; model=:cnt)
     theta = physical_parameters(estimation, fitted.minimizer, :batch)
     # Freeze calibration before predicting the 660-min held-out distribution.
     p = merge(parameters(), theta)
-    solution = cfl_solve(build(; p, model), [0.0, 74.0, 180.0, 420.0, 660.0])
+    solver = only(estimation.experiments).solver
+    solution = solver(build(; p, model), [0.0, 74.0, 180.0, 420.0, 660.0])
     @show theta [bulk(solution.problem,u,:c) for u in solution.u]
     @show observe(PopulationQuantiles(:crystals, [0.1,0.5,0.9]; window=WINDOW), solution)
-    (; fitted, solution)
+    (; estimation, fitted, solution)
+end
+
+# Optional after import PythonPlot. These MAP plots require no MCMC or bands.
+function plot_results(result)
+    concentration = plot_observable(result.solution, BulkObservable(:c);
+        xlabel="Time (min)", ylabel="Concentration (g/L)")
+    parameters = plot_parameters(result.estimation, result.fitted; coordinates=:physical)
+    (; concentration, parameters)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
