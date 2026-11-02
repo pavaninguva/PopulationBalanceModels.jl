@@ -18,6 +18,9 @@ concurrency:
 jobs:
   documentation:
     runs-on: ubuntu-latest
+    env:
+      # A user's global environment must not mask missing example dependencies.
+      JULIA_LOAD_PATH: '@:@stdlib'
     steps:
       - uses: actions/checkout@v4
         with:

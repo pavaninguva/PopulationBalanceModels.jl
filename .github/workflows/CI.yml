@@ -26,26 +26,46 @@ jobs:
       matrix:
         version: ['1.10', '1']
     runs-on: ubuntu-latest
+    env:
+      JULIA_LOAD_PATH: '@:@stdlib'
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
+        with:
+          # Keep sources, but rebuild compiler images on the selected Julia.
+          cache-name: julia-extensions-source-v1
+          cache-compiled: 'false'
       - name: Optional integration tests
+        env:
+          JULIA_PROJECT: ${{ runner.temp }}/pbm-extensions
         shell: julia --color=yes {0}
         run: |
           import Pkg
+          using InteractiveUtils
+          versioninfo()
           root = pwd()
-          Pkg.activate(mktempdir())
+          Pkg.activate(ENV["JULIA_PROJECT"])
           Pkg.develop(path=root)
           Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff", "AdvancedHMC", "MCMCDiagnosticTools", "NonlinearSolve", "Statistics"])
+          Pkg.status(;mode=Pkg.PKGMODE_MANIFEST)
           include(joinpath(root,"test","stationary_integration.jl"))
           include(joinpath(root,"test","stationary_inference.jl"))
           include(joinpath(root,"test","tensor_integration.jl"))
           include(joinpath(root,"test","integration.jl"))
           include(joinpath(root,"test","bayesian_integration.jl"))
           include(joinpath(root,"test","protein_parallel.jl"))
+      - name: Retain resolved extension environment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-environment-${{ matrix.version }}
+          path: |
+            ${{ runner.temp }}/pbm-extensions/Project.toml
+            ${{ runner.temp }}/pbm-extensions/Manifest.toml
+          if-no-files-found: ignore
   sensitivities:
     strategy:
       fail-fast: false

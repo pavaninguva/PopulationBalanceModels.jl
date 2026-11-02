@@ -141,7 +141,10 @@ end
     @test diagnostics(study).solves == 214
     @test diagnostics(study).stop_reason === :criteria_met
     @test diagnostics(first(study.candidates)).condition < 2
-    @test diagnostics(first(study.candidates)).training_rmse == [0.,0.]
+    # x^3 and x agree at these training points. The least-squares residual is
+    # roundoff-sized, not necessarily bitwise zero across BLAS/LAPACK versions.
+    # Their disagreement away from the design must still fail validation below.
+    @test diagnostics(first(study.candidates)).training_rmse ≈ [0.,0.] atol=8eps(Float64) rtol=0
     @test !first(study.history).validation_passed
     @test diagnostics(first(study.candidates)).accuracy_status === :failed
     @test study.candidates[2].validation.passed && !study.history[2].selected
