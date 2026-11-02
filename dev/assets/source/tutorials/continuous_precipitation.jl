@@ -1,8 +1,11 @@
 # Minimal continuous precipitation tutorial.
-# Generated from maintained scientific source sections and a short run block.
+# Physical definitions and one calculation; numerical helpers are linked on the case page.
 # No benchmark exports or retained files are written. See the case-study page.
 
 using PopulationBalanceModels
+# Existing RK4 controller: rate/depletion bounds and stage checks.
+include(joinpath(pkgdir(PopulationBalanceModels), "examples", "continuous_precipitation.jl"))
+using .ContinuousPrecipitation: advance
 
 # From examples/continuous_precipitation.jl (model).
 """Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³."""
@@ -39,51 +42,6 @@ function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=para
     axial_problem(local_problem,reactor;axial_scheme)
 end
 
-# From examples/continuous_precipitation.jl (controller).
-# Native explicit RK with a state-dependent explicit step bound. This controller is
-# a benchmark driver, not an adaptive-error solver or a differentiable schedule.
-function advance(problem,times;fraction=.3,method=RK4(),progress=false)
-    times = collect(times)
-    isfinite(fraction) && 0 < fraction <= 1 || throw(ArgumentError("fraction must be in (0,1]"))
-    method isa PopulationBalanceModels.AbstractExplicitRK || throw(ArgumentError("advance requires a native explicit Runge–Kutta method"))
-    all(isfinite,times) && issorted(times) && all(t->first(problem.tspan)<=t<=last(problem.tspan),times) ||
-        throw(ArgumentError("output times must be finite, sorted and inside the problem time span"))
-    u = copy(problem.u0)
-    t = first(problem.tspan)
-    operator = problem.operator
-    grid = first(operator.local_operators).system.populations.crystals.grid
-    p = problem.p
-    dz,dx = minimum(operator.domain.grid.widths),minimum(grid.widths)
-    transport = operator.domain.velocity/dz + 2p.Dax/dz^2
-    cache = ntuple(_->similar(u),6)
-    du = similar(u)
-    states = typeof(u)[]
-    steps = 0
-    for target in times
-        while t < target
-            rhs!(du,u,operator,p,t)
-            maxG = p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
-            h = fraction/(transport+maxG/dx+eps())
-            for j in axes(u,2)
-                c,dc = bulk(problem,u,:c)[j],bulk(problem,du,:c)[j]
-                dc < 0 && (h = min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
-            end
-            h = min(h,target-t,.25)
-            h > 1e-12 || throw(NumericalFailure("precipitation step collapsed; inspect the state"))
-            PopulationBalanceModels._rk_step!(u,cache,problem,t,h,method,true,1e-8)
-            PopulationBalanceModels._check_problem_state(problem,u,1e-8)
-            t = h == target-t ? target : t+h
-            steps += 1
-        end
-        push!(states,copy(u))
-        if progress
-            println("  t = ",target," s; ",steps," steps")
-            flush(stdout)
-        end
-    end
-    PBMSolution(times,states,problem,steps)
-end
-
 function tutorial_problem(; nx=50, nz=50)
     # Log size bins on [1,900] µm, uniform physical reactor cells.
     # Size and axial reconstruction are deliberately selected separately.
@@ -91,13 +49,15 @@ function tutorial_problem(; nx=50, nz=50)
 end
 
 function main()
-    problem = tutorial_problem()
-    # The controller above bounds the next explicit RK4 step; it is not an
+    nz = 50
+    problem = tutorial_problem(; nz)
+    # The imported controller bounds each explicit RK4 step; it is not an
     # adaptive-error solver or an unconditional positivity guarantee for WENO.
     solution = advance(problem, [0.0, 5.0]; method=RK4())
-    grid = first(problem.operator.local_operators).system.populations.crystals.grid
-    physical_density = 1e12 .* density(grid, population(problem, last(solution.u), :crystals))
-    @show extrema(bulk(problem, last(solution.u), :c)) extrema(physical_density)
+    @show extrema(bulk(problem, last(solution.u), :c))
+    # Restore the population scaling when reporting particles/m³.
+    outlet = CellObservable(PopulationMoment(:crystals, 0), nz)
+    @show 1e12 .* observe(outlet, solution)
     solution
 end
 

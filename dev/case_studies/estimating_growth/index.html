@@ -48,50 +48,52 @@ operator = compile(PBMModel(growth=Growth(law)),grid;
 initial = recipe.exact_counts(grid.edges,0.0,p)
 solution = simulate(PBMProblem(operator,initial,(0.0,1.0);p);
     dt=0.005,saveat=data.times)</code></pre><p>Compilation checks the declared growth form, positivity, boundaries and mesh. The time step and requested outputs must align with the travel-time cells. During a numerical refit the builder reconstructs this mesh for each proposed parameter vector. See <a href="../../methods/characteristics/">Transport along growth trajectories</a> for the method, conservation properties and restrictions.</p><h2 id="Run-the-study"><a class="docs-heading-anchor" href="#Run-the-study">Run the study</a><a id="Run-the-study-1"></a><a class="docs-heading-anchor-permalink" href="#Run-the-study" title="Permalink"></a></h2><pre><code class="language-sh hljs">julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl --output=/tmp/growth-declared-coordinates
-python docs/benchmarks/plot_bayesian_growth.py --data-dir=/tmp/growth-declared-coordinates --usetex</code></pre><p>The working environment needs Optim, AdvancedHMC and MCMCDiagnosticTools as well as this package. The script records all seeds, prior definitions, solver settings and diagnostics in the selected fresh output directory. The plotter reads that same directory, so these commands cannot mix new results with the retained documentation assets. It uses LaTeX labels and no grid lines, and exports PNG and SVG figures. The figures on this page remain retained outputs; replace them only after checking the new calculation and its provenance.</p><h2 id="Minimal-run-and-full-reproduction"><a class="docs-heading-anchor" href="#Minimal-run-and-full-reproduction">Minimal run and full reproduction</a><a id="Minimal-run-and-full-reproduction-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-run-and-full-reproduction" title="Permalink"></a></h2><p>The <a href="../../assets/source/examples/estimate_size_dependent_growth.jl">full driver</a> adds uncertainty calculations, sampling and numerical-refinement comparisons. Use an environment with Optim and the checkout developed into it; see the <a href="../../verification/">shared setup guide</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The continuous density and bin-integral reference, synthetic observation process, forward-model assembly, observable, likelihood, physical priors and explicit inference transforms are included below. The final call performs a MAP fit; it does not sample or overwrite the retained Bayesian results.</p><p><a href="../../assets/source/tutorials/estimating_growth.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=docs docs/src/assets/source/tutorials/estimating_growth.jl</code></pre><p>The code is assembled from marked sections of the maintained examples; those same definitions are used by the reproduction drivers above. Model equations and assumptions have not been changed for this presentation.</p><pre><code class="language-julia hljs"># Minimal estimating growth tutorial.
-# Generated from maintained scientific source sections and a short run block.
+python docs/benchmarks/plot_bayesian_growth.py --data-dir=/tmp/growth-declared-coordinates --usetex</code></pre><p>The working environment needs Optim, AdvancedHMC and MCMCDiagnosticTools as well as this package. The script records all seeds, prior definitions, solver settings and diagnostics in the selected fresh output directory. The plotter reads that same directory, so these commands cannot mix new results with the retained documentation assets. It uses LaTeX labels and no grid lines, and exports PNG and SVG figures. The figures on this page remain retained outputs; replace them only after checking the new calculation and its provenance.</p><h2 id="Minimal-run-and-full-reproduction"><a class="docs-heading-anchor" href="#Minimal-run-and-full-reproduction">Minimal run and full reproduction</a><a id="Minimal-run-and-full-reproduction-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-run-and-full-reproduction" title="Permalink"></a></h2><p>The <a href="../../assets/source/examples/estimate_size_dependent_growth.jl">full driver</a> adds uncertainty calculations, sampling and numerical-refinement comparisons. Use an environment with Optim and the checkout developed into it; see the <a href="../../verification/">shared setup guide</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The continuous density and bin-integral reference, synthetic observation process, forward-model assembly, observable, likelihood, physical priors and explicit inference transforms are included below. It fixes the analytical forward calculation; numerical-backend switches and their refinement loops stay in the full reproduction driver. The final call performs one MAP fit and does not sample or overwrite retained Bayesian results.</p><p><a href="../../assets/source/tutorials/estimating_growth.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=docs docs/src/assets/source/tutorials/estimating_growth.jl</code></pre><p>Physical definitions follow the maintained examples. Numerical helpers and full reproduction sources are linked above; this tutorial writes no retained results.</p><pre><code class="language-julia hljs"># Minimal estimating growth tutorial.
+# Physical definitions and one calculation; numerical helpers are linked on the case page.
 # No benchmark exports or retained files are written. See the case-study page.
 
 using PopulationBalanceModels
-using Optim, Random, LinearAlgebra
+using Optim, Random
 using Distributions: Normal, LogNormal, Uniform, pdf, cdf, ccdf, quantile, truncated
 
-# From examples/estimate_size_dependent_growth.jl (inference).
+# Physical definitions from examples/estimate_size_dependent_growth.jl.
 const TRUTH=(g0=0.434,g1=0.2604)
+
 const TIMES=[0.1,0.25,0.4,0.6,0.8,1.0]
+
 const SIZES=collect(range(0.0,1.4;length=281))
+
 const CENTER=0.2
+
 const WIDTH=sqrt(0.0005/2)
+
 const INITIAL_NUMBER=50sqrt(π*0.0005)
+
 const UNIFORM_BOUNDS=((0.05,1.0),(0.02,1.0))
+
 const LAW=AffineGrowth(:g0,:g1)
+
 initial_density(a)=50exp(-(a-CENTER)^2/0.0005)
 # Independent closed-form reference for data generation, not a discretized solve.
+
 shift(t,p)=iszero(p.g1) ? p.g0*t : p.g0*expm1(p.g1*t)/p.g1
+
 function exact_density(a,t,p=TRUTH)
     foot=(a-shift(t,p))*exp(-p.g1*t)
     foot&lt;0 ? 0.0 : initial_density(foot)*exp(-p.g1*t)
 end
+
 function initial_integral(lo,hi)
     hi&lt;=lo &amp;&amp; return 0.0
     d=Normal(CENTER,WIDTH)
     INITIAL_NUMBER*(lo&gt;CENTER ? ccdf(d,lo)-ccdf(d,hi) : cdf(d,hi)-cdf(d,lo))
 end
-function initial_moment(k)
-    a=-CENTER/WIDTH;phi=pdf(Normal(),a);integrals=[ccdf(Normal(),a),phi]
-    for j in 2:k;push!(integrals,a^(j-1)*phi+(j-1)*integrals[j-1]);end
-    INITIAL_NUMBER*sum(binomial(k,j)*CENTER^(k-j)*WIDTH^j*integrals[j+1] for j in 0:k)
-end
+
 function exact_counts(edges,t,p=TRUTH)
     inverse(a)=max(0.0,(a-shift(t,p))*exp(-p.g1*t))
     [initial_integral(inverse(a),inverse(b)) for (a,b) in zip(edges[1:end-1],edges[2:end])]
 end
-function exact_moment(k,t,p=TRUTH)
-    growth=exp(p.g1*t);translation=shift(t,p)
-    sum(binomial(k,j)*growth^j*translation^(k-j)*initial_moment(j) for j in 0:k)
-end
 
-&quot;&quot;&quot;Evaluate analytical densities and sample independent Gaussian observations conditioned to be nonnegative. The fitted likelihood includes this truncation; no clipping, counts or renormalization are used.&quot;&quot;&quot;
 function synthetic_measurements(;seed=2022,noise=1.0,sizes=SIZES,times=TIMES)
     noise&gt;0 &amp;&amp; isfinite(noise) || throw(ArgumentError(&quot;noise must be positive&quot;))
     truth=[exact_density(a,t) for a in sizes,t in times]
@@ -100,70 +102,31 @@ function synthetic_measurements(;seed=2022,noise=1.0,sizes=SIZES,times=TIMES)
     (;values,truth,noise,sizes=collect(sizes),times=collect(times),seed,noise_model=:truncated_gaussian)
 end
 
-function physical_problem(;p=TRUTH,forward=:analytic,bins=280,upper=1.4,dt=0.005,scheme=MUSCL())
-    boundary=SizeBC(OpenBoundary(),OpenBoundary())
-    model=PBMModel(growth=Growth(LAW))
-    op=if forward in (:analytic,:inguva)
-        grid=characteristic_grid(LAW,(0.0,upper);dt,p)
-        compile(model,grid;evolution=Inguva2022(),p,bc=boundary)
-    elseif forward===:sectional
-        grid=Grid1D(range(0.0,upper;length=bins+1);coordinate=:length)
-        compile(model,grid;methods=TermMethods(growth=scheme),bc=boundary)
-    else
-        throw(ArgumentError(&quot;forward must be :analytic, :inguva or :sectional&quot;))
-    end
-    PBMProblem(op,exact_counts(op.grid.edges,0.0,p),(0.0,1.0);p)
-end
-
 function analytical_solver(pb,times)
     states=[reshape(exact_counts(pb.operator.grid.edges,t,pb.p),:,1) for t in times]
     PBMSolution(times,states,pb,0)
 end
 # Point observations from a bin solver require an explicit reconstruction. This
 # linear interpolation of bin-average densities is NOT an exact continuous PSD.
-function sample_sectional(N,op,points)
-    g=op.grid;f=vec(density(g,N))
-    map(points) do x
-        i=searchsortedlast(g.centers,x)
-        i==0 &amp;&amp; return first(f)
-        i&gt;=length(f) &amp;&amp; return last(f)
-        w=(x-g.centers[i])/(g.centers[i+1]-g.centers[i])
-        (1-w)*f[i]+w*f[i+1]
-    end
-end
-
-&quot;&quot;&quot;
-Two fitted kinetic parameters; the initial density and truncated Gaussian error scale are known.
-`prior=:lognormal` retains the previous growth priors. `prior=:uniform` uses
-physical bounds from stated growth/stretching timescales. Both use log inference
-coordinates as an explicit numerical override. MAP and posterior sampling use the same declared log-coordinate density,
-including the physical-prior Jacobian.
-The default forward calculation evaluates the analytical continuous density.
-The optional bin solvers rebuild the characteristic mesh when parameters change.
-&quot;&quot;&quot;
-function estimation_problem(data=synthetic_measurements();prior=:lognormal,forward=:analytic,bins=280,upper=1.4,dt=0.005,scheme=MUSCL())
-    prior in (:lognormal,:uniform) || throw(ArgumentError(&quot;unknown prior scenario&quot;))
-    base=physical_problem(;forward,bins,upper,dt,scheme)
-    observable=forward===:analytic ?
-        FunctionObservable((N,op,p,t)-&gt;exact_density.(data.sizes,t,Ref(p))) :
-        FunctionObservable((N,op,p,t)-&gt;sample_sectional(N,op,data.sizes))
-    measurement=Measurement(data.times,data.values,observable;
-        likelihood=TruncatedGaussianLikelihood(sigma=data.noise),source=:density_measurements)
-    setup=(theta,pb)-&gt;forward===:inguva ? physical_problem(;p=theta,forward,bins,upper,dt,scheme) : remake(pb;p=theta)
-    solver=forward===:analytic ? analytical_solver : forward===:inguva ?
-        ((pb,ts)-&gt;simulate(pb;dt=pb.operator.dt,saveat=ts)) : nothing
-    ex=InferenceExperiment(:growth,base,measurement;setup,solver,dt=forward===:sectional ? dt : nothing)
-    distributions=prior===:lognormal ? (LogNormal(log(0.4),0.4),LogNormal(log(0.25),0.6)) :
-        (Uniform(UNIFORM_BOUNDS[1]...),Uniform(UNIFORM_BOUNDS[2]...))
-    specs=[ParameterSpec(name;initial,transform=LogTransform(),prior=d)
-        for (name,initial,d) in zip((:g0,:g1),(0.40,0.23),distributions)]
-    EstimationProblem(specs,(ex,);derivatives=forward===:inguva ? :finite_difference : :auto)
-end
 
 function tutorial_problem(; prior=:lognormal)
-    # Known continuous density + truncated-Gaussian observations, not a histogram.
-    data = synthetic_measurements(; seed=2022)
-    estimation_problem(data; prior)
+    data = synthetic_measurements(seed=2022)
+    grid = characteristic_grid(LAW, (0.0,1.4); dt=0.005, p=TRUTH)
+    model = PBMModel(growth=Growth(LAW))
+    operator = compile(model, grid; evolution=Inguva2022(), p=TRUTH,
+        bc=SizeBC(OpenBoundary(),OpenBoundary()))
+    base = PBMProblem(operator, exact_counts(grid.edges,0.0), (0.0,1.0); p=TRUTH)
+    observable = FunctionObservable((N,op,p,t) -&gt; exact_density.(data.sizes,t,Ref(p)))
+    measurement = Measurement(data.times, data.values, observable;
+        likelihood=TruncatedGaussianLikelihood(sigma=data.noise), source=:density_measurements)
+    # Closed-form forward values isolate estimation from transport error.
+    experiment = InferenceExperiment(:growth, base, measurement; solver=analytical_solver)
+    distributions = prior === :lognormal ?
+        (LogNormal(log(0.4),0.4), LogNormal(log(0.25),0.6)) :
+        (Uniform(UNIFORM_BOUNDS[1]...), Uniform(UNIFORM_BOUNDS[2]...))
+    parameters = [ParameterSpec(name; initial, prior=d, transform=LogTransform())
+        for (name,initial,d) in zip((:g0,:g1),(0.40,0.23),distributions)]
+    EstimationProblem(parameters, (experiment,))
 end
 
 function main()
@@ -178,4 +141,4 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
     main()
 end
-</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../transport/">« Growth in two particle dimensions</a><a class="docs-footer-nextpage" href="../milling_uncertainty/">Uncertainty in continuous milling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 17:29">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../transport/">« Growth in two particle dimensions</a><a class="docs-footer-nextpage" href="../milling_uncertainty/">Uncertainty in continuous milling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 18:53">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

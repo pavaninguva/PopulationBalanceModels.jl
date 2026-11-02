@@ -1,39 +1,37 @@
 # Minimal transport tutorial.
-# Generated from maintained scientific source sections and a short run block.
+# Physical definitions and one calculation; numerical helpers are linked on the case page.
 # No benchmark exports or retained files are written. See the case-study page.
 
 using PopulationBalanceModels
 
-# From examples/inguva_braatz_case2.jl (model).
+# Physical definitions from examples/inguva_braatz_case2.jl.
 const FINAL_TIME=1.0
+
 const NORMAL=GaussianNucleation((p,t,ctx)->1.0;center=0.0,width=1.0,truncation=:physical)
 
-"""Affine growth Gᵢ=offsetᵢ+slopeᵢ*aᵢ and the initial Gaussian, in the benchmark's units."""
 parameters(;offset=(0.1,0.5),slope=(0.05,0.25),amplitude=50.0,
     center=(0.4,0.4),width=(0.05,0.05))=(;offset,slope,amplitude,center,width)
+
 function growth_rate(x,y,p,t,ctx)
     (p.offset[1]+p.slope[1]*x,p.offset[2]+p.slope[2]*y)
 end
-initial_density(x,y,p=parameters())=p.amplitude*exp(-0.5*((x-p.center[1])/p.width[1])^2-
-    0.5*((y-p.center[2])/p.width[2])^2)
+
 foot(x,t,b,s)=iszero(s) ? x-b*t : x*exp(-s*t)+b*expm1(-s*t)/s
-function analytical_density(x,y,t,p=parameters())
-    x0=foot(x,t,p.offset[1],p.slope[1]);y0=foot(y,t,p.offset[2],p.slope[2])
-    0<=x0<=2 && 0<=y0<=2 ? initial_density(x0,y0,p)*exp(-sum(p.slope)*t) : 0.0
-end
-# Integrate in the initial coordinates: f da1 da2 = f0 da10 da20.
+
 function axis_integrals(axis,t,b,s,center,width)
     [begin
         lo=max(0.0,foot(axis.edges[i],t,b,s));hi=min(2.0,foot(axis.edges[i+1],t,b,s))
         hi<=lo ? 0.0 : width*sqrt(2π)*NORMAL.fraction((lo-center)/width,(hi-center)/width,(;),t,(;))
     end for i in 1:length(axis)]
 end
+
 function reference(grid,t,p=parameters())
     integrals=map((grid.x,grid.y),p.offset,p.slope,p.center,p.width) do axis,b,s,center,width
         axis_integrals(axis,t,b,s,center,width)
     end
     p.amplitude.*(integrals[1]*integrals[2]')
 end
+
 function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters())
     grid=Grid2D(range(0,2;length=n+1),range(0,2;length=n+1))
     boundary=SizeBC(OpenBoundary(),NoFlux())
@@ -43,18 +41,16 @@ function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters())
 end
 
 function tutorial_problem(; bins=50)
-    # Functions above specify both affine velocities and exact Gaussian bin ICs.
+    # Exact initial Gaussian bin integrals; one WENO5 configuration.
     problem(bins; scheme=WENO5(epsilon=1e-12), p=parameters())
 end
 
 function main()
     pb = tutorial_problem()
-    grid = pb.operator.grid
     dt = suggest_dt(pb.operator, pb.u0, pb.p, 0.0; cfl=0.4)
     # Keep signed undershoots in this diagnostic comparison; no clipping.
     solution = simulate(pb; method=SSPRK33(), dt, saveat=[1.0], check_nonnegative=false)
-    truth = reference(grid, 1.0, pb.p)
-    @show sum(abs, last(solution.u)-truth) minimum(density(grid, last(solution.u)))
+    @show observe(MomentObservable((0,0)), solution)
     solution
 end
 
