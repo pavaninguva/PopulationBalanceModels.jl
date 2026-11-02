@@ -40,12 +40,14 @@ function _compile_evolution(model,grid,method::Union{LaxWendroff,BeamWarming},bc
         throw(ArgumentError("supported size boundaries are Periodic, OpenBoundary and NoFlux"))
     CompiledConstantTransport(model,grid,bc,method,rate,(PreparedTerm(only(model.names),only(model.terms),method,nothing),))
 end
-function PBMProblem(op::CompiledConstantTransport,u0,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledConstantTransport,u0,tspan;p=NamedTuple(),history=nothing)
+    initial=_initial_description(u0)
+    u0=initial===nothing ? u0 : initialize(op,initial;p,t=first(tspan))
     N=reshape(float.(copy(u0)),:,1)
     size(N,1)==length(op.grid) || throw(DimensionMismatch("one bin number per cell required"))
     all(isfinite,N) && all(>=(0),N) || throw(ArgumentError("initial numbers must be finite and nonnegative"))
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
-    PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,N,(float(tspan[1]),float(tspan[2])),p,initial,history)
 end
 rhs!(dN,N,op::CompiledConstantTransport,p,t)=throw(ArgumentError("use simulate with the compiled space–time scheme; no semi-discrete residual exists"))
 function _simulate(prob::PBMProblem,method::Union{LaxWendroff,BeamWarming};dt,saveat,check_nonnegative,negative_tolerance,maxsteps)

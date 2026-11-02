@@ -57,12 +57,28 @@ cases also show observations, priors and likelihoods; the milling example adds
 one MC/PCE calculation. Comparisons and reporting/export loops stay in the full
 reproduction drivers.
 
-Where a calculation still needs numerical preparation or a custom checked
-solver, the script imports that helper explicitly and the page links its source.
-This includes daughter quadrature, DLVO preparation and the existing coupled
-timestep controllers. The helper's physical meaning and restrictions are stated
-beside the code. These are existing example components, not additional package
-APIs or automatic solver guarantees.
+Ordinary initialization and execution use the public
+[preparation/execution interfaces](../forward_execution.md). Configured solvers,
+physical distributions and consequential support/normalization choices are
+visible in the scripts. Prescribed moment states, empty populations and axial
+initial arrays stay explicit. Model-specific bounds can be declared without
+implementing a time loop. Automatic preparation needs no reader-managed cache.
+
+The remaining helper imports have narrower roles: CSV selection, the protein
+bucketed derivative schedule, the milling constrained algebraic reduction,
+the analytical growth reference and DLVO material physics. Their meaning and
+limits stay beside the relevant code. The only piecewise operating change in
+these ten walkthroughs is milling's 30-s speed reduction; its specialized
+reduced-state/constraint backend currently prevents a direct OperatingHistory
+migration. Smooth cooling remains a field callback; autonomous cases introduce
+no artificial operating transitions.
+
+Every minimum script also defines `plot_results(result)` for its existing
+solution or inference/UQ result. After `import PythonPlot`, these short optional
+calls use the [shared plotting interface](../plotting.md); `main()` and ordinary
+numerical inclusion do not load Python or write figures. Inference scripts return
+prepared predictions and their estimation context so display needs no new solve.
+Paper layouts remain separate plot-only compositions over retained values.
 
 Use the [common setup](../verification.md#Examples-and-figures) for dependencies
 and the original data. Retained figures and production campaigns are separate

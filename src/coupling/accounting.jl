@@ -67,7 +67,7 @@ end
 function _sectional_losses(op,N,p,t,ctx,mechanisms=nothing)
     losses=Tuple[]
     for item in op.prepared
-        term=_effective_term(item)
+        term=_effective_run_term(item,op,p)
         mechanisms!==nothing && !(mechanism(term) in mechanisms) && continue
         if term isa Growth
             # The wrapped face transfers particles internally, not to a reservoir.
@@ -104,15 +104,31 @@ function _validate_exchange_property(exchange,op,popop,p,t,ctx)
         all(y->isapprox(exchange.weight(y,p,t,ctx),factor*y^k;rtol=1e-9,atol=0),x)
     end || throw(ArgumentError("accounted exchange must use a declared raw-power property"))
 end
+struct _CurrentAccountingInputs end
 """Instantaneous rates for the cumulative states, evaluated from the same residual.
 Characteristic moment boundary rates are discrete events and are reported through
 cumulative increments of MeasureEuler, rather than an invented density trace.
+`accounting_rates(problem,state;time=...)` uses right-hand operating conditions
+at a prescribed transition. Explicit positional parameters retain their override.
 """
-function accounting_rates(prob::PBMProblem,u,p=prob.p,t=first(prob.tspan))
+function accounting_rates(prob::PBMProblem,u,p,t)
     prob.operator isa Union{CompiledSystem,CompiledAxialSystem} || throw(ArgumentError("accounting_rates requires a PBMSystem or coupled axial problem"))
-    du=zero(u);rhs!(du,u,prob.operator,p,t)
-    _accounting_rate_tree(prob.operator,du)
+    if p isa _CurrentAccountingInputs
+        operator,p=_observation_inputs(prob,t)
+    else
+        operator=prob.operator
+        if _unsegmented_history(prob)
+            i=operating_inputs(prob,t).interval
+            operator=_operating_operator(operator,p,prob.history,i)
+        end
+    end
+    operator=prepare_run(operator,p)
+    du=zero(u);rhs!(du,u,operator,p,t)
+    _accounting_rate_tree(operator,du)
 end
+accounting_rates(prob::PBMProblem,u,p)=accounting_rates(prob,u,p,first(prob.tspan))
+accounting_rates(prob::PBMProblem,u;time=first(prob.tspan))=
+    accounting_rates(prob,u,_CurrentAccountingInputs(),time)
 function _accounting_rate_tree(operator,du)
     op=operator isa CompiledAxialSystem ? first(operator.local_operators) : operator
     NamedTuple{keys(op.ledger_indices)}(Tuple(

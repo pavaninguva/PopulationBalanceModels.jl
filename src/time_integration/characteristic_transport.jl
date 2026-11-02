@@ -119,13 +119,15 @@ function _compile_characteristic(model,grid,method,bc,p;fields,methods)
     CompiledCharacteristic(model,grid,bc,rates,method,Float64(first(spacings)),prepared)
 end
 
-function PBMProblem(op::CompiledCharacteristic,u0,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledCharacteristic,u0,tspan;p=NamedTuple(),history=nothing)
+    initial=_initial_description(u0)
+    u0=initial===nothing ? u0 : initialize(op,initial;p,t=first(tspan))
     N=op.grid isa Grid1D ? reshape(float.(copy(u0)),:,1) : float.(copy(u0))
     expected=op.grid isa Grid1D ? (length(op.grid),1) : size(op.grid)
     size(N)==expected || throw(DimensionMismatch("one bin-integrated number per characteristic cell required"))
     all(isfinite,N) && all(>=(0),N) || throw(ArgumentError("initial numbers must be finite and nonnegative"))
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
-    PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,N,(float(tspan[1]),float(tspan[2])),p,initial,history)
 end
 rhs!(dN,N,op::CompiledCharacteristic,p,t)=throw(ArgumentError("characteristic transport is a direct evolution method; use simulate, not a semi-discrete ODE residual"))
 

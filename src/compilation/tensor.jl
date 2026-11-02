@@ -53,11 +53,14 @@ function compile(model::PBMModel,g::Grid2D;growth_scheme=Upwind(),bc=SizeBC2D(),
     CompiledPBM2D(model,g,scheme,bc,fields,prepared)
 end
 
-function PBMProblem(op::CompiledPBM2D,u0::AbstractMatrix,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledPBM2D,u0,tspan;p=NamedTuple(),history=nothing)
+    initial=_initial_description(u0)
+    u0=initial===nothing ? u0 : initialize(op,initial;p,t=first(tspan))
+    u0 isa AbstractMatrix || throw(ArgumentError("Grid2D initial data must be a bin-integral matrix or a physical initialization description"))
     size(u0)==size(op.grid) || throw(DimensionMismatch("one state value per internal-coordinate bin is required"))
     N=float.(copy(u0)); all(isfinite,N) && all(x->_primal(x)>=0,N) || throw(ArgumentError("initial number must be finite and nonnegative"))
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
-    PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,N,(float(tspan[1]),float(tspan[2])),p,initial,history)
 end
 function _tensor_context(op,N,t,system=nothing)
     localfields=op.fields(1,t)

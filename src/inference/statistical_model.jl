@@ -358,8 +358,25 @@ mutable struct _InferenceCounts
     messages::Vector{String}
     gradient_evaluations::Int
     adjoint_solves::Int
+    integration_accepted::Int
+    integration_rejected::Int
+    integration_segments::Int
+    integration_unknown::Int
 end
-_InferenceCounts()=_InferenceCounts(0,0,0,String[],0,0)
+_InferenceCounts()=_InferenceCounts(0,0,0,String[],0,0,0,0,0,0)
+function _record_integration_counts!(counts,info::NamedTuple)
+    counts===nothing && return
+    a=info.accepted_steps;r=info.rejected_steps
+    counts.integration_accepted+=ismissing(a) ? 0 : a
+    counts.integration_rejected+=ismissing(r) ? 0 : r
+    counts.integration_segments+=info.segments
+    counts.integration_unknown+=(ismissing(a) || ismissing(r))
+end
+_record_integration!(counts,sol::PBMSolution)=_record_integration_counts!(counts,_integration_counts(sol))
+_record_integration!(counts,sol)=counts===nothing ? nothing : (counts.integration_unknown+=1)
+_integration_work(counts)=(accepted_steps=counts.integration_accepted,
+    rejected_steps=counts.integration_rejected,segments=counts.integration_segments,
+    incomplete_work_reports=counts.integration_unknown)
 function _record_failure!(counts,e)
     counts===nothing && return
     counts.failures+=1
@@ -384,6 +401,7 @@ function _experiment_solution(problem,z,ex,counts,::PBMProblem)
     pb=_experiment_problem(problem,z,ex);ts=_experiment_times(ex)
     counts===nothing || (counts.solves+=1)
     sol=ex.solver===nothing ? simulate(pb;dt=ex.dt,saveat=ts) : ex.solver(pb,ts)
+    _record_integration!(counts,sol)
     length(sol.t)==length(ts)==length(sol.u) && all(isapprox.(sol.t,ts;rtol=1e-12,atol=1e-12)) || throw(NumericalFailure("inference solver did not return requested times; check its success code"))
     all(u->all(isfinite,u),sol.u) || throw(NumericalFailure("nonfinite inference state"))
     pb,ts,sol
@@ -391,7 +409,10 @@ end
 function _experiment_predictions(problem,z,ex,pb,ts,states)
     theta=physical_parameters(problem,z,ex.name)
     map(ex.measurements) do m
-        raw=hcat([_observe(m.observable,states[searchsortedfirst(ts,t)],pb.operator,pb.p,t) for t in m.times]...)
+        raw=hcat([begin
+            op,p=_observation_inputs(pb,t)
+            _observe(m.observable,states[searchsortedfirst(ts,t)],op,p,t)
+        end for t in m.times]...)
         output=m.response(raw,theta,ex)
         size(output)==size(m.data) || throw(DimensionMismatch("measurement response changed output dimension"))
         all(x->x isa Real && isfinite(x),output) || throw(NumericalFailure("measurement predictions must be finite and real"))

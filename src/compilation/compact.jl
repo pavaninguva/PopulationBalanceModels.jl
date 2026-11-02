@@ -180,7 +180,9 @@ function _hoc_check_prescribed_values(op,p,t,ctx)
     end
 end
 
-function PBMProblem(op::CompiledHOC,u0,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledHOC,u0,tspan;p=NamedTuple(),history=nothing)
+    initial=_initial_description(u0)
+    u0=initial===nothing ? u0 : initialize(op,initial;p,t=first(tspan))
     _validate_hoc(op.model,op.grid,op.evolution,op.bc,p)
     N=op.grid isa Grid1D ? reshape(float.(copy(u0)),:,1) : float.(copy(u0))
     expected=op.grid isa Grid1D ? (length(op.grid),1) : size(op.grid)
@@ -194,7 +196,7 @@ function PBMProblem(op::CompiledHOC,u0,tspan;p=NamedTuple())
         end
         _hoc_check_prescribed_values(op,p,first(tspan),ctx)
     end
-    PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,N,(float(tspan[1]),float(tspan[2])),p,initial,history)
 end
 rhs!(dN,N,op::CompiledHOC,p,t)=throw(ArgumentError("HOC is a fully discrete method: use simulate; external ODE solvers and event/AD sensitivities are not supported"))
 

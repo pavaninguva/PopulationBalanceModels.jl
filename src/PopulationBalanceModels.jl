@@ -11,7 +11,7 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        AbstractPBMTerm, AbstractPopulationRepresentation, AbstractMomentBasis,
        AbstractTermMethod, AbstractReconstruction, AbstractMomentMethod,
        AbstractMomentClosure, AbstractDirectMomentMethod,
-       TermMethods, term_methods, mechanism, default_method, prepare_term, add_term!,
+       TermMethods, term_methods, mechanism, default_method, prepare_term, prepare_run, add_term!,
        MidpointRule, FiniteVolumeDiffusion, GaussLegendre, BinIntegral, FixedPivot, PointwiseLoss,
        CellAverageLoss, BoundaryInjection, GaussianInjection, NativeResidual,
        ExactMomentRule, QuadratureMomentRule, LogNormalClosure, QMOM,
@@ -29,11 +29,13 @@ export Grid1D, Growth, SizeDiffusion, Birth, Death, Nucleation, Aggregation, Bre
        PrescribedRate, HOCGrowthLaw, HOCFiniteVolume, Inguva2022, InguvaBraatz2023,
        characteristic_grid, characteristic_density,
        MomentSet, ExactClosure, QuadratureClosure, PolynomialRate,
-       ConstantKernel, SelfSimilarDaughters, UniformVolumeDaughters, daughter_moment, MomentSource, MomentExchange,
+       ConstantKernel, SelfSimilarDaughters, UniformVolumeDaughters, ContinuousDaughters, daughter_moment, MomentSource, MomentExchange,
        quadrature, realizability,
        CustomTerm, PBMModel, Upwind, MUSCL, WENO5, NoFlux, OpenBoundary, Periodic,
        InflowFlux, AbsorbingZero, MomentBoundary, CumulativeAccounting, cumulative, accounting_rates, MeasureEuler, SizeBC, AbstractPopulationDomain, BatchDomain, compile, PBMProblem, remake,
-       rhs!, simulate, PBMSolution, density, moment, number_concentration,
+       rhs!, simulate, ForwardSolver, StepControl, OperatingHistory, operating_inputs,
+       InitialDensity, InitialDistribution, initialize, initialization_report,
+       PBMSolution, density, moment, number_concentration,
        diagnostics, suggest_dt, NumericalFailure, MomentObservable, observe, CellObservable,
        HistogramObservable, FunctionObservable, Observation, Experiment,
        ResidualObservation, PopulationCDF, PopulationQuantiles, WassersteinObservation,
@@ -111,6 +113,11 @@ include("compilation/axial.jl")
 include("compilation/axial_system.jl")
 include("coupling/accounting.jl")
 include("time_integration/measure_euler.jl")
+include("time_integration/preparation.jl")
+include("time_integration/forward_execution.jl")
+include("time_integration/operating_history.jl")
+include("time_integration/initialization.jl")
+include("numerics/sectional/continuous_daughters.jl")
 include("inference/observations.jl")
 include("inference/distribution_discrepancies.jl")
 include("inference/differentiation.jl")
@@ -130,6 +137,11 @@ include("uq/propagation.jl")
 include("uq/bases.jl")
 include("uq/polynomial_chaos.jl")
 include("uq/refinement.jl")
+
+export plot_distribution, plot_observable, plot_fit, plot_parameters, plot_uq, plot_field, save_figure
+include("plotting/interface.jl")
+include("plotting/extraction.jl")
+include("plotting/parameters.jl")
 
 @doc "Load Optim to enable fit(calibration, initial_parameters; ...) or MAP fit(estimation_problem; ...)." fit
 

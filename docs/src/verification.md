@@ -26,6 +26,12 @@ simulation-core dependencies. JET is a separate, selected-residual check in CI.
 See the [test catalogue](https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/test/README.md)
 for entry points and the [current Actions results](https://github.com/pavaninguva/PopulationBalanceModels.jl/actions).
 
+`test/forward_execution.jl` verifies physical initialization, continuous daughters,
+run preparation, prescribed intervals and native rollback against analytical
+balances and an independent matrix exponential. Optional
+`test/forward_execution_integration.jl` checks external completion/failure paths;
+`test/sensitivity_integration.jl` includes configured sensitivity delegation.
+
 ## Optional integrations
 
 Create one working environment without adding optional packages to the package's
@@ -50,13 +56,36 @@ Enzyme stacks have recorded loading failures; they are not numerical test passes
 
 Each case page ends with a standalone tutorial, available as a download after
 building the docs. It shows physical rates, inputs, model assembly and one
-calculation. Rate definitions follow the maintained sources. Numerical
-preparation and controllers are imported where needed and linked beside the
+calculation. Rate definitions follow the maintained sources. Public physical
+initialization and configured solvers own ordinary preparation/execution. The
+remaining specialist imports and their limitations are identified beside each
 script. Reporting and benchmark drivers remain separate.
 `julia --project=docs test/case_study_scripts.jl` checks syntax, initial states,
 residuals and inference equivalence without fitting or advancing production
 cases. The full constructor check, including milling/Sundials, uses the
 prepared paper environment: `julia --project=paper test/case_study_scripts.jl`.
+
+For reduced **execution** checks of the migrated workflows, run:
+
+```sh
+julia --project=paper test/case_study_migration.jl
+```
+
+This also runs the construction checks. It advances small tutorial configurations,
+checks independent initial/daughter integrals and balances, and evaluates the
+unchanged inference callables without fitting or sampling. Milling uses 11 full
+solves: nominal + two MC + two validation + six PCE training. This is a smoke
+check, not production uncertainty propagation or historical-result certification.
+The docs environment runs all core/Optim checks; the paper environment additionally
+supplies the milling/Sundials dependencies.
+
+After building the docs, an individual reduced run can be executed without any
+export or plotting:
+
+```sh
+julia --project=. -e 'include("docs/src/assets/source/tutorials/continuous_precipitation.jl"); main(nx=8,nz=6,times=[0.0,0.5,2.0])'
+julia --project=. -e 'include("docs/src/assets/source/tutorials/stem_cells.jl"); main(bins=40,times=[0.0,0.05,0.1])'
+```
 
 Including an example module defines its builders; executing the script invokes its driver.
 Download supporting files with their directories intact, or use a checkout.

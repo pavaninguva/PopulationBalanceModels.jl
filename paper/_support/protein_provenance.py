@@ -91,3 +91,27 @@ def verify_analysis_compatibility(folder, manifest, report):
     return dict(producing_compatibility_sha256=original_hash,
                 current_compatibility_sha256=current_hash,
                 reused_under_review=original_hash != current_hash)
+
+
+def verify_recorded_analysis(folder, report, *, analysis_root=ANALYSIS):
+    """Read-only redraw validation tied to the ORIGINAL producer/receipt.
+
+    This does not establish equivalence to today's source or permit numerical
+    reuse; verify_analysis_compatibility remains strict for that purpose.
+    """
+    manifest=json.loads((folder/'manifest.json').read_text())
+    directory=analysis_root/folder.name
+    digest=report['compatibility_sha256']
+    candidates=[directory/'compatibility.json',directory/'history'/f'compatibility_{digest}.json']
+    paths=[p for p in candidates if p.is_file() and sha(p)==digest]
+    if not paths:raise ValueError('Missing original compatibility receipt for archived approximation')
+    receipt=json.loads(paths[0].read_text())
+    if not receipt['passed'] or receipt['model']!=folder.name or receipt['original_target_hash']!=manifest['target_hash']:
+        raise ValueError('Recorded approximation belongs to another or unsuccessful target')
+    if receipt['source_review']['original_sources']!=manifest['source_files']:
+        raise ValueError('Original producer identity differs from archived approximation')
+    for name,digest_ in receipt['inputs'].items():
+        if sha(folder/name)!=digest_:raise ValueError(f'Changed archived approximation input: {name}')
+    if report['model']!=folder.name:
+        raise ValueError('Approximation model differs from selected retained data')
+    return dict(producing_compatibility_sha256=digest,retained_redraw=True,current_source_equivalence=False)

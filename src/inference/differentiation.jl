@@ -85,5 +85,15 @@ end
 (s::SciMLSensitivitySolver)(pb,times)=_sensitivity_solve(s,pb,times)
 _sensitivity_solve(s,pb,times)=throw(ArgumentError("load SciMLBase and SciMLSensitivity to use SciMLSensitivitySolver"))
 
+_uses_sensitivity_solver(s)=s isa SciMLSensitivitySolver
+_uses_sensitivity_solver(s::ForwardSolver)=s.backend===:sensitivity && _uses_sensitivity_solver(s.algorithm)
+function _configured_sensitivity_forward(pb,s::ForwardSolver,ts)
+    s.algorithm isa SciMLSensitivitySolver || throw(ArgumentError("backend=:sensitivity requires SciMLSensitivitySolver"))
+    s.dt===nothing && isempty(s.options) || throw(ArgumentError("configure the sensitivity backend's ODE options in SciMLSensitivitySolver"))
+    pb.history===nothing || throw(ArgumentError("continuous sensitivities across OperatingHistory transitions are not implemented; use native fixed-schedule ForwardDiff or explicit finite differences"))
+    result=s.algorithm(pb,ts)
+    _checked_solution(pb,result.t,result.u,result.steps,result.integration_diagnostics,s,ts)
+end
+
 _primal(x)=x
 _primal(x::ForwardDiff.Dual)=_primal(ForwardDiff.value(x))

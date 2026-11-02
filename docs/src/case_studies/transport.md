@@ -284,8 +284,13 @@ also runs refinement and the eligible characteristic method. Follow the
 
 ### Complete script
 
-Both directional growth laws, the Gaussian bin integrals, boundaries and
-numerical assembly are defined below. The final call runs one WENO5 + SSPRK33
+Both directional growth laws, the joint Gaussian number density, boundaries and
+numerical assembly are defined below. `InitialDensity` integrates rectangles on
+[0,2]² without normalization or an inferred independence assumption. Its callback
+uses the current parameters, including when `remake` changes the initial profile.
+The axis-integral formulas serve as an independent analytical reference rather
+than initial-state infrastructure. The final call configures `ForwardSolver`
+for one WENO5 + SSPRK33
 configuration and reads total number as a joint moment of order (0,0). The
 refinement, distribution-error and signed-undershoot comparisons remain in the
 linked full driver. The diagnostic solve retains its explicitly disabled
@@ -305,3 +310,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:transport))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

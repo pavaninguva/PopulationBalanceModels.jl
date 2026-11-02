@@ -184,7 +184,8 @@ def dependencies(ax):
         (97,39,'Stationary solving','NonlinearSolve'),
         (59,26,'External ODE integration','SciMLBase + solver'),
         (97,26,'Continuous sensitivities','SciMLBase,\nSciMLSensitivity,\nReverseDiff'),
-        (59,12,'Posterior sampling','AdvancedHMC, MCMCDiagnosticTools')):
+        (59,12,'Posterior sampling','AdvancedHMC\nMCMCDiagnosticTools'),
+        (97,12,'Plotting','PythonPlot (PythonCall)')):
         text(ax,x,origin+y,title,size=7,weight='bold',ha='left',color='dependency_category')
         text(ax,x,origin+y-(8 if title=='Continuous sensitivities' else 5),body,size=7,ha='left',color='dependency_package')
     text(ax,156.5,origin+48,'Development tools',weight='bold',size=8,color='dependency_heading')
@@ -198,12 +199,13 @@ def check_architecture():
     project=tomllib.loads((ROOT/'Project.toml').read_text())
     required={'LinearAlgebra','Random','Distributions','ForwardDiff','SpecialFunctions'}
     optional={'Optim','NonlinearSolve','SciMLBase','SciMLSensitivity','ReverseDiff',
-              'AdvancedHMC','MCMCDiagnosticTools'}
+              'AdvancedHMC','MCMCDiagnosticTools','PythonPlot','PythonCall'}
     if set(project['deps'])!=required or set(project['weakdeps'])!=optional:
         raise ValueError('Dependency roles changed: review the diagram against Project.toml')
     expected={'Optim':['Optim'],'NonlinearSolve':['NonlinearSolve'],'SciMLBase':['SciMLBase'],
               'SciMLSensitivity':['SciMLBase','SciMLSensitivity','ReverseDiff'],
-              'AdvancedHMC':['AdvancedHMC','MCMCDiagnosticTools']}
+              'AdvancedHMC':['AdvancedHMC','MCMCDiagnosticTools'],
+              'PythonPlot':['PythonPlot','PythonCall']}
     for name,deps in expected.items():
         actual=project['extensions']['PopulationBalanceModels'+name+'Ext']
         if set([actual] if isinstance(actual,str) else actual)!=set(deps):
@@ -213,7 +215,6 @@ def check_architecture():
 
 def configure_schematic(usetex=False):
     """Use the original softer sans-serif lettering, with optional external TeX."""
-    configure(preview=not usetex, require_dvipng=False)
     plt.rcParams.update({
         'font.family': 'sans-serif',
         'font.serif': ['serif'],  # Computer Modern for the per-artist LaTeX equation.
@@ -234,38 +235,39 @@ def main():
     if not args.preview and not shutil.which('latex'):
         parser.error('The equation requires LaTeX; install latex or use --preview for mathtext')
     project=check_architecture()
-    configure_schematic(usetex=args.usetex)
-    fig=plt.figure(figsize=(7.2,8.8))
-    ax=fig.add_axes([0,0,1,1]);ax.set(xlim=(0,180),ylim=(-40,210));ax.axis('off')
-    workflow(ax,equation_usetex=not args.preview);forward_uq(ax);dependencies(ax)
-    out=args.output_dir;out.mkdir(parents=True,exist_ok=True)
-    name='section2_architecture_revised'+('_preview' if args.preview else '')
-    revision=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
-    export=save_png(fig,out/(name+'.png'),creator='generate_pbm_architecture.py')
-    plt.close(fig)
-    receipt=dict(revision=revision,package_version=project['version'],
-                 renderer=('actual LaTeX' if args.usetex else 'Matplotlib mathtext'
-                           if args.preview else 'Matplotlib text with a LaTeX equation'),
-                 equation_renderer='Matplotlib mathtext' if args.preview else 'actual LaTeX',
-                 font_family='sans-serif' if args.usetex else 'DejaVu Sans',
-                 math_font=('external LaTeX' if args.usetex else 'STIX' if args.preview
-                            else 'Computer Modern equation; STIX rate symbols'),
-                 preview=args.preview,dpi=300,**export,
-                 width_inches=7.2,height_inches=8.8,
-                 project_sha256=hashlib.sha256((ROOT/'Project.toml').read_bytes()).hexdigest(),
-                 generator_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                 png_sha256=hashlib.sha256((out/(name+'.png')).read_bytes()).hexdigest(),
-                 uq_source_sha256={str(path):hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
-                     for path in (Path('src/uq/inputs.jl'),Path('src/uq/propagation.jl'),
-                                  Path('src/uq/polynomial_chaos.jl'),Path('src/uq/bases.jl'),
-                                  Path('src/uq/refinement.jl'))},
-                 dirty_state=subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain=v1'],text=True),
-                 scope='Conceptual glyph; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply')
-    (out/(name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
-    if not args.preview:
-        docs=ROOT/'docs/src/assets/architecture';docs.mkdir(parents=True,exist_ok=True)
-        shutil.copy2(out/(name+'.png'),docs/(name+'.png'))
-    print(out)
+    with configure(preview=not args.usetex):
+        configure_schematic(usetex=args.usetex)
+        fig=plt.figure(figsize=(7.2,8.8))
+        ax=fig.add_axes([0,0,1,1]);ax.set(xlim=(0,180),ylim=(-40,210));ax.axis('off')
+        workflow(ax,equation_usetex=not args.preview);forward_uq(ax);dependencies(ax)
+        out=args.output_dir;out.mkdir(parents=True,exist_ok=True)
+        name='section2_architecture_revised'+('_preview' if args.preview else '')
+        revision=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
+        export=save_png(fig,out/(name+'.png'),creator='generate_pbm_architecture.py')
+        plt.close(fig)
+        receipt=dict(revision=revision,package_version=project['version'],
+                     renderer=('actual LaTeX' if args.usetex else 'Matplotlib mathtext'
+                               if args.preview else 'Matplotlib text with a LaTeX equation'),
+                     equation_renderer='Matplotlib mathtext' if args.preview else 'actual LaTeX',
+                     font_family='sans-serif' if args.usetex else 'DejaVu Sans',
+                     math_font=('external LaTeX' if args.usetex else 'STIX' if args.preview
+                                else 'Computer Modern equation; STIX rate symbols'),
+                     preview=args.preview,dpi=300,**export,
+                     width_inches=7.2,height_inches=8.8,
+                     project_sha256=hashlib.sha256((ROOT/'Project.toml').read_bytes()).hexdigest(),
+                     generator_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                     png_sha256=hashlib.sha256((out/(name+'.png')).read_bytes()).hexdigest(),
+                     uq_source_sha256={str(path):hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
+                         for path in (Path('src/uq/inputs.jl'),Path('src/uq/propagation.jl'),
+                                      Path('src/uq/polynomial_chaos.jl'),Path('src/uq/bases.jl'),
+                                      Path('src/uq/refinement.jl'))},
+                     dirty_state=subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain=v1'],text=True),
+                     scope='Conceptual glyph; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply')
+        (out/(name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
+        if not args.preview:
+            docs=ROOT/'docs/src/assets/architecture';docs.mkdir(parents=True,exist_ok=True)
+            shutil.copy2(out/(name+'.png'),docs/(name+'.png'))
+        print(out)
 
 
 if __name__=='__main__':

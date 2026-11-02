@@ -181,8 +181,17 @@ class PublicationContracts(unittest.TestCase):
         folder=self.history/'cnt'
         manifest=json.loads((folder/'manifest.json').read_text())
         saved=json.loads((self.history/'analysis/cnt/compatibility.json').read_text())
+        # Replay the producing environment for this archived guard test. Today's
+        # Project legitimately adds optional plotting; it is not the old producer.
+        original_sha=provenance.sha
+        def producer_sha(path):
+            path=Path(path)
+            for name,digest in saved['projects'].items():
+                if path==ROOT/name:return digest
+            return original_sha(path)
         with patch.object(provenance,'ANALYSIS',self.history/'analysis'), \
-             patch.object(provenance,'numerical_sources',return_value=saved['source_review']['current_sources']):
+             patch.object(provenance,'numerical_sources',return_value=saved['source_review']['current_sources']), \
+             patch.object(provenance,'sha',side_effect=producer_sha):
             receipt=provenance.verify_compatibility(folder,manifest)
             with patch.object(provenance,'numerical_sources',return_value={}):
                 with self.assertRaisesRegex(ValueError,'Sources changed'):
@@ -191,11 +200,13 @@ class PublicationContracts(unittest.TestCase):
             changed['target_hash']='changed'
             with self.assertRaisesRegex(ValueError,'another target'):
                 provenance.verify_compatibility(folder,changed)
-            original_sha=provenance.sha
             def changed_manifest(path):
-                return 'changed' if Path(path)==folder/'manifest.json' else original_sha(path)
+                return 'changed' if Path(path)==folder/'manifest.json' else producer_sha(path)
             with patch.object(provenance,'sha',side_effect=changed_manifest):
                 with self.assertRaisesRegex(ValueError,'Changed compatibility input'):
+                    provenance.verify_compatibility(folder,manifest)
+            with patch.object(provenance,'sha',side_effect=lambda path: 'changed' if Path(path)==ROOT/'Project.toml' else producer_sha(path)):
+                with self.assertRaisesRegex(ValueError,'Environment changed'):
                     provenance.verify_compatibility(folder,manifest)
             self.assertGreaterEqual(len(receipt['checks']),9)
 

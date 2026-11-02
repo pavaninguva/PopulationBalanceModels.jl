@@ -570,7 +570,9 @@ its benchmark or writing files.
 ### Complete script
 
 The script contains the physical laws, source normalization, model assembly,
-material exchange and explicit inputs. DLVO quadrature and per-mechanism
+material exchange and explicit inputs, with `ForwardSolver` selecting the same
+fixed SSPRK33 maximum step. Empty populations remain explicit arrays. DLVO
+potential/attachment quadrature and per-mechanism
 accounting use the linked [material helpers](../assets/source/examples/papers/cej2025_lnp.jl),
 whose implementation is separate from the model definition. The reconstruction
 specifies the solubility and DLVO assumptions and starts with no particles. This is the
@@ -592,3 +594,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:nanoparticles))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

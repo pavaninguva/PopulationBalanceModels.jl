@@ -46,7 +46,8 @@ one prescribed total number flux in 1D, including without Growth. Tensor point
 sources use Nucleation2D's fixed-pivot/Gaussian methods; tensor boundary injection
 is unavailable. Other size boundaries, moment/axial representations and direct evolution are unsupported.
 Use suggest_dt for the combined explicit growth/diffusion/loss recommendation;
-it does not automatically control simulate's timestep.
+the legacy fixed-step simulate call does not enforce it. Select ForwardSolver
+with StepControl explicitly to recompute local recommendations and check trials.
 """
 struct SizeDiffusion{F} <: AbstractPBMTerm
     diffusivity::F
@@ -123,6 +124,10 @@ end
 of `(daughter_size, expected_number)` pairs, including quadrature weights if
 discretizing a continuous daughter distribution. The weighted additive size
 must equal parent size; a probability density alone is not a daughter count.
+Alternatively supply ContinuousDaughters with expected count, support and
+conserved-property declarations. FixedPivot then owns quadrature/projection
+and parameter-dependent run preparation; unresolved tails follow overflow and
+CumulativeAccounting conventions without renormalization onto the grid.
 """
 struct Breakage{F,D,C} <: AbstractPBMTerm
     rate::F

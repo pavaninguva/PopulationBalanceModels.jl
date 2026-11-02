@@ -20,11 +20,29 @@ struct GaussLegendre <: AbstractTermMethod
     end
 end
 struct BinIntegral <: AbstractTermMethod end
+"""
+    FixedPivot(; overflow=:inherit, daughter_quadrature=GaussLegendre(8),
+               daughter_rtol=1e-9, daughter_atol=0, daughter_maxorder=128)
+
+Existing conservative additive-coordinate pivot deposition. For ContinuousDaughters,
+prepare a positive hat projection with independent quadrature refinement and
+count/property checks. Discrete daughter laws retain their existing treatment.
+`overflow=:inherit` uses the physical term's explicit unresolved-birth policy.
+"""
 struct FixedPivot <: AbstractTermMethod
     overflow::Symbol
-    function FixedPivot(;overflow=:inherit)
+    daughter_quadrature::GaussLegendre
+    daughter_rtol::Float64
+    daughter_atol::Float64
+    daughter_maxorder::Int
+    function FixedPivot(;overflow=:inherit,daughter_quadrature=GaussLegendre(8),
+            daughter_rtol=1e-9,daughter_atol=0.0,daughter_maxorder=128)
         overflow in (:inherit,:error,:discard) || throw(ArgumentError("invalid fixed-pivot overflow policy"))
-        new(overflow)
+        daughter_quadrature isa GaussLegendre || throw(ArgumentError("daughter quadrature must be GaussLegendre"))
+        daughter_rtol>0 && isfinite(daughter_rtol) && daughter_atol>=0 && isfinite(daughter_atol) &&
+            daughter_maxorder isa Integer && daughter_maxorder>=2daughter_quadrature.order ||
+            throw(ArgumentError("invalid daughter quadrature accuracy settings"))
+        new(overflow,daughter_quadrature,daughter_rtol,daughter_atol,daughter_maxorder)
     end
 end
 struct PointwiseLoss <: AbstractTermMethod end

@@ -473,7 +473,10 @@ contains the other families, pulse calculation and reporting. Follow the
 ### Complete script
 
 The script fixes one formulation: three-node QMOM with orders 0:5. Its physical
-terms, initial moments, compilation and solve are explicit. The last two calls
+terms, prescribed initial moments, compilation and configured `ForwardSolver`
+are explicit. The benchmark moment array is retained intentionally: it states
+the known moments of the exponential volume law in the length basis, without
+reconstructing an invented initial distribution. The last two calls
 read the number and conserved material moment through observation operators.
 The family comparisons and DQMOM state conversion are explained above and
 implemented in the linked full driver; this first calculation needs no
@@ -493,3 +496,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:moment_crystallization))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

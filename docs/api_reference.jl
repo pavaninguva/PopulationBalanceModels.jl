@@ -18,6 +18,8 @@ const SECTIONS = [
         sources=("src/inference/",)),
     (id=:uq, title="Forward uncertainty quantification", page="api/uncertainty.md",
         sources=("src/uq/",)),
+    (id=:plotting, title="Plotting", page="api/plotting.md",
+        sources=("src/plotting/",)),
 ]
 
 pages() = [section.page for section in SECTIONS]

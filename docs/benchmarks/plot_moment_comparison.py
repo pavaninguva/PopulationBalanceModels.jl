@@ -19,6 +19,8 @@ STYLES = ("-", "--", "-.", ":", "-")
 MARKERS = ("o", "s", "^", "d", "x")
 
 
+from pbm_plotting import plot_observable
+
 def style(i, *, markers=False, count=1):
     out = dict(color=COLORS[i], ls=STYLES[i], lw=1.15, label=LABELS[i])
     if markers:
@@ -41,11 +43,13 @@ def aggregation(folder, data, summary):
         for ax, k in zip(axes[0], (1, 2)):
             q = d[d["order"] == k]
             error = relative_percent(q["moment"], q["reference"], display_floor=True)
-            ax.semilogy(q["time"][1:], error[1:], **style(i, markers=True, count=len(q)))
+            plot_observable(q["time"][1:],error[1:],ax=ax,
+                styles=[style(i,markers=True,count=len(q))],legend=False)
+            ax.set_yscale("log")
             ax.set(xlabel=r"$t\ (\mathrm{s})$", ylabel=rf"Relative $\mu_{k}$ error $(\%)$")
         q = d[d["order"] == 3]
-        axes[1, 0].plot(q["time"], q["moment"]/q["reference"],
-                        **style(i, markers=True, count=len(q)))
+        plot_observable(q["time"],q["moment"]/q["reference"],ax=axes[1,0],
+            styles=[style(i,markers=True,count=len(q))],legend=False)
         report = summary[(summary["scenario"] == "aggregation_breakage") &
                          (summary["method"] == method)][0]
         axes[1, 1].bar(i, report["seconds"], color=COLORS[i], width=.6)
@@ -83,7 +87,9 @@ def pulse(folder, data, summary, reference):
                 error = relative_percent(q["moment"], truth, display_floor=True)
                 maximum = max(maximum, np.nanmax(error[1:]))
                 minimum = min(minimum, np.nanmin(error[1:]))
-                ax.semilogy(q["time"][1:], error[1:], **style(i, markers=True, count=len(q)))
+                plot_observable(q["time"][1:],error[1:],ax=ax,
+                styles=[style(i,markers=True,count=len(q))],legend=False)
+            ax.set_yscale("log")
                 status = summary[(summary["scenario"] == scenario) & (summary["method"] == method)][0]
                 if status["status"] != "completed" and len(q) > 1:
                     ax.plot(q["time"][-1], error[-1], "x", ms=6, mew=1.3, color=COLORS[i])
@@ -97,12 +103,12 @@ def pulse(folder, data, summary, reference):
 
 
 def main(folder=FOLDER, usetex=False):
-    configure(usetex)
-    data = read(folder, "method_comparison.csv")
-    summary = read(folder, "method_summary.csv")
-    reference = read(folder, "sectional_reference.csv")
-    aggregation(folder, data, summary)
-    pulse(folder, data, summary, reference)
+    with configure(usetex):
+        data = read(folder, "method_comparison.csv")
+        summary = read(folder, "method_summary.csv")
+        reference = read(folder, "sectional_reference.csv")
+        aggregation(folder, data, summary)
+        pulse(folder, data, summary, reference)
 
 
 if __name__ == "__main__":

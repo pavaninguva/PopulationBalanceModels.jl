@@ -10,11 +10,13 @@ from plot_style import configure
 ROOT=Path(__file__).resolve().parents[2]
 ASSETS=ROOT/'docs/src/assets'
 
+from pbm_plotting import plot_field, save_figure as shared_save
+
 def save(fig,path):
     fig.tight_layout()
     for ext in ('png','svg'):
         target = path.with_suffix('.'+ext)
-        fig.savefig(target,dpi=210,bbox_inches='tight',metadata={'Date':None} if ext=='svg' else None)
+        shared_save(fig,target,dpi=300,layout='tight')
         if ext=='svg':
             target.write_text('\n'.join(line.rstrip() for line in target.read_text().splitlines())+'\n')
     plt.close(fig)
@@ -38,13 +40,15 @@ def precipitation_fields(d, folder):
             values=q['number_density'].reshape(len(z),len(x)).T
             ze=np.r_[np.unique(q['z_left']),np.max(q['z_right'])]
             xe=np.r_[np.unique(q['x_left']),np.max(q['x_right'])]*1e6
-            im=ax.pcolormesh(ze,xe,values,shading='flat',cmap='magma',vmin=0,vmax=vmax,rasterized=True)
+            plot_field(values,ze,xe,orientation='rows_y',ax=ax,colorbar=False,
+                cmap='magma',vmin=0,vmax=vmax,rasterized=True)
+            im=ax._pbm_mesh
             ax.set(xlabel=r'$z\ (\mathrm{m})$',title=rf'$t={t}\ \mathrm{{s}}$',yscale=scale,ylim=(1,upper))
         for ax in axes[:,0]:ax.set_ylabel(r'$x\ (\mu\mathrm{m})$')
         fig.colorbar(im,ax=axes.ravel().tolist(),label=r'$n\ (\mathrm{m}^{-4})$',pad=.03)
         for ext in ('png','svg'):
             target = (folder/stem).with_suffix('.'+ext)
-            fig.savefig(target,dpi=210,bbox_inches='tight',metadata={'Date':None} if ext=='svg' else None)
+            shared_save(fig,target,dpi=300,layout='tight')
             if ext=='svg':
                 target.write_text('\n'.join(line.rstrip() for line in target.read_text().splitlines())+'\n')
         plt.close(fig)
@@ -137,6 +141,7 @@ def protein():
     axes[0].legend(fontsize=7);save(fig,folder/'fit')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('case',choices=['moments','precipitation','protein','all']);p.add_argument('--usetex',action='store_true');a=p.parse_args();configure(a.usetex)
-    for name,fun in [('moments',moments),('precipitation',precipitation),('protein',protein)]:
-        if a.case in (name,'all'):fun()
+    p=argparse.ArgumentParser();p.add_argument('case',choices=['moments','precipitation','protein','all']);p.add_argument('--usetex',action='store_true');a=p.parse_args()
+    with configure(a.usetex):
+        for name,fun in [('moments',moments),('precipitation',precipitation),('protein',protein)]:
+            if a.case in (name,'all'):fun()

@@ -59,6 +59,29 @@ position as another intrinsic coordinate. General CFD remains outside the scope.
 
 ## Add a numerical algorithm
 
+### Preparation and execution contracts
+
+`compile` prepares fixed geometry through `prepare_term`. The public
+`prepare_run(operator,p)` hook binds coefficients/projections to one parameter
+set and isolates mutable working storage. Its term-level overload is
+`prepare_run(term,method,structural_cache,representation,p)`; return a cache for
+the existing `add_term!` method without mutating the structural input. The
+default copies caches. A custom operator may specialize the two-argument hook.
+Changing topology still requires an explicit setup/recompile callback.
+State/time/bulk-dependent laws remain stage evaluations, never run-cache values.
+
+`ForwardSolver` owns transient completion and solution construction. Native
+controls accept public physical bounds and guards; optional external execution
+checks backend status and saved states. They are separate from method-specific
+numerical formulas and from inference/UQ full-solve budgets. The
+[forward guide](forward_execution.md) describes eligibility, rollback, histories,
+initialization and derivative restrictions. Stationary solving is unchanged.
+
+An outside-module extension test in `test/forward_execution.jl` demonstrates
+parameter preparation using a declared parameter selector, current-time
+evaluation and the unchanged additive residual contract. It tests repeated
+bindings, base-problem immutability and ForwardDiff against an analytical law.
+
 The public sectional extension contract is:
 
 1. Define a subtype of AbstractTermMethod.

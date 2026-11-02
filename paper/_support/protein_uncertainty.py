@@ -15,36 +15,15 @@ from protein_plot import (
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from plotting_style import configure
-from protein_provenance import ANALYSIS, sha, verify_analysis_compatibility
+from protein_provenance import ANALYSIS, sha, verify_analysis_compatibility, verify_recorded_analysis
 
 APPROXIMATIONS = {'laplace': 'Laplace', 'gauss_newton': 'Gauss--Newton'}
 
 
 # These maps describe the existing unit-scale inference transformations.
 # The priors remain distinct; Gaussian draws are never truncated to prior support.
-def physical(z, meta):
-    z = np.asarray(z, dtype=float)
-    if meta['transform'] == 'log':
-        with np.errstate(over='ignore'):
-            return np.exp(z)
-    if meta['transform'] == 'logit':
-        # Stable logistic without evaluating the overflowing branch of np.where.
-        value = np.empty_like(z)
-        positive = z >= 0
-        value[positive] = 1 / (1 + np.exp(-z[positive]))
-        e = np.exp(z[~positive])
-        value[~positive] = e / (1 + e)
-        return meta['lower'] + (meta['upper']-meta['lower']) * value
-    if meta['transform'] == 'identity':
-        return z.copy()
-    raise ValueError(f"Unimplemented inference transformation: {meta['transform']}")
-
-
-def display(z, meta):
-    if meta['plotting_coordinate'] == 'log' and meta['transform'] == 'log':
-        return np.asarray(z, dtype=float)
-    theta = physical(z, meta)
-    return np.log(theta) if meta['plotting_coordinate'] == 'log' else theta
+from pbm_plotting.coordinates import physical, display, gaussian_marginal
+from pbm_plotting import plot_parameters
 
 
 def approximation_coordinates(report):
@@ -73,29 +52,6 @@ def approximation_display(values, meta, report):
     with np.errstate(divide='ignore', invalid='ignore'):
         return np.log(values) if meta['plotting_coordinate'] == 'log' else np.asarray(values)
 
-
-def gaussian_marginal(x, mean, variance, meta, *, coordinates="inference"):
-    """Exact pushforward marginal density, including dz/d(display)."""
-    x = np.asarray(x, dtype=float)
-    theta = np.exp(x) if meta['plotting_coordinate'] == 'log' else x
-    dtheta = theta if meta['plotting_coordinate'] == 'log' else np.ones_like(x)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        if coordinates == 'physical':
-            z, jac, valid = theta, dtheta, np.ones_like(x, dtype=bool)
-        elif meta['transform'] == 'log':
-            z, jac = np.log(theta), dtheta/theta
-            valid = theta > 0
-        elif meta['transform'] == 'logit':
-            a, b = meta['lower'], meta['upper']
-            z = np.log((theta-a)/(b-theta))
-            jac = dtheta*(b-a)/((theta-a)*(b-theta))
-            valid = (theta > a) & (theta < b)
-        elif meta['transform'] == 'identity':
-            z, jac, valid = theta, dtheta, np.ones_like(x, dtype=bool)
-        else:
-            raise ValueError(f"Unimplemented transformation: {meta['transform']}")
-        density = np.exp(-.5*(z-mean)**2/variance)/np.sqrt(2*np.pi*variance)*jac
-    return np.where(valid, density, 0.)
 
 
 def gaussian_draws(report, count=100000, seed=20261026):
@@ -136,84 +92,15 @@ def gaussian_draws(report, count=100000, seed=20261026):
     return z, theta, shown, diagnostics
 
 
-def draw_corner(canvas, samples, metadata, point, limits, *, approximation=None):
-    n = len(metadata)
-    axes = canvas.subplots(n, n, squeeze=False)
-    canvas.subplots_adjust(left=.14, right=.97, bottom=.13, top=.91, wspace=.13, hspace=.13)
-    for i in range(n):
-        for j in range(n):
-            ax = axes[i, j]
-            if j > i:
-                ax.axis('off')
-                continue
-            if i == j:
-                x = np.linspace(*limits[i], 601)
-                if approximation is None:
-                    density = marginal(samples[:, i], x, support(metadata[i]))
-                else:
-                    # A Gaussian in logit coordinates can have a narrow
-                    # physical-density peak near a bound. Resolve it using
-                    # mapped coordinates instead of a coarse uniform x grid.
-                    mean=approximation['center'][i]
-                    sd=np.sqrt(approximation['covariance'][i][i])
-                    mapped=approximation_display(np.linspace(mean-8*sd,mean+8*sd,1601),metadata[i],approximation)
-                    x=np.unique(np.r_[x,mapped[(mapped>=limits[i][0])&(mapped<=limits[i][1])]])
-                    density = gaussian_marginal(x, approximation['center'][i],
-                                                approximation['covariance'][i][i], metadata[i],
-                                                coordinates=approximation_coordinates(approximation))
-                ax.fill_between(x, 0, density, color='#0072B2', alpha=.14)
-                ax.plot(x, density, color='#0072B2', lw=1)
-                ax.plot(x, prior_density(metadata[i], x), '--', color='.35', lw=1)
-                ax.axvline(point[i], color='#D55E00', lw=.8, ls=':')
-                ax.set(xlim=limits[i], ylim=(0, None))
-                ax.tick_params(labelleft=False)
-            else:
-                if approximation is not None:
-                    # These are transformed probability ellipses, NOT HDR
-                    # contours of the generally non-Gaussian displayed density.
-                    indices = [j, i]
-                    cov = np.asarray(approximation['covariance'])[np.ix_(indices, indices)]
-                    factor = np.linalg.cholesky(cov)
-                    angle = np.linspace(0, 2*np.pi, 500)
-                    circle = np.column_stack([np.cos(angle), np.sin(angle)])
-                    for probability, color in ((.95, '#86b2cc'), (.68, '#0072B2')):
-                        ellipse = (np.asarray(approximation['center'])[indices] +
-                                   np.sqrt(-2*np.log1p(-probability))*circle @ factor.T)
-                        ax.plot(approximation_display(ellipse[:, 0], metadata[j], approximation),
-                                approximation_display(ellipse[:, 1], metadata[i], approximation), color=color, lw=.8)
-                elif j == 0 and i == 1:
-                    selected = np.linspace(0, len(samples)-1, min(2000, len(samples)), dtype=int)
-                    ax.scatter(samples[selected, j], samples[selected, i], s=1,
-                               color='#0072B2', alpha=.2, linewidths=0, rasterized=True)
-                else:
-                    x, y, density = joint_density(samples[:, j], samples[:, i],
-                                                  limits[j], limits[i], points=75)
-                    levels = probability_levels(density, (.95, .68))
-                    if len(levels) == 2:
-                        ax.contourf(x, y, density, levels=[*levels, density.max()+1],
-                                    colors=['#e7f0f7', '#bad7e8'])
-                        ax.contour(x, y, density, levels=levels, colors=['#86b2cc', '#0072B2'], linewidths=.7)
-                ax.plot(point[j], point[i], 'x', color='#D55E00', ms=4, mew=.8)
-                ax.set(xlim=limits[j], ylim=limits[i])
-            if i == n-1:
-                ax.set_xlabel(LABELS[metadata[j]['name']], fontsize=8)
-            else:
-                ax.tick_params(labelbottom=False)
-            if j == 0 and i != j:
-                ax.set_ylabel(LABELS[metadata[i]['name']], fontsize=8)
-            elif i != j:
-                ax.tick_params(labelleft=False)
-            ax.tick_params(labelsize=7, length=2.5, pad=2)
-            ax.locator_params(axis='x', nbins=3)
-            if i != j:
-                ax.locator_params(axis='y', nbins=3)
-    label=APPROXIMATIONS[approximation.get('approximation','laplace')] if approximation else 'Retained NUTS'
-    handles = [Line2D([], [], color='#0072B2', label=label),
-               Line2D([], [], color='.35', ls='--', label='Analytical prior'),
-               Line2D([], [], color='#D55E00', marker='x', ls='none', label='MAP')]
-    canvas.legend(handles=handles, loc='upper right', bbox_to_anchor=(.98, .90), fontsize=8)
-    canvas.text(.65, .72, r'$A_J^\circ=1\,\mathrm{m}^{-3}\mathrm{s}^{-1}$'+'\n'+r'$A_G^\circ=1\,\mathrm{nm\,min}^{-1}$' +
-                ('\n'+r'$t^\circ=1\,\mathrm{min}$' if n == 5 else ''), fontsize=8)
+def draw_corner(canvas,samples,metadata,point,limits,*,approximation=None):
+    n=len(metadata);axes=canvas.subplots(n,n,squeeze=False)
+    canvas.subplots_adjust(left=.14,right=.97,bottom=.13,top=.91,wspace=.13,hspace=.13)
+    gaussian=None if approximation is None else dict(center=approximation['center'],
+        covariance=approximation['covariance'],coordinates=approximation_coordinates(approximation))
+    plot_parameters(samples,metadata=metadata,point=point,axes=axes,limits=limits,
+        labels=[LABELS.get(m['name'],m['name']) for m in metadata],
+        bounds=[support(m) for m in metadata],gaussian=gaussian,
+        raw_pairs=[(0,1)] if n>1 else [],kde_points=75)
 
 
 def rejected_panel(canvas, report):
@@ -248,16 +135,11 @@ def rejected_panel(canvas, report):
 
 def comparison(model,kind='laplace', *, tables=False):
     folder = BASE/model
-    verify_model(folder)
+    verify_model(folder,bands=False,fit=False)
     analysis = ANALYSIS/model
     report_path=analysis/(kind+'.json')
     report = json.loads(report_path.read_text())
-    compatibility = verify_analysis_compatibility(
-        folder, json.loads((folder/'manifest.json').read_text()), report)
-    source = Path(__file__).parent/'protein_analysis.jl'
-    producer = ANALYSIS/'producer/laplace.jl'
-    if report['analysis_source_sha256'] not in (sha(source), sha(producer)):
-        raise ValueError('Uncertainty analysis implementation changed: regenerate its report')
+    compatibility=verify_recorded_analysis(folder,report,analysis_root=ANALYSIS)
     metadata = json.loads((folder/'priors.json').read_text())
     if report['priors'] != metadata:
         raise ValueError('Approximation/MCMC parameter specifications differ')
@@ -361,15 +243,15 @@ def main(argv=None):
     parser.add_argument('--approximation',choices=list(APPROXIMATIONS),default='laplace')
     parser.add_argument('--tables',action='store_true',help='Explicitly regenerate derived comparison tables')
     args=parser.parse_args(argv)
-    configure(require_dvipng=False)
-    for model in ('cnt','cnt_grd') if args.model=='both' else (args.model,):
-        comparison(model,args.approximation,tables=args.tables)
-    caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (a) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (b) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the selected MAP under its recorded density convention. Inference\_map\_v2 reports use the declared-coordinate posterior; physical\_map\_v1 reports and older unversioned analyses retain their producer convention. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
-    if args.approximation=='gauss_newton':
-        caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (a) A joint Gaussian in the coordinates recorded by its producer: historical reports use the inference-density MAP and transformed-prior curvature; physical\_map\_v1 reports use the physical MAP, physical sensitivities and physical-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (b) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
-        if args.tables:
-            publish_gauss_newton_tables()
-    (OUT/(args.approximation+'_captions.tex')).write_text(caption+'\n')
+    with configure(require_dvipng=False):
+        for model in ('cnt','cnt_grd') if args.model=='both' else (args.model,):
+            comparison(model,args.approximation,tables=args.tables)
+        caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (a) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (b) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the selected MAP under its recorded density convention. Inference\_map\_v2 reports use the declared-coordinate posterior; physical\_map\_v1 reports and older unversioned analyses retain their producer convention. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
+        if args.approximation=='gauss_newton':
+            caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (a) A joint Gaussian in the coordinates recorded by its producer: historical reports use the inference-density MAP and transformed-prior curvature; physical\_map\_v1 reports use the physical MAP, physical sensitivities and physical-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (b) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
+            if args.tables:
+                publish_gauss_newton_tables()
+        (OUT/(args.approximation+'_captions.tex')).write_text(caption+'\n')
 
 
 def publish_gauss_newton_tables():

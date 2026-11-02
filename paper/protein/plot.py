@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--data-only', action='store_true')
     parser.add_argument('--tables', action='store_true')
+    parser.add_argument('--map-only',action='store_true',help='Draw MAP fits without posterior files or uncertainty bands')
     parser.add_argument('--input',type=Path,help='Numerical result root, containing shared/, cnt/ and cnt_grd/')
     parser.add_argument('--output',type=Path,help='Figure directory; numerical exports are never modified')
     analysis = parser.add_mutually_exclusive_group()
@@ -24,9 +25,9 @@ if __name__ == '__main__':
     if args.gauss_newton or args.laplace:
         if args.input is not None or args.output is not None:
             parser.error('Use retained active results for the separate uncertainty analyses')
-        if args.data_only:
+        if args.data_only or args.map_only:
             parser.error('Choose data-only figures or an uncertainty comparison')
         protein_uncertainty.main(['--approximation', 'gauss_newton' if args.gauss_newton else 'laplace']
                                 + (['--tables'] if args.tables else []))
     else:
-        protein_plot.plot(data_only=args.data_only, figures_only=not args.tables)
+        protein_plot.plot(data_only=args.data_only, figures_only=not args.tables,map_only=args.map_only)

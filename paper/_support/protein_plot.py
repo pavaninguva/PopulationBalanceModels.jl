@@ -15,7 +15,10 @@ from matplotlib.ticker import FuncFormatter
 from protein_provenance import verify_compatibility
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from plotting_style import configure, save_png, DOUBLE
-from _support.posterior_density import joint_density, probability_levels
+from _support.posterior_density import joint_density, probability_levels, marginal_on_grid
+from pbm_plotting import plot_observable, plot_distribution, plot_parameters
+from pbm_plotting.coordinates import prior_density
+from pbm_plotting.style import renderer_sources
 
 PAPER=Path(__file__).resolve().parents[1]
 ROOT=PAPER.parent
@@ -83,29 +86,6 @@ def export(fig,name):
     plt.close(fig)
     print(f'Rendered {name}',flush=True)
 
-def prior_density(meta,display):
-    """Normalized analytical prior in the DISPLAY coordinate; never peak-scaled."""
-    x=np.asarray(display,float)
-    theta=np.exp(x) if meta['plotting_coordinate']=='log' else x
-    jac=np.exp(x) if meta['plotting_coordinate']=='log' else np.ones_like(x)
-    value=theta.copy()
-    if meta['density_coordinates']=='inference':
-        if meta['transform']=='log':
-            with np.errstate(divide='ignore',invalid='ignore'): value=np.log(theta);jac=jac/theta
-        elif meta['transform']=='logit':
-            a,b=meta['lower'],meta['upper']
-            with np.errstate(divide='ignore',invalid='ignore'):
-                value=np.log((theta-a)/(b-theta));jac=jac*(b-a)/((theta-a)*(b-theta))
-    args=meta['arguments'];family=meta['family'];density=np.zeros_like(value)
-    if family=='uniform':
-        a,b=args;density=np.where((value>=a)&(value<=b),1/(b-a),0.)
-    elif family=='lognormal':
-        mu,s=args;valid=value>0
-        density[valid]=np.exp(-.5*((np.log(value[valid])-mu)/s)**2)/(value[valid]*s*np.sqrt(2*np.pi))
-    elif family=='exponential':
-        scale=args[0];valid=value>=0;density[valid]=np.exp(-value[valid]/scale)/scale
-    else: raise ValueError(f'Unsupported prior family {family}')
-    return np.where(np.isfinite(density*jac),density*jac,0.)
 
 def support(meta):
     if meta['plotting_coordinate']=='log':
@@ -139,36 +119,50 @@ def prior_tables(metadata):
         tex+=f"{parameter} & {units} & {r['prior']} & {r['model']} \\\\\n"
     (TABLES/'prior_table.tex').write_text((tex+'\\hline\n\\end{tabular}\n').replace('μ',r'$\mu$').replace('²',r'$^2$'))
 
-def verify_model(folder):
+def verify_model(folder, *, posterior=True, bands=True,fit=True):
+    """Validate the recorded producer/files for display, not current-source reuse.
+
+    MAP-only plots require no posterior files. Supplied posterior bands retain
+    the full saved-target, sampler and latent-propagation checks.
+    """
     m=json.loads((folder/'manifest.json').read_text())
-    if not m['complete'] or m['mode']!='production': raise ValueError(f'{folder.name}: full verified posterior run required')
-    for name,digest in m['files'].items():
-        if hashlib.sha256((folder/name).read_bytes()).hexdigest()!=digest: raise ValueError(f'Changed numerical result {folder/name}')
-    changed = any(hashlib.sha256((ROOT/name).read_bytes()).hexdigest()!=digest
-                  for name,digest in m['source_files'].items())
-    if changed:
-        verify_compatibility(folder,m)
+    if m['mode'] not in ('production','map') or ((posterior or bands) and not m['complete']):
+        raise ValueError(f'{folder.name}: completed recorded results required')
+    required={'map.json'}
+    if fit:required|={'trajectory.csv','distribution_curves.csv'}
+    if posterior or bands:
+        required|={'priors.json','sampling_diagnostics.json','target_verification.json','posterior_draws.csv',
+            'sampler_statistics.csv','sampling_provenance.json'}
+    if bands:
+        required|={'latent_settings.json','latent_predictions.csv','latent_distribution_curves.csv',
+            'latent_draw_diagnostics.csv','latent_prediction_indices.csv','frozen_model.json','reporting_provenance.json'}
+    for name in required:
+        if name not in m['files'] or hashlib.sha256((folder/name).read_bytes()).hexdigest()!=m['files'][name]:
+            raise ValueError(f'Changed or unrecorded numerical result {folder/name}')
+    if not posterior and not bands:
+        if not json.loads((folder/'map.json').read_text())['converged']:
+            raise ValueError(f'{folder.name}: recorded MAP did not converge')
+        return m
     d=json.loads((folder/'sampling_diagnostics.json').read_text())
-    if not d['passed']: raise ValueError(f'{folder.name}: posterior sampling screen failed')
-    verification=folder/'target_verification.json'
-    if not verification.exists():
-        raise ValueError(f'{folder.name}: verify this retained posterior with run.jl --verify before plotting')
-    checked=json.loads(verification.read_text())
+    if not d['passed']:raise ValueError(f'{folder.name}: posterior sampling screen failed')
+    checked=json.loads((folder/'target_verification.json').read_text())
     if not checked['passed'] or checked.get('target_hash')!=m['target_hash']:
-        raise ValueError(f'{folder.name}: verify this retained posterior with run.jl --verify')
+        raise ValueError(f'{folder.name}: retained target verification failed or belongs to another target')
     for filename,key in [('posterior_draws.csv','posterior_draws_sha256'),('sampler_statistics.csv','sampler_statistics_sha256')]:
         if checked.get(key)!=hashlib.sha256((folder/filename).read_bytes()).hexdigest():
             raise ValueError(f'{folder.name}: target verification belongs to different retained draws')
-    if d.get('sampling_coordinates') in ('CNT_soft_barrier_rates','CNT_transport_rates'):
-        provenance=json.loads((folder/'sampling_provenance.json').read_text())
-        helper=ROOT/'examples/support/isothermal_protein_sampling.jl'
-        if provenance['coordinate_source_sha256']!=hashlib.sha256(helper.read_bytes()).hexdigest():
-            raise ValueError('Changed sampling-coordinate implementation; verify/reproduce the posterior first')
-        if d.get('sampling_coordinates')=='CNT_transport_rates':
-            path=ROOT/'paper/protein/sampling_transport.json'
-            if provenance['transport_configuration_sha256']!=hashlib.sha256(path.read_bytes()).hexdigest():
-                raise ValueError('Changed sampler transport configuration')
+    # The original source/transport identities are retained in the hashed
+    # sampling_provenance file. They are not compared to today's checkout for
+    # a redraw. New numerical analyses still use verify_compatibility.
+    if bands:
+        settings=json.loads((folder/'latent_settings.json').read_text())
+        if settings.get('target_hash',m['target_hash'])!=m['target_hash']:
+            raise ValueError('Latent intervals belong to another target')
+        for filename in ('frozen_model.json','reporting_provenance.json'):
+            if json.loads((folder/filename).read_text())['target_hash']!=m['target_hash']:
+                raise ValueError('Latent/reporting record belongs to another target')
     return m
+
 
 def layout():
     fig,axes=plt.subplots(2,2,figsize=(DOUBLE,5.45))
@@ -187,14 +181,14 @@ def layout():
     axes[1,1].set_xticks([0,200,400,600]);axes[1,1].set_yticks([5,10,15,20,25])
     return fig,axes
 
-def figure_legend(fig,*,fitted):
+def figure_legend(fig,*,fitted,with_bands=True):
     handles=[]
     if fitted:
         handles.extend([
             Line2D([],[],color='.15',lw=1.3,label='MAP prediction'),
             Line2D([],[],color='.35',ls='--',lw=1.,marker='o',ms=3,label='Digitized PSD / guide'),
-            Patch(facecolor='.55',alpha=.2,edgecolor='none',label=r'95\% latent interval'),
         ])
+        if with_bands:handles.append(Patch(facecolor='.55',alpha=.2,edgecolor='none',label=r'95\% latent interval'))
     handles.extend([
         Line2D([],[],color='.2',ls='none',marker='o',ms=3.5,label='Training observation'),
         Line2D([],[],color='.2',ls='none',marker='s',mfc='white',ms=3.5,label='Test observation'),
@@ -203,13 +197,14 @@ def figure_legend(fig,*,fitted):
     fig.legend(handles=handles,loc='lower center',bbox_to_anchor=(.53,.025),ncol=3,
                fontsize=7.2,columnspacing=1.7,handlelength=2.,handletextpad=.6)
 
-def observation_panels(axes,data,psds,quantiles,*,guide=False,fitted=False):
+def observation_panels(axes,data,psds,quantiles,*,guide=False,fitted=False,with_bands=True):
     ax=axes[0,0]
     for split,marker,label,fill in (('calibration','o','Training',True),('validation','s','Test',False),('initial_condition','D','Fixed initial',True)):
         q=data[data['split']==split]
         if len(q):
-            ax.errorbar(q['time_min'],q['observed_g_L'],yerr=q['sigma_g_L'],fmt=marker,ms=3.2,
-                mfc='.2' if fill else 'white',mec='.2',color='.2',elinewidth=.65,capsize=2,zorder=4)
+            plot_observable(q['time_min'],data=q['observed_g_L'],sigma=q['sigma_g_L'],ax=ax,
+                data_style=dict(marker=marker,ms=3.2,mfc='.2' if fill else 'white',mec='.2',
+                    color='.2',elinewidth=.65,capsize=2,zorder=4),legend=False)
     for t in TIMES:
         q=psds[psds['time_min']==t];ax=axes[0,1] if t<660 else axes[1,0]
         marker='o' if t<660 else 's'
@@ -232,109 +227,72 @@ def observation_panels(axes,data,psds,quantiles,*,guide=False,fitted=False):
              for key,label,color,ls in QUANTILES.values()]
     axes[1,1].legend(handles=handles,fontsize=7.5,loc='upper right',ncol=3,
                      handlelength=1.5,columnspacing=.8)
-    figure_legend(axes[0,0].figure,fitted=fitted)
+    figure_legend(axes[0,0].figure,fitted=fitted,with_bands=with_bands)
 
 def interval_at(table,time,quantity):
     values=table[table['time_min']==time][quantity]
     return np.quantile(values,[.025,.975]) if len(values) and np.isfinite(values).all() else [np.nan,np.nan]
 
-def four_panel(name,data,psds,quantiles,ymax):
-    folder=BASE/name;trajectory=read(folder,'trajectory.csv');latent=read(folder,'latent_predictions.csv')
-    curves=read(folder,'distribution_curves.csv');drawcurves=read(folder,'latent_distribution_curves.csv')
+def four_panel(name,data,psds,quantiles,ymax,*,bands=True):
+    folder=BASE/name;trajectory=read(folder,'trajectory.csv')
+    curves=read(folder,'distribution_curves.csv')
+    latent=read(folder,'latent_predictions.csv') if bands else None
+    drawcurves=read(folder,'latent_distribution_curves.csv') if bands else None
     fig,axes=layout()
-    # Curves first, so observed markers and error bars remain readable.
-    a=axes[0,0];times=np.unique(latent['time_min'])
-    ci=np.array([interval_at(latent,t,'concentration_g_L') for t in times])
-    a.fill_between(times,ci[:,0],ci[:,1],color='.4',alpha=.2,label=r'95\% latent interval')
-    a.plot(trajectory['time_min'],trajectory['concentration_g_L'],'k-',lw=1.2,label='MAP')
+    a=axes[0,0]
+    if bands:
+        times=np.unique(latent['time_min'])
+        ci=np.array([interval_at(latent,t,'concentration_g_L') for t in times])
+        a.fill_between(times,ci[:,0],ci[:,1],color='.4',alpha=.2,label=r'95\% latent interval')
+    plot_observable(trajectory['time_min'],trajectory['concentration_g_L'],ax=a,
+        styles=[dict(color='k',lw=1.2,label='MAP')],legend=False)
     a.axvline(420,color='.5',ls=':',lw=.7,ymax=.65)
     for t in TIMES:
         a=axes[0,1] if t<660 else axes[1,0];q=curves[curves['time_min']==t]
-        draws=drawcurves[drawcurves['time_min']==t]
-        values=np.array([draws[draws['left_um']==x]['conditional_density_per_um'] for x in q['left_um']])
-        lo,hi=np.quantile(values,[.025,.975],axis=1)
-        centers=.5*(q['left_um']+q['right_um'])
-        # Display the stored bin averages at their centers; no smoothing,
-        # remeshing or forward-model evaluation is performed.
-        a.fill_between(centers,lo,hi,alpha=.15,color=COLORS[t],linewidth=0)
-        a.plot(centers,q['conditional_density_per_um'],color=COLORS[t],lw=1.35)
+        interval=None
+        if bands:
+            draws=drawcurves[drawcurves['time_min']==t]
+            values=np.array([draws[draws['left_um']==x]['conditional_density_per_um'] for x in q['left_um']])
+            interval=np.quantile(values,[.025,.975],axis=1)
+        edges=np.r_[q['left_um'],q['right_um'][-1]]
+        plot_distribution(q['conditional_density_per_um'],edges,ax=a,curve='centers',
+            styles=[dict(color=COLORS[t],lw=1.35)],legend=False,
+            band=interval,band_label='Pointwise 95% latent interval' if bands else None)
     a=axes[1,1]
     for p,(key,label,color,ls) in QUANTILES.items():
-        ci=np.array([interval_at(latent,t,key) for t in times])
-        a.fill_between(times,ci[:,0],ci[:,1],color=color,alpha=.12)
-        a.plot(trajectory['time_min'],trajectory[key],ls=ls,color=color,lw=1.1)
-    observation_panels(axes,data,psds,quantiles,fitted=True)
-    for a in (axes[0,1],axes[1,0]): a.set_ylim(0,ymax)
+        if bands:
+            ci=np.array([interval_at(latent,t,key) for t in times])
+            a.fill_between(times,ci[:,0],ci[:,1],color=color,alpha=.12)
+        plot_observable(trajectory['time_min'],trajectory[key],ax=a,
+            styles=[dict(ls=ls,color=color,lw=1.1)],legend=False)
+    observation_panels(axes,data,psds,quantiles,fitted=True,with_bands=bands)
+    for a in (axes[0,1],axes[1,0]):a.set_ylim(0,ymax)
     export(fig,'protein_fit_'+name)
 
+
 def marginal(values,x,bounds):
-    h=1.06*np.std(values,ddof=1)*len(values)**(-.2)
-    if not h>0: raise ValueError('Degenerate posterior')
-    centers=[values]+[2*b-values for b in bounds if np.isfinite(b)]
-    return sum(np.exp(-.5*((x[:,None]-v)/h)**2).sum(axis=1) for v in centers)/(len(values)*h*np.sqrt(2*np.pi))
+    return marginal_on_grid(values,x,bounds)
+
 
 def corner(name,metadata,*,write_tables=True):
-    folder=BASE/name;draws=read(folder,'posterior_draws.csv');map_record=json.loads((folder/'map.json').read_text());mode=map_record['parameters']
+    folder=BASE/name;draws=read(folder,'posterior_draws.csv');mode=json.loads((folder/'map.json').read_text())['parameters']
     metas=json.loads((folder/'priors.json').read_text());n=len(metas)
     samples=np.column_stack([np.log(draws[m['name']]) if m['plotting_coordinate']=='log' else draws[m['name']] for m in metas])
     point=[np.log(mode[m['name']]) if m['plotting_coordinate']=='log' else mode[m['name']] for m in metas]
-    bounds=[support(m) for m in metas]
     fig,axes=plt.subplots(n,n,figsize=(DOUBLE,5.2 if n==3 else 6.2))
     fig.subplots_adjust(left=.12,right=.98,bottom=.12,top=.96,wspace=.13,hspace=.13)
-    limits=[]
-    for i in range(n):
-        q=np.quantile(samples[:,i],[.0005,.9995]);margin=.15*(q[1]-q[0])
-        limits.append((max(q[0]-margin,bounds[i][0]),min(q[1]+margin,bounds[i][1])))
-    for i in range(n):
-        lo,hi=limits[i]
-        for j in range(n):
-            a=axes[i,j]
-            if j>i: a.axis('off');continue
-            if i==j:
-                x=np.linspace(lo,hi,601)
-                density=marginal(samples[:,i],x,bounds[i])
-                a.fill_between(x,0,density,color='#0072B2',alpha=.13,linewidth=0)
-                a.plot(x,density,color='#0072B2',lw=1.2)
-                a.plot(x,prior_density(metas[i],x),color='.35',ls='--',lw=1.)
-                a.axvline(point[i],color='#D55E00',lw=.8,ls=':')
-                a.set_xlim(lo,hi);a.set_ylim(bottom=0);a.tick_params(labelleft=False)
-                a.set_yticks([])
-            else:
-                curved={metas[j]['name'],metas[i]['name']}=={'logAJ','gamma'}
-                if not curved:
-                    X,Y,density=joint_density(samples[:,j],samples[:,i],bounds[j],bounds[i],points=151)
-                    levels=probability_levels(density)
-                    a.contourf(X,Y,density,levels=[*levels,density.max()*1.001],
-                               colors=['#e7f0f7','#bad7e8'])
-                    a.contour(X,Y,density,levels=levels,colors=['#86b2cc','#0072B2'],linewidths=[.65,.9])
-                # This CNT relation is curved and thinner than a Cartesian KDE
-                # bandwidth. Actual draws preserve its width without a blur.
-                if curved:
-                    index=np.linspace(0,len(samples)-1,min(2000,len(samples)),dtype=int)
-                    a.plot(samples[index,j],samples[index,i],'.',color='#0072B2',ms=.8,alpha=.35)
-                a.plot(point[j],point[i],'x',color='#D55E00',ms=4,mew=.8)
-                a.set_ylim(lo,hi);a.set_xlim(*limits[j])
-            if i==n-1: a.set_xlabel(LABELS[metas[j]['name']],fontsize=8.5,labelpad=5)
-            else: a.tick_params(labelbottom=False)
-            if j==0 and i!=j: a.set_ylabel(LABELS[metas[i]['name']],fontsize=8.5,labelpad=5)
-            elif i!=j: a.tick_params(labelleft=False)
-            a.tick_params(labelsize=7.2,direction='out',length=2.5,width=.65,pad=2)
-            for spine in a.spines.values(): spine.set_linewidth(.65)
-            a.locator_params(axis='x',nbins=3)
-            if i!=j: a.locator_params(axis='y',nbins=3)
-    handles=[Line2D([],[],color='#0072B2',lw=1.2,label='NUTS posterior'),
-             Line2D([],[],color='.35',ls='--',lw=1.,label='Analytical prior'),
-             Line2D([],[],color='#D55E00',ls='none',marker='x',ms=4,label='MAP'),
-             Patch(facecolor='#bad7e8',edgecolor='#0072B2',lw=.6,label=r'68\% joint region'),
-             Patch(facecolor='#e7f0f7',edgecolor='#86b2cc',lw=.6,label=r'95\% joint region')]
-    fig.legend(handles=handles,loc='upper right',bbox_to_anchor=(.965,.96),fontsize=7.5,
-               handlelength=2.,labelspacing=.5)
+    curved=[(j,i) for i in range(n) for j in range(i) if {metas[j]['name'],metas[i]['name']}=={'logAJ','gamma'}]
+    plot_parameters(samples,metadata=metas,point=point,axes=axes,
+        bounds=[support(m) for m in metas],labels=[LABELS.get(m['name'],m['name']) for m in metas],
+        raw_pairs=curved,kde_points=151,
+        diagnostics=json.loads((folder/'sampling_diagnostics.json').read_text()))
     export(fig,'protein_corner_'+name)
     coordinates=[('log_'+m['name']) if m['plotting_coordinate']=='log' else m['name'] for m in metas]
     if write_tables:
         write_csv(TABLES/f'posterior_correlations_{name}.csv',[
             dict(coordinate=coordinates[i],**dict(zip(coordinates,row)))
             for i,row in enumerate(np.corrcoef(samples.T))])
+
 
 def result_tables(metadata):
     fixed=json.loads((BASE/'shared/fixed_parameters.json').read_text())
@@ -409,7 +367,17 @@ def result_tables(metadata):
         text+=f"| {r['model']} | {r['time_min']:g} | {r['split']} | {r['CDF_RMSE']:.4f} | {r['W2_um']:.3f} | {r['d10_error_um']:.3f} | {r['d50_error_um']:.3f} | {r['d90_error_um']:.3f} |\n"
     (TABLES/'fit_comparison.md').write_text(text);(DOCS/'fit_comparison.txt').write_text(text)
 
-def captions(data_only=False):
+def captions(data_only=False,map_only=False):
+    if map_only:
+        # Do not reuse latent-band captions for an explicitly band-free redraw,
+        # or overwrite captions associated with existing posterior figures.
+        (OUT/'captions_map_only.txt').write_text(
+            'MAP-only CNT and CNT + GRD fits: concentration, training conditional number densities, '
+            'held-out 660-min density and conditional d10/d50/d90. Fixed 5% concentration SD bars, '
+            'training/test markers and the 2.5-25 micrometre window are unchanged. '
+            'No posterior bands or parameter-distribution claims are displayed. '
+            'Lines connect stored bin averages; dashed observation guides are display-only.\n')
+        return
     text=r'''\newcommand{\ProteinDataCaption}{Original graph-digitized Tang et al. (2018) 100 mL isothermal lysozyme observations at 20 degrees C. (a) Dissolved concentration with assumed 5\% standard deviations; the diamond fixes the initial condition, filled circles train and open squares test. (b) Training conditional number densities at 74, 180 and 420 min. (c) Held-out 660-min density. (d) Conditional number $d_{10},d_{50},d_{90}$; connecting dotted lines are guides only. All sizes and quantiles condition on 2.5--25 $\mu$m. No model prediction or invented PSD uncertainty is shown.}
 \newcommand{\ProteinFitCaption}{CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview. Solid curves/stairs show the inference-coordinate MAP; markers retain the graph readings and dashed density guides have a fixed 0.6 micrometre display bandwidth, without changing likelihood observations. Shading is the pointwise 95\% latent interval from screened NUTS draws, conditional on fixed observation errors and physical constants; it excludes additional measurement noise. The vertical dotted line marks the end of training at 420 min. The 660-min PSD and later concentrations are predicted without refitting. Quantile segments are omitted when the conditioning window is empty; quantiles derived from PSDs are not independent likelihood data. Numerical densities use actual bin edges without smoothing.}
 \newcommand{\ProteinCornerCaption}{Three-parameter CNT or four-parameter CNT+GRD NUTS posterior, identified by filename. Diagonals show normalized posterior KDEs and dashed analytical priors generated from the active specifications; positive wide-scale parameters use labelled natural-log plotting coordinates, including the correct prior Jacobian. Broad priors are not renormalized to the displayed posterior window; full support is in the prior table. In each two-parameter marginal, KDE contours enclose approximately 68\% and 95\% probability. Interfacial energy is fixed at 0.64 mJ per squared metre and is absent from these inferred coordinates. Orange markers denote the transformed inference-coordinate MAP. Sampling convergence does not establish numerical convergence, identifiability or physical model adequacy.}
@@ -454,48 +422,55 @@ def captions(data_only=False):
     text+=r'\newcommand{\ProteinParameterTableCaption}{Inference-coordinate MAP estimates transformed to physical units, posterior medians and equal-tailed 95\% credible intervals. Model 1 fixes dispersion to zero. Intervals condition on the model, fixed observation errors and physical constants.}'+'\n'
     (OUT/'captions.tex').write_text(text.replace('μm²/min',r'$\mu{\rm m}^2/{\rm min}$'))
 
-def plot(data_only=False,figures_only=True):
-    configure(require_dvipng=False)
-    OUT.mkdir(parents=True,exist_ok=True);DOCS.mkdir(parents=True,exist_ok=True)
-    verify_shared_data()
-    shared=BASE/'shared';data=read(shared,'concentration.csv');psds=read(shared,'psd.csv');qs=read(shared,'quantiles.csv')
-    metadata=json.loads((shared/'priors.json').read_text())
-    if not figures_only:
-        TABLES.mkdir(parents=True,exist_ok=True)
-        prior_tables(metadata)
-    ymax=DENSITY_YMAX
-    required=1.05*np.max(psds['conditional_density_per_um'])
-    if not data_only:
-        for name in ('cnt','cnt_grd'):
-            verify_model(BASE/name)
-            curves=read(BASE/name,'distribution_curves.csv');latent=read(BASE/name,'latent_distribution_curves.csv')
-            upper=max(np.quantile(latent[(latent['time_min']==t)&(latent['left_um']==x)]['conditional_density_per_um'],.975)
-                for t in TIMES for x in np.unique(curves[curves['time_min']==t]['left_um']))
-            required=max(required,1.05*np.max(curves['conditional_density_per_um']),1.05*upper)
-    if required>ymax:
-        raise ValueError('The declared common density limit would clip a curve/band; increase DENSITY_YMAX for all three figures')
-    fig,axes=layout();observation_panels(axes,data,psds,qs,guide=True)
-    for a in (axes[0,1],axes[1,0]): a.set_ylim(0,ymax)
-    export(fig,'protein_data')
-    if not data_only:
-        for name in ('cnt','cnt_grd'):
-            four_panel(name,data,psds,qs,ymax);corner(name,metadata,write_tables=not figures_only)
-        if not figures_only: result_tables(metadata)
-    captions(data_only=data_only)
-    names=('protein_data',) if data_only else ('protein_data','protein_fit_cnt','protein_fit_cnt_grd','protein_corner_cnt','protein_corner_cnt_grd')
-    files={f'{name}.{ext}':hashlib.sha256((OUT/f'{name}.{ext}').read_bytes()).hexdigest()
-        for name in names for ext in ('png',)}
-    inputs={f'{name}/{file}':hashlib.sha256((BASE/name/file).read_bytes()).hexdigest()
-        for name in (('shared',) if data_only else ('shared','cnt','cnt_grd'))
-        for file in (('concentration.csv','psd.csv','quantiles.csv') if name=='shared' else
-                     ('manifest.json','posterior_draws.csv','map.json','latent_predictions.csv','latent_distribution_curves.csv'))}
-    receipt='data_plot_provenance.json' if data_only else 'plot_provenance.json'
-    (OUT/receipt).write_text(json.dumps(dict(renderer='actual LaTeX',dpi=300,files=files,
-        retained_inputs=inputs,figures_only=figures_only,display_only_density_bandwidth_um=GUIDE_BANDWIDTH_UM,
-        python=platform.python_version(),numpy=np.__version__,matplotlib=plt.matplotlib.__version__,
-        driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        density_helpers_sha256=hashlib.sha256((PAPER/'_support/posterior_density.py').read_bytes()).hexdigest()),indent=2)+'\n')
-    print(OUT)
+def plot(data_only=False,figures_only=True,map_only=False):
+    with configure(require_dvipng=False):
+        OUT.mkdir(parents=True,exist_ok=True);DOCS.mkdir(parents=True,exist_ok=True)
+        verify_shared_data()
+        shared=BASE/'shared';data=read(shared,'concentration.csv');psds=read(shared,'psd.csv');qs=read(shared,'quantiles.csv')
+        metadata=json.loads((shared/'priors.json').read_text()) if (not data_only and not map_only) or not figures_only else None
+        if not figures_only:
+            TABLES.mkdir(parents=True,exist_ok=True)
+            prior_tables(metadata)
+        ymax=DENSITY_YMAX
+        required=1.05*np.max(psds['conditional_density_per_um'])
+        if not data_only:
+            for name in ('cnt','cnt_grd'):
+                verify_model(BASE/name,posterior=not map_only,bands=not map_only)
+                curves=read(BASE/name,'distribution_curves.csv')
+                upper=0.
+                if not map_only:
+                    latent=read(BASE/name,'latent_distribution_curves.csv')
+                    upper=max(np.quantile(latent[(latent['time_min']==t)&(latent['left_um']==x)]['conditional_density_per_um'],.975)
+                        for t in TIMES for x in np.unique(curves[curves['time_min']==t]['left_um']))
+                required=max(required,1.05*np.max(curves['conditional_density_per_um']),1.05*upper)
+        if required>ymax:
+            raise ValueError('The declared common density limit would clip a curve/band; increase DENSITY_YMAX for all three figures')
+        fig,axes=layout();observation_panels(axes,data,psds,qs,guide=True)
+        for a in (axes[0,1],axes[1,0]): a.set_ylim(0,ymax)
+        export(fig,'protein_data')
+        if not data_only:
+            for name in ('cnt','cnt_grd'):
+                four_panel(name,data,psds,qs,ymax,bands=not map_only)
+                if not map_only:corner(name,metadata,write_tables=not figures_only)
+            if not figures_only and not map_only: result_tables(metadata)
+        captions(data_only=data_only,map_only=map_only)
+        names=('protein_data',) if data_only else ('protein_data','protein_fit_cnt','protein_fit_cnt_grd') if map_only else ('protein_data','protein_fit_cnt','protein_fit_cnt_grd','protein_corner_cnt','protein_corner_cnt_grd')
+        files={f'{name}.{ext}':hashlib.sha256((OUT/f'{name}.{ext}').read_bytes()).hexdigest()
+            for name in names for ext in ('png',)}
+        inputs={f'{name}/{file}':hashlib.sha256((BASE/name/file).read_bytes()).hexdigest()
+            for name in (('shared',) if data_only else ('shared','cnt','cnt_grd'))
+            for file in (('concentration.csv','psd.csv','quantiles.csv') if name=='shared' else
+                         (('manifest.json','map.json','trajectory.csv','distribution_curves.csv') if map_only else
+                          ('manifest.json','posterior_draws.csv','map.json','latent_predictions.csv','latent_distribution_curves.csv')))}
+        receipt='data_plot_provenance.json' if data_only else 'plot_provenance.json'
+        (OUT/receipt).write_text(json.dumps(dict(renderer='actual LaTeX',dpi=300,files=files,
+            shared_renderer_sources=renderer_sources(),
+            map_only=map_only,posterior_bands=not data_only and not map_only,
+            retained_inputs=inputs,figures_only=figures_only,display_only_density_bandwidth_um=GUIDE_BANDWIDTH_UM,
+            python=platform.python_version(),numpy=np.__version__,matplotlib=plt.matplotlib.__version__,
+            driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            density_helpers_sha256=hashlib.sha256((PAPER/'_support/posterior_density.py').read_bytes()).hexdigest()),indent=2)+'\n')
+        print(OUT)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

@@ -29,7 +29,10 @@ function PBM._experiment_gradient(adapter::PBM.SciMLSensitivitySolver,problem,z,
     function f!(du,u,q,t)
         current=PBM._experiment_problem(problem,q,ex)
         size(current.u0)==shape || throw(ArgumentError("ODE sensitivities require a fixed state layout"))
-        PBM.rhs!(reshape(du,shape),reshape(u,shape),current.operator,current.p,t)
+        # q also takes dual values while forming the ODE parameter Jacobian.
+        # Preparation must use that binding, never the primal saved operator.
+        operator=PBM.prepare_run(current.operator,current.p)
+        PBM.rhs!(reshape(du,shape),reshape(u,shape),operator,current.p,t)
         nothing
     end
     u0=vec(pb.u0)
@@ -52,6 +55,8 @@ function PBM._experiment_gradient(adapter::PBM.SciMLSensitivitySolver,problem,z,
         sol=checked_solve(ode,adapter;save_everystep=true,dense=true)
         states=hcat((sol(t) for t in ts)...)
     end
+    stats=hasproperty(sol,:stats) ? sol.stats : sol.destats
+    PBM._record_integration_counts!(counts,(accepted_steps=stats.naccept,rejected_steps=stats.nreject,segments=1))
     function conditional(q,U)
         current=PBM._experiment_problem(problem,q,ex)
         snapshots=[reshape(view(U,:,j),shape) for j in axes(U,2)]

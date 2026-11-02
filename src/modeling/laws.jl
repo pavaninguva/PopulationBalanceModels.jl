@@ -208,3 +208,51 @@ struct MomentSource{F,M} <: AbstractPBMTerm
     rawmoment::M
 end
 mechanism(::MomentSource)=:birth
+
+"""
+    ContinuousDaughters(density; support, count, coordinates=:ratio,
+                       conserved_order=1, moment=nothing,
+                       dependencies=(:parameters,))
+
+Continuous expected daughter-**number** measure per breakage event, not an
+implicitly normalized probability law. With `coordinates=:ratio`, density is
+`b(r,parent,p,t,ctx)` per ratio r=x/parent; the daughter-coordinate density is
+b(x/parent,...)/parent. With `:daughter`, the same callback directly returns
+b(x,parent,...). `support` is a finite interval in the declared coordinate, or
+`(parent,p)->interval`. It must lie inside [0,1] or [0,parent], respectively.
+`count` is the expected total number, a scalar or `(parent,p)->number`.
+`conserved_order` declares ∫x^k b dx=parent^k; specify the matching
+AdditiveCoordinate on Breakage for a nonadditive coordinate.
+Use `conserved_order=nothing` when a general AdditiveCoordinate, rather than a
+raw power, declares the conserved property. Its balance is checked by Breakage.
+
+`moment(parent,k,p,t,ctx)`, when supplied, is the analytical full daughter raw
+moment. Otherwise the package integrates numerically. This inner integral does
+not establish closure of the population moment equations.
+
+FixedPivot selects positive quadrature and its accuracy controls. At run
+preparation, parameter-dependent laws are projected once onto conservative
+additive-coordinate hats, including unresolved number/property tails. Nothing
+is renormalized onto the grid. Declare :time and/or :state dependencies for a
+dynamic law; moment integrals use current-stage quadrature. FixedPivot run
+preparation currently rejects these dynamic declarations explicitly.
+The default moment inner quadrature uses 16 points, checked up to 256 points.
+"""
+struct ContinuousDaughters{F,S,C,M,D}
+    density::F
+    support::S
+    count::C
+    coordinates::Symbol
+    conserved_order::Union{Nothing,Int}
+    moment::M
+    dependencies::D
+end
+function ContinuousDaughters(f;support,count,coordinates=:ratio,conserved_order=1,
+        moment=nothing,dependencies=(:parameters,))
+    coordinates in (:ratio,:daughter) || throw(ArgumentError("daughter coordinates must be :ratio or :daughter"))
+    conserved_order===nothing || (conserved_order isa Integer && conserved_order>=1) ||
+        throw(ArgumentError("conserved_order must be a positive integer or nothing for a general additive map"))
+    all(d->d in (:parameters,:time,:state),dependencies) && length(unique(dependencies))==length(dependencies) ||
+        throw(ArgumentError("daughter dependencies may contain :parameters, :time, :state"))
+    ContinuousDaughters(f,support,count,coordinates,conserved_order===nothing ? nothing : Int(conserved_order),moment,Tuple(dependencies))
+end

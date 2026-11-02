@@ -37,8 +37,8 @@ jobs:
           Pkg.instantiate()
       - name: Check API reference routing
         run: julia --color=yes --project=docs test/docs_reference.jl
-      - name: Check standalone case-study tutorial scripts
-        run: julia --color=yes --project=docs test/case_study_scripts.jl
+      - name: Check standalone tutorials and reduced execution paths
+        run: julia --color=yes --project=docs test/case_study_migration.jl
       - name: Build and deploy documentation
         run: julia --color=yes --project=docs docs/make.jl
         env:

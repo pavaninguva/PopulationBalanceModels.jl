@@ -1,6 +1,7 @@
 using Test, LinearAlgebra, ForwardDiff
 using Distributions: LogNormal, MvNormal, logpdf
 using PopulationBalanceModels, SciMLBase, SciMLSensitivity, OrdinaryDiffEqTsit5, Optim
+include("forward_execution_sensitivity.jl")
 
 function sensitivity_fixture(mode)
     grid=Grid1D([0.,0.5,1.])

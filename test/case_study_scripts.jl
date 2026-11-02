@@ -60,15 +60,16 @@ end
     # No tutorial main(), fit(), simulate() or production exporter is invoked.
     _load_example(:ConstantGrowthMethods,"constant_growth_methods.jl")
     scope=load_tutorial(:constant_growth);case=construct(scope)
-    @test case.initial==ConstantGrowthMethods.gaussian_counts(case.grid,0.)
-    @test case.reference==ConstantGrowthMethods.gaussian_counts(case.grid,4.)
+    @test case.initial isa InitialDistribution
+    @test vec(case.problem.u0)==ConstantGrowthMethods.gaussian_counts(case.grid,0.)
+    @test case.reference==vec(initialize(case.problem.operator,ConstantGrowthMethods.gaussian_initial(4.)))
     @test case.grid.coordinate===:length
 
     _load_example(:Gunawan2004Case2,"papers/gunawan2004_case2.jl")
     scope=load_tutorial(:crystallization);pb=construct(scope)
-    ref=Gunawan2004Case2.build(grid=pb.operator.system.populations.crystals.grid,
+    ref=Gunawan2004Case2.density_problem(grid=pb.operator.system.populations.crystals.grid,
         initial_density=Gunawan2004Case2.benchmark_initial_density,
-        c0=Gunawan2004Case2.solubility(Gunawan2004Case2.temperature(0.)),tspan=pb.tspan)
+        support=(180.5,210.5),c0=Gunawan2004Case2.solubility(Gunawan2004Case2.temperature(0.)),tspan=pb.tspan)
     same_initial_rates(pb,ref;time=5.)
 
     _load_example(:QamarMomentBenchmarks,"qamar_moment_benchmarks.jl")
@@ -87,12 +88,14 @@ end
     scope=load_tutorial(:stem_cells)
     for differentiation in (false,true)
         same_initial_rates(construct(scope;bins=40,differentiation),
-            StemCellPopulation.build_problem(bins=40,tf=20.;differentiation))
+            StemCellPopulation.continuous_problem(bins=40,tf=20.;differentiation))
     end
 
     _load_example(:InguvaBraatzCase2,"inguva_braatz_case2.jl")
     scope=load_tutorial(:transport)
-    same_initial_rates(construct(scope;bins=12),InguvaBraatzCase2.problem(12))
+    initial=InitialDensity((xy,p,t)->InguvaBraatzCase2.initial_density(xy[1],xy[2],p);
+        support=((0.,2.),(0.,2.)))
+    same_initial_rates(construct(scope;bins=12),InguvaBraatzCase2.problem(12;initial))
 
     # The LNP startup assembly uses only core dependencies. Its historical
     # full-horizon Rosenbrock driver is deliberately not imported or executed.

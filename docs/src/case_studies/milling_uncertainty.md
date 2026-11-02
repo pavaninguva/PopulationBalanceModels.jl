@@ -378,8 +378,19 @@ advances this package residual in mass coordinates and restarts exactly at the
 30-s speed change. It is imported separately and retains its completion and
 nonnegativity checks. Run in the milling environment prepared above.
 
+This helper is a genuine specialization. The public external `ForwardSolver`
+does not yet declare the active-coordinate reduction, exact diagonal mass
+scaling/Jacobian and CVODE inequality constraints together. Its saved-state
+validation is also distinct from CVODE's internal constraint handling. Therefore
+the existing reduction and interval integration remain together in one adapter.
+`OperatingHistory` alone cannot replace that adapter without these hooks; the
+30-s transition and right-hand outlet convention remain unchanged. The empty
+mill remains an explicit initial array, and each UQ scenario rebuilds the
+parameter-dependent projection also required by the algebraic screen.
+
 This small demonstration uses 40 pivots, 16 MC solves, 8 validation solves and
-12 first-order PCE training solves: 36 full solves. It is separate from the
+12 first-order PCE training solves, plus one nominal solve: 37 full solves.
+The nominal calculation and UQ use the same callable solver. It is separate from the
 production 12,000-realization study and the degree-two comparison. Surrogate
 draws require no further PBM solves. The script propagates them only if the
 independent validation passes; otherwise it reports the errors and requests
@@ -399,3 +410,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:milling_uncertainty))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

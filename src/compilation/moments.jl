@@ -102,12 +102,14 @@ function check_moment_state(method::AbstractMomentClosure,g,u,tolerance)
 end
 check_moment_state(::AbstractDirectMomentMethod,g,u,tolerance)=throw(ArgumentError("direct moment family must check its solver state"))
 _check_population_state(op::CompiledMomentPBM,u,tolerance)=check_moment_state(op.closure,op.grid,u,tolerance)
-function PBMProblem(op::CompiledMomentPBM,u0,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledMomentPBM,u0,tspan;p=NamedTuple(),history=nothing)
+    initial=_initial_description(u0)
+    u0=initial===nothing ? u0 : initialize(op,initial;p,t=first(tspan))
     μ=reshape(float.(copy(vec(u0))),:,1)
     length(μ)==population_state_length(op) || throw(DimensionMismatch("moment-method state size mismatch"))
     _validate_population_state(op,μ)
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
-    PBMProblem(op,μ,(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,μ,(float(tspan[1]),float(tspan[2])),p,initial,history)
 end
 function _check_problem_state(prob::PBMProblem{O},u,tolerance) where {O<:CompiledMomentPBM}
     _checkstate(u,tolerance,"moment-method state",

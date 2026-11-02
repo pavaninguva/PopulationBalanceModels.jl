@@ -74,28 +74,37 @@ biological meaning explicit:
 
 ```julia
 using PopulationBalanceModels
+using Distributions: Beta, pdf
 include("examples/stem_cell_population.jl")
 using .StemCellPopulation
 
 grid = Grid1D(range(0.0, 120.0; length=601); coordinate=:oct4)
+daughters = ContinuousDaughters((r,parent,p,t,ctx)->2pdf(Beta(40.0,40.0),r);
+    coordinates=:ratio,support=(0.0,1.0),count=2.0,conserved_order=1)
 model = PBMModel(
     expression=Growth(cargo_rate),
-    division=Breakage(division_rate, beta_daughters(order=12);
+    division=Breakage(division_rate, daughters;
         overflow=:discard,
         coordinate_map=AdditiveCoordinate(identity, identity)),
     differentiation=Death(differentiation_rate),
 )
 operator = compile(model, grid;
-    methods=TermMethods(growth=MUSCL()), bc=SizeBC())
+    methods=TermMethods(growth=MUSCL(),breakage=FixedPivot(daughter_quadrature=GaussLegendre(8))),
+    bc=SizeBC())
 ```
 
-`beta_daughters` constructs a positive Gauss–Jacobi rule for the beta marginal.
-Its expected daughter counts sum to two and its first cargo moment is one.
-The native fixed-pivot method deposits these daughters while preserving their
+`ContinuousDaughters` specifies the expected daughter-number density in the
+ratio ``r=x/y``. Its integral is two and its first ratio moment is one.
+The native fixed-pivot method prepares positive quadrature and deposits daughters while preserving their
 number and additive cargo when they lie between represented pivots. Daughters
 below the first pivot are explicitly discarded into a cumulative loss ledger;
 they are never silently assigned to the smallest cell. Their tiny contribution
 is reported separately from biological differentiation.
+
+The retained figures below used the same physical law with the example's older
+12-node Gauss–Jacobi rule. The continuous-density walkthrough has its own
+projection checks; the [complete script](#Complete-script) explains this
+distinction from historical results.
 
 To retain exit counts and cargo, the example wraps the operator in `PBMSystem`.
 Its coupled scalar balances are
@@ -297,11 +306,25 @@ and the paper's supplement specify the source functions and initialization.
 ## Complete script
 
 Cargo dynamics, division and differentiation hazards, model assembly and
-historical counters are defined below. Two
-[numerical helpers](../assets/source/examples/stem_cell_population.jl) prepare
-the stated Beta(40,40) two-daughter rule and the exact truncated-Normal initial
-bin integrals. Their quadrature implementation is separate from the physical
-definition. The final call solves one 20-model-time transient with
+historical counters are defined below. `ContinuousDaughters` declares the number
+measure ``2\,\mathrm{Beta}(40,40)`` in cargo ratio: its count is two and it
+conserves cargo, not cargo cubed. `FixedPivot` owns positive quadrature and
+conservative projection; sub-grid daughters remain explicit losses recorded by
+`CumulativeAccounting`. `InitialDistribution` supplies Normal(50,0.5) conditioned
+on [0,100] with unit total cell concentration. Neither integration nor state
+packing is a reader-supplied helper. `ForwardSolver` keeps the autonomous fixed
+step recommendation, SSPRK33 and zero negativity tolerance.
+
+The [maintained source](../assets/source/examples/stem_cell_population.jl) shares
+one physical assembly between `continuous_problem` (this walkthrough) and
+`build_problem` (the retained 12-node Gauss–Jacobi production recipe). The physical
+daughter law is the same, but integrating its continuous density changes the
+finite quadrature/deposition approximation. Resolved daughter profiles need not
+match the old 12-node profiles. The figures and historical numerical checks above
+still describe their original producer; this migration does not certify a
+reproduction of them. Count/cargo and short-transient checks are separate.
+
+The final call solves one 20-model-time transient with
 differentiation; use `tutorial_problem(differentiation=false)` for the other
 cohort. The full balanced-growth/refinement study remains separate.
 
@@ -319,3 +342,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:stem_cells))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

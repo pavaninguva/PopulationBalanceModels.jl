@@ -15,10 +15,18 @@ end
 function _experiment_gradient(solver,problem,z,ex,counts)
     _differentiate_gradient(v->_experiment_loglikelihood(problem,v,ex,counts),z;derivatives=:forwarddiff)
 end
+function _experiment_gradient(solver::ForwardSolver,problem,z,ex,counts)
+    if solver.backend===:sensitivity
+        ex.problem.history===nothing || throw(ArgumentError("continuous sensitivities with operating transitions are unsupported"))
+        _uses_sensitivity_solver(solver) || throw(ArgumentError("invalid sensitivity ForwardSolver backend"))
+        return _experiment_gradient(solver.algorithm,problem,z,ex,counts)
+    end
+    _differentiate_gradient(v->_experiment_loglikelihood(problem,v,ex,counts),z;derivatives=:forwarddiff)
+end
 function _gradient_backend(problem,derivatives)
     derivatives===:finite_difference && return :finite_difference
     derivatives===:auto && problem.gradient!==nothing && return :callback
-    derivatives===:auto && any(ex->ex.solver isa SciMLSensitivitySolver,problem.experiments) && return :sciml_sensitivities
+    derivatives===:auto && any(ex->_uses_sensitivity_solver(ex.solver),problem.experiments) && return :sciml_sensitivities
     if any(ex->_is_stationary(ex.problem),problem.experiments)
         return all(ex->_is_stationary(ex.problem),problem.experiments) ? :implicit_stationary : :mixed_forwarddiff_implicit
     end
@@ -28,7 +36,7 @@ end
 """Log-likelihood gradient in inference coordinates. Automatic mode uses a configured SciML sensitivity adapter or ForwardDiff; finite differences require an explicit request."""
 function likelihood_gradient(problem::EstimationProblem,z;derivatives=problem.derivatives,step=cbrt(eps(Float64)),_counts=nothing)
     _derivative_choice(derivatives)
-    if derivatives===:auto && any(ex->ex.solver isa SciMLSensitivitySolver,problem.experiments)
+    if derivatives===:auto && any(ex->_uses_sensitivity_solver(ex.solver),problem.experiments)
         _ad_evaluate(()->sum(_experiment_gradient(ex.solver,problem,z,ex,_counts) for ex in problem.experiments))
     else
         _differentiate_gradient(v->loglikelihood(problem,v;_counts),z;derivatives,step)
@@ -338,7 +346,8 @@ function posterior_predictive(problem::EstimationProblem,draws;max_solves,measur
         end
         push!(results,prediction)
     end
-    (;results,solves=counts.solves,failed_draws=counts.failures,failure_messages=counts.messages,measurement_noise,seed)
+    (;results,solves=counts.solves,integration_work=_integration_work(counts),
+        failed_draws=counts.failures,failure_messages=counts.messages,measurement_noise,seed)
 end
 
 """Likelihood-only local prediction sensitivities/SVD and observed curvature, reported separately from prior curvature. Prediction rank alone omits information in inferred noise/covariance parameters; observed likelihood curvature includes it. Neither establishes global identifiability."""

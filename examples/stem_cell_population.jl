@@ -1,10 +1,11 @@
 module StemCellPopulation
 
 using PopulationBalanceModels
-using Distributions: Normal, cdf, ccdf
+using Distributions: Normal, Beta, pdf, cdf, ccdf
 using LinearAlgebra
 
 export cargo_rate, division_rate, differentiation_rate, beta_daughters,
+       division_daughters, initial_distribution, continuous_problem,
        initial_population, build_problem, solve_case, state_summary,
        event_distributions, rate_recovery, run_study
 
@@ -20,6 +21,21 @@ division_rate(x, p, t, ctx) = (x / 100)^5
 
 """Eq. 9: exit from the pluripotent cohort, not cell death or diffusivity."""
 differentiation_rate(x, p, t, ctx) = p.differentiation ? 0.5 / (1 + 0.005exp(0.25x)) : zero(x)
+# tutorial:end model
+
+# tutorial:start inputs
+"""Continuous binary-division number measure: two Beta(40,40) cargo fractions."""
+division_daughters() = ContinuousDaughters(
+    (r,parent,p,t,ctx)->2pdf(Beta(40.0,40.0),r);
+    coordinates=:ratio,support=(0.0,1.0),count=2.0,conserved_order=1)
+
+"""Unit-normalized physical initial law on [0,100], with explicit cell concentration."""
+function initial_distribution(;concentration=1.0)
+    isfinite(concentration) && concentration>0 || throw(ArgumentError("initial concentration must be positive"))
+    InitialDistribution(Normal(50.0,0.5);total=concentration,
+        support=(0.0,100.0),truncation=:renormalize)
+end
+# tutorial:end inputs
 
 """
 Positive Gauss–Jacobi quadrature of TWO expected daughters for r ~ Beta(q,q).
@@ -72,13 +88,20 @@ function build_problem(; bins=600, xmax=120.0, tf=200.0, differentiation=false,
     differentiation isa Bool || throw(ArgumentError("differentiation must be true or false"))
     grid = Grid1D(range(0.0, xmax; length=bins+1); coordinate=:oct4)
     daughters = beta_daughters(order=daughter_order)
+    # Retain this historical quadrature/initial-array path for reproduction.
+    assemble_problem(grid,daughters,initial_population(grid;concentration);tf,differentiation)
+end
+
+# tutorial:start assembly
+function assemble_problem(grid,daughters,initial;tf,differentiation,
+                          methods=TermMethods(growth=MUSCL()))
     model = PBMModel(
         expression=Growth(cargo_rate),
         division=Breakage(division_rate, daughters; overflow=:discard,
                           coordinate_map=AdditiveCoordinate(identity, identity)),
         differentiation=Death(differentiation_rate),
     )
-    operator = compile(model, grid; methods=TermMethods(growth=MUSCL()), bc=SizeBC())
+    operator = compile(model, grid; methods, bc=SizeBC())
     function counters(ctx, p, t)
         cells = ctx.populations.stem
         divisions = sum(division_rate(x, p, t, ctx) * cells[i] for (i, x) in enumerate(grid.centers))
@@ -91,11 +114,29 @@ function build_problem(; bins=600, xmax=120.0, tf=200.0, differentiation=false,
                                          mechanisms=(:growth,)),),
         accounting=(CumulativeAccounting(:stem; properties=(cargo=1,)),),
         nonnegative_bulk=(:divisions, :differentiated_cells, :differentiated_cargo))
-    PBMProblem(system, (stem=initial_population(grid; concentration),), (0.0, float(tf));
+    PBMProblem(system, (stem=initial,), (0.0, float(tf));
         p=(differentiation=differentiation,),
         bulk0=(divisions=0.0, differentiated_cells=0.0,
                differentiated_cargo=0.0, synthesis_balance=0.0))
 end
+
+"""Walkthrough of the same continuous model with package-owned initial/daughter integration.
+The retained build_problem uses the original finite Gauss–Jacobi daughter rule;
+the resolved bin profiles of these two quadrature treatments need not coincide.
+"""
+function continuous_problem(;bins=600,xmax=120.0,tf=200.0,differentiation=false,
+                            concentration=1.0,daughter_quadrature=GaussLegendre(8))
+    bins isa Integer && bins>=20 || throw(ArgumentError("use at least 20 cargo bins"))
+    100<=xmax<=180 || throw(ArgumentError("use 100 ≤ xmax ≤ 180; this case keeps R positive"))
+    isfinite(tf) && tf>0 || throw(ArgumentError("tf must be positive"))
+    differentiation isa Bool || throw(ArgumentError("differentiation must be true or false"))
+    grid=Grid1D(range(0.0,xmax;length=bins+1);coordinate=:oct4)
+    daughters=division_daughters()
+    initial=initial_distribution(;concentration)
+    methods=TermMethods(growth=MUSCL(),breakage=FixedPivot(;daughter_quadrature))
+    assemble_problem(grid,daughters,initial;tf,differentiation,methods)
+end
+# tutorial:end assembly
 
 """Solve with MUSCL / fixed pivot / SSPRK33 and a combined static loss bound.
 All coefficients are autonomous and independent of the population and counters,
@@ -108,7 +149,8 @@ function solve_case(; maximum_dt=0.05, cfl=0.35, saveat=nothing, kwargs...)
     problem = build_problem(; kwargs...)
     dt = min(maximum_dt, suggest_dt(problem.operator, problem.u0, problem.p, 0.0; cfl))
     times = isnothing(saveat) ? range(0.0, last(problem.tspan); length=101) : saveat
-    simulate(problem; dt, saveat=times, method=SSPRK33(), negative_tolerance=0.0)
+    solver=ForwardSolver(SSPRK33();dt,negative_tolerance=0.0)
+    simulate(problem;solver,saveat=times)
 end
 
 function state_summary(problem, state, time)
@@ -134,8 +176,6 @@ function state_summary(problem, state, time)
      cargo_balance=cargo+exit_cargo+lost_cargo-synthesis-moment(grid, initial, 1),
      minimum_count=minimum(cells), upper_bin_fraction=last(cells)/number)
 end
-
-# tutorial:end model
 
 """Snapshot event distributions, not additional independently evolving cohorts.
 The newborn bins are the birth part of the SAME native Breakage residual.

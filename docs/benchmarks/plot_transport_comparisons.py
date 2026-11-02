@@ -7,6 +7,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullLocator
 from plot_style import configure
+from pbm_plotting import plot_observable
 from plot_case_studies import save_figure
 
 ASSETS = Path(__file__).resolve().parents[1] / "src" / "assets"
@@ -45,8 +46,8 @@ def constant_growth():
         for name,time,label,color in choices:
             if name=="inguva2022" and C!=1:continue
             d=read(folder/f"{name}_{time}_{C}_200.csv")
-            ax.plot(d['size'],d['density'],color=color,label=label,
-                    **line_style(name,markers=False))
+            plot_observable(d['size'],d['density'],ax=ax,
+                styles=[dict(color=color,label=label,**line_style(name,markers=False))],legend=False)
         ax.set(xlim=(.42,.78),xlabel="$a$",title=fr"$C={C:g}$, 200 bins")
     axes[0].set_ylabel("$f(a,4)$");axes[1].legend(fontsize=7)
     save_figure(fig,folder,"solutions")
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     parser.add_argument("case", choices=("constant", "cooling", "axial", "all"))
     parser.add_argument("--usetex", action="store_true")
     args = parser.parse_args()
-    configure(usetex=args.usetex)
-    for name, plot in (("constant", constant_growth), ("cooling", cooling), ("axial", axial)):
-        if args.case in (name, "all"):
-            plot()
+    with configure(usetex=args.usetex):
+        for name, plot in (("constant", constant_growth), ("cooling", cooling), ("axial", axial)):
+            if args.case in (name, "all"):
+                plot()

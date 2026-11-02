@@ -10,6 +10,7 @@ sys.path.insert(0,str(PAPER))
 from _support import figures
 from _support.figures import load_case, rows, table, export, analysis_table, gaussian_key
 from plotting_style import panel,method_style,DOUBLE,METHODS
+from pbm_plotting import plot_distribution
 
 
 def panels():
@@ -64,7 +65,8 @@ def growth():
             x=(data['left']+data['right'])/2
             style=method_style(method)
             style.update(markevery=(i*2,17),ms=2.8)
-            ax.plot(x,data['density'],**style)
+            edges=np.r_[data['left'],data['right'][-1]]
+            plot_distribution(data['density'],edges,ax=ax,curve='centers',styles=[style],legend=False)
         ax.axhline(0,color='.75',lw=.5)
         ax.set(xlim=(0,1),xlabel=r'Size coordinate $a$',ylabel=r'$n(a,4\,\mathrm{s})$')
         ax.text(.97,1.035,rf'$\mathrm{{CFL}}={courant:g},\ N={n}$',transform=ax.transAxes,

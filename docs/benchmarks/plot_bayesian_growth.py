@@ -13,6 +13,8 @@ SCENARIOS = ("lognormal", "uniform")
 LABELS = {"lognormal": "Lognormal prior", "uniform": "Uniform prior"}
 
 
+from pbm_plotting import save_figure as shared_save
+
 def read(folder, name):
     return np.genfromtxt(folder / name, delimiter=",", names=True, dtype=None, encoding="utf-8")
 
@@ -20,18 +22,16 @@ def read(folder, name):
 def save(fig, folder, name):
     for axis in fig.axes:
         axis.grid(False, which="both")
-    fig.savefig(folder / f"{name}.png", dpi=180)
+    shared_save(fig,folder/f"{name}.png")
     svg = folder / f"{name}.svg"
-    fig.savefig(svg, dpi=180, metadata={"Date": None})
+    shared_save(fig,svg)
     svg.write_text("\n".join(line.rstrip() for line in svg.read_text().splitlines()) + "\n")
     plt.close(fig)
 
 
-def kde(values, x):
-    # A visual smoothing of recorded parameter draws, not a fitted likelihood.
-    bandwidth = 1.06 * np.std(values, ddof=1) * len(values) ** (-0.2)
-    z = (x[:, None] - values[None, :]) / bandwidth
-    return np.exp(-0.5 * z**2).mean(axis=1) / (bandwidth * np.sqrt(2 * np.pi))
+def kde(values,x):
+    from pbm_plotting.density import marginal_on_grid
+    return marginal_on_grid(values,x)
 
 
 def plot(folder):
@@ -173,5 +173,5 @@ if __name__ == "__main__":
     parser.add_argument("--usetex", action="store_true")
     parser.add_argument("--data-dir", type=Path, default=ROOT)
     args = parser.parse_args()
-    configure(usetex=args.usetex)
-    plot(args.data_dir)
+    with configure(usetex=args.usetex):
+        plot(args.data_dir)

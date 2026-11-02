@@ -386,11 +386,16 @@ is `paper/precipitation/run.jl`; the physical builder is
 
 The rates, population scaling, discrete solute exchange, reactor feed and
 independent size/axial methods are explicit below. This runs startup to 5 s on
-50 logarithmic size bins and 50 axial cells. The unchanged
-[RK4 step controller](../assets/source/examples/continuous_precipitation.jl)
-is imported separately: it enforces the study's transport/depletion step policy
-and native stage checks. `suggest_dt` alone does not bound future bulk depletion;
-the package has no automatic controller for this calculation. The production
+50 logarithmic size bins and 50 axial cells. The model-specific
+transport/depletion bound is visible, together with `ForwardSolver(RK4())` and
+`StepControl`. The package owns step selection, output landing, native stage
+checks and bounded trial rejection. The original fraction 0.3, maximum step
+0.25 s, minimum step 10⁻¹² s and negativity tolerance 10⁻⁸ are retained. The
+small excess-concentration allowance in the bound never modifies a state.
+`suggest_dt` alone does not bound future bulk depletion, and this control is
+not integration-error estimation or an unconditional WENO positivity guarantee.
+The initial reactor population/bulk arrays remain exactly empty; the axial
+initialization API still requires those explicit arrays. The production
 reference and refinement campaigns remain separate.
 
 [Download this standalone script](../assets/source/tutorials/continuous_precipitation.jl).
@@ -407,3 +412,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:continuous_precipitation))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

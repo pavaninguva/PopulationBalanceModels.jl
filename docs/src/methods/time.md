@@ -12,6 +12,12 @@ After spatial/internal-coordinate discretization the state satisfies
 Each term method contributes to ``\mathbf R``. Time integration is selected by
 `simulate(problem; method=...,dt=...)`; it is not a property of Growth or Nucleation.
 
+The reusable form is `solver=ForwardSolver(SSPRK33();dt=...)` followed by
+`simulate(problem;solver,saveat=times)`. The same solver is callable in estimation
+and UQ. See [preparation and checked execution](../forward_execution.md) for
+physical initialization, opt-in stability/admissibility control, prescribed
+operating changes and checked external integration.
+
 The native residual-based choices are:
 
 | Integrator | Stages | Time order | SSP property |
@@ -69,7 +75,9 @@ bound for WENO or custom residuals. For 2D unsplit transport the sum of both
 coordinate Courant numbers matters.
 For a packed sectional PBMSystem, `suggest_dt(problem.operator,u,p,t)` uses
 the current bulk context but does not bound bulk depletion or interactions.
-Neither interface automatically recomputes or enforces a step during `simulate`.
+The legacy fixed-step form does not recompute this recommendation. Explicitly
+selecting `ForwardSolver(...;control=StepControl(...))` recomputes it and checks
+trials, without providing an integration-error estimate or a future-rate bound.
 See [size diffusion](dispersion.md) for
 boundary, nonuniform geometry and RK-stage restrictions.
 

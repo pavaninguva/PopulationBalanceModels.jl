@@ -87,25 +87,28 @@ function script(name::Symbol; root=ROOT)
     imports = "using PopulationBalanceModels\n"
     pieces = String[]
     body = if name === :constant_growth
-        imports *= "using Distributions: Normal, cdf, ccdf\n"
-        append!(pieces, [take("constant_growth_methods.jl", section)
-            for section in ("velocity", "gaussian")])
+        imports *= "using Distributions: Normal\n"
+        push!(pieces,take("constant_growth_methods.jl","velocity"))
+        push!(pieces,pick("constant_growth_methods.jl","gaussian",
+            (:gaussian_height,:gaussian_center,:gaussian_width,:gaussian_initial)))
         raw"""
 function tutorial_problem(; bins=200)
     grid = Grid1D(range(0.0, 1.0; length=bins+1); coordinate=:length)
     model = PBMModel(growth=Growth(AffineGrowth(growth, 0.0)))
     boundary = SizeBC(OpenBoundary(), OpenBoundary())
-    (; grid, model, boundary, initial=gaussian_counts(grid, 0.0),
-       reference=gaussian_counts(grid, 4.0))
+    operator = compile(model, grid;
+        methods=TermMethods(growth=MUSCL()), bc=boundary)
+    initial = gaussian_initial() # Number concentration, with physical [0,1] support.
+    problem = PBMProblem(operator, initial, (0.0, 4.0))
+    reference = vec(initialize(operator, gaussian_initial(4.0))) # Exact translation.
+    (; grid, model, boundary, initial, problem, reference)
 end
 
-function main()
-    case = tutorial_problem()
-    operator = compile(case.model, case.grid;
-        methods=TermMethods(growth=MUSCL()), bc=case.boundary)
-    problem = PBMProblem(operator, case.initial, (0.0, 4.0))
+function main(; bins=200)
+    case = tutorial_problem(; bins)
     dt = 0.5 * first(case.grid.widths) / growth
-    solution = simulate(problem; method=SSPRK33(), dt, saveat=[4.0])
+    solver = ForwardSolver(SSPRK33(); dt)
+    solution = simulate(case.problem; solver, saveat=[4.0])
     error = (vec(last(solution.u)) .- case.reference) ./ case.grid.widths
     @show sum(case.grid.widths .* abs.(error)) # Integrated L1 density error.
     solution
@@ -115,33 +118,21 @@ end
         push!(pieces, pick("papers/gunawan2004_case2.jl", "physics",
             (:parameters, :temperature, :solubility, :benchmark_initial_density,
              :supersaturation, :growth_scale, :growth_rate, :nucleation_rate)))
-        # Cell integration is numerical preparation; retain the tested helper.
-        imports *= "include(joinpath(pkgdir(PopulationBalanceModels), \"examples\", \"papers\", \"gunawan2004_case2.jl\"))\n" *
-            "using .Gunawan2004Case2: initial_counts\n"
+        push!(pieces,pick("papers/gunawan2004_case2.jl","assembly",(:assemble_problem,:density_problem)))
         raw"""
 function tutorial_problem()
     p = parameters() # µm, seconds, g solute/g water; rho is g/µm³.
     edges = sort!(unique(vcat(collect(0.0:2.0:1600.0), 180.5, 210.5)))
     grid = Grid1D(edges; coordinate=:length)
-    model = PBMModel(
-        growth=Growth(growth_rate),
-        nucleation=Nucleation(nucleation_rate, 0.0),
-    )
-    methods = TermMethods(growth=MUSCL(),
-        by_term=(nucleation=BoundaryInjection(:left),))
-    operator = compile(model, grid; methods, bc=SizeBC())
-    exchange = ConservativeExchange(:crystals, :c, (L,p,t,ctx) -> p.rho*L^3)
-    system = PBMSystem((crystals=operator,);
-        fields=(p,t) -> (T=temperature(t),), nonnegative_bulk=(:c,),
-        exchanges=(exchange,))
-    initial = initial_counts(grid, benchmark_initial_density)
-    PBMProblem(system, (crystals=initial,), (0.0, 10.0);
-        bulk0=(c=solubility(temperature(0.0)),), p)
+    # The compact support breakpoints are grid edges; the density is not normalized.
+    density_problem(;grid,initial_density=benchmark_initial_density,support=(180.5,210.5),
+        c0=solubility(temperature(0.0)),tspan=(0.0,10.0),p)
 end
 
-function main()
+function main(; times=[0.0,5.0,10.0])
     problem = tutorial_problem()
-    solution = simulate(problem; method=SSPRK33(), dt=0.05, saveat=[0.0, 5.0, 10.0])
+    solver = ForwardSolver(SSPRK33(); dt=0.05)
+    solution = simulate(problem; solver, saveat=times)
     @show bulk(problem, last(solution.u), :c)
     @show observe(PopulationMoment(:crystals, 3), solution)
     solution
@@ -163,9 +154,10 @@ function tutorial_problem()
     PBMProblem(operator, initial, (0.0, 50.0))
 end
 
-function main()
+function main(; times=0.0:1.0:50.0)
     problem = tutorial_problem()
-    solution = simulate(problem; method=SSPRK33(), dt=0.02, saveat=0.0:1.0:50.0)
+    solver = ForwardSolver(SSPRK33(); dt=0.02)
+    solution = simulate(problem; solver, saveat=times)
     @show observe(MomentObservable(0), solution)
     @show observe(MomentObservable(3), solution) # Conserved material moment.
     solution
@@ -173,9 +165,7 @@ end
 """
     elseif name === :continuous_precipitation
         push!(pieces, take("continuous_precipitation.jl", "model"))
-        imports *= "# Existing RK4 controller: rate/depletion bounds and stage checks.\n" *
-            "include(joinpath(pkgdir(PopulationBalanceModels), \"examples\", \"continuous_precipitation.jl\"))\n" *
-            "using .ContinuousPrecipitation: advance\n"
+        push!(pieces,take("continuous_precipitation.jl","bound"))
         raw"""
 function tutorial_problem(; nx=50, nz=50)
     # Log size bins on [1,900] µm, uniform physical reactor cells.
@@ -183,12 +173,14 @@ function tutorial_problem(; nx=50, nz=50)
     build(; nx, nz, mesh=:log, scheme=WENO5(), axial_scheme=MUSCL(), tf=5.0)
 end
 
-function main()
-    nz = 50
-    problem = tutorial_problem(; nz)
-    # The imported controller bounds each explicit RK4 step; it is not an
-    # adaptive-error solver or an unconditional positivity guarantee for WENO.
-    solution = advance(problem, [0.0, 5.0]; method=RK4())
+function main(; nx=50, nz=50, times=[0.0,5.0])
+    problem = tutorial_problem(; nx, nz)
+    # A physical transport/depletion bound, with package-owned trial/stage checks.
+    # This controls admissibility, not integration error; WENO has no limiter.
+    bound = (pb,u,t) -> precipitation_step_bound(pb,u,t; fraction=0.3)
+    solver = ForwardSolver(RK4(); dt=0.25, negative_tolerance=1e-8,
+        control=StepControl(; cfl=nothing, bound, min_dt=1e-12))
+    solution = simulate(problem; solver, saveat=times)
     @show extrema(bulk(problem, last(solution.u), :c))
     # Restore the population scaling when reporting particles/m³.
     outlet = CellObservable(PopulationMoment(:crystals, 0), nz)
@@ -248,8 +240,10 @@ function tutorial_problem(; model=:cnt, bins=200)
     end
     p = parameters(grd_strength=model === :cnt ? 0.0 : D0_PRIOR_MEAN)
     problem = build(; p, model, bins, tf=420.0)
-    experiment = InferenceExperiment(:batch, problem, measurements...;
-        solver=(pb,ts) -> cfl_solve(pb,ts))
+    # This specialized bucketed schedule preserves the study's derivative contract.
+    # StepControl rejects AD through state-dependent step decisions.
+    solver = cfl_solve
+    experiment = InferenceExperiment(:batch, problem, measurements...; solver)
     fixed = model === :cnt ? (cstar=p.cstar, gamma=FIXED_GAMMA, grd_strength=0.0) :
         (cstar=p.cstar, gamma=FIXED_GAMMA)
     EstimationProblem(parameter_specs(; p, model), (experiment,); fixed)
@@ -262,30 +256,31 @@ function main(; model=:cnt)
     theta = physical_parameters(estimation, fitted.minimizer, :batch)
     # Freeze calibration before predicting the 660-min held-out distribution.
     p = merge(parameters(), theta)
-    solution = cfl_solve(build(; p, model), [0.0, 74.0, 180.0, 420.0, 660.0])
+    solver = only(estimation.experiments).solver
+    solution = solver(build(; p, model), [0.0, 74.0, 180.0, 420.0, 660.0])
     @show theta [bulk(solution.problem,u,:c) for u in solution.u]
     @show observe(PopulationQuantiles(:crystals, [0.1,0.5,0.9]; window=WINDOW), solution)
-    (; fitted, solution)
+    (; estimation, fitted, solution)
 end
 """
     elseif name === :stem_cells
-        imports *= "# Prepared Beta(40,40) two-daughter rule and exact initial bin integrals.\n" *
-            "include(joinpath(pkgdir(PopulationBalanceModels), \"examples\", \"stem_cell_population.jl\"))\n" *
-            "using .StemCellPopulation: beta_daughters, initial_population\n"
+        imports *= "using Distributions: Normal, Beta, pdf\n"
         push!(pieces, pick("stem_cell_population.jl", "model",
-            (:cargo_rate, :division_rate, :differentiation_rate, :build_problem)))
+            (:cargo_rate, :division_rate, :differentiation_rate)))
+        push!(pieces,take("stem_cell_population.jl","inputs"))
+        push!(pieces,pick("stem_cell_population.jl","assembly",(:assemble_problem,:continuous_problem)))
         raw"""
 function tutorial_problem(; differentiation=false, bins=600)
     # A short transient in synthetic model time, not the balanced-growth study.
-    build_problem(; bins, tf=20.0, differentiation)
+    continuous_problem(; bins, tf=20.0, differentiation)
 end
 
-function main()
-    problem = tutorial_problem(differentiation=true)
+function main(; bins=600, differentiation=true, times=[0.0,10.0,20.0])
+    problem = tutorial_problem(; bins, differentiation)
     # Autonomous, state-independent rates: this bound applies throughout the run.
     dt = min(0.05, suggest_dt(problem.operator, problem.u0, problem.p, 0.0; cfl=0.35))
-    solution = simulate(problem; method=SSPRK33(), dt,
-        saveat=[0.0,10.0,20.0], negative_tolerance=0.0)
+    solver = ForwardSolver(SSPRK33(); dt, negative_tolerance=0.0)
+    solution = simulate(problem; solver, saveat=times)
     @show observe(PopulationMoment(:stem, 0), solution)
     @show bulk(problem, last(solution.u), :differentiated_cells)
     solution
@@ -308,27 +303,32 @@ function tutorial_problem(; bins=80)
     remake(make_problem(; bins, FRR=3.0); tspan=(0.0, 1e-5))
 end
 
-function main()
-    problem = tutorial_problem()
-    solution = simulate(problem; method=SSPRK33(), dt=1e-8, saveat=[0.0,1e-5])
+function main(; bins=80, times=[0.0,1e-5])
+    problem = tutorial_problem(; bins)
+    solver = ForwardSolver(SSPRK33(); dt=1e-8)
+    solution = simulate(problem; solver, saveat=times)
     @show bulk(problem, last(solution.u), :lipid)
     solution
 end
 """
     elseif name === :transport
         push!(pieces, pick("inguva_braatz_case2.jl", "model",
-            (:FINAL_TIME, :NORMAL, :parameters, :growth_rate, :foot, :axis_integrals, :reference, :problem)))
+            (:FINAL_TIME, :NORMAL, :parameters, :growth_rate, :initial_density,
+             :foot, :axis_integrals, :reference, :problem)))
         raw"""
 function tutorial_problem(; bins=50)
-    # Exact initial Gaussian bin integrals; one WENO5 configuration.
-    problem(bins; scheme=WENO5(epsilon=1e-12), p=parameters())
+    # Explicit joint number density on [0,2]²; no inferred independence/normalization.
+    initial = InitialDensity((xy,p,t) -> initial_density(xy[1],xy[2],p);
+        support=((0.0,2.0),(0.0,2.0)))
+    problem(bins; scheme=WENO5(epsilon=1e-12), p=parameters(), initial)
 end
 
-function main()
-    pb = tutorial_problem()
+function main(; bins=50, times=[1.0])
+    pb = tutorial_problem(; bins)
     dt = suggest_dt(pb.operator, pb.u0, pb.p, 0.0; cfl=0.4)
     # Keep signed undershoots in this diagnostic comparison; no clipping.
-    solution = simulate(pb; method=SSPRK33(), dt, saveat=[1.0], check_nonnegative=false)
+    solver = ForwardSolver(SSPRK33(); dt, check_nonnegative=false)
+    solution = simulate(pb; solver, saveat=times)
     @show observe(MomentObservable((0,0)), solution)
     solution
 end
@@ -338,7 +338,7 @@ end
             "using Distributions: Normal, LogNormal, Uniform, pdf, cdf, ccdf, quantile, truncated\n"
         push!(pieces, pick("estimate_size_dependent_growth.jl", "inference",
             (:TRUTH, :TIMES, :SIZES, :CENTER, :WIDTH, :INITIAL_NUMBER, :UNIFORM_BOUNDS, :LAW,
-             :initial_density, :shift, :exact_density, :initial_integral, :exact_counts,
+             :initial_density, :initial_profile, :shift, :exact_density, :initial_integral, :exact_counts,
              :synthetic_measurements, :analytical_solver)))
         raw"""
 function tutorial_problem(; prior=:lognormal)
@@ -347,12 +347,13 @@ function tutorial_problem(; prior=:lognormal)
     model = PBMModel(growth=Growth(LAW))
     operator = compile(model, grid; evolution=Inguva2022(), p=TRUTH,
         bc=SizeBC(OpenBoundary(),OpenBoundary()))
-    base = PBMProblem(operator, exact_counts(grid.edges,0.0), (0.0,1.0); p=TRUTH)
+    base = PBMProblem(operator, initial_profile(), (0.0,1.0); p=TRUTH)
     observable = FunctionObservable((N,op,p,t) -> exact_density.(data.sizes,t,Ref(p)))
     measurement = Measurement(data.times, data.values, observable;
         likelihood=TruncatedGaussianLikelihood(sigma=data.noise), source=:density_measurements)
     # Closed-form forward values isolate estimation from transport error.
-    experiment = InferenceExperiment(:growth, base, measurement; solver=analytical_solver)
+    solver = analytical_solver # Deliberate exact forward reference, not an ODE wrapper.
+    experiment = InferenceExperiment(:growth, base, measurement; solver)
     distributions = prior === :lognormal ?
         (LogNormal(log(0.4),0.4), LogNormal(log(0.25),0.6)) :
         (Uniform(UNIFORM_BOUNDS[1]...), Uniform(UNIFORM_BOUNDS[2]...))
@@ -367,7 +368,8 @@ function main()
     fitted.converged || error("MAP failed; inspect the fit diagnostics")
     @show fitted.parameters.shared fitted.convention
     @show posterior_components(problem, fitted.minimizer)
-    predictions(problem, fitted.minimizer)
+    predicted = predictions(problem, fitted.minimizer) # Explicit forward work.
+    (; estimation=problem, fitted, predicted)
 end
 """
     else # milling_uncertainty
@@ -394,28 +396,35 @@ function tutorial_problem(; bins=40)
     setup = (theta,base) -> build(theta; bins)
     # Instantaneous OUTLET volume median, not the resident number median.
     d50 = SystemObservable((state,op,p,t) -> MillingModel.outlet_median(p,state.populations.mill,t))
-    UQProblem(base, inputs; setup, solver=MillingSolver.solve, times,
+    # Retain the constrained material-coordinate reduction; generic external
+    # ForwardSolver has no reduced-state or CVODE-constraint declaration.
+    solver = MillingSolver.solve
+    UQProblem(base, inputs; setup, solver, times,
         outputs=(d50=d50,), output_coordinates=(d50=(units=:micrometre,
             weighting=:instantaneous_outlet_volume, interpolation=:linear_diameter_CDF),))
 end
 
-function main()
-    uq = tutorial_problem()
+function main(; bins=40, mc_samples=16, validation_samples=8, training_samples=12,
+              surrogate_draws=10_000)
+    uq = tutorial_problem(; bins)
+    solver = uq.solver
+    nominal = solver(uq.base, uq.times) # Same callable as the uncertainty calculation.
+    @show observe(uq.outputs.d50, nominal; index=findfirst(==(31.0),uq.times))
     # Demonstration budgets, not the retained 12,000-realization production run.
-    mc = propagate(uq, MonteCarlo(16; seed=2018255); max_solves=16)
-    validation = propagate(uq, MonteCarlo(8; seed=2018256); max_solves=8)
+    mc = propagate(uq, MonteCarlo(mc_samples; seed=2018255); max_solves=mc_samples)
+    validation = propagate(uq, MonteCarlo(validation_samples; seed=2018256); max_solves=validation_samples)
     box = hcat(fill(-2.0,4), fill(2.0,4)) # Training design, not a truncated input law.
-    design = pce_design(uq.inputs; n=12, seed=2018257, bounds=box)
-    pce = fit_pce(uq, PolynomialChaos(1); design, validation, max_solves=12)
+    design = pce_design(uq.inputs; n=training_samples, seed=2018257, bounds=box)
+    pce = fit_pce(uq, PolynomialChaos(1); design, validation, max_solves=training_samples)
     @show uq_summary(mc; covariance=false).mean.d50
     @show pce.validation.rmse pce.validation.passed
     if pce.validation.passed
-        cheap = evaluate_pce(pce, MonteCarlo(10_000; seed=2018259))
+        cheap = evaluate_pce(pce, MonteCarlo(surrogate_draws; seed=2018259))
         @show uq_summary(cheap; covariance=false).quantiles.d50
     else
         @warn "Refine the PCE degree/design before using its uncertainty summaries"
     end
-    (; mc, pce)
+    (; nominal, mc, pce)
 end
 """
     end
@@ -423,7 +432,104 @@ end
         "# Physical definitions and one calculation; numerical helpers are linked on the case page.\n" *
         "# No benchmark exports or retained files are written. See the case-study page.\n\n"
     entry = "\nif abspath(PROGRAM_FILE) == @__FILE__\n    main()\nend\n"
-    header * imports * "\n" * join(pieces, "\n") * "\n" * body * entry
+    header * imports * "\n" * join(pieces, "\n") * "\n" * body * "\n" * plotting_code(name) * entry
+end
+
+# These functions operate on existing numerical results. Importing PythonPlot is
+# an explicit optional step, never a dependency of main() or tutorial inclusion.
+function plotting_code(name)
+    if name===:constant_growth
+        raw"""
+# Optional: import PythonPlot; plot_results(solution). No solve/export occurs here.
+plot_results(solution) = plot_distribution(solution; times=[last(solution.t)],
+    xlabel="Size coordinate", ylabel="Number density")
+"""
+    elseif name===:crystallization
+        raw"""
+# Optional after import PythonPlot; reuse the returned solution.
+function plot_results(solution)
+    distribution = plot_distribution(solution; population=:crystals,
+        xlabel="Length (micrometres)", ylabel="Number density")
+    concentration = plot_observable(solution, BulkObservable(:c);
+        xlabel="Time (s)", ylabel="Solute mass / water mass")
+    (; distribution, concentration)
+end
+"""
+    elseif name===:moment_crystallization
+        raw"""
+# Optional after import PythonPlot. Moment states do not imply a unique density.
+plot_results(solution) = plot_observable(solution, MomentObservable(0);
+    xlabel="Time (s)", ylabel="Total number")
+"""
+    elseif name===:continuous_precipitation
+        raw"""
+# Optional after import PythonPlot. Actual nonuniform size edges are retained.
+function plot_results(solution)
+    field = plot_field(solution; population=:crystals, orientation=:axial_x,
+        xlabel="Axial position (m)", ylabel="Size (m)", colorbar_label="Scaled number density")
+    outlet = plot_distribution(solution; population=:crystals,
+        cell=length(solution.problem.operator.domain.grid), times=[last(solution.t)],
+        xlabel="Size (m)", ylabel="Scaled number density")
+    (; field, outlet)
+end
+"""
+    elseif name===:protein_crystallization
+        raw"""
+# Optional after import PythonPlot. These MAP plots require no MCMC or bands.
+function plot_results(result)
+    concentration = plot_observable(result.solution, BulkObservable(:c);
+        xlabel="Time (min)", ylabel="Concentration (g/L)")
+    parameters = plot_parameters(result.estimation, result.fitted; coordinates=:physical)
+    (; concentration, parameters)
+end
+"""
+    elseif name===:stem_cells
+        raw"""
+# Optional after import PythonPlot; synthetic model time is not hours.
+function plot_results(solution)
+    distribution = plot_distribution(solution; population=:stem,
+        xlabel="Cargo (arbitrary units)", ylabel="Cell number density")
+    number = plot_observable(solution, PopulationMoment(:stem,0);
+        xlabel="Model time", ylabel="Stem-cell concentration")
+    (; distribution, number)
+end
+"""
+    elseif name===:nanoparticles
+        raw"""
+# Optional after import PythonPlot; the short startup only, not a full-horizon claim.
+plot_results(solution) = plot_observable(solution, BulkObservable(:lipid);
+    xlabel="Time (s)", ylabel="Dissolved lipid concentration")
+"""
+    elseif name===:transport
+        raw"""
+# Optional after import PythonPlot. No implicit tensor marginal is selected.
+plot_results(solution) = plot_field(solution; orientation=:internal_x,
+    xlabel="First internal coordinate", ylabel="Second internal coordinate",
+    colorbar_label="Joint number density")
+"""
+    elseif name===:estimating_growth
+        raw"""
+# Optional after import PythonPlot; predictions were computed explicitly in main.
+function plot_results(result)
+    fit_figure = plot_fit(result.estimation, result.predicted; abscissa=SIZES,
+        xlabel="Size coordinate", ylabel="Number density")
+    parameters = plot_parameters(result.estimation, result.fitted; coordinates=:physical)
+    (; fit_figure, parameters)
+end
+"""
+    else
+        raw"""
+# Optional after import PythonPlot. MC output quantiles are not errors on the mean.
+function plot_results(result)
+    mc = plot_uq(result.mc; output=:d50,
+        xlabel="Time (s)", ylabel="Outlet volume median (micrometres)")
+    # PCE analytical moments do not define quantiles; label one output SD explicitly.
+    pce = plot_uq(result.pce; output=:d50, band=:sd,
+        xlabel="Time (s)", ylabel="Outlet volume median (micrometres)")
+    (; mc, pce)
+end
+"""
+    end
 end
 
 function write_scripts(destination; root=ROOT)

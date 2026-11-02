@@ -1,0 +1,42 @@
+name: Optional plotting
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  plotting:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        julia: ['1.10', '1']
+    env:
+      MPLBACKEND: Agg
+      JULIA_CONDAPKG_BACKEND: 'Null'
+      JULIA_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: paper/requirements.txt
+      - run: python -m pip install -r paper/requirements.txt
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.julia }}
+      - uses: julia-actions/cache@v2
+      - name: Prepare isolated optional environment
+        shell: julia --color=yes {0}
+        run: |
+          using Pkg
+          Pkg.activate(joinpath(ENV["RUNNER_TEMP"], "plotting"))
+          Pkg.develop(path=pwd())
+          Pkg.add(["PythonPlot", "Distributions", "ForwardDiff", "SpecialFunctions",
+                   "Optim", "SciMLBase", "Sundials"])
+      - name: Test Julia extension and small tutorial paths
+        run: JULIA_PYTHONCALL_EXE="$(which python)" julia --project="${RUNNER_TEMP}/plotting" test/plotting_integration.jl
+      - run: python test/shared_plotting.py
+      - run: python test/protein_publication.py
+      - run: python test/plotting_summaries.py

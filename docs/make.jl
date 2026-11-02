@@ -60,6 +60,7 @@ makedocs(;
         "Home" => "index.md",
         "Getting started" => "getting_started.md",
         "Defining models" => "defining_models.md",
+        "Preparing and executing forward problems" => "forward_execution.md",
         "Coupled systems" => "coupled_systems.md",
         "Axially dispersed reactors" => "axial_reactors.md",
         "Stationary population balances" => "steady_state.md",
@@ -78,6 +79,7 @@ makedocs(;
         ],
         "Parameter estimation" => "inference.md",
         "Forward uncertainty quantification" => "uncertainty_quantification.md",
+        "Plotting numerical results" => "plotting.md",
         "Case studies" => [
             "Overview" => "case_studies/index.md",
             "Comparing growth and time methods" => "case_studies/constant_growth.md",

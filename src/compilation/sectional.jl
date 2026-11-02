@@ -98,9 +98,11 @@ end
 Local explicit Upwind/diffusion/loss step recommendation. Outgoing rates are
 added before taking the largest cell rate; uniform interior cells contribute
 `abs(G)/ΔL + 2D/ΔL²`. Closed exterior diffusion faces are omitted. Coefficients
-use the supplied current state/context. This does not control simulate's dt,
+use the supplied current state/context. This does not control legacy fixed-step simulate's dt,
 bound subsequent coefficient changes or guarantee positivity for arbitrary
 growth reconstructions. Check every RK stage and refine independently.
+ForwardSolver with explicit StepControl can recompute the recommendation;
+its stage checks do not turn this into an integration-error estimate.
 """
 function suggest_dt(op::CompiledPBM,N,p,t;cfl=0.5,context=nothing)
     0 < cfl <= 1 || throw(ArgumentError("cfl must be in (0,1]"))

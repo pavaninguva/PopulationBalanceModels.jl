@@ -4,6 +4,18 @@ Run commands from the repository root with this checkout active. Include a
 case-study module to reuse its builders; execute its file to run its driver.
 The manual links short modelling walkthroughs and complete downloadable sources.
 
+`prepared_forward.jl` demonstrates physical initialization, continuous daughters,
+prescribed operating changes and configured native/optional external execution.
+It writes no retained results. The preparation/execution guide explains its
+population measures, tail accounting and derivative limits.
+
+The downloadable minimum scripts also define optional `plot_results(result)`
+functions. Run `main()` numerically, then `import PythonPlot` and plot the returned
+result; plotting never launches another solve or writes a figure implicitly.
+See the [plotting guide](../docs/src/plotting.md). Protein's bucketed derivative
+schedule and milling's constrained algebraic solver remain numerical specializations;
+their plotting uses the same result interfaces.
+
 ## Start here
 
 ```sh

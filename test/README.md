@@ -13,10 +13,12 @@ Files are grouped by behaviour, rather than by development milestone:
 |:--|:--|
 | Physical terms and coupling | `sources_moments.jl`, `systems.jl`, `papers.jl`, `size_diffusion.jl`, `tensor_diffusion.jl` |
 | Transport and time methods | `transport_integrators.jl`, `nonuniform_weno.jl`, `compact_finite_volume.jl`, `tensor.jl` |
+| Run preparation, physical initialization and execution | `forward_execution.jl`; optional checked ODE execution: `forward_execution_integration.jl` |
 | Moment representations and accounting | `moment_compilation.jl`, `extended_moments.jl`, `measure_evolution.jl`, `qamar_moments.jl` |
 | Axial and stationary balances | `axial.jl`, `axial_inlets.jl`, `axial_system.jl`, `stationary.jl` |
 | Calibration, Bayesian targets and derivatives | `uncertainty.jl`, `bayesian.jl`, `physical_parameters.jl`, `differentiation.jl`, `isothermal_protein.jl` |
 | Data-free forward UQ and milling physics | `forward_uq.jl`, `pce_construction.jl`, `milling_model.jl`; optional BDF adapter: `milling_integration.jl` |
+| Plot extraction and optional rendering | `plotting.jl`; PythonPlot: `plotting_integration.jl`; Python: `shared_plotting.py` |
 | Scientific regression cases | `audit_regressions.jl`, `numerical_contracts.jl`, `stem_cells.jl`, `li_supplement.jl` |
 
 Documentation CI runs `julia --project=docs test/docs_reference.jl`, the strict
@@ -45,6 +47,16 @@ entry points. The full check, including the milling/Sundials constructor, can
 run in the prepared paper environment with
 `julia --project=paper test/case_study_scripts.jl`. Generated scripts are also
 published as downloads by `docs/make.jl`; neither command regenerates figures.
+
+`julia --project=paper test/case_study_migration.jl` includes those construction
+checks and executes reduced tutorial entry points. It checks independent CDF/
+pivot-hat integrals, short population/bulk/accounting balances and callable
+solver reuse in inference/UQ. The small milling run uses 11 full solves (one
+nominal, two MC, two validation, six PCE training); it is not the production
+ensemble. No fit, posterior sampling or retained export is run. Documentation
+CI runs the same entry point with `--project=docs`; optional milling checks need
+the paper environment. The stem walkthrough uses continuous daughter integration;
+its legacy 12-node producer remains separately tested by `stem_cells.jl`.
 
 ## Optional integrations
 
@@ -93,6 +105,27 @@ population-moment function. The complete optional-CI sequence is checked togethe
 as well as through its standalone entry points.
 
 ## Retained results and utilities
+
+For optional plotting checks, develop this checkout into an isolated environment
+containing `PythonPlot`, `Distributions`, `ForwardDiff`, `SpecialFunctions` and
+`Optim`; add `SciMLBase`/`Sundials` for the small milling walkthrough. PythonPlot
+normally installs its own Python/Matplotlib. To reuse the paper's pinned Python,
+set `JULIA_PYTHONCALL_EXE` to that environment's Python and
+`JULIA_CONDAPKG_BACKEND=Null` **before** starting Julia. The repository Python
+plotters require Python 3.11 or newer.
+
+```sh
+MPLBACKEND=Agg julia --project=/path/to/plotting-env test/plotting_integration.jl
+MPLBACKEND=Agg python test/shared_plotting.py
+MPLBACKEND=Agg python test/render_plotting_fixtures.py --output /tmp/pbm-plot-checks
+```
+
+The last command renders retained growth/protein/milling values and a small field
+fixture with real LaTeX. Its required output directory prevents accidental writes
+to retained assets. Numerical-only extraction tests are part of `Pkg.test()`.
+The optional tests exercise callable/tutorial wiring with small solves, not
+production fits, MCMC or ensembles. Publication rendering needs `latex`/`dvipng`;
+ordinary plotting and simulation do not. API routing/link checks remain separate.
 
 ```sh
 python test/protein_results.py --retained

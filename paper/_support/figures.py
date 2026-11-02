@@ -19,6 +19,7 @@ MODE = "production"
 PREVIEW = False
 RETAINED = False
 INPUTS = {}
+TABLES = False
 
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -55,6 +56,8 @@ def density_l1(edges,density,reference_edges,reference):
 
 def analysis_table(number,base,name,data):
     """Plot-derived summaries stay separate from immutable solver exports."""
+    if not TABLES:
+        return
     folder = base/"analysis"
     folder.mkdir(exist_ok=True)
     path = folder/name
@@ -171,7 +174,7 @@ def load_milling(input_path=None, *, check_checkout=False):
     if not info["complete"] or info["mode"] != "production" or info["case"] != "milling":
         raise ValueError("Expected completed production milling paper data")
     cfg = tomllib.loads((PAPER/"milling/config.toml").read_text())
-    if info["configuration"] != cfg:
+    if check_checkout and info["configuration"] != cfg:
         raise ValueError("Milling paper selection differs from config.toml; stage the requested selection")
     required = {"forward.csv","reference.csv","forward_producer.json","uq_producer.json",
                 "nominal.csv","mc_summary.csv","pce1_summary.csv","pce2_summary.csv"}
@@ -241,15 +244,16 @@ def export(fig,number,name,info):
 
 def run_plot(number, renderer, argv=None):
     """Common CLI; retained redraws validate original payloads, never relabel producers."""
-    global MODE, PREVIEW, RETAINED
+    global MODE, PREVIEW, RETAINED, TABLES
     parser=argparse.ArgumentParser(description=renderer.__doc__)
     parser.add_argument('--retained',action='store_true',help='Redraw recorded production exports; do not assert current producer equality')
     parser.add_argument('--smoke',action='store_true',help='Ignored small-check output, never a production figure')
     parser.add_argument('--preview',action='store_true')
+    parser.add_argument('--tables',action='store_true',help='Explicitly export derived plotting summaries under analysis/')
     args=parser.parse_args(argv)
     MODE='smoke' if args.smoke else 'production'
-    PREVIEW=args.preview; RETAINED=True
+    PREVIEW=args.preview; RETAINED=True; TABLES=args.tables
     if PREVIEW and MODE!='smoke': parser.error('--preview requires --smoke')
     if RETAINED: print('Redrawing retained exports; original producer provenance is preserved.',flush=True)
-    configure(PREVIEW)
-    renderer()
+    with configure(PREVIEW):
+        renderer()

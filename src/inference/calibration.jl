@@ -66,7 +66,8 @@ function predictions(cal::CalibrationProblem,z)
         map(ex.observations) do obs
             values=map(eachindex(obs.times)) do j
                 index=searchsortedfirst(ts,obs.times[j])
-                pred=_observe(obs.observable,sol.u[index],prob.operator,p,obs.times[j])
+                operator,parameters=_observation_inputs(prob,obs.times[j])
+                pred=_observe(obs.observable,sol.u[index],operator,parameters,obs.times[j])
                 length(pred)==size(obs.data,1) || throw(DimensionMismatch("observable changed output dimension"))
                 all(isfinite,pred) || throw(NumericalFailure("nonfinite observation prediction"))
                 pred

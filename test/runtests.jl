@@ -2,6 +2,8 @@ using Test
 using PopulationBalanceModels
 include("quality.jl")
 include("stationary.jl")
+include("forward_execution.jl")
+include("plotting.jl")
 include("isothermal_protein.jl")
 struct UnsupportedDomain <: AbstractPopulationDomain end
 include("audit_regressions.jl")

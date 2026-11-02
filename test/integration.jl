@@ -1,6 +1,7 @@
 include("fixtures/example_modules.jl")
 using Test, LinearAlgebra, PopulationBalanceModels, Optim, SciMLBase, OrdinaryDiffEqTsit5
 import Distributions
+include("forward_execution_integration.jl")
 include("size_diffusion_integration.jl")
 include("isothermal_protein_optim.jl")
 

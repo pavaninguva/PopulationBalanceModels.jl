@@ -18,6 +18,8 @@ COLORS = {"mc":"#24679a","pce1":"#bd6b28","pce2":"#26816b"}
 LABELS = {"mc":"MC","pce1":"PCE, degree 1","pce2":"PCE, degree 2"}
 
 
+from pbm_plotting import plot_observable, plot_uq
+
 def milling(input_path=None):
     base,info,producers = load_case(2,check_checkout=False,input_path=input_path)
     forward,reference = table(base/"forward.csv"),table(base/"reference.csv")
@@ -40,7 +42,8 @@ def milling(input_path=None):
         if len(data) == 0 or np.any(np.diff(data["time_s"]) <= 0):
             raise ValueError(f"Missing or unordered {rpm} RPM forward data")
         for ax,field,quantity in zip(axes,(cfg["forward_statistic"],"holdup_g"),("d50_um","holdup_g")):
-            ax.plot(data["time_s"],data[field],color=color,lw=1.2,label=f"{rpm} RPM")
+            plot_observable(data["time_s"],data[field],ax=ax,
+                styles=[dict(color=color,lw=1.2,label=f"{rpm} RPM")],legend=False)
             points = reference[(reference["rpm"] == rpm)&(reference["quantity"] == quantity)]
             ax.plot(points["time_s"],points["value"],ls="none",marker="o",
                     ms=3.2,mfc="white",mec=color,mew=.7)
@@ -69,10 +72,11 @@ def milling(input_path=None):
     for letter,ax,name in zip("abc",axes,COLORS):
         data,color = summaries[name],COLORS[name]
         t = data["time_s"]
-        ax.fill_between(t,data["q025_um"],data["q975_um"],color=color,alpha=.20,lw=0)
+        plot_uq(t,data["mean_um"],ax=ax,
+            quantiles=np.stack([data["q025_um"],data["q975_um"]],axis=-1)[None,:,:],
+            probabilities=[.025,.975],styles=[dict(color=color,lw=1.25)],legend=False)
         ax.plot(t,data["gaussian_low_um"],color=color,ls=":",lw=.75,alpha=.75)
         ax.plot(t,data["gaussian_high_um"],color=color,ls=":",lw=.75,alpha=.75)
-        ax.plot(t,data["mean_um"],color=color,lw=1.25)
         ax.plot(nominal["time_s"],nominal["d50_um"],color="#424242",ls="--",lw=.8)
         ax.axvline(30,color=".5",ls=(0,(3,3)),lw=.6,zorder=0)
         ax.set(xlim=(0,200),ylim=limits,xlabel=r"Time, $t$ (s)",xticks=[0,100,200])
@@ -95,5 +99,5 @@ if __name__ == "__main__":
     parser.add_argument("--retained",action="store_true",help="Retained redraw is the default; original producers are preserved")
     args = parser.parse_args()
     print("Redrawing retained production curves; no simulations or numerical-table updates.",flush=True)
-    configure()
-    milling(args.input)
+    with configure():
+        milling(args.input)

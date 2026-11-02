@@ -13,8 +13,9 @@ from _support import figures
 from _support.figures import (load_case,rows,table,export,analysis_table,
     density_l1,relative_difference)
 from plotting_style import panel, DOUBLE
+from pbm_plotting import plot_distribution, plot_field
 
-def precipitation():
+def precipitation(*,sync_docs=True):
     base,info,runs = load_case(3)
     runtime = []
     for name,(_,provenance) in runs.items():
@@ -102,7 +103,9 @@ def precipitation():
     fig,axes = plt.subplots(2,2,figsize=(DOUBLE,4.8))
     fig.subplots_adjust(left=.09,right=.84,bottom=.11,top=.93,wspace=.3,hspace=.3)
     for letter,ax,t,data in zip("abcd",axes.flat,settings["times"],fields):
-        mesh = ax.pcolormesh(z,x*1e6,data,norm=norm,cmap="magma",shading="flat",rasterized=True)
+        plot_field(data,z,x*1e6,orientation="rows_y",ax=ax,colorbar=False,
+            norm=norm,cmap="magma",rasterized=True)
+        mesh=ax._pbm_mesh
         ax.set(yscale="linear",ylim=(1,100),xlabel=r"Axial position $z$ (m)",ylabel=r"Size $x$ ($\mu$m)")
         panel(ax,letter)
         ax.text(.97,.96,rf"$t={t:g}\,\mathrm{{s}}$",transform=ax.transAxes,ha="right",va="top",color="black",
@@ -119,11 +122,11 @@ def precipitation():
         data = table(runs[f"axial_Nz{nz_}"][0]/"outlet.csv")
         edges = np.r_[data["left_m"],data["right_m"][-1]]*1e6
         for ax,quantity in zip(axes,(data["number_density_m4"]/1e15,data["volume_density_per_m"]*1e-6)):
-            ax.stairs(quantity,edges,color=color,lw=1.0,label=rf"$N_z={nz_}$")
+            plot_distribution(quantity,edges,ax=ax,styles=[dict(color=color,lw=1.0,label=rf"$N_z={nz_}$")],legend=False)
     data = table(folder/"outlet.csv")
     edges = np.r_[data["left_m"],data["right_m"][-1]]*1e6
     for ax,quantity in zip(axes,(data["number_density_m4"]/1e15,data["volume_density_per_m"]*1e-6)):
-        ax.stairs(quantity,edges,color="k",lw=1.2,ls="--",label="Reference solution")
+        plot_distribution(quantity,edges,ax=ax,styles=[dict(color="k",lw=1.2,ls="--",label="Reference solution")],legend=False)
     if figures.MODE == "production":
         lit = table(PAPER/"precipitation/data/literature"/"cadet_reference.csv")
         literature_edges = np.r_[lit["left_m"],lit["right_m"][-1]]
@@ -200,18 +203,12 @@ def precipitation():
         fig.legend(*axes[0].get_legend_handles_labels(),loc="lower center",ncol=2)
         export(fig,3,filename,info)
 
-    if figures.MODE=="production":
+    if figures.MODE=="production" and sync_docs:
         destination = PAPER.parent/"docs/src/assets/continuous_precipitation_log"
         destination.mkdir(parents=True,exist_ok=True)
         for name in ("precipitation_fields","precipitation_outlet","precipitation_refinement","precipitation_work_precision"):
             for suffix in (".png",".json"):
                 shutil.copyfile(PAPER/"precipitation/figures"/(name+suffix),destination/(name+suffix))
-        for name in ("refinement.csv","analysis/runtimes.csv","analysis/refinement_observables.csv",
-                "analysis/digitized_point_comparison.csv","literature/zhang_figure9c_digitized.csv",
-                "literature/provenance.json"):
-            shutil.copyfile(base/name,destination/Path(name).name)
-        for name in ("accounting.csv","outlet.csv","provenance.toml"):
-            shutil.copyfile(folder/name,destination/("reference_"+name))
 
 if __name__=="__main__":
     figures.run_plot(3,precipitation)

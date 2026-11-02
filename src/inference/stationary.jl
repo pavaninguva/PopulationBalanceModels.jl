@@ -54,6 +54,7 @@ function InferenceExperiment(name::Symbol,problem::StationaryPBMProblem,measurem
         solver=StationarySolver(),setup=_default_setup,fixed=NamedTuple(),dt=nothing)
     dt===nothing || throw(ArgumentError("stationary estimation has no timestep; omit dt"))
     solver===nothing && (solver=StationarySolver())
+    solver isa ForwardSolver && throw(ArgumentError("ForwardSolver is transient; use StationarySolver for stationary experiments"))
     solver isa SciMLSensitivitySolver && throw(ArgumentError("SciMLSensitivitySolver is an ODE adapter; use StationarySolver for stationary experiments"))
     blocks=map(o->o isa Observation ? Measurement(o) : o,measurements)
     all(o->o isa Measurement,blocks) || throw(ArgumentError("provide Measurement or Observation blocks"))
@@ -93,8 +94,10 @@ time is used. `CellObservable` selects a local axial state. Histograms/CDFs
 from moment states still require an explicit reconstruction; DQMOM entries are
 not interpreted as raw moments or PSD bins.
 """
-observe(observable::AbstractObservable,problem::PBMProblem,state;time)=
-    _checked_observe(observable,state,problem.operator,problem.p,time)
+function observe(observable::AbstractObservable,problem::PBMProblem,state;time)
+    operator,p=_observation_inputs(problem,time)
+    _checked_observe(observable,state,operator,p,time)
+end
 function observe(observable::AbstractObservable,solution::PBMSolution;index=length(solution.u))
     checkbounds(solution.u,index)
     observe(observable,solution.problem,solution.u[index];time=solution.t[index])

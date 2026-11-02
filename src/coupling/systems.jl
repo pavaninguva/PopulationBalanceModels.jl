@@ -203,13 +203,21 @@ function _pack_system(system::PBMSystem,u0::NamedTuple,bulk0::NamedTuple)
     op,flat
 end
 
-function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=NamedTuple())
+function PBMProblem(system::PBMSystem,u0::NamedTuple,tspan;bulk0=NamedTuple(),p=NamedTuple(),history=nothing)
     bulk0 isa NamedTuple || throw(ArgumentError("bulk0 must contain finite named scalar values"))
-    op,flat=_pack_system(system,u0,bulk0)
-    PBMProblem(op,flat,tspan;p)
+    Set(keys(u0))==Set(keys(system.populations)) || throw(ArgumentError("initial population names must match the system"))
+    values=map(keys(system.populations)) do name
+        value=getproperty(u0,name)
+        _initial_description(value)===nothing ? value : initialize(getproperty(system.populations,name),value;p,t=first(tspan))
+    end
+    converted=NamedTuple{keys(system.populations)}(Tuple(values))
+    op,flat=_pack_system(system,converted,bulk0)
+    pb=PBMProblem(op,flat,tspan;p,history)
+    initial=any(v->_initial_description(v)!==nothing,u0) ? _SystemInitial(u0,bulk0) : nothing
+    PBMProblem(pb.operator,pb.u0,pb.tspan,pb.p,initial,pb.history)
 end
 
-function PBMProblem(op::CompiledSystem,u0::AbstractVector,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledSystem,u0::AbstractVector,tspan;p=NamedTuple(),history=nothing)
     length(u0)==op.length || throw(DimensionMismatch("packed system state size mismatch"))
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
     N=float.(copy(u0)); all(isfinite,N) || throw(ArgumentError("initial system state is nonfinite"))
@@ -223,7 +231,7 @@ function PBMProblem(op::CompiledSystem,u0::AbstractVector,tspan;p=NamedTuple())
     for name in op.system.nonnegative_bulk
         _primal(N[getproperty(op.bulk_indices,name)])>=0 || throw(ArgumentError("initial bulk state is negative"))
     end
-    PBMProblem(op,N,(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,N,(float(tspan[1]),float(tspan[2])),p,nothing,history)
 end
 _validate_population_state(op,N)=nothing
 

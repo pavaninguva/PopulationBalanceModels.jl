@@ -13,6 +13,8 @@ integration or `solver(problem,times)` returning a checked PBMSolution. Stationa
 outputs have no times and use `solver(problem)` (StationarySolver by default).
 External solvers must check their own successful completion; native guarantees
 do not transfer. Saved states also receive the stated nonnegativity check.
+ForwardSolver is directly callable here and performs supported native/external
+completion checks without a user-written solution-construction wrapper.
 
 `outputs` is a NamedTuple of existing observables, including FunctionObservable
 and SystemObservable callbacks. `output_coordinates` records each output's units,
@@ -39,6 +41,7 @@ function UQProblem(base::Union{PBMProblem,StationaryPBMProblem},inputs::Uncertai
         throw(ArgumentError("output coordinate metadata must follow every named output"))
     isfinite(negative_tolerance) && negative_tolerance>=0 || throw(ArgumentError("invalid saved-state negativity tolerance"))
     if base isa StationaryPBMProblem
+        solver isa ForwardSolver && throw(ArgumentError("ForwardSolver is transient; use StationarySolver or a stationary solver callback"))
         times===nothing && dt===nothing || throw(ArgumentError("stationary UQ has no times or timestep"))
         solver===nothing && (solver=StationarySolver())
     else
@@ -149,6 +152,7 @@ function propagate(problem::UQProblem,method::MonteCarlo;max_solves,samples=noth
     physical=Any[nothing for _ in 1:n]
     trajectories=Vector{Union{Nothing,Vector{Float64}}}(nothing,n)
     success=falses(n);failures=NamedTuple[];layout=nothing
+    integration_work=Any[nothing for _ in 1:n]
     solves=0;setup_seconds=0.;solve_seconds=0.;observation_seconds=0.;started=time_ns()
     for i in 1:n
         stage=:input
@@ -169,6 +173,7 @@ function propagate(problem::UQProblem,method::MonteCarlo;max_solves,samples=noth
                 throw(ArgumentError("rebuilt UQ problem does not contain the common output times"))
             stage=:solve;solves+=1;tick=time_ns();pending=tick
             solution=pb isa PBMProblem ? problem.solver(pb,problem.times) : problem.solver(pb)
+            solution isa PBMSolution && (integration_work[i]=_integration_counts(solution))
             solve_seconds+=(time_ns()-tick)/1e9
             pending=0
             stage=:observation;tick=time_ns();pending=tick
@@ -197,6 +202,7 @@ function propagate(problem::UQProblem,method::MonteCarlo;max_solves,samples=noth
     meta=(;method=samples===nothing ? :monte_carlo : :design,seed=method.seed,
         iid=source.iid,coordinates=source.coordinates,input_metadata=source.metadata,
         design=samples isa NamedTuple ? samples : nothing,solves,requested=n,
+        integration_work,
         setup_seconds,solve_seconds,observation_seconds,total_seconds=(time_ns()-started)/1e9)
     UQResult(problem,raw,physical,ids,values,success,failures,layout,meta)
 end

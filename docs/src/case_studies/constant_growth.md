@@ -41,15 +41,18 @@ only about ``1.3\times10^{-11}`` of the untruncated number below zero.
 
 ```@example growth_comparison
 using PopulationBalanceModels
+using Distributions: Normal
 include(joinpath(pkgdir(PopulationBalanceModels),"examples","constant_growth_methods.jl"))
 import .ConstantGrowthMethods
 model = PBMModel(growth=Growth(AffineGrowth(0.1,0.0)))
 grid = Grid1D(range(0.,1.;length=201);coordinate=:length)
 bc = SizeBC(OpenBoundary(),OpenBoundary())
-initial = ConstantGrowthMethods.gaussian_counts(grid,0.)
+initial = InitialDistribution(Normal(0.2,0.03);
+    total=100*0.03*sqrt(2pi), support=(0.0,1.0), truncation=:physical)
 operator = compile(model,grid;methods=TermMethods(growth=MUSCL()),bc)
 problem = PBMProblem(operator,initial,(0.,4.))
-solution = simulate(problem;method=SSPRK33(),dt=0.5*first(grid.widths)/0.1)
+solver = ForwardSolver(SSPRK33();dt=0.5*first(grid.widths)/0.1)
+solution = simulate(problem;solver)
 nothing # hide
 ```
 
@@ -208,8 +211,12 @@ julia --project=docs docs/make.jl
 
 ### Complete script
 
-The script defines the Gaussian and its exact bin integrals, then runs one
-MUSCL + SSPRK33 calculation and checks its integrated density error. The seven
+The script declares the Gaussian through `InitialDistribution`, including the
+height-to-total conversion and original [0,1] support. Truncation is physical:
+omitted tails are not renormalized. `PBMProblem` creates the bin integrals;
+`initialize` evaluates the analytically translated profile for comparison.
+An explicit `ForwardSolver` runs MUSCL + SSPRK33 at the same fixed maximum
+step and checks the integrated density error. The seven
 method pairings, signed-undershoot diagnostics and timings remain in the linked
 comparison driver. The tutorial retains the native nonnegativity checks.
 
@@ -227,3 +234,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:constant_growth))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

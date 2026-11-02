@@ -7,6 +7,7 @@ checks. `suggest_dt` recommends a local explicit step; it is not an adaptive
 controller.
 
 See [Time integration](../methods/time.md),
+[Numerical preparation and checked execution](../forward_execution.md),
 [Stationary population balances](../steady_state.md) and the
 [optional-dependency setup](../verification.md#Optional-integrations).
 The shared optional `fit` entry point is used by the

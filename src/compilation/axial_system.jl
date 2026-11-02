@@ -42,13 +42,13 @@ function _compile_axial_system(localop::CompiledSystem,domain::AxialDispersion,a
     end
     CompiledAxialSystem(domain,locals,axial_scheme,reconstruction)
 end
-function PBMProblem(op::CompiledAxialSystem,u::AbstractMatrix,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledAxialSystem,u::AbstractMatrix,tspan;p=NamedTuple(),history=nothing)
     localop=first(op.local_operators)
     size(u)==(localop.length,length(op.domain.grid)) || throw(DimensionMismatch("expected packed local states × axial cells"))
     for c in axes(u,2)
         PBMProblem(op.local_operators[c],view(u,:,c),tspan;p)
     end
-    PBMProblem(op,float.(copy(u)),(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,float.(copy(u)),(float(tspan[1]),float(tspan[2])),p,nothing,history)
 end
 population(op::CompiledAxialSystem,u,name::Symbol)=view(u,getproperty(first(op.local_operators).ranges,name),:)
 bulk(op::CompiledAxialSystem,u,name::Symbol)=view(u,getproperty(first(op.local_operators).bulk_indices,name),:)

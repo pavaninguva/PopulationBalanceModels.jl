@@ -80,6 +80,7 @@ explains the equations, units and number-balance check.
 | **Solve transients or steady states** | Use `PBMProblem` → `simulate`, or [StationaryPBMProblem → solve_stationary](https://pavaninguva.github.io/PopulationBalanceModels.jl/dev/steady_state/), including parameter continuation. |
 | **Estimate parameters** | [Observations and Bayesian estimation](https://pavaninguva.github.io/PopulationBalanceModels.jl/dev/inference/) connect forward models to data for MAP fitting, local Gauss–Newton/Laplace uncertainty and MCMC. |
 | **Propagate input uncertainty** | [Forward UQ](https://pavaninguva.github.io/PopulationBalanceModels.jl/dev/uncertainty_quantification/) provides Monte Carlo and non-intrusive PCE, including independent validation and refinement, without requiring an estimation problem. |
+| **Plot results** | The optional [PythonPlot interface](https://pavaninguva.github.io/PopulationBalanceModels.jl/dev/plotting/) plots solutions, observations, prepared fits, parameter results and UQ summaries without CSV pipelines or new forward solves. |
 
 Compilation checks compatibility; the guides describe supported term,
 representation, boundary and solver combinations. Stationary root finding,

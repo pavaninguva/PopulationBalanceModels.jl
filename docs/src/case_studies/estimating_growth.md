@@ -375,7 +375,12 @@ Use an environment with Optim and the checkout developed into it; see the
 The continuous density and bin-integral reference, synthetic observation
 process, forward-model assembly, observable, likelihood, physical priors and
 explicit inference transforms are included below. It fixes the analytical
-forward calculation; numerical-backend switches and their refinement loops stay
+forward calculation. Initial populations use `InitialDistribution` with the
+declared Gaussian's physical total and unnormalized domain truncation; its bin
+integrals agree with the analytical initial condition. The `analytical_solver`
+callable is retained deliberately: changing to a numerical forward solve would
+change this reference likelihood. Its CDF formulas describe the exact transported
+solution, not a numerical initialization helper. Numerical-backend switches and their refinement loops stay
 in the full reproduction driver. The final call performs one MAP fit and does
 not sample or overwrite retained Bayesian results.
 
@@ -393,3 +398,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:estimating_growth))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

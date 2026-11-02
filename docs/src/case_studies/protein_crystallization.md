@@ -336,8 +336,14 @@ The script shows CNT laws and units, optional constant GRD,
 selection, the checked interval solver and the three calibration-only starts are
 imported from the [maintained example](../assets/source/examples/isothermal_protein_crystallization.jl).
 Those helpers do not choose new observations, priors or physical terms.
-The interval controller still bounds current-stage coefficients; a single
-initial `suggest_dt` call is insufficient for this coupled calculation.
+The same solver callable is used in the experiment and subsequent prediction.
+Its interval controller bounds current-stage coefficients and retains the
+bucketed schedule used by the study's derivative implementation. `StepControl`
+rejects differentiation through state-dependent step selection; wrapping or
+replacing this helper would not preserve that contract. It remains maintained
+in one place, with no changes to derivatives, rate buckets or interval lengths.
+A single initial `suggest_dt` call is insufficient for this coupled calculation.
+The unseeded population remains an explicit zero array.
 `main(model=:cnt)` fits CNT and freezes it before the later prediction;
 use `main(model=:cnt_grd)` for the extension. These fits can take several
 minutes. There is no MCMC or file export here; the retained posterior figures
@@ -357,3 +363,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:protein_crystallization))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

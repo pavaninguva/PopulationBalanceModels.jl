@@ -201,18 +201,22 @@ The kinetics, cooling trajectory, and coupled balances are retained.
 ```@example cooling
 f0 = recipe.benchmark_initial_density
 c0 = recipe.solubility(recipe.temperature(0.0))
-N0 = recipe.initial_counts(grid,f0)
-problem = PBMProblem(system,(crystals=N0,),(0.0,10.0);
+initial = InitialDensity((L,p,t)->f0(L);
+    support=(180.5,210.5),quadrature=GaussLegendre(3))
+problem = PBMProblem(system,(crystals=initial,),(0.0,10.0);
     bulk0=(c=c0,),p)
-solution = simulate(problem;method=SSPRK33(),dt=0.05,saveat=[0.0,10.0])
+solver = ForwardSolver(SSPRK33();dt=0.05)
+solution = simulate(problem;solver,saveat=[0.0,10.0])
 crystals = population(problem,solution.u[end],:crystals)
 final_concentration = bulk(problem,solution.u[end],:c)
 nothing # hide
 ```
 
-`initial_counts` integrates the initial density over every size bin. For this
-piecewise polynomial, aligning the support endpoints makes its three-point
-Gauss rule exact for the initial bin numbers. The full runner continues to
+`InitialDensity` integrates the physical number density without normalization.
+For this piecewise polynomial, aligning the support endpoints makes the starting
+three-point Gauss rule exact for the initial bin numbers; the package also checks
+quadrature refinement. The full runner preserves its original initial-array
+projection, continues to
 1000 s and compares several grids.
 
 ## Construct a numerical reference
@@ -328,7 +332,7 @@ consistently specified numerical benchmark.
 ## Minimal run and full reproduction
 
 The [physical recipe](../assets/source/examples/papers/gunawan2004_case2.jl)
-supplies the kinetic callbacks and initial-bin integrals. The
+supplies the kinetic callbacks and physical initial density. The
 [full comparison driver](../assets/source/examples/cooling_crystallization_benchmark.jl)
 adds the reference calculation and error tables. Follow the
 [shared setup guide](../verification.md) to retain their directory layout.
@@ -336,9 +340,11 @@ adds the reference calculation and error tables. Follow the
 ### Complete script
 
 The temperature and solubility laws, kinetics, chosen initial density and
-`ConservativeExchange` assembly are defined below. The only imported helper is
-the recipe's [bin-integration function](../assets/source/examples/papers/gunawan2004_case2.jl),
-which integrates that stated density without changing it. The 10-second run
+`ConservativeExchange` assembly are defined below. `InitialDensity` integrates
+that number density without normalization; its support breakpoints are grid
+edges. The quadrature starts with the original three-point rule and checks its
+accuracy by order refinement. `ForwardSolver` retains SSPRK33 and the 0.05-s
+maximum step. There is no imported integration helper. The 10-second run
 checks the coupling; the full 1000-second refinement study remains separate.
 
 [Download this standalone script](../assets/source/tutorials/crystallization.jl).
@@ -355,3 +361,7 @@ reproduction sources are linked above; this tutorial writes no retained results.
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:crystallization))])
 ```
+
+Optional plots reuse the returned result: after `import PythonPlot`, call
+`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
+numerical execution remains independent of plotting.

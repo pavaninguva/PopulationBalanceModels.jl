@@ -142,11 +142,11 @@ function axial_population(op::CompiledAxial,N,cell::Integer)
     size(N)==(length(op.grid),length(op.domain.grid)) || throw(DimensionMismatch("axial state must be intrinsic bins × axial cells"))
     reshape(view(N,:,cell),_axial_shape(op.local_operators[cell]))
 end
-function PBMProblem(op::CompiledAxial,u0::AbstractMatrix,tspan;p=NamedTuple())
+function PBMProblem(op::CompiledAxial,u0::AbstractMatrix,tspan;p=NamedTuple(),history=nothing)
     size(u0)==(length(op.grid),length(op.domain.grid)) || throw(DimensionMismatch("axial state must be intrinsic bins × axial cells"))
     all(isfinite,u0) && all(>=(0),u0) || throw(ArgumentError("initial numbers must be finite and nonnegative"))
     length(tspan)==2 && all(isfinite,tspan) && tspan[2]>tspan[1] || throw(ArgumentError("invalid time span"))
-    PBMProblem(op,float.(copy(u0)),(float(tspan[1]),float(tspan[2])),p)
+    _bound_problem(op,float.(copy(u0)),(float(tspan[1]),float(tspan[2])),p,nothing,history)
 end
 
 function _axial_row_fluxes!(F,N,d,reconstruction,physical_length)

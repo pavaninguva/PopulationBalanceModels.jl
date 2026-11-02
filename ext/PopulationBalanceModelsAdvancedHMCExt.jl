@@ -351,6 +351,7 @@ function PopulationBalanceModels.sample_posterior(problem::EstimationProblem;
         laplace_tuning_covariance=laplace_tuning,laplace_tuning_coordinates=:sampler,
         map_checks,sampling_map_validation=mapped ? :every_evaluation : :none,gradient_checks,
         forward_solves=counts.solves,posterior_evaluations=counts.evaluations,
+        integration_work=PopulationBalanceModels._integration_work(counts),
         gradient_evaluations=counts.gradient_evaluations,adjoint_solves=counts.adjoint_solves,
         derivative_backend=PopulationBalanceModels._gradient_backend(problem,derivatives),
         failed_evaluations=counts.failures,failure_messages=counts.messages,
