@@ -5,6 +5,7 @@ using Distributions: Normal, LogNormal, Uniform, pdf, cdf, ccdf, quantile, trunc
 export synthetic_measurements, estimation_problem, run_example, refit_numerics,
        exact_density, exact_counts, exact_moment, physical_problem
 
+# tutorial:start inference
 const TRUTH=(g0=0.434,g1=0.2604)
 const TIMES=[0.1,0.25,0.4,0.6,0.8,1.0]
 const SIZES=collect(range(0.0,1.4;length=281))
@@ -107,6 +108,8 @@ function estimation_problem(data=synthetic_measurements();prior=:lognormal,forwa
         for (name,initial,d) in zip((:g0,:g1),(0.40,0.23),distributions)]
     EstimationProblem(specs,(ex,);derivatives=forward===:inguva ? :finite_difference : :auto)
 end
+
+# tutorial:end inference
 
 function write_table(path,header,rows)
     open(path,"w") do io

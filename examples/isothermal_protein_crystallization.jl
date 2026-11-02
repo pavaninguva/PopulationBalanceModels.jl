@@ -7,6 +7,7 @@ export load_data, select_concentration, select_psds, parameters, build,
        estimation_problem, forward, rates, cfl_solve, DATA, minimal_run
 
 const DATA = joinpath(@__DIR__, "data", "protein_crystallization", "tang2018_isothermal")
+# tutorial:start constants
 const C0 = 19.965841161400512
 const TEMPERATURE = 293.15                 # K
 const BOLTZMANN = 1.380649e-23             # J K⁻¹
@@ -20,6 +21,9 @@ const AJ_BOUNDS = (LOG_AJ_SHIFT,100+LOG_AJ_SHIFT)
 const D0_PRIOR_MEAN = 0.01                # μm²/min; declared regularization
 const MOLECULAR_VOLUME = 2.97e-26          # m³ molecule⁻¹; Lin et al. (2017)
 
+# tutorial:end constants
+
+# tutorial:start data
 function table(path)
     data, header = readdlm(path, ',', Any; header=true)
     names = Tuple(Symbol.(vec(header)))
@@ -38,6 +42,9 @@ function select_psds(data, split=:calibration; window="isothermal_core")
      for t in sort(unique(r.time_min for r in rows))]
 end
 
+# tutorial:end data
+
+# tutorial:start model
 parameters(; logAJ=30.5, gamma=FIXED_GAMMA, AG=.0002, g=3.3, cstar=2.16,
            grd_strength=0.) =
     (; logAJ, gamma, AG, g, cstar, grd_strength, c0=C0, rho=RHO, kv=.81)
@@ -105,6 +112,9 @@ function build(; bins=200, Lmax=50., p=parameters(), tf=660., model=:cnt)
     PBMProblem(system,(crystals=zeros(bins),),(0.,tf);bulk0=(c=C0,),p)
 end
 
+# tutorial:end model
+
+# tutorial:start controller
 """Native SSPRK33 with the package's combined growth/diffusion/loss bound.
 At most coefficient_interval minutes are advanced before recomputing the bound.
 Monotone rates are bounded by the interval's starting c plus roundoff allowance;
@@ -150,23 +160,30 @@ forward(p=parameters();bins=200,Lmax=50.,dt=2.,cfl=.35,model=:cnt,
     cfl_solve(build(;bins,Lmax,p,tf=maximum(times),model),times;
         maximum_dt=dt,cfl,coefficient_interval)
 
+# tutorial:end controller
+
+# tutorial:start priors
 """Three common kinetic parameters with fixed gamma=0.64 mJ/m².
 No fitted noise. D0 is a constant diffusivity with Exponential mean 0.01 μm²/min.
 AJ and AG priors are the previous priors converted into L, μm and min units;
-g uses Uniform(1,5). Prior coordinates and Jacobians remain explicit.
+g uses Uniform(1,5). Starting values are physical; inference transforms are
+explicit. The tagged log-uniform declaration for AG preserves the retained
+prior law and export metadata; the other priors use physical distributions.
 """
 function parameter_specs(; p=parameters(),model=:cnt)
     model=model_name(model)
     common=(ParameterSpec(:logAJ;initial=p.logAJ,transform=LogitTransform(AJ_BOUNDS...),
-         prior=Prior(Uniform(AJ_BOUNDS...);coordinates=:physical)),
+         prior=Uniform(AJ_BOUNDS...)),
      ParameterSpec(:AG;initial=p.AG,transform=LogTransform(),
          prior=Prior(Uniform(log(1e-5),log(1.5));coordinates=:inference)),
      ParameterSpec(:g;initial=p.g,transform=LogitTransform(1.,5.),
-         prior=Prior(Uniform(1.,5.);coordinates=:physical)))
+         prior=Uniform(1.,5.)))
     model===:cnt ? common : (common...,ParameterSpec(:grd_strength;
         initial=p.grd_strength>0 ? p.grd_strength : D0_PRIOR_MEAN,transform=LogTransform(),
-        prior=Prior(Exponential(D0_PRIOR_MEAN);coordinates=:physical)))
+        prior=Exponential(D0_PRIOR_MEAN)))
 end
+
+# tutorial:end priors
 
 const PARAMETER_INFO=(
     logAJ=(meaning="Natural log of the numerical nucleation prefactor in particles/(L min)",units="dimensionless",label="ln A_J"),
@@ -189,9 +206,12 @@ function prior_metadata(problem)
     end
 end
 
+# tutorial:start cdf_covariance
 # Fixed correlation whitening. Its known determinant is reported separately
 # so the normalized original-CDF likelihood is recoverable exactly.
 cdf_factor(x)=cholesky(Symmetric([exp(-abs(a-b)/CORRELATION_LENGTH) for a in x,b in x])).L
+
+# tutorial:end cdf_covariance
 
 function original_predictions(problem,z)
     blocks=only(predictions(problem,z))
@@ -199,6 +219,7 @@ function original_predictions(problem,z)
     (blocks[1],(cdf_factor(m.observable.points)*v for (m,v) in zip(measurements[2:end],blocks[2:end]))...)
 end
 
+# tutorial:start inference
 """Shared fixed-error Bayesian target: 11 concentrations and three CDF blocks.
 Concentration SDs are 5% of OBSERVED values, fixed once. CDF SD is .03 absolute
 fraction with correlation length 2 μm and 22 interior ordinates per PSD.
@@ -246,6 +267,8 @@ function fit_model(problem;maxiters=500,initial=nothing)
     initial===nothing || (starts[1]=collect(initial))
     fit(problem;starts,maxiters,gradient_tolerance=1e-3)
 end
+
+# tutorial:end inference
 
 """Unit-determinant growth-rate shear for sampler tuning, not a new parameter.
 Keep logit(logAJ) and logit(g). Sample log G at supersaturation 6 instead of log AG.

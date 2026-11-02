@@ -47,8 +47,16 @@ Enzyme stacks have recorded loading failures; they are not numerical test passes
 
 ## Examples and figures
 
-Each case page gives a short calculation and full-source links. Including an
-example module defines its builders; executing the script invokes its driver.
+Each case page ends with a standalone tutorial, available as a download after
+building the docs. Its physical definitions come from marked sections of the
+maintained example sources, not from a second model implementation. It shows
+those definitions before calling the problem builder. Reporting and benchmark
+drivers remain separate. `julia --project=docs test/case_study_scripts.jl` checks
+assembly, syntax and initial-state/residual equivalence without fitting or
+advancing production cases; the milling constructor additionally needs its
+documented optional environment.
+
+Including an example module defines its builders; executing the script invokes its driver.
 Download supporting files with their directories intact, or use a checkout.
 For example, `examples/verification/compact_growth.jl` includes
 `../compact_growth.jl`; these identically named files occupy different directories.

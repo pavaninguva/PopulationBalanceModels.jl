@@ -193,5 +193,6 @@ include("extended_moments.jl")
 include("moment_compilation.jl")
 include("axial_system.jl")
 include("qamar_moments.jl")
+include("example_interfaces.jl")
 
 include("measure_evolution.jl")

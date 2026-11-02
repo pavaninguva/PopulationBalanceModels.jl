@@ -295,28 +295,24 @@ and the paper's supplement specify the source functions and initialization.
 
 ## Complete script
 
-Run from the repository root with the [standard environment](../verification.md).
-The [model recipe](../assets/source/examples/stem_cell_population.jl) supplies
-the rates, beta daughters and coupled counters defined above; the
-[full study helper](../assets/source/examples/support/stem_cell_study.jl) adds
-refinement and exports. Including the recipe does not run that study.
+Cargo dynamics, division and differentiation hazards, the two-daughter
+quadrature, initial bin probabilities and historical counters are defined
+below. The final calls solve short 20-model-time transients with and without
+differentiation, not the full balanced-growth/refinement study. The counters
+remain historical records, not another proliferating population.
 
-```julia
-using PopulationBalanceModels
-include("examples/stem_cell_population.jl")
-recipe = StemCellPopulation
+[Download this standalone script](../assets/source/tutorials/stem_cells.jl).
+Run it from a checkout with the package developed into the selected environment:
 
-results = Dict()
-for (name, differentiation) in ((:self_renewal, false), (:differentiation, true))
-    problem = recipe.build_problem(bins=600, tf=200.0;
-        differentiation=differentiation)
-    dt = min(0.05, suggest_dt(problem.operator, problem.u0, problem.p, 0.0;
-        cfl=0.35))
-    solution = simulate(problem; method=SSPRK33(), dt,
-        saveat=0.0:10.0:200.0, negative_tolerance=0.0)
-    summary = recipe.state_summary(problem, last(solution.u), last(solution.t))
-    results[name] = (problem=problem, solution=solution, summary=summary)
-    @show name summary.stem summary.differentiated
-    @show summary.number_balance summary.cargo_balance
-end
+```sh
+julia --project=. docs/src/assets/source/tutorials/stem_cells.jl
+```
+
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:stem_cells))])
 ```

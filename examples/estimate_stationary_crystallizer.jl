@@ -10,7 +10,7 @@ function estimation_problem()
         births = Nucleation((p,t,ctx) -> p.J, 0.0),
         withdrawal = Dilution(PolynomialRate(((p,t,ctx) -> 1/p.tau,))),
     )
-    operator = compile(model, MomentSet(0:3; coordinate=:length); method=ExactClosure())
+    operator = compile(model, MomentSet(0:3; coordinate=:length); moment_method=ExactClosure())
     base = StationaryPBMProblem(operator, [2.0, 1.0, 1.0, 2.0];
         p=(G=0.3, J=1.0, tau=2.0), autonomous=true)
     # Independently generated synthetic data: M_k = k! J G^k tau^(k+1).

@@ -2,6 +2,7 @@ module InguvaBraatzCase2
 using PopulationBalanceModels
 
 export parameters, growth_rate, initial_density, analytical_density, reference, problem, mapped_problem, run_benchmark
+# tutorial:start model
 const FINAL_TIME=1.0
 const NORMAL=GaussianNucleation((p,t,ctx)->1.0;center=0.0,width=1.0,truncation=:physical)
 
@@ -38,6 +39,8 @@ function problem(n=100;scheme=WENO5(epsilon=1e-12),p=parameters())
     operator=compile(model,grid;methods=TermMethods(growth=scheme),bc=SizeBC2D(x=boundary,y=boundary))
     PBMProblem(operator,reference(grid,0.0,p),(0.0,FINAL_TIME);p)
 end
+
+# tutorial:end model
 
 """
 Compile the public InguvaBraatz2023 method on its physical travel-time mesh.

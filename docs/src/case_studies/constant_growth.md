@@ -208,36 +208,22 @@ julia --project=docs docs/make.jl
 
 ### Complete script
 
-Run from the repository root. This solves the Gaussian problem with each pairing
-and prints its error; the full driver above adds refinement, timings and exports.
-Signed undershoots are retained for this diagnostic comparison.
+The script defines the Gaussian, its exact bin integrals, and all seven
+space/time pairings before assembling and solving each problem. Signed
+undershoots are retained. It performs no timing study or file export.
 
-```julia
-using PopulationBalanceModels
-include("examples/constant_growth_methods.jl")
-benchmark = ConstantGrowthMethods
+[Download this standalone script](../assets/source/tutorials/constant_growth.jl).
+Run it from a checkout with the package developed into the selected environment:
 
-model = PBMModel(growth=Growth(AffineGrowth(0.1, 0.0)))
-grid = Grid1D(range(0.0, 1.0; length=201); coordinate=:length)
-boundary = SizeBC(OpenBoundary(), OpenBoundary())
-initial = benchmark.gaussian_counts(grid, 0.0)
-reference = benchmark.gaussian_counts(grid, 4.0)
+```sh
+julia --project=. docs/src/assets/source/tutorials/constant_growth.jl
+```
 
-for (name, time_name, scheme, time_method) in benchmark.combinations()
-    operator = if scheme === nothing
-        compile(model, grid; evolution=time_method, bc=boundary)
-    else
-        compile(model, grid; methods=TermMethods(growth=scheme), bc=boundary)
-    end
-    problem = PBMProblem(operator, initial, (0.0, 4.0))
-    CFL = time_method isa Inguva2022 ? 1.0 : 0.5
-    dt = CFL * first(grid.widths) / 0.1
-    solution = simulate(problem; method=time_method, dt,
-        saveat=[4.0], check_nonnegative=false)
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
 
-    error = (vec(last(solution.u)) .- reference) ./ grid.widths
-    L1 = sum(grid.widths .* abs.(error))
-    RMSE = sqrt(sum(grid.widths .* error.^2) / sum(grid.widths))
-    @show name time_name CFL L1 RMSE
-end
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:constant_growth))])
 ```

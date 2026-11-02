@@ -9,6 +9,7 @@ const ROOT = normpath(joinpath(@__DIR__,".."))
 const CONFIG = joinpath(@__DIR__,"data","milling_uncertainty","reconstruction.toml")
 const ASSETS = joinpath(ROOT,"docs","src","assets","milling_uncertainty")
 
+# tutorial:start uq
 function output_times()
     sort!(unique(vcat(.001,.01,collect(.1:.1:2),collect(3.:10.),collect(12.:2:28.),
         29.,29.9,29.999,30.,30.001,30.1,30.5,31.,collect(32.:2:60.),
@@ -59,6 +60,8 @@ function problem(;bins=100,times=output_times(),reltol=1e-9,abstol=1e-14,
         output_coordinates=(d50=(units=:micrometre,weighting=:instantaneous_outlet_volume,
             interpolation=:linear_diameter_CDF),))
 end
+
+# tutorial:end uq
 
 function write_csv(path,header,rows)
     mkpath(dirname(path))

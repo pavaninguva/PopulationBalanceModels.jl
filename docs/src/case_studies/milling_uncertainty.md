@@ -365,34 +365,33 @@ interface; [verification instructions](../verification.md) describe environments
 
 ## Complete script
 
-Run from the repository root in the milling environment prepared above. This
-small example uses 40 pivots, 32 MC realizations, 16 independent validation
-solves, and 12/32 training solves for PCE degrees one/two: 92 full solves in
-total. It demonstrates the workflow, not convergence or the retained 12,000-run
-study. The included module supplies the physical model and segmented BDF solver;
-it does not run its production driver or write exports.
+The displayed model includes the feed distribution, volume-additive daughter
+measure and its conservative projection, breakage law, algebraic screen,
+material accounting and instantaneous outlet median. The UQ declaration then
+shows the four-input map, scenario rebuild, solver and output meaning.
 
-```julia
-using PopulationBalanceModels
-include("examples/milling_uncertainty.jl")
-recipe = MillingUncertainty
+The one external include is the checked **numerical BDF adapter**, not a
+hidden physical model: it advances the shown package residual in mass
+coordinates and restarts exactly at the 30-s speed change. Its
+[complete source](../assets/source/examples/support/milling_solver.jl) is
+provided separately. Run in the milling environment prepared above.
 
-times = [1.0, 5.0, 29.9, 30.0, 31.0, 60.0, 200.0]
-problem = recipe.problem(bins=40, times=times)
-mc = propagate(problem, MonteCarlo(32; seed=2018255); max_solves=32)
-mc_summary = uq_summary(mc; covariance=false)
+The small demonstration uses 40 pivots, 32 MC solves, 16 validation solves and
+12/32 PCE training solves: 92 full solves, rather than the production
+12,000-realization study. The much cheaper surrogate draws require no PBM solves.
 
-validation = propagate(problem, MonteCarlo(16; seed=2018256); max_solves=16)
-box = hcat(fill(-2.0, 4), fill(2.0, 4))
-surrogates = Dict()
-for (degree, samples, seed) in ((1, 12, 2018257), (2, 32, 2018258))
-    design = pce_design(problem.inputs; n=samples, seed=seed, bounds=box)
-    pce = fit_pce(problem, PolynomialChaos(degree);
-        design=design, validation=validation, max_solves=samples)
-    draws = evaluate_pce(pce, MonteCarlo(10_000; seed=2018259))
-    surrogates[degree] = (pce=pce, summary=uq_summary(draws; covariance=false))
-end
-@show mc_summary.mean.d50
-@show uq_summary(surrogates[1].pce).mean.d50
-@show uq_summary(surrogates[2].pce).mean.d50
+[Download this standalone script](../assets/source/tutorials/milling_uncertainty.jl).
+Run it from a checkout with the package developed into the selected environment:
+
+```sh
+julia --project=examples/environments/milling docs/src/assets/source/tutorials/milling_uncertainty.jl
+```
+
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:milling_uncertainty))])
 ```

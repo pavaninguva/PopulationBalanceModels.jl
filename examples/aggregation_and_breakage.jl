@@ -12,5 +12,5 @@ println("Initial/final resolved first moments: ",
     (sum(grid.centers.*initial),only(moment(grid,solution.u[end],1))))
 println("Final unresolved birth rates: ",diagnostics(op,solution.u[end],problem.p,1.0))
 # These are instantaneous loss rates, not cumulative overflow reservoirs.
-# To close a time-integrated balance, integrate the rates with consistent
-# quadrature, or add explicit reservoirs in a future ledger implementation.
+# For stage-consistent cumulative accounting, put the population in PBMSystem
+# with CumulativeAccounting; a historical ledger is not a physical reservoir.

@@ -2,6 +2,7 @@ module ContinuousPrecipitation
 using PopulationBalanceModels
 export parameters,build,run_benchmark,run_size_resolution
 
+# tutorial:start model
 """Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³."""
 parameters() = (cfeed=9.,ceq=.4,rho=1200.,kv=.524,kp=5.,u=10.,kb=4e8,b=2.,
     kg=7e-6,xc=1e-6,xmax=900e-6,Q=1.67e-7,area=1.46e-4,porosity=.21,L=.47,Dax=4.2e-5)
@@ -36,6 +37,9 @@ function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=para
     axial_problem(local_problem,reactor;axial_scheme)
 end
 
+# tutorial:end model
+
+# tutorial:start controller
 # Native explicit RK with a state-dependent explicit step bound. This controller is
 # a benchmark driver, not an adaptive-error solver or a differentiable schedule.
 function advance(problem,times;fraction=.3,method=RK4(),progress=false)
@@ -79,6 +83,8 @@ function advance(problem,times;fraction=.3,method=RK4(),progress=false)
     end
     PBMSolution(times,states,problem,steps)
 end
+
+# tutorial:end controller
 
 """Normalized outlet L1 difference, integrating both densities on their union grid."""
 function outlet_error(problem,u,reference,v)

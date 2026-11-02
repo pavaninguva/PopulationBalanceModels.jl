@@ -284,24 +284,23 @@ also runs refinement and the eligible characteristic method. Follow the
 
 ### Complete script
 
-Run from the repository root. The recipe supplies the kinetic parameters and
-exact bin integrals; the remaining lines declare and solve the two-coordinate model.
+Both directional growth laws, the Gaussian and its characteristic bin
+integrals, boundaries and numerical assembly are defined below. The final
+solve reports the integrated error and signed undershoot; it does not run
+the spatial refinement/export driver.
 
-```julia
-using PopulationBalanceModels
-include("examples/inguva_braatz_case2.jl")
-recipe = InguvaBraatzCase2
-p = recipe.parameters()
-grid = Grid2D(range(0.0, 2.0; length=51), range(0.0, 2.0; length=51))
-model = PBMModel(growth=Growth2D(recipe.growth_rate))
-boundary = SizeBC(OpenBoundary(), NoFlux())
-operator = compile(model, grid; methods=TermMethods(growth=WENO5(epsilon=1e-12)),
-    bc=SizeBC2D(x=boundary, y=boundary))
-problem = PBMProblem(operator, recipe.reference(grid, 0.0, p), (0.0, 1.0); p)
-dt = suggest_dt(operator, problem.u0, p, 0.0; cfl=0.4)
-solution = simulate(problem; dt, saveat=[1.0], check_nonnegative=false)
-reference = recipe.reference(grid, 1.0, p)
-L1_error = sum(abs, last(solution.u) - reference)
-minimum_density = minimum(density(grid, last(solution.u)))
-@show L1_error minimum_density
+[Download this standalone script](../assets/source/tutorials/transport.jl).
+Run it from a checkout with the package developed into the selected environment:
+
+```sh
+julia --project=. docs/src/assets/source/tutorials/transport.jl
+```
+
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:transport))])
 ```

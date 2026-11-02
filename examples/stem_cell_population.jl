@@ -11,6 +11,7 @@ export cargo_rate, division_rate, differentiation_rate, beta_daughters,
 const REFERENCE_DOI = "10.1186/s13287-025-04668-w"
 const AUTHOR_REVISION = "64a069491d4895aaa6b8a3f5476dc997877f728f"
 
+# tutorial:start model
 """Brown et al. (2025), Eq. 7: net intracellular cargo change, in a.u./model time."""
 cargo_rate(x, p, t, ctx) = (50 + x^2) / (100 + x^2) - 0.005x
 
@@ -133,6 +134,8 @@ function state_summary(problem, state, time)
      cargo_balance=cargo+exit_cargo+lost_cargo-synthesis-moment(grid, initial, 1),
      minimum_count=minimum(cells), upper_bin_fraction=last(cells)/number)
 end
+
+# tutorial:end model
 
 """Snapshot event distributions, not additional independently evolving cohorts.
 The newborn bins are the birth part of the SAME native Breakage residual.

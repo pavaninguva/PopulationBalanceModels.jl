@@ -5,6 +5,7 @@ export parameters,temperature,solubility,supersaturation,growth_rate,nucleation_
        reported_initial_density,reported_seed_density,benchmark_initial_density,
        initial_counts,build,build_moments,moment_rhs!
 
+# tutorial:start physics
 """Kinetic constants in µm, seconds, and g/g-water; size_factor has units µm⁻¹."""
 parameters(;kb=4.64e-7,b=1.78,kg=116.0,g=1.32,rho=2.11e-12,size_factor=0.1)=
     (;kb,b,kg,g,rho,size_factor)
@@ -28,6 +29,8 @@ function initial_counts(grid,f)
         for (x,width) in zip(grid.centers,grid.widths)]
 end
 
+# tutorial:end physics
+
 """Native exactly closed moment model. Supply μ0:μ3 and c0 explicitly."""
 function build_moments(;initial_moments,c0,tspan=(0.0,1000.0),p=parameters())
     model=PBMModel(
@@ -40,6 +43,7 @@ function build_moments(;initial_moments,c0,tspan=(0.0,1000.0),p=parameters())
     PBMProblem(system,(crystals=initial_moments,),tspan;bulk0=(c=float(c0),),p)
 end
 
+# tutorial:start assembly
 """
 Gunawan et al. 2004, Example 2, Eqs. 28-34 and Table 3.
 initial_density and c0 are explicit inputs. Eq. 34 is retained verbatim in
@@ -64,6 +68,8 @@ function build(;grid=Grid1D(range(0.0,1600.0;length=1601);coordinate=:length),
     N0=initial_counts(grid,initial_density)
     PBMProblem(system,(crystals=N0,),tspan;bulk0=(c=float(c0),),p)
 end
+
+# tutorial:end assembly
 
 """
 Independent continuum moment equations for this linear-in-length growth law.

@@ -3,6 +3,7 @@ using PopulationBalanceModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 include("api_reference.jl")
+include("case_study_scripts.jl")
 const API_REFERENCE_SOURCES = APIReference.source_index(ROOT)
 # Downloadable sources preserve the reproduction drivers without embedding them
 # in the walkthroughs. The generated copies are ignored by Git.
@@ -21,6 +22,7 @@ for (directory, subdirectories, files) in walkdir(joinpath(ROOT, "examples"))
         cp(joinpath(directory, file), joinpath(target, name); force=true)
     end
 end
+CaseStudyScripts.write_scripts(joinpath(source_assets,"tutorials"))
 plot_sources = joinpath(source_assets, "plotting")
 mkpath(plot_sources)
 for file in readdir(joinpath(ROOT, "docs", "benchmarks"))

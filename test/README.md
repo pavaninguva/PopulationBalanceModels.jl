@@ -30,6 +30,20 @@ module, so the same builders can be used in several files without replacing
 modules and repeating compilation. It also supports standalone test-file runs.
 The cleanup retains the numerical assertions and their independent references.
 
+For an interface-only example check, run `julia --project=. test/example_interfaces.jl`.
+It constructs problems, checks priors/state layouts and evaluates selected initial
+residuals; it does not fit, sample, advance a case study or write results. In an
+environment with Optim and NonlinearSolve it also constructs the stationary
+estimation example. Long benchmark/reproduction commands are separate.
+
+`julia --project=docs test/case_study_scripts.jl` assembles all ten standalone
+case-study scripts and checks their initial conditions, rates and inference
+declarations against the maintained builders. It does not call their `main`
+entry points. The full check, including the milling/Sundials constructor, can
+run in the prepared paper environment with
+`julia --project=paper test/case_study_scripts.jl`. Generated scripts are also
+published as downloads by `docs/make.jl`; neither command regenerates figures.
+
 ## Optional integrations
 
 Use an isolated working environment containing this checkout and the dependencies

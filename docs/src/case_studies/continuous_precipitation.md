@@ -388,41 +388,24 @@ is `paper/precipitation/run.jl`; the physical builder is
 
 ### Complete script
 
-Run from the repository root. This demonstrates startup on 50 logarithmic size
-bins and 50 axial cells to 5 s, rather than running the production refinement
-study. The recipe's checked explicit controller selects each RK4 step.
+The rates, population scaling, discrete solute exchange, reactor feed and
+independent size/axial methods are explicit below. This runs startup to 5 s on
+50 logarithmic size bins and 50 axial cells. The checked RK4 step controller
+is included so its restrictions are visible; the production reference and
+refinement campaigns are separate.
 
-```julia
-using PopulationBalanceModels
-include("examples/continuous_precipitation.jl")
-recipe = ContinuousPrecipitation
-p = recipe.parameters()
-nx, nz = 50, 50
+[Download this standalone script](../assets/source/tutorials/continuous_precipitation.jl).
+Run it from a checkout with the package developed into the selected environment:
 
-edges = exp.(range(log(p.xc), log(p.xmax); length=nx+1))
-grid = Grid1D(edges; coordinate=:length)
-model = PBMModel(
-    growth=Growth(recipe.growth),
-    primary_secondary=Nucleation(recipe.nucleation, first(edges)),
-)
-methods = TermMethods(growth=WENO5(),
-    by_term=(primary_secondary=BoundaryInjection(:left),))
-operator = compile(model, grid; methods)
-exchange = ConservativeExchange(:crystals, :c,
-    (x, p, t, ctx)->1e12 * p.rho * p.kv * x^3)
-system = PBMSystem((crystals=operator,);
-    exchanges=(exchange,), nonnegative_bulk=(:c,))
-local_problem = PBMProblem(system, (crystals=zeros(nx),), (0.0, 5.0);
-    bulk0=(c=0.0,), p)
+```sh
+julia --project=. docs/src/assets/source/tutorials/continuous_precipitation.jl
+```
 
-axial_grid = AxialGrid(range(0.0, p.L; length=nz+1))
-reactor = AxialDispersion(axial_grid;
-    velocity=p.Q / (p.area * p.porosity), dispersion=p.Dax,
-    inlet=(p, t)->(populations=(crystals=zeros(nx),), bulk=(c=p.cfeed,)))
-problem = axial_problem(local_problem, reactor; axial_scheme=MUSCL())
-solution = recipe.advance(problem, [0.0, 5.0]; method=RK4())
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
 
-concentration = bulk(problem, last(solution.u), :c)
-number_density = 1e12 .* density(grid, population(problem, last(solution.u), :crystals))
-@show extrema(concentration) extrema(number_density)
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:continuous_precipitation))])
 ```

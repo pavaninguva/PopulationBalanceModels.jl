@@ -3,14 +3,20 @@ using PopulationBalanceModels
 using LinearAlgebra
 using SpecialFunctions: gamma, erf
 export problem4,problem5,exact4,exact5,run_benchmarks,run_method_comparison,comparison_moment,method_basis
+# tutorial:start geometry
 const volume_map=AdditiveCoordinate(x->x^3,cbrt)
 const daughter_law=UniformVolumeDaughters()
+# tutorial:end geometry
+
 const gl=PopulationBalanceModels._gauss_legendre(GaussLegendre(24))
 
+# tutorial:start problem4
 function method_basis(method,nodes=3)
-    lastorder=method isa EQMOM ? 2method.nodes : method isa LogNormalClosure ? 2 :
-        method isa RankAdaptiveQMOM ? 2method.max_nodes-1 :
-        method isa Union{QuadratureClosure,DQMOM} ? 2method.nodes-1 : 2nodes-1
+    # A specification such as QMOM() leaves resolution to the supplied basis.
+    # This recipe chooses that basis from `nodes`; explicit family counts win.
+    capacity=method isa RankAdaptiveQMOM ? something(method.max_nodes,nodes) :
+        method isa Union{QuadratureClosure,EQMOM,DQMOM} ? something(method.nodes,nodes) : nodes
+    lastorder=method isa LogNormalClosure ? 2 : method isa EQMOM ? 2capacity : 2capacity-1
     MomentSet(0:lastorder;coordinate=:length)
 end
 
@@ -29,7 +35,8 @@ function problem4(;nodes=3,method=QMOM(nodes),tf=50.)
         aggregation=Aggregation(ConstantKernel(1.);coordinate_map=volume_map),
         breakage=Breakage((x,p,t,ctx)->x^3,daughter_law;coordinate_map=volume_map))
     mu=exact4(0.,basis.orders)
-    PBMProblem(compile(model,basis;method),initial_state(method,basis,mu),(0.,tf))
+    operator=compile(model,basis;moment_method=method)
+    PBMProblem(operator,initial_state(operator.closure,basis,mu),(0.,tf))
 end
 
 # Number obeys dμ0/dt = a0 μ3 - β0 μ0²/2; μ3=V0 is constant.
@@ -40,6 +47,8 @@ function exact4(t,orders=0:5)
     phi=steady*(1+steady*tanh(steady*beta*N0*t/2))/(steady+tanh(steady*beta*N0*t/2))
     [N0*phi*(V0/(N0*phi))^(k/3)*gamma(1+k/3) for k in orders]
 end
+
+# tutorial:end problem4
 
 # Eq.43 is a boundary DENSITY. Convert it to number flux using G=1 m/s.
 boundary_density(t)=100+1e6*exp(-1e4*(t-.215)^2)
@@ -59,10 +68,11 @@ function problem5(;nodes=3,collisions=true,tf=.5,method=QMOM(nodes))
             breakage=Breakage((x,p,t,ctx)->x^6,daughter_law;coordinate_map=volume_map)))
     end
     basis=method_basis(method,nodes)
-    op=compile(PBMModel(;terms...),basis;method,
-        methods=TermMethods(by_term=(growth=ExactMomentRule(),primary=ExactMomentRule())))
+    # The compiler recognizes the closed growth and independent source moments;
+    # the selected family supplies the unresolved collision integrals.
+    op=compile(PBMModel(;terms...),basis;moment_method=method)
     raw=[initial_moment5(k) for k in basis.orders]
-    PBMProblem(op,initial_state(method,basis,raw),(0.,tf);p=(G=1.,))
+    PBMProblem(op,initial_state(op.closure,basis,raw),(0.,tf);p=(G=1.,))
 end
 
 # Analytical full moments of advected initial particles and boundary births.

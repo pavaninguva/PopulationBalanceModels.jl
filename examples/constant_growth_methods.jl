@@ -2,7 +2,10 @@ module ConstantGrowthMethods
 using PopulationBalanceModels
 using Distributions: Normal, cdf, ccdf
 
+# tutorial:start velocity
 const growth = 0.1
+# tutorial:end velocity
+
 # The separate paper workflow retains this original exponential reference.
 initial_density(a) = a >= 0 ? 100exp(-a/0.01) : 0.0
 primitive(a) = a <= 0 ? 0.0 : -expm1(-a/0.01)
@@ -14,6 +17,7 @@ function exact_counts(grid,t)
         for (a,b) in zip(grid.edges[1:end-1],grid.edges[2:end])]
 end
 
+# tutorial:start gaussian
 const gaussian_height = 100.0
 const gaussian_center = 0.2
 const gaussian_width = 0.03 # standard deviation, independent of bin width
@@ -37,6 +41,8 @@ function gaussian_counts(grid,t)
     end
 end
 
+# tutorial:end gaussian
+
 """Bin integrals of a smooth periodic density; shift the integration endpoints."""
 function smooth_counts(grid,t)
     a = grid.edges[1:end-1] .- growth*t
@@ -45,6 +51,7 @@ function smooth_counts(grid,t)
         0.1 .* (sin.(4pi.*b) .- sin.(4pi.*a)) ./ (4pi)
 end
 
+# tutorial:start pairings
 # Each tuple names a size reconstruction and time method. A complete space–time
 # update has no separate reconstruction. Inguva2022 requires C=1.
 combinations() = [
@@ -56,6 +63,8 @@ combinations() = [
     ("hoc", "midpoint", nothing, HOCFiniteVolume()),
     ("inguva2022", "coupled", nothing, Inguva2022()),
 ]
+
+# tutorial:end pairings
 
 function make_problem(grid,initial,scheme,time_method,tf,bc)
     model = PBMModel(growth=Growth(AffineGrowth(growth,0.0)))

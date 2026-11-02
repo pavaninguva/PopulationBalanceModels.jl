@@ -106,20 +106,32 @@ sizes and times contribute to one normalized truncated-Gaussian likelihood.
 
 ## Compare two prior choices
 
-First retain the previous growth priors:
+Declare physical starting values and priors, with explicit log transforms:
 
 ```julia
-Prior(LogNormal(log(0.4),0.4);coordinates=:physical) # g₀
-Prior(LogNormal(log(0.25),0.6);coordinates=:physical) # g₁
+using Distributions: LogNormal, Uniform
+lognormal_specs = (
+    ParameterSpec(:g0; initial=0.40, prior=LogNormal(log(0.4),0.4),
+        transform=LogTransform()),
+    ParameterSpec(:g1; initial=0.23, prior=LogNormal(log(0.25),0.6),
+        transform=LogTransform()),
+)
 ```
 
 These favour rates near 0.4 and 0.25. To see whether that preference drives
 the answer, compare them with uniform priors:
 
 ```julia
-Prior(Uniform(0.05,1.0);coordinates=:physical) # g₀
-Prior(Uniform(0.02,1.0);coordinates=:physical) # g₁
+uniform_specs = (
+    ParameterSpec(:g0; initial=0.40, prior=Uniform(0.05,1.0),
+        transform=LogTransform()),
+    ParameterSpec(:g1; initial=0.23, prior=Uniform(0.02,1.0),
+        transform=LogTransform()),
+)
 ```
+
+`initial` is a physical optimizer start, not a prior statistic or a fixed
+forward-model value. It does not overwrite the base problem's nominal parameters.
 
 One way to choose these bounds is to state plausible growth times. Take one
 scaled size unit as a reference and one time unit as the observation duration.
@@ -135,8 +147,11 @@ or logarithms, and is not uniquely noninformative.
 Both scenarios use log coordinates so rates stay positive. Each prior is
 explicitly a density in physical coordinates, so the posterior in log
 coordinates includes its transformation Jacobian once. In particular, a
-physical uniform prior is not flat in log sampling coordinates. Retained MAP values
-are transformed log-coordinate modes; new fits maximize physical density; see [Parameter estimation](../inference.md).
+physical uniform prior is not flat in log coordinates. Current MAP fitting,
+local uncertainty and sampling use the same declared log-coordinate posterior.
+The mapped mode is generally different from the physical-density mode; see
+[Parameter estimation](../inference.md). Retained outputs keep their original
+producer conventions; this interface update does not recompute them.
 
 ## Fit and calculate local uncertainty
 
@@ -214,9 +229,11 @@ report.diagnostics_passed
 ```
 
 The runner uses four seeded starts dispersed along both directions of the
-Laplace covariance. It runs 1000 warmup iterations and retains 1500 draws per
+Laplace covariance in log coordinates. Its explicit `samples=1500` selects a
+fixed-length reproduction run: 1000 warmup iterations and 1500 retained draws per
 chain, for each prior scenario. Warmup adapts the metric and step size; those
-draws are excluded from posterior summaries.
+draws are excluded from posterior summaries. Omitting `samples` in the public
+API instead selects the default [diagnostic stopping policy](../inference.md#Sample-the-same-posterior).
 
 It checks rank-normalized split R-hat ≤1.01, bulk and tail ESS ≥400, per-chain
 BFMI ≥0.3, no retained divergences and no maximum-depth hits. MCSE reports
@@ -334,15 +351,17 @@ for the method, conservation properties and restrictions.
 ## Run the study
 
 ```sh
-julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl --output=/tmp/growth-physical-map
-python docs/benchmarks/plot_bayesian_growth.py --usetex
+julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl --output=/tmp/growth-declared-coordinates
+python docs/benchmarks/plot_bayesian_growth.py --data-dir=/tmp/growth-declared-coordinates --usetex
 ```
 
 The working environment needs Optim, AdvancedHMC and MCMCDiagnosticTools as
 well as this package. The script records all seeds, prior definitions, solver
-settings and diagnostics under `docs/src/assets/bayesian_growth/`. The plotter
-reads those files. It uses LaTeX labels and no grid lines, and exports PNG and
-SVG figures. Rebuild Documenter after changing the figures.
+settings and diagnostics in the selected fresh output directory. The plotter
+reads that same directory, so these commands cannot mix new results with the
+retained documentation assets. It uses LaTeX labels and no grid lines, and
+exports PNG and SVG figures. The figures on this page remain retained outputs;
+replace them only after checking the new calculation and its provenance.
 
 ## Minimal run and full reproduction
 
@@ -353,18 +372,23 @@ Use an environment with Optim and the checkout developed into it; see the
 
 ### Complete script
 
-Run from the repository root. This generates the declared synthetic observations
-and performs a MAP fit, without sampling or writing benchmark outputs.
+The continuous density and bin-integral reference, synthetic observation
+process, forward-model assembly, observable, likelihood, physical priors and
+explicit inference transforms are included below. The final call performs a
+MAP fit; it does not sample or overwrite the retained Bayesian results.
 
-```julia
-using PopulationBalanceModels, Optim
-include("examples/estimate_size_dependent_growth.jl")
-study = EstimateSizeDependentGrowth
-data = study.synthetic_measurements(; seed=2022)
-problem = study.estimation_problem(data; prior=:lognormal)
-fitted = fit(problem; nstarts=3, seed=22, maxiters=500)
-fitted.converged || error("MAP did not converge; inspect the fit diagnostics")
-parameters = physical_parameters(problem, fitted.minimizer)
-predicted = predictions(problem, fitted.minimizer)
-@show fitted.converged parameters
+[Download this standalone script](../assets/source/tutorials/estimating_growth.jl).
+Run it from a checkout with the package developed into the selected environment:
+
+```sh
+julia --project=docs docs/src/assets/source/tutorials/estimating_growth.jl
+```
+
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:estimating_growth))])
 ```

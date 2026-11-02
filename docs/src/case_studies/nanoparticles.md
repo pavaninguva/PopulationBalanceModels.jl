@@ -569,15 +569,25 @@ its benchmark or writing files.
 
 ### Complete script
 
-Run from the repository root:
+The displayed module contains the physical laws, source normalization,
+material exchange and explicit inputs. The following reconstruction specifies
+the solubility and DLVO assumptions and starts with no particles. This is the
+checked 10-µs native startup example, not a claim of full-horizon reproduction.
+It needs only the package and Julia standard libraries; the separate long-time
+workflow still needs its external stiff solver. No strict checks are relaxed.
 
-```julia
-using PopulationBalanceModels
-# Also requires OrdinaryDiffEqRosenbrock, ADTypes and SciMLBase in this environment.
-include("examples/shin_lnp_long_time.jl")
-problem = remake(ShinLNPLongTime.make_problem(; bins=80, FRR=3.0);
-    tspan=(0.0, 1e-5))
-solution = simulate(problem; method=SSPRK33(), dt=1e-8, saveat=[0.0, 1e-5])
-free_lipid = [bulk(problem, u, :lipid) for u in solution.u]
-@show last(free_lipid)
+[Download this standalone script](../assets/source/tutorials/nanoparticles.jl).
+Run it from a checkout with the package developed into the selected environment:
+
+```sh
+julia --project=. docs/src/assets/source/tutorials/nanoparticles.jl
+```
+
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:nanoparticles))])
 ```

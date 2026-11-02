@@ -213,7 +213,10 @@ A unit-determinant growth-rate shear improves tuning; it does not add a referenc
 rate parameter. Expected Gaussian information initializes sampler tuning; it is
 not reported as a Laplace covariance. Sampling must pass rank Rhat ≤ 1.01, bulk/tail ESS ≥ 400,
 BFMI ≥ 0.3 and zero retained divergences/depth hits. Two consecutive eligible
-checkpoints are required. All figures below use **new draws for this target**.
+checkpoints are required. The figures below use the **retained fixed-gamma,
+constant-diffusion draws**, with their original producer records. Updating the
+declarations does not rerun sampling or certify equivalence to changed source;
+the compatibility checks remain separate from retained-file integrity.
 Failed trial solves are counted and rejected; they are distinct from sampler
 divergences and do not become posterior predictions.
 The former four-/five-parameter, growth-dependent-GRD results are archived.
@@ -328,30 +331,26 @@ adds reporting, figures and saved provenance. Plotting the data alone needs no f
 
 ### Complete script
 
-Run from the repository root in an environment with Optim and the checkout
-developed into it, such as `julia --project=docs`. This fits CNT using calibration
-data only, freezes its parameters, then predicts the later observations. Set
-`model = :cnt_grd` to fit the constant-diffusion extension instead. The fit can
-take several minutes; this script performs neither MCMC nor file exports.
+The script includes the original-data loader, CNT laws and units, optional
+constant GRD, same-stage solute balance, fixed-error observation model, priors
+and calibration-only starts. No model or likelihood is hidden in an imported
+recipe. `main(model=:cnt)` fits CNT and freezes it before the later prediction;
+use `main(model=:cnt_grd)` for the extension. These fits can take several
+minutes. There is no MCMC or file export here; the retained posterior figures
+are not recomputed by this minimal calculation.
 
-```julia
-using PopulationBalanceModels, Optim
-include("examples/isothermal_protein_crystallization.jl")
-recipe = IsothermalProteinCrystallization
+[Download this standalone script](../assets/source/tutorials/protein_crystallization.jl).
+Run it from a checkout with the package developed into the selected environment:
 
-model = :cnt
-data = recipe.load_data()
-estimation = recipe.estimation_problem(; data, model, bins=200)
-fitted = recipe.fit_model(estimation)
-fitted.converged || error("MAP did not converge; inspect the fit diagnostics")
-theta = physical_parameters(estimation, fitted.minimizer, :batch)
+```sh
+julia --project=docs docs/src/assets/source/tutorials/protein_crystallization.jl
+```
 
-# Predictions use frozen calibration parameters, including at held-out times.
-p = merge(recipe.parameters(), theta)
-solution = recipe.forward(p; model, bins=200,
-    times=[0.0, 74.0, 180.0, 420.0, 660.0])
-problem = solution.problem
-concentration = [bulk(problem, u, :c) for u in solution.u]
-crystals = population(problem, last(solution.u), :crystals)
-@show theta concentration
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:protein_crystallization))])
 ```

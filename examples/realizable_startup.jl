@@ -5,7 +5,7 @@ function run_realizable_startup()
     # J has units number/(process volume*time), G has units length/time.
     J=1.7;G=.8;basis=MomentSet(0:5;coordinate=:length)
     model=PBMModel(growth=Growth(PolynomialRate((G,))),births=Nucleation((p,t,ctx)->J,0.0))
-    op=compile(model,basis;closure=RankAdaptiveQMOM(3))
+    op=compile(model,basis;moment_method=RankAdaptiveQMOM(3))
     pb=PBMProblem(op,zeros(6),(0.0,1.0))
     for dt in (.2,.1,.05)
         sol=simulate(pb;dt,saveat=[0.,.25,.5,1.],method=MeasureEuler())
@@ -18,7 +18,7 @@ function run_realizable_startup()
     model=PBMModel(growth=Growth((L,p,t,ctx)->.08*ctx.bulk.solute),
         nucleation=Nucleation((p,t,ctx)->.3,.05),
         collisions=Aggregation(ConstantKernel(.2);coordinate_map=additive))
-    op=compile(model,MomentSet(0:3;coordinate=:length);closure=RankAdaptiveQMOM(2;rtol=1e-10))
+    op=compile(model,MomentSet(0:3;coordinate=:length);moment_method=RankAdaptiveQMOM(2;rtol=1e-10))
     sys=PBMSystem((crystals=op,);exchanges=(MomentExchange(:crystals,:solute,3;factor=.7),),
         nonnegative_bulk=(:solute,),accounting=(CumulativeAccounting(:crystals),))
     pb=PBMProblem(sys,(crystals=zeros(4),),(0.,1.);bulk0=(solute=2.,))

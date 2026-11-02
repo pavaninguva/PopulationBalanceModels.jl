@@ -114,7 +114,7 @@ model = PBMModel(
         coordinate_map=volume),
 )
 basis = MomentSet(0:5;coordinate=:length)
-operator = compile(model,basis;method=QMOM(3))
+operator = compile(model,basis;moment_method=QMOM())
 problem = PBMProblem(operator,benchmark.exact4(0.),(0.,50.))
 solution = simulate(problem;dt=0.01,saveat=[0.,10.,50.])
 vec(last(solution.u))
@@ -170,6 +170,10 @@ extended = benchmark.problem4(method=EQMOM(3))
 direct = benchmark.problem4(method=DQMOM(3))
 lognormal = benchmark.problem4(method=LogNormalClosure(quadrature_order=64))
 ```
+
+Here `method` is the benchmark builder's comparison option. It passes the family
+to `compile(...;moment_method=...)`; `simulate(...;method=...)` independently
+selects the time integrator.
 
 | Method | Evolved state | Reconstruction used for rates |
 |:--|:--|:--|
@@ -307,14 +311,16 @@ model = PBMModel(
     breakage=Breakage((x,p,t,ctx)->x^6,UniformVolumeDaughters();
         coordinate_map=volume),
 )
-operator = compile(model,MomentSet(0:5;coordinate=:length);method=QMOM(3),
-    methods=TermMethods(by_term=(growth=ExactMomentRule(),primary=ExactMomentRule())))
+operator = compile(model,MomentSet(0:5;coordinate=:length);moment_method=QMOM())
+moment_plan(operator)
 ```
 
-The reconstruction closes collision integrals. Growth and boundary creation use
-exact moment rules: ``d\mu_0/dt`` receives ``J(t)`` and growth adds
+The selected reconstruction supplies unresolved collision integrals. Compilation
+automatically evaluates growth and boundary creation analytically:
+``d\mu_0/dt`` receives ``J(t)`` and growth adds
 ``kG\mu_{k-1}`` to each higher equation. The source at zero adds no higher
-moment directly. That separation makes the treatment of each term visible.
+moment directly. `moment_plan` shows each equation's treatment; no per-term
+moment-rule selection is needed for this model.
 
 Without collisions, characteristics give ``n(x,t)=n(x-t,0)`` for ``x\ge t``
 and ``n(x,t)=n(0,t-x)`` for ``0\le x<t``. `exact5` integrates that solution,
@@ -466,26 +472,24 @@ contains the other families, pulse calculation and reporting. Follow the
 
 ### Complete script
 
-Run from the repository root. This assembles the analytical aggregation–fragmentation
-example with three-node QMOM; it does not run the other benchmark configurations.
+The additive coordinate, collision laws, analytical moments, required bases
+and DQMOM state conversion are explicit below. The final call runs one
+three-node QMOM calculation. Use `main(method=...)` to examine another supported
+family. The script labels lognormal M3 as reconstructed and shows its initial
+material mismatch; it does not regenerate the method-comparison assets.
 
-```julia
-using PopulationBalanceModels
-include("examples/qamar_moment_benchmarks.jl")
-benchmark = QamarMomentBenchmarks
-volume = AdditiveCoordinate(x->x^3, cbrt)
-model = PBMModel(
-    aggregation=Aggregation(ConstantKernel(1.0); coordinate_map=volume),
-    breakage=Breakage((x, p, t, ctx)->x^3, UniformVolumeDaughters();
-        coordinate_map=volume),
-)
-basis = MomentSet(0:5; coordinate=:length)
-operator = compile(model, basis; moment_method=QMOM())
-problem = PBMProblem(operator, benchmark.exact4(0.0), (0.0, 50.0))
-solution = simulate(problem; method=SSPRK33(), dt=0.02, saveat=0.0:1.0:50.0)
-M1 = [moment_value(operator.closure, basis, u, 1) for u in solution.u]
-M3 = [moment_value(operator.closure, basis, u, 3) for u in solution.u]
-reference = [benchmark.exact4(t)[2] for t in solution.t]
-@show maximum(abs.((M1 .- reference) ./ reference))
-@show maximum(abs.(M3 ./ first(M3) .- 1.0))
+[Download this standalone script](../assets/source/tutorials/moment_crystallization.jl).
+Run it from a checkout with the package developed into the selected environment:
+
+```sh
+julia --project=. docs/src/assets/source/tutorials/moment_crystallization.jl
+```
+
+The code is assembled from marked sections of the maintained examples; those
+same definitions are used by the reproduction drivers above. Model equations
+and assumptions have not been changed for this presentation.
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:moment_crystallization))])
 ```

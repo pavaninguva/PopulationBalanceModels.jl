@@ -82,10 +82,10 @@ function estimation_problem(;bins=100,solver=nothing,dt=.5,priors=:broad,
     sizes=Measurement(data.D50.t,data.D50.y,FunctionObservable(volume_median);
         likelihood=GaussianLikelihood(sigma=data.D50.sigma),source=:figure4_D50)
     specs=(
-        ParameterSpec(:logAJ;initial=p.logAJ,prior=Prior(Uniform(bounds.logAJ...);coordinates=:physical),transform=IdentityTransform()),
-        ParameterSpec(:j;initial=p.j,transform=LogitTransform(bounds.j...),prior=Prior(Uniform(bounds.j...);coordinates=:physical)),
+        ParameterSpec(:logAJ;initial=p.logAJ,prior=Uniform(bounds.logAJ...),transform=IdentityTransform()),
+        ParameterSpec(:j;initial=p.j,transform=LogitTransform(bounds.j...),prior=Uniform(bounds.j...)),
         ParameterSpec(:AG;initial=p.AG,transform=LogTransform(),prior=LogNormal(log(p.AG),growth_prior_sd)),
-        ParameterSpec(:g;initial=p.g,transform=LogitTransform(bounds.g...),prior=Prior(Uniform(bounds.g...);coordinates=:physical)))
+        ParameterSpec(:g;initial=p.g,transform=LogitTransform(bounds.g...),prior=Uniform(bounds.g...)))
     ex=InferenceExperiment(:batch,problem,concentration,sizes;dt=solver===nothing ? dt : nothing,solver)
     EstimationProblem(specs,(ex,))
 end

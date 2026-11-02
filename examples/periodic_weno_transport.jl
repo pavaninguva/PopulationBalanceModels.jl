@@ -1,8 +1,9 @@
 using PopulationBalanceModels
 
 # A smooth periodic problem verifies the transport scheme, not a physical
-# periodic particle-size boundary. Upwind supports nonuniform bins; WENO5 here
-# requires uniform bins and is fifth order in the interior only.
+# periodic particle-size boundary. This example uses uniform bins; WENO5 also
+# supports eligible fixed nonuniform bins. Its spatial order is distinct from
+# the time integrator's order.
 grid=Grid1D(range(0,2π;length=81))
 model=PBMModel(Growth((v,p,t,ctx)->p.velocity))
 op=compile(model,grid;growth_scheme=WENO5(epsilon=1e-10),
