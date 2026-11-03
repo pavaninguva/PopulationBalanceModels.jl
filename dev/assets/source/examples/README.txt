@@ -9,12 +9,11 @@ prescribed operating changes and configured native/optional external execution.
 It writes no retained results. The preparation/execution guide explains its
 population measures, tail accounting and derivative limits.
 
-The downloadable minimum scripts also define optional `plot_results(result)`
-functions. Run `main()` numerically, then `import PythonPlot` and plot the returned
-result; plotting never launches another solve or writes a figure implicitly.
-See the [plotting guide](../docs/src/plotting.md). Protein's bucketed derivative
-schedule and milling's constrained algebraic solver remain numerical specializations;
-their plotting uses the same result interfaces.
+The authored [tutorials](tutorials/README.md) show physical laws and model
+assembly directly. Simple isolated calculations use `simulate(...;method,dt)`;
+configured solvers appear where their reuse or controls matter. Optional direct
+plotting recipes use existing results after `import PythonPlot`; no universal
+plotting wrapper is needed. See the [plotting guide](../docs/src/plotting.md).
 
 ## Start here
 
@@ -43,9 +42,11 @@ end of the manual page. It shows one configuration and the model definition;
 the larger files in the table below are reproduction drivers. Tutorials import
 only explicitly identified data/numerical helpers where necessary. They do not
 run benchmark grids, production fitting/sampling or export loops implicitly.
-The estimation tutorials fit only when their `main()` is run; merely including
-one defines the calculation. Generated downloads live under
-`docs/src/assets/source/tutorials/` after building the manual.
+The estimation tutorials fit only when executed as programs; including one
+prepares data and declarations. Milling propagation is an explicitly included
+second stage. The source files live in `examples/tutorials/`; the manual reads
+and downloads those exact files. Existing download addresses under
+`docs/src/assets/source/tutorials/` are preserved.
 
 ## Manual case studies
 

@@ -1,51 +1,24 @@
-# Minimal constant growth tutorial.
-# Physical definitions and one calculation; numerical helpers are linked on the case page.
-# No benchmark exports or retained files are written. See the case-study page.
-
+# One translating population, in the benchmark's coordinate and time units.
 using PopulationBalanceModels
-using Distributions: Normal
 
-# From examples/constant_growth_methods.jl (velocity).
-const growth = 0.1
+p = (speed=0.1, height=100.0, center=0.2, width=0.03)
+growth(x,p,t,ctx) = p.speed
+initial_density(x,p,t) = p.height*exp(-0.5*((x-p.center)/p.width)^2)
 
-# Physical definitions from examples/constant_growth_methods.jl.
-const gaussian_height = 100.0
+model = PBMModel(growth=Growth(growth))
+grid = Grid1D(range(0.0,1.0;length=201);coordinate=:length)
+boundary = SizeBC(OpenBoundary(),OpenBoundary()) # Zero inflow; free outflow.
+operator = compile(model,grid;methods=TermMethods(growth=MUSCL()),bc=boundary)
 
-const gaussian_center = 0.2
+# Physical number density on [0,1], without probability normalization.
+initial = InitialDensity(initial_density;support=(0.0,1.0))
+problem = PBMProblem(operator,initial,(0.0,4.0);p)
+dt = 0.5*minimum(grid.widths)/p.speed # CFL=0.5 for this constant velocity.
+solution = simulate(problem;method=SSPRK33(),dt,saveat=[0.0,2.0,4.0])
+@show observe(MomentObservable(0),solution)
 
-const gaussian_width = 0.03 # standard deviation, independent of bin width
-
-gaussian_initial(t=0.0) = InitialDistribution(
-    Normal(gaussian_center+growth*t,gaussian_width);
-    total=gaussian_height*gaussian_width*sqrt(2pi),
-    support=(growth*t,1.0+growth*t),truncation=:physical)
-
-function tutorial_problem(; bins=200)
-    grid = Grid1D(range(0.0, 1.0; length=bins+1); coordinate=:length)
-    model = PBMModel(growth=Growth(AffineGrowth(growth, 0.0)))
-    boundary = SizeBC(OpenBoundary(), OpenBoundary())
-    operator = compile(model, grid;
-        methods=TermMethods(growth=MUSCL()), bc=boundary)
-    initial = gaussian_initial() # Number concentration, with physical [0,1] support.
-    problem = PBMProblem(operator, initial, (0.0, 4.0))
-    reference = vec(initialize(operator, gaussian_initial(4.0))) # Exact translation.
-    (; grid, model, boundary, initial, problem, reference)
-end
-
-function main(; bins=200)
-    case = tutorial_problem(; bins)
-    dt = 0.5 * first(case.grid.widths) / growth
-    solver = ForwardSolver(SSPRK33(); dt)
-    solution = simulate(case.problem; solver, saveat=[4.0])
-    error = (vec(last(solution.u)) .- case.reference) ./ case.grid.widths
-    @show sum(case.grid.widths .* abs.(error)) # Integrated L1 density error.
-    solution
-end
-
-# Optional: import PythonPlot; plot_results(solution). No solve/export occurs here.
-plot_results(solution) = plot_distribution(solution; times=[last(solution.t)],
-    xlabel="Size coordinate", ylabel="Number density")
-
-if abspath(PROGRAM_FILE) == @__FILE__
-    main()
-end
+# Optional, after the calculation (requires the plotting environment):
+# import PythonPlot
+# picture = plot_distribution(solution;xlabel="Size coordinate",ylabel="Number density")
+# save_figure(picture,"growth.png")
+# Exact bin-integral errors, method sweeps and timings: constant_growth_methods.jl.

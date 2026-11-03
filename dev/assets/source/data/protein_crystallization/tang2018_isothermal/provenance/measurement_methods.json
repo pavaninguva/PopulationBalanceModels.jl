@@ -1,0 +1,138 @@
+{
+  "Tang2018": {
+    "source_pdf_pages": [
+      2,
+      3
+    ],
+    "concentration": {
+      "method": "filtered_diluted_UV_absorbance",
+      "syringe_filter_um": 0.22,
+      "dilution_factor": 50,
+      "wavelength_nm": 280,
+      "instrument": "Shimadzu_UVmini1240",
+      "analytical_replicates": "not_reported",
+      "analytical_error": "not_reported"
+    },
+    "number_PSD": {
+      "method": "ex_situ_camera_microscopy_SHAPE",
+      "size_coordinate": "equivalent_diameter",
+      "raw_particle_list": "not_available",
+      "particle_count_per_sample": "not_reported",
+      "bin_edges": "not_reported",
+      "PSD_replicates": "not_reported",
+      "detection_limit_um": "not_reported",
+      "covariance": "not_reported"
+    },
+    "volume_PSD": {
+      "method": "Malvern_Mastersizer3000_laser_diffraction",
+      "coordinate": "equivalent_spherical_diameter",
+      "basis": "volume",
+      "bin_edges": "not_reported",
+      "number_conversion": "requires_volume_model_and_detection_assumptions"
+    },
+    "onset": {
+      "method": "in_situ_2D_Vision_Probe",
+      "definition": "rapid_growth_and_rising_visible_solid_concentration",
+      "first_nuclei": "fine_particles_seen_within_2min_in_Fig5_separate_5mL_cooled_example",
+      "sample_time_alignment": "not_equal_to_first_PSD_time_in_all_figures",
+      "errorbars": "plotted_but_definition_and_n_not_reported"
+    },
+    "yield_measurement": {
+      "method": "bulk_filtration_and_dried_filter_cake",
+      "membrane_um": 0.22,
+      "vacuum_drying_temperature_C": 20,
+      "vacuum_drying_duration_h": 24,
+      "replicates_in_Fig4": 4,
+      "denominator_and_sampling_corrections": "not_explicitly_defined"
+    },
+    "preparation": {
+      "buffer_M": 0.1,
+      "pH": 4.5,
+      "protein_stock_range_g_L": [
+        10,
+        80
+      ],
+      "NaCl_stock_range_percent_w_w": [
+        3.5,
+        25
+      ],
+      "centrifuge_rpm": 1300,
+      "centrifuge_min": 15,
+      "filter_um": 0.22,
+      "storage_C": 20,
+      "stock_vs_mixed": "concentrations_are_before_mixing_unless_otherwise_stated_Fig12_after_mixing"
+    },
+    "screening": {
+      "sitting_drop_plate_wells": 24,
+      "incubation_C": 20,
+      "incubation_h": 24,
+      "reservoir_NaCl_percent_w_w": 25
+    },
+    "microbatch": {
+      "volume_uL": 200,
+      "T_start_C": 20,
+      "T_end_C": 0,
+      "rates_C_min": [
+        0.03,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1
+      ],
+      "image_interval_s": 15,
+      "reported_cooling_duration_range_min": [
+        10,
+        660
+      ],
+      "note": "Reported_10min_lower_duration_not_equal_to_20C_divided_by_1Cmin_no_correction_applied"
+    }
+  },
+  "Mitchell2023": {
+    "source_pdf_pages": [
+      4,
+      5,
+      7,
+      8,
+      9
+    ],
+    "software": "gPROMS_FormulatedProducts_2.3.1",
+    "DAE_solver": "DAEBDF",
+    "optimizer": "NLPSQP",
+    "multi_start_explored": false,
+    "measurement_noise_term_as_written": "constant_variance_0.1_g_L_and_0.5_um_units_not_squared",
+    "variance_vs_SD_interpretation": "ambiguous_do_not_inherit_silently",
+    "D50_basis": "not_explicitly_stated_in_Mitchell_matches_Tang_number_CDF_more_closely_than_volume_reweighting",
+    "fitted_parameters_uncertainty": "95_percent_confidence_intervals_not_Bayesian_priors",
+    "primary_model": {
+      "well_mixed": true,
+      "secondary_nucleation": false,
+      "agglomeration": false,
+      "impurity_effect": false,
+      "nucleation_mass": "neglected",
+      "kv": 0.81,
+      "crystal_density_kg_m3": 1240,
+      "activation_energies_in_final_fits_J_mol": 0
+    },
+    "auxiliary_inputs": {
+      "viscosity_Pa_s_approx": 0.001,
+      "enthalpy_crystallization_kcal_mol": -13.2,
+      "protein_molecular_weight_kDa": 14.3,
+      "molecular_diameter_nm_approx": 3.5,
+      "default_impeller_power_number": 0.5,
+      "default_pumping_number": 0.8,
+      "Tang_impeller_estimate_mm": 10,
+      "Tang_stirring_rpm": 210,
+      "Tang_ceq_g_L": 2.16,
+      "Smejkal_impeller_mm": 24.8,
+      "Smejkal_stirring_rpm": 200,
+      "Smejkal_ceq_g_L": 2.47
+    }
+  }
+}

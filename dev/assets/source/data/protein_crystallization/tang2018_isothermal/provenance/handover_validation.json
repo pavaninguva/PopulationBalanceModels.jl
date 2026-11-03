@@ -1,0 +1,87 @@
+{
+  "checks": {
+    "16_concentrations_with_1_initial_11_calibration_4_validation": true,
+    "initial_value_and_time_match_manifest": true,
+    "noninitial_times_preserve_graph_readings": true,
+    "training_and_validation_ids_match_configuration": true,
+    "later_concentrations_are_heldout": true,
+    "exactly_four_unique_PSD_times": true,
+    "two_alternative_windows_only": true,
+    "PSD_roles_match_3_calibration_1_validation": true,
+    "one_block_per_time_independent_of_window": true,
+    "548_reconstructed_rows_not_548_independent_records": true,
+    "conditional_CDF_normalization_and_quantile_checks": true,
+    "original_PDF_hashes_match": true,
+    "reference_rate_units_roundtrip": true,
+    "scaled_mass_coefficient_consistent": true,
+    "reference_squared_Wasserstein_shift_units": true,
+    "reference_training_selector_excludes_validation": true
+  },
+  "all_checks_pass": true,
+  "PSD_checks": [
+    {
+      "window": "isothermal_core",
+      "time_min": 180,
+      "rows": 46,
+      "density_integral": 1.0,
+      "checks_pass": true
+    },
+    {
+      "window": "isothermal_core",
+      "time_min": 420,
+      "rows": 46,
+      "density_integral": 1.0,
+      "checks_pass": true
+    },
+    {
+      "window": "isothermal_core",
+      "time_min": 660,
+      "rows": 46,
+      "density_integral": 0.9999999999999999,
+      "checks_pass": true
+    },
+    {
+      "window": "isothermal_core",
+      "time_min": 74,
+      "rows": 46,
+      "density_integral": 1.0000000000000004,
+      "checks_pass": true
+    },
+    {
+      "window": "visible_window",
+      "time_min": 180,
+      "rows": 91,
+      "density_integral": 1.0000000000000002,
+      "checks_pass": true
+    },
+    {
+      "window": "visible_window",
+      "time_min": 420,
+      "rows": 91,
+      "density_integral": 0.9999999999999999,
+      "checks_pass": true
+    },
+    {
+      "window": "visible_window",
+      "time_min": 660,
+      "rows": 91,
+      "density_integral": 0.9999999999999996,
+      "checks_pass": true
+    },
+    {
+      "window": "visible_window",
+      "time_min": 74,
+      "rows": 91,
+      "density_integral": 1.0,
+      "checks_pass": true
+    }
+  ],
+  "primary_counts": {
+    "initial_concentration": 1,
+    "calibration_concentration_residuals": 11,
+    "validation_concentration": 4,
+    "calibration_PSD_blocks": 3,
+    "validation_PSD_blocks": 1
+  },
+  "status": "Data_and_handover_checked_Julia_implementation_and_fitting_not_yet_performed"
+}

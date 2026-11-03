@@ -1,0 +1,37 @@
+title = "Cone-mill forward uncertainty: Bhonsale et al. (2018)"
+doi = "10.3390/pr6120255"
+context_doi = "10.1016/j.compchemeng.2020.106814"
+targets = ["Figure 4", "Figure 7", "Figure 8"]
+mc_samples = 12000
+validation_samples = 512
+pce_quantile_samples = 50000
+bins = 100
+first_pivot_m3 = 6.54e-17
+last_pivot_m3 = 1e-3
+daughter_quadrature_order = 8
+reltol = 1e-9
+abstol = 1e-14
+absolute_tolerance_basis = "kg per pivot and kg in discharge/fines states; exact diagonal change from scaled number inventory"
+mc_seed = 2018255
+validation_seed = 2018256
+pce1_seed = 2018257
+pce2_seed = 2018258
+surrogate_seed = 2018259
+
+[source_to_code]
+equations = "18-24: total-number inventory, volume-weighted feed, algebraic screen discharge, breakage selection and daughter conservation; 25-27: fixed-pivot approximation"
+units = "SI: m3 particle volume, m diameter, kg inventory, s time, RPM speed; reported outlet diameter in micrometres"
+feed = "Volume-weighted LogNormal(log(4.81e-5 m3),0.25); exact bin probabilities, converted to count feed by mass_feed/(rho*pivot). Resolved probabilities normalized explicitly; excluded fraction reported."
+daughter_measure = "Expected number density on 0<v<=parent; normalized by its first relative-volume moment, not by daughter count."
+fixed_pivot = "Positive linear hat functions in volume, Kumar & Ramkrishna (1996), DOI 10.1016/0009-2509(96)88489-2. Printed Eq 27 has inconsistent integration limit/numerator; its literal negative expression is not used."
+screen = "Fout=(1-fd)*(Fin+B-SN); instantaneous sub-first-pivot daughter volume is discharged as fines, separately accounted."
+speed = "4923 RPM for t<30 s; 1500 RPM for t>=30 s. Two separate BDF integrations, no stage crosses the change."
+initial_condition = "Reconstruction assumption: initially empty mill. The paper does not specify a complete initial state; d50 at t=0 is undefined."
+grid = "Reconstruction assumption: geometric volume pivots, 100 points, first 6.54e-17 m3 (published), last 1e-3 m3 (declared here). Arithmetic bin centres are those pivots."
+median = "Reconstruction assumption: instantaneous outlet VOLUME-weighted diameter median, with linear interpolation between cumulative fixed-pivot volume values in diameter. The 2018 paper does not specify median interpolation or weighting explicitly."
+joint_law = "Four independent Gaussians with Table 1 means/SDs. Independence is assumed because dependence is unspecified. Invalid physical draws are recorded, never clipped or redrawn."
+pce1 = "Primary: caption-consistent twelve-point LHS in the +/-2 SD reference box. Prose instead says nine sigma points; a nine-point centre/axial design is a separate sensitivity check. Original points are unavailable."
+pce2 = "Nine centre/axial points at +/-sqrt(3) SD augmented with 23 LHS points in +/-2 SD. Declared reconstruction of the described 32-point hybrid; original points are unavailable."
+training_law = "Bounded training boxes do not truncate the propagated Gaussian input law. Validation and MC use full Gaussian reference samples."
+bands = "Primary: pointwise 2.5/97.5 percentiles. Additional mean +/-1.96 SD is an explicitly approximate Gaussian-reference band. The source prose says F distribution, while Eq 7 uses a t critical value; missing degrees of freedom prevent a unique source-band reconstruction. Neither band is an interval for the mean or simultaneous coverage."
+published_31s = "MC Gaussian-fit mean 208.366 micrometres and SD 41.7409 micrometres (12000 draws); these are comparison values, not calibration targets."

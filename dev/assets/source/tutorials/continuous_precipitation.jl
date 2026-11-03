@@ -1,97 +1,41 @@
-# Minimal continuous precipitation tutorial.
-# Physical definitions and one calculation; numerical helpers are linked on the case page.
-# No benchmark exports or retained files are written. See the case-study page.
-
+# Zhang Case 7A: metres, seconds, kg/m^3; particles are stored / 10^12.
 using PopulationBalanceModels
+include(joinpath(@__DIR__,"..","support","precipitation_numerics.jl"))
 
-# From examples/continuous_precipitation.jl (model).
-"""Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³."""
-parameters() = (cfeed=9.,ceq=.4,rho=1200.,kv=.524,kp=5.,u=10.,kb=4e8,b=2.,
-    kg=7e-6,xc=1e-6,xmax=900e-6,Q=1.67e-7,area=1.46e-4,porosity=.21,L=.47,Dax=4.2e-5)
+p = (cfeed=9.0,ceq=0.4,rho=1200.0,kv=0.524,kp=5.0,u=10.0,kb=4e8,b=2.0,
+     kg=7e-6,xc=1e-6,xmax=900e-6,Q=1.67e-7,area=1.46e-4,porosity=0.21,L=0.47,Dax=4.2e-5)
 supersaturation(p,ctx) = max(ctx.bulk.c/p.ceq-1,zero(ctx.bulk.c))
 growth(x,p,t,ctx) = p.kg*supersaturation(p,ctx)
-
 function nucleation(p,t,ctx)
     s = supersaturation(p,ctx)
     solid = 1e12*p.rho*p.kv*moment(ctx.grid,ctx.N,3)
-    (p.kp*s^p.u + p.kb*s^p.b*solid)/1e12
+    (p.kp*s^p.u+p.kb*s^p.b*solid)/1e12
 end
+nx,nz = 50,50 # Coarse startup demonstration, not the retained reference.
+edges = exp.(range(log(p.xc),log(p.xmax);length=nx+1))
+model = PBMModel(growth=Growth(growth),primary_secondary=Nucleation(nucleation,first(edges)))
+grid = Grid1D(edges;coordinate=:length)
+operator = compile(model,grid;methods=TermMethods(
+    growth=WENO5(),nucleation=BoundaryInjection(:left)),bc=SizeBC())
+exchange = ConservativeExchange(:crystals,:c,(x,p,t,ctx)->1e12*p.rho*p.kv*x^3)
+system = PBMSystem((crystals=operator,);exchanges=(exchange,),nonnegative_bulk=(:c,))
+local_problem = PBMProblem(system,(crystals=zeros(nx),),(0.0,5.0);bulk0=(c=0.0,),p)
+reactor = AxialDispersion(AxialGrid(range(0.0,p.L;length=nz+1));
+    velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
+    inlet=(p,t)->(populations=(crystals=zeros(nx),),bulk=(c=p.cfeed,)))
+problem = axial_problem(local_problem,reactor;axial_scheme=MUSCL())
 
-"""Closed size domain and discrete solute exchange; both phases move axially."""
-function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=parameters(),tf=200.)
-    mesh in (:log,:uniform) || throw(ArgumentError("mesh must be :log or :uniform"))
-    edges = mesh === :log ? exp.(range(log(p.xc),log(p.xmax);length=nx+1)) :
-        collect(range(p.xc,p.xmax;length=nx+1))
-    grid = Grid1D(edges;coordinate=:length)
-    model = PBMModel(
-        growth=Growth(rate=growth),
-        primary_secondary=Nucleation(rate=nucleation,size=first(edges)),
-    )
-    methods = TermMethods(growth=scheme,
-        by_term=(primary_secondary=BoundaryInjection(:left),))
-    operator = compile(model,grid;methods)
-    exchange = ConservativeExchange(:crystals,:c,(x,p,t,ctx)->1e12*p.rho*p.kv*x^3)
-    system = PBMSystem((crystals=operator,);nonnegative_bulk=(:c,),exchanges=(exchange,))
-    local_problem = PBMProblem(system,(crystals=zeros(nx),),(0.,tf);bulk0=(c=0.,),p)
-    z = AxialGrid(range(0.,p.L;length=nz+1))
-    reactor = AxialDispersion(z;velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
-        inlet=(p,t)->(populations=(crystals=zeros(nx),),bulk=(c=p.cfeed,)))
-    axial_problem(local_problem,reactor;axial_scheme)
-end
-
-# From examples/continuous_precipitation.jl (bound).
-# The model-specific bound combines transport and solute depletion. The package
-# owns the RK loop, output landing, stage checks, retry and solution construction.
-function precipitation_step_bound(problem,u,t;fraction=.3)
-    isfinite(fraction) && 0 < fraction <= 1 || throw(ArgumentError("fraction must be in (0,1]"))
-    operator = problem.operator
-    grid = first(operator.local_operators).system.populations.crystals.grid
-    dz,dx = minimum(operator.domain.grid.widths),minimum(grid.widths)
-    transport = operator.domain.velocity/dz + 2operator.domain.dispersion/dz^2
-    du = similar(u)
-    rhs!(du,u,operator,problem.p,t)
-    p=problem.p
-    maxG = p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
-    h = fraction/(transport+maxG/dx+eps())
-    for j in axes(u,2)
-        c,dc = bulk(problem,u,:c)[j],bulk(problem,du,:c)[j]
-        # This retained allowance affects the step bound, never the state.
-        dc < 0 && (h = min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
-    end
-    h
-end
-
-function tutorial_problem(; nx=50, nz=50)
-    # Log size bins on [1,900] µm, uniform physical reactor cells.
-    # Size and axial reconstruction are deliberately selected separately.
-    build(; nx, nz, mesh=:log, scheme=WENO5(), axial_scheme=MUSCL(), tf=5.0)
-end
-
-function main(; nx=50, nz=50, times=[0.0,5.0])
-    problem = tutorial_problem(; nx, nz)
-    # A physical transport/depletion bound, with package-owned trial/stage checks.
-    # This controls admissibility, not integration error; WENO has no limiter.
-    bound = (pb,u,t) -> precipitation_step_bound(pb,u,t; fraction=0.3)
-    solver = ForwardSolver(RK4(); dt=0.25, negative_tolerance=1e-8,
-        control=StepControl(; cfl=nothing, bound, min_dt=1e-12))
-    solution = simulate(problem; solver, saveat=times)
-    @show extrema(bulk(problem, last(solution.u), :c))
-    # Restore the population scaling when reporting particles/m³.
-    outlet = CellObservable(PopulationMoment(:crystals, 0), nz)
-    @show 1e12 .* observe(outlet, solution)
-    solution
-end
-
-# Optional after import PythonPlot. Actual nonuniform size edges are retained.
-function plot_results(solution)
-    field = plot_field(solution; population=:crystals, orientation=:axial_x,
-        xlabel="Axial position (m)", ylabel="Size (m)", colorbar_label="Scaled number density")
-    outlet = plot_distribution(solution; population=:crystals,
-        cell=length(solution.problem.operator.domain.grid), times=[last(solution.t)],
-        xlabel="Size (m)", ylabel="Scaled number density")
-    (; field, outlet)
-end
-
+# Preserve the transport/depletion restriction and native stage checks. The
+# companion implements a physical step bound, not integration-error control.
+bound = (pb,u,t)->precipitation_step_bound(pb,u,t;fraction=0.3)
+solver = ForwardSolver(RK4();dt=0.25,negative_tolerance=1e-8,
+    control=StepControl(;cfl=nothing,bound,min_dt=1e-12))
 if abspath(PROGRAM_FILE) == @__FILE__
-    main()
+    solution = simulate(problem;solver,saveat=[0.0,5.0])
+    @show observe(CellObservable(BulkObservable(:c),nz),solution)
+    # Optional: import PythonPlot. Plot labels retain the /10^12 state scaling.
+    # plot_field(solution;population=:crystals,orientation=:axial_x,
+    #     xlabel="Axial position (m)",ylabel="Size (m)",colorbar_label="Scaled number density")
+    # plot_distribution(solution;population=:crystals,cell=nz,times=[5.0],
+    #     xlabel="Size (m)",ylabel="Scaled number density")
 end

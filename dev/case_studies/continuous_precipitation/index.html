@@ -42,101 +42,45 @@ problem = axial_problem(local_problem,reactor;axial_scheme=MUSCL())</code></pre>
 julia --project=paper paper/precipitation/run.jl
 python paper/precipitation/plot.py
 python test/paper_data.py --case 3
-julia --project=docs docs/make.jl</code></pre><p>Focused model, source, exchange and preconditioner checks use <code>julia --project=paper test/paper_precipitation.jl</code>. The nonuniform WENO tests are in <code>test/nonuniform_weno.jl</code>, with the usual package test environment.</p><p>The production run is expensive and resumes matching completed configurations. <code>--smoke</code> writes a separate small study under <code>.cache/paper/</code>; it does not replace production data. Plotting reads validated results and saves only 300-dpi PNGs, shared by the paper and this page. It never reruns a simulation. The full driver is <code>paper/precipitation/run.jl</code>; the physical builder is <a href="../../assets/source/examples/continuous_precipitation.jl">examples/continuous_precipitation.jl</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The rates, population scaling, discrete solute exchange, reactor feed and independent size/axial methods are explicit below. This runs startup to 5 s on 50 logarithmic size bins and 50 axial cells. The model-specific transport/depletion bound is visible, together with <code>ForwardSolver(RK4())</code> and <code>StepControl</code>. The package owns step selection, output landing, native stage checks and bounded trial rejection. The original fraction 0.3, maximum step 0.25 s, minimum step 10⁻¹² s and negativity tolerance 10⁻⁸ are retained. The small excess-concentration allowance in the bound never modifies a state. <code>suggest_dt</code> alone does not bound future bulk depletion, and this control is not integration-error estimation or an unconditional WENO positivity guarantee. The initial reactor population/bulk arrays remain exactly empty; the axial initialization API still requires those explicit arrays. The production reference and refinement campaigns remain separate.</p><p><a href="../../assets/source/tutorials/continuous_precipitation.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=. docs/src/assets/source/tutorials/continuous_precipitation.jl</code></pre><p>Physical definitions follow the maintained examples. Numerical helpers and full reproduction sources are linked above; this tutorial writes no retained results.</p><pre><code class="language-julia hljs"># Minimal continuous precipitation tutorial.
-# Physical definitions and one calculation; numerical helpers are linked on the case page.
-# No benchmark exports or retained files are written. See the case-study page.
-
+julia --project=docs docs/make.jl</code></pre><p>Focused model, source, exchange and preconditioner checks use <code>julia --project=paper test/paper_precipitation.jl</code>. The nonuniform WENO tests are in <code>test/nonuniform_weno.jl</code>, with the usual package test environment.</p><p>The production run is expensive and resumes matching completed configurations. <code>--smoke</code> writes a separate small study under <code>.cache/paper/</code>; it does not replace production data. Plotting reads validated results and saves only 300-dpi PNGs, shared by the paper and this page. It never reruns a simulation. The full driver is <code>paper/precipitation/run.jl</code>; the physical builder is <a href="../../assets/source/examples/continuous_precipitation.jl">examples/continuous_precipitation.jl</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>Rates, the 10¹² population scaling, solute exchange, empty-reactor inlet and independently selected WENO5/MUSCL schemes remain visible. The numerical <a href="../../assets/source/examples/support/precipitation_numerics.jl">transport/depletion bound</a> is a named companion shared with the maintained example. <code>ForwardSolver</code> and <code>StepControl</code> show its use with fraction 0.3, maximum step 0.25 s, minimum step 10⁻¹² s and negativity tolerance 10⁻⁸. This controls stability/admissibility; it does not estimate integration error or guarantee WENO positivity. The 50 × 50, 5-s startup is a demonstration. The retained fine-grid BDF reference, temporal/spatial refinements and timings remain separate.</p><p><a href="../../assets/source/tutorials/continuous_precipitation.jl">Download the authored script</a>. The displayed code below is read verbatim from <code>examples/tutorials/continuous_precipitation.jl</code>; the download is a byte-for-byte copy. Run from the checkout root:</p><pre><code class="language-sh hljs">julia --project=. examples/tutorials/continuous_precipitation.jl</code></pre><p>For downloaded files, preserve the relative directory layout described in the <a href="../../assets/source/examples/tutorials/README.txt">tutorial source guide</a>.</p><p>Keep <code>../support/precipitation_numerics.jl</code> beside the downloaded tutorial tree.</p><pre><code class="language-julia hljs"># Zhang Case 7A: metres, seconds, kg/m^3; particles are stored / 10^12.
 using PopulationBalanceModels
+include(joinpath(@__DIR__,&quot;..&quot;,&quot;support&quot;,&quot;precipitation_numerics.jl&quot;))
 
-# From examples/continuous_precipitation.jl (model).
-&quot;&quot;&quot;Case 7A, Zhang et al. (2024), SI Table S8; metres, seconds, kg/m³.&quot;&quot;&quot;
-parameters() = (cfeed=9.,ceq=.4,rho=1200.,kv=.524,kp=5.,u=10.,kb=4e8,b=2.,
-    kg=7e-6,xc=1e-6,xmax=900e-6,Q=1.67e-7,area=1.46e-4,porosity=.21,L=.47,Dax=4.2e-5)
+p = (cfeed=9.0,ceq=0.4,rho=1200.0,kv=0.524,kp=5.0,u=10.0,kb=4e8,b=2.0,
+     kg=7e-6,xc=1e-6,xmax=900e-6,Q=1.67e-7,area=1.46e-4,porosity=0.21,L=0.47,Dax=4.2e-5)
 supersaturation(p,ctx) = max(ctx.bulk.c/p.ceq-1,zero(ctx.bulk.c))
 growth(x,p,t,ctx) = p.kg*supersaturation(p,ctx)
-
 function nucleation(p,t,ctx)
     s = supersaturation(p,ctx)
     solid = 1e12*p.rho*p.kv*moment(ctx.grid,ctx.N,3)
-    (p.kp*s^p.u + p.kb*s^p.b*solid)/1e12
+    (p.kp*s^p.u+p.kb*s^p.b*solid)/1e12
 end
+nx,nz = 50,50 # Coarse startup demonstration, not the retained reference.
+edges = exp.(range(log(p.xc),log(p.xmax);length=nx+1))
+model = PBMModel(growth=Growth(growth),primary_secondary=Nucleation(nucleation,first(edges)))
+grid = Grid1D(edges;coordinate=:length)
+operator = compile(model,grid;methods=TermMethods(
+    growth=WENO5(),nucleation=BoundaryInjection(:left)),bc=SizeBC())
+exchange = ConservativeExchange(:crystals,:c,(x,p,t,ctx)-&gt;1e12*p.rho*p.kv*x^3)
+system = PBMSystem((crystals=operator,);exchanges=(exchange,),nonnegative_bulk=(:c,))
+local_problem = PBMProblem(system,(crystals=zeros(nx),),(0.0,5.0);bulk0=(c=0.0,),p)
+reactor = AxialDispersion(AxialGrid(range(0.0,p.L;length=nz+1));
+    velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
+    inlet=(p,t)-&gt;(populations=(crystals=zeros(nx),),bulk=(c=p.cfeed,)))
+problem = axial_problem(local_problem,reactor;axial_scheme=MUSCL())
 
-&quot;&quot;&quot;Closed size domain and discrete solute exchange; both phases move axially.&quot;&quot;&quot;
-function build(;nx=32,nz=48,scheme=Upwind(),axial_scheme=scheme,mesh=:log,p=parameters(),tf=200.)
-    mesh in (:log,:uniform) || throw(ArgumentError(&quot;mesh must be :log or :uniform&quot;))
-    edges = mesh === :log ? exp.(range(log(p.xc),log(p.xmax);length=nx+1)) :
-        collect(range(p.xc,p.xmax;length=nx+1))
-    grid = Grid1D(edges;coordinate=:length)
-    model = PBMModel(
-        growth=Growth(rate=growth),
-        primary_secondary=Nucleation(rate=nucleation,size=first(edges)),
-    )
-    methods = TermMethods(growth=scheme,
-        by_term=(primary_secondary=BoundaryInjection(:left),))
-    operator = compile(model,grid;methods)
-    exchange = ConservativeExchange(:crystals,:c,(x,p,t,ctx)-&gt;1e12*p.rho*p.kv*x^3)
-    system = PBMSystem((crystals=operator,);nonnegative_bulk=(:c,),exchanges=(exchange,))
-    local_problem = PBMProblem(system,(crystals=zeros(nx),),(0.,tf);bulk0=(c=0.,),p)
-    z = AxialGrid(range(0.,p.L;length=nz+1))
-    reactor = AxialDispersion(z;velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
-        inlet=(p,t)-&gt;(populations=(crystals=zeros(nx),),bulk=(c=p.cfeed,)))
-    axial_problem(local_problem,reactor;axial_scheme)
-end
-
-# From examples/continuous_precipitation.jl (bound).
-# The model-specific bound combines transport and solute depletion. The package
-# owns the RK loop, output landing, stage checks, retry and solution construction.
-function precipitation_step_bound(problem,u,t;fraction=.3)
-    isfinite(fraction) &amp;&amp; 0 &lt; fraction &lt;= 1 || throw(ArgumentError(&quot;fraction must be in (0,1]&quot;))
-    operator = problem.operator
-    grid = first(operator.local_operators).system.populations.crystals.grid
-    dz,dx = minimum(operator.domain.grid.widths),minimum(grid.widths)
-    transport = operator.domain.velocity/dz + 2operator.domain.dispersion/dz^2
-    du = similar(u)
-    rhs!(du,u,operator,problem.p,t)
-    p=problem.p
-    maxG = p.kg*max(maximum(bulk(problem,u,:c))/p.ceq-1,0)
-    h = fraction/(transport+maxG/dx+eps())
-    for j in axes(u,2)
-        c,dc = bulk(problem,u,:c)[j],bulk(problem,du,:c)[j]
-        # This retained allowance affects the step bound, never the state.
-        dc &lt; 0 &amp;&amp; (h = min(h,fraction*max(c-p.ceq,1e-5)/(-dc)))
-    end
-    h
-end
-
-function tutorial_problem(; nx=50, nz=50)
-    # Log size bins on [1,900] µm, uniform physical reactor cells.
-    # Size and axial reconstruction are deliberately selected separately.
-    build(; nx, nz, mesh=:log, scheme=WENO5(), axial_scheme=MUSCL(), tf=5.0)
-end
-
-function main(; nx=50, nz=50, times=[0.0,5.0])
-    problem = tutorial_problem(; nx, nz)
-    # A physical transport/depletion bound, with package-owned trial/stage checks.
-    # This controls admissibility, not integration error; WENO has no limiter.
-    bound = (pb,u,t) -&gt; precipitation_step_bound(pb,u,t; fraction=0.3)
-    solver = ForwardSolver(RK4(); dt=0.25, negative_tolerance=1e-8,
-        control=StepControl(; cfl=nothing, bound, min_dt=1e-12))
-    solution = simulate(problem; solver, saveat=times)
-    @show extrema(bulk(problem, last(solution.u), :c))
-    # Restore the population scaling when reporting particles/m³.
-    outlet = CellObservable(PopulationMoment(:crystals, 0), nz)
-    @show 1e12 .* observe(outlet, solution)
-    solution
-end
-
-# Optional after import PythonPlot. Actual nonuniform size edges are retained.
-function plot_results(solution)
-    field = plot_field(solution; population=:crystals, orientation=:axial_x,
-        xlabel=&quot;Axial position (m)&quot;, ylabel=&quot;Size (m)&quot;, colorbar_label=&quot;Scaled number density&quot;)
-    outlet = plot_distribution(solution; population=:crystals,
-        cell=length(solution.problem.operator.domain.grid), times=[last(solution.t)],
-        xlabel=&quot;Size (m)&quot;, ylabel=&quot;Scaled number density&quot;)
-    (; field, outlet)
-end
-
+# Preserve the transport/depletion restriction and native stage checks. The
+# companion implements a physical step bound, not integration-error control.
+bound = (pb,u,t)-&gt;precipitation_step_bound(pb,u,t;fraction=0.3)
+solver = ForwardSolver(RK4();dt=0.25,negative_tolerance=1e-8,
+    control=StepControl(;cfl=nothing,bound,min_dt=1e-12))
 if abspath(PROGRAM_FILE) == @__FILE__
-    main()
+    solution = simulate(problem;solver,saveat=[0.0,5.0])
+    @show observe(CellObservable(BulkObservable(:c),nz),solution)
+    # Optional: import PythonPlot. Plot labels retain the /10^12 state scaling.
+    # plot_field(solution;population=:crystals,orientation=:axial_x,
+    #     xlabel=&quot;Axial position (m)&quot;,ylabel=&quot;Size (m)&quot;,colorbar_label=&quot;Scaled number density&quot;)
+    # plot_distribution(solution;population=:crystals,cell=nz,times=[5.0],
+    #     xlabel=&quot;Size (m)&quot;,ylabel=&quot;Scaled number density&quot;)
 end
-</code></pre><p>Optional plots reuse the returned result: after <code>import PythonPlot</code>, call <code>plot_results(result)</code>. See <a href="../../plotting/">plotting setup and interpretation</a>; numerical execution remains independent of plotting.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../moment_crystallization/">« Aggregation and nucleation with moments</a><a class="docs-footer-nextpage" href="../protein_crystallization/">Isothermal protein crystallization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 23:33">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><p>Optional plotting calls at the end use existing results after explicitly loading <code>PythonPlot</code>; they perform no simulation, fitting or propagation. See the <a href="../../plotting/">plotting guide</a> for the optional environment and saving figures.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../moment_crystallization/">« Aggregation and nucleation with moments</a><a class="docs-footer-nextpage" href="../protein_crystallization/">Isothermal protein crystallization »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Tuesday 3 November 2026 03:13">Tuesday 3 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

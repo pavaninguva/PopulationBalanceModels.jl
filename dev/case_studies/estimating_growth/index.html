@@ -5,12 +5,11 @@
 f(a,0)=50\exp\!\left[-\frac{(a-0.2)^2}{0.0005}\right].\]</p><p>Size a is nonnegative, and no particles enter at a=0. We retain the paper&#39;s scaled size and time units. The coefficient g₀ has size/time units, while g₁ has inverse-time units. There is no nucleation, aggregation or concentration feedback in this model.</p><p>A particle starting at size a₀ reaches</p><p class="math-container">\[a(t)=a_0e^{g_1t}+\frac{g_0}{g_1}(e^{g_1t}-1).\]</p><p>The inverse trajectory and the resulting density are</p><p class="math-container">\[a_0(a,t)=ae^{-g_1t}+\frac{g_0}{g_1}(e^{-g_1t}-1),\qquad
 f(a,t)=e^{-g_1t}f(a_0(a,t),0).\]</p><p>Set f=0 when a₀&lt;0. The exponential factor accounts for stretching: particles move to larger sizes and the peak becomes wider and lower.</p><p>Generate data with g₀=0.434 and g₁=0.2604. At six times between 0.1 and 1, evaluate f at 281 sizes between 0 and 1.4. Draw each measurement independently from a Gaussian centred on that density, conditioned to be nonnegative:</p><p class="math-container">\[y_{ij}\sim\mathcal N\!\left(f(a_i,t_j;g_0,g_1),\sigma_f^2\right)
 \ \text{conditioned on }y_{ij}\ge0,\qquad \sigma_f=1.\]</p><p>The initial density and noise level are known in this exercise. Only g₀ and g₁ are fitted. These are density measurements, not sampled particle counts; there is no binning, clipping or normalization of the density. Far from zero this is nearly ordinary additive Gaussian noise. Near zero the noise is asymmetric, so its conditional mean exceeds the underlying density. The likelihood accounts for that difference using its normalization factor <span>$\Phi(f/\sigma_f)$</span>. Clipping negative Gaussian draws would instead create an artificial point mass at zero.</p><pre><code class="language-julia hljs">value = rand(rng,truncated(Normal(density,sigma),0.0,Inf))</code></pre><pre><code class="language-julia hljs">using PopulationBalanceModels, Distributions
-include(joinpath(pkgdir(PopulationBalanceModels),&quot;examples&quot;,&quot;estimate_size_dependent_growth.jl&quot;))
-import .EstimateSizeDependentGrowth
-const recipe = EstimateSizeDependentGrowth
-data = recipe.synthetic_measurements(seed=2022,noise=1.0)
+using Random, LinearAlgebra
+include(joinpath(pkgdir(PopulationBalanceModels),&quot;examples&quot;,&quot;support&quot;,&quot;affine_growth_reference.jl&quot;))
+data = synthetic_measurements(seed=2022,noise=1.0)
 size(data.values)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(281, 6)</code></pre><p>All six snapshots appear on one plot. The points are noisy measurements and the continuous curves are the MAP fit with the lognormal priors defined below.</p><p><img src="../../assets/bayesian_growth/distributions.png" alt="Nonnegative noisy density measurements at six times and continuous MAP curves"/></p><h2 id="Specify-what-the-model-predicts"><a class="docs-heading-anchor" href="#Specify-what-the-model-predicts">Specify what the model predicts</a><a id="Specify-what-the-model-predicts-1"></a><a class="docs-heading-anchor-permalink" href="#Specify-what-the-model-predicts" title="Permalink"></a></h2><p>FunctionObservable evaluates the analytical density at the measured sizes:</p><pre><code class="language-julia hljs">profile = FunctionObservable((N,operator,p,t)-&gt;
-    recipe.exact_density.(data.sizes,t,Ref(p)))
+    exact_density.(data.sizes,t,Ref(p)))
 measurement = Measurement(data.times,data.values,profile;
     likelihood=TruncatedGaussianLikelihood(sigma=data.noise))</code></pre><p>Here the analytical expression supplies the point densities directly. It does not reconstruct them from a sectional histogram. The script&#39;s analytical solver also returns exact cell integrals for the underlying PBM state. All sizes and times contribute to one normalized truncated-Gaussian likelihood.</p><h2 id="Compare-two-prior-choices"><a class="docs-heading-anchor" href="#Compare-two-prior-choices">Compare two prior choices</a><a id="Compare-two-prior-choices-1"></a><a class="docs-heading-anchor-permalink" href="#Compare-two-prior-choices" title="Permalink"></a></h2><p>Declare physical starting values and priors, with explicit log transforms:</p><pre><code class="language-julia hljs">using Distributions: LogNormal, Uniform
 lognormal_specs = (
@@ -23,7 +22,10 @@ lognormal_specs = (
         transform=LogTransform()),
     ParameterSpec(:g1; initial=0.23, prior=Uniform(0.02,1.0),
         transform=LogTransform()),
-)</code></pre><p><code>initial</code> is a physical optimizer start, not a prior statistic or a fixed forward-model value. It does not overwrite the base problem&#39;s nominal parameters.</p><p>One way to choose these bounds is to state plausible growth times. Take one scaled size unit as a reference and one time unit as the observation duration. The offset-growth time 1/g₀ then lies between 1 and 20 observation durations; the stretching time 1/g₁ lies between 1 and 50 durations. These ranges allow much slower growth than the experiment resolves, while excluding changes faster than those assumed in this exercise. They are physical assumptions, not universal defaults. A uniform density in rates is not uniform in timescales or logarithms, and is not uniquely noninformative.</p><p><img src="../../assets/bayesian_growth/priors.png" alt="Lognormal and timescale-bounded uniform priors on the physical growth rates"/></p><p>Both scenarios use log coordinates so rates stay positive. Each prior is explicitly a density in physical coordinates, so the posterior in log coordinates includes its transformation Jacobian once. In particular, a physical uniform prior is not flat in log coordinates. Current MAP fitting, local uncertainty and sampling use the same declared log-coordinate posterior. The mapped mode is generally different from the physical-density mode; see <a href="../../inference/">Parameter estimation</a>. Retained outputs keep their original producer conventions; this interface update does not recompute them.</p><h2 id="Fit-and-calculate-local-uncertainty"><a class="docs-heading-anchor" href="#Fit-and-calculate-local-uncertainty">Fit and calculate local uncertainty</a><a id="Fit-and-calculate-local-uncertainty-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-and-calculate-local-uncertainty" title="Permalink"></a></h2><p>The builder joins the physical problem, measurements and selected priors:</p><pre><code class="language-julia hljs">problem = recipe.estimation_problem(data;prior=:lognormal)
+)</code></pre><p><code>initial</code> is a physical optimizer start, not a prior statistic or a fixed forward-model value. It does not overwrite the base problem&#39;s nominal parameters.</p><p>One way to choose these bounds is to state plausible growth times. Take one scaled size unit as a reference and one time unit as the observation duration. The offset-growth time 1/g₀ then lies between 1 and 20 observation durations; the stretching time 1/g₁ lies between 1 and 50 durations. These ranges allow much slower growth than the experiment resolves, while excluding changes faster than those assumed in this exercise. They are physical assumptions, not universal defaults. A uniform density in rates is not uniform in timescales or logarithms, and is not uniquely noninformative.</p><p><img src="../../assets/bayesian_growth/priors.png" alt="Lognormal and timescale-bounded uniform priors on the physical growth rates"/></p><p>Both scenarios use log coordinates so rates stay positive. Each prior is explicitly a density in physical coordinates, so the posterior in log coordinates includes its transformation Jacobian once. In particular, a physical uniform prior is not flat in log coordinates. Current MAP fitting, local uncertainty and sampling use the same declared log-coordinate posterior. The mapped mode is generally different from the physical-density mode; see <a href="../../inference/">Parameter estimation</a>. Retained outputs keep their original producer conventions; this interface update does not recompute them.</p><h2 id="Fit-and-calculate-local-uncertainty"><a class="docs-heading-anchor" href="#Fit-and-calculate-local-uncertainty">Fit and calculate local uncertainty</a><a id="Fit-and-calculate-local-uncertainty-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-and-calculate-local-uncertainty" title="Permalink"></a></h2><p>The builder joins the physical problem, measurements and selected priors:</p><pre><code class="language-julia hljs">include(joinpath(pkgdir(PopulationBalanceModels),&quot;examples&quot;,&quot;estimate_size_dependent_growth.jl&quot;))
+import .EstimateSizeDependentGrowth
+const recipe = EstimateSizeDependentGrowth
+problem = recipe.estimation_problem(data;prior=:lognormal)
 posterior_components(problem,initial_coordinates(problem))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(loglikelihood = -27805.78103658665, logprior = -0.42041695064317897, logposterior = -27806.201453537295, density_coordinates = :inference, argument_coordinates = :inference, convention = :inference_map_v2)</code></pre><p>Load Optim to fit; request Laplace explicitly:</p><pre><code class="language-julia hljs">using Optim
 result = fit(problem;nstarts=3,seed=22,uncertainty=:laplace)
 result.parameters.shared
@@ -48,110 +50,36 @@ operator = compile(PBMModel(growth=Growth(law)),grid;
 initial = recipe.exact_counts(grid.edges,0.0,p)
 solution = simulate(PBMProblem(operator,initial,(0.0,1.0);p);
     dt=0.005,saveat=data.times)</code></pre><p>Compilation checks the declared growth form, positivity, boundaries and mesh. The time step and requested outputs must align with the travel-time cells. During a numerical refit the builder reconstructs this mesh for each proposed parameter vector. See <a href="../../methods/characteristics/">Transport along growth trajectories</a> for the method, conservation properties and restrictions.</p><h2 id="Run-the-study"><a class="docs-heading-anchor" href="#Run-the-study">Run the study</a><a id="Run-the-study-1"></a><a class="docs-heading-anchor-permalink" href="#Run-the-study" title="Permalink"></a></h2><pre><code class="language-sh hljs">julia --project=/path/to/working_environment examples/estimate_size_dependent_growth.jl --output=/tmp/growth-declared-coordinates
-python docs/benchmarks/plot_bayesian_growth.py --data-dir=/tmp/growth-declared-coordinates --usetex</code></pre><p>The working environment needs Optim, AdvancedHMC and MCMCDiagnosticTools as well as this package. The script records all seeds, prior definitions, solver settings and diagnostics in the selected fresh output directory. The plotter reads that same directory, so these commands cannot mix new results with the retained documentation assets. It uses LaTeX labels and no grid lines, and exports PNG and SVG figures. The figures on this page remain retained outputs; replace them only after checking the new calculation and its provenance.</p><h2 id="Minimal-run-and-full-reproduction"><a class="docs-heading-anchor" href="#Minimal-run-and-full-reproduction">Minimal run and full reproduction</a><a id="Minimal-run-and-full-reproduction-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-run-and-full-reproduction" title="Permalink"></a></h2><p>The <a href="../../assets/source/examples/estimate_size_dependent_growth.jl">full driver</a> adds uncertainty calculations, sampling and numerical-refinement comparisons. Use an environment with Optim and the checkout developed into it; see the <a href="../../verification/">shared setup guide</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The continuous density and bin-integral reference, synthetic observation process, forward-model assembly, observable, likelihood, physical priors and explicit inference transforms are included below. It fixes the analytical forward calculation. Initial populations use <code>InitialDistribution</code> with the declared Gaussian&#39;s physical total and unnormalized domain truncation; its bin integrals agree with the analytical initial condition. The <code>analytical_solver</code> callable is retained deliberately: changing to a numerical forward solve would change this reference likelihood. Its CDF formulas describe the exact transported solution, not a numerical initialization helper. Numerical-backend switches and their refinement loops stay in the full reproduction driver. The final call performs one MAP fit and does not sample or overwrite retained Bayesian results.</p><p><a href="../../assets/source/tutorials/estimating_growth.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=docs docs/src/assets/source/tutorials/estimating_growth.jl</code></pre><p>Physical definitions follow the maintained examples. Numerical helpers and full reproduction sources are linked above; this tutorial writes no retained results.</p><pre><code class="language-julia hljs"># Minimal estimating growth tutorial.
-# Physical definitions and one calculation; numerical helpers are linked on the case page.
-# No benchmark exports or retained files are written. See the case-study page.
+python docs/benchmarks/plot_bayesian_growth.py --data-dir=/tmp/growth-declared-coordinates --usetex</code></pre><p>The working environment needs Optim, AdvancedHMC and MCMCDiagnosticTools as well as this package. The script records all seeds, prior definitions, solver settings and diagnostics in the selected fresh output directory. The plotter reads that same directory, so these commands cannot mix new results with the retained documentation assets. It uses LaTeX labels and no grid lines, and exports PNG and SVG figures. The figures on this page remain retained outputs; replace them only after checking the new calculation and its provenance.</p><h2 id="Minimal-run-and-full-reproduction"><a class="docs-heading-anchor" href="#Minimal-run-and-full-reproduction">Minimal run and full reproduction</a><a id="Minimal-run-and-full-reproduction-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-run-and-full-reproduction" title="Permalink"></a></h2><p>The <a href="../../assets/source/examples/estimate_size_dependent_growth.jl">full driver</a> adds uncertainty calculations, sampling and numerical-refinement comparisons. Use an environment with Optim and the checkout developed into it; see the <a href="../../verification/">shared setup guide</a>.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The <a href="../../assets/source/examples/support/affine_growth_reference.jl">analytical reference companion</a> contains exact densities, bin integrals, and independently seeded synthetic data generation. The walkthrough then declares the forward model, point observable, normalized nonnegative truncated-Gaussian likelihood, two explicit lognormal priors with log transforms, and the fit. Its context grid supplies the PBM state; the analytical solver and continuous point observable determine this likelihood. Changing an unused reconstruction choice cannot improve that analytical fit.</p><p>The same seed, observation positions/times, noise, starting values and prior laws are retained. Including the script prepares the data and estimation problem without fitting. Executing it performs only the small MAP example and prepared predictions; local uncertainty, MCMC, numerical-forward reconstruction and refinement remain separate follow-on workflows above.</p><p><a href="../../assets/source/tutorials/estimating_growth.jl">Download the authored script</a>. The displayed code below is read verbatim from <code>examples/tutorials/estimating_growth.jl</code>; the download is a byte-for-byte copy. Run from the checkout root:</p><pre><code class="language-sh hljs">julia --project=docs examples/tutorials/estimating_growth.jl</code></pre><p>For downloaded files, preserve the relative directory layout described in the <a href="../../assets/source/examples/tutorials/README.txt">tutorial source guide</a>.</p><pre><code class="language-julia hljs"># Fit prepared point-density data with an analytical affine-growth forward law.
+using PopulationBalanceModels, Optim, Random, LinearAlgebra
+using Distributions: Normal, LogNormal, Uniform, pdf, cdf, ccdf, truncated
+include(joinpath(@__DIR__,&quot;..&quot;,&quot;support&quot;,&quot;affine_growth_reference.jl&quot;))
 
-using PopulationBalanceModels
-using Optim, Random
-using Distributions: Normal, LogNormal, Uniform, pdf, cdf, ccdf, quantile, truncated
-
-# Physical definitions from examples/estimate_size_dependent_growth.jl.
-const TRUTH=(g0=0.434,g1=0.2604)
-
-const TIMES=[0.1,0.25,0.4,0.6,0.8,1.0]
-
-const SIZES=collect(range(0.0,1.4;length=281))
-
-const CENTER=0.2
-
-const WIDTH=sqrt(0.0005/2)
-
-const INITIAL_NUMBER=50sqrt(π*0.0005)
-
-const UNIFORM_BOUNDS=((0.05,1.0),(0.02,1.0))
-
-const LAW=AffineGrowth(:g0,:g1)
-
-initial_density(a)=50exp(-(a-CENTER)^2/0.0005)
-
-initial_profile()=InitialDistribution(Normal(CENTER,WIDTH);
-    total=INITIAL_NUMBER,truncation=:physical)
-# Independent closed-form reference for data generation, not a discretized solve.
-
-shift(t,p)=iszero(p.g1) ? p.g0*t : p.g0*expm1(p.g1*t)/p.g1
-
-function exact_density(a,t,p=TRUTH)
-    foot=(a-shift(t,p))*exp(-p.g1*t)
-    foot&lt;0 ? 0.0 : initial_density(foot)*exp(-p.g1*t)
-end
-
-function initial_integral(lo,hi)
-    hi&lt;=lo &amp;&amp; return 0.0
-    d=Normal(CENTER,WIDTH)
-    INITIAL_NUMBER*(lo&gt;CENTER ? ccdf(d,lo)-ccdf(d,hi) : cdf(d,hi)-cdf(d,lo))
-end
-
-function exact_counts(edges,t,p=TRUTH)
-    inverse(a)=max(0.0,(a-shift(t,p))*exp(-p.g1*t))
-    [initial_integral(inverse(a),inverse(b)) for (a,b) in zip(edges[1:end-1],edges[2:end])]
-end
-
-function synthetic_measurements(;seed=2022,noise=1.0,sizes=SIZES,times=TIMES)
-    noise&gt;0 &amp;&amp; isfinite(noise) || throw(ArgumentError(&quot;noise must be positive&quot;))
-    truth=[exact_density(a,t) for a in sizes,t in times]
-    rng=MersenneTwister(seed)
-    values=[rand(rng,truncated(Normal(truth[i,j],noise),0.0,Inf)) for i in axes(truth,1),j in axes(truth,2)]
-    (;values,truth,noise,sizes=collect(sizes),times=collect(times),seed,noise_model=:truncated_gaussian)
-end
-
-function analytical_solver(pb,times)
-    states=[reshape(exact_counts(pb.operator.grid.edges,t,pb.p),:,1) for t in times]
-    PBMSolution(times,states,pb,0)
-end
-# Point observations from a bin solver require an explicit reconstruction. This
-# linear interpolation of bin-average densities is NOT an exact continuous PSD.
-
-function tutorial_problem(; prior=:lognormal)
-    data = synthetic_measurements(seed=2022)
-    grid = characteristic_grid(LAW, (0.0,1.4); dt=0.005, p=TRUTH)
-    model = PBMModel(growth=Growth(LAW))
-    operator = compile(model, grid; evolution=Inguva2022(), p=TRUTH,
-        bc=SizeBC(OpenBoundary(),OpenBoundary()))
-    base = PBMProblem(operator, initial_profile(), (0.0,1.0); p=TRUTH)
-    observable = FunctionObservable((N,op,p,t) -&gt; exact_density.(data.sizes,t,Ref(p)))
-    measurement = Measurement(data.times, data.values, observable;
-        likelihood=TruncatedGaussianLikelihood(sigma=data.noise), source=:density_measurements)
-    # Closed-form forward values isolate estimation from transport error.
-    solver = analytical_solver # Deliberate exact forward reference, not an ODE wrapper.
-    experiment = InferenceExperiment(:growth, base, measurement; solver)
-    distributions = prior === :lognormal ?
-        (LogNormal(log(0.4),0.4), LogNormal(log(0.25),0.6)) :
-        (Uniform(UNIFORM_BOUNDS[1]...), Uniform(UNIFORM_BOUNDS[2]...))
-    parameters = [ParameterSpec(name; initial, prior=d, transform=LogTransform())
-        for (name,initial,d) in zip((:g0,:g1),(0.40,0.23),distributions)]
-    EstimationProblem(parameters, (experiment,))
-end
-
-function main()
-    problem = tutorial_problem()
-    fitted = fit(problem; nstarts=3, seed=22, maxiters=500)
-    fitted.converged || error(&quot;MAP failed; inspect the fit diagnostics&quot;)
-    @show fitted.parameters.shared fitted.convention
-    @show posterior_components(problem, fitted.minimizer)
-    predicted = predictions(problem, fitted.minimizer) # Explicit forward work.
-    (; estimation=problem, fitted, predicted)
-end
-
-# Optional after import PythonPlot; predictions were computed explicitly in main.
-function plot_results(result)
-    fit_figure = plot_fit(result.estimation, result.predicted; abscissa=SIZES,
-        xlabel=&quot;Size coordinate&quot;, ylabel=&quot;Number density&quot;)
-    parameters = plot_parameters(result.estimation, result.fitted; coordinates=:physical)
-    (; fit_figure, parameters)
-end
+# Separate, reproducible synthetic-data generation; no PBM solve is involved.
+data = synthetic_measurements(seed=2022)
+model = PBMModel(growth=Growth(LAW)) # G(x)=g0+g1*x; the reference companion defines LAW.
+# The reference companion supplies the required PBM state/solution context.
+# It is not the forward approximation used by this analytical likelihood.
+problem = analytical_context(model)
+observable = FunctionObservable((N,op,p,t)-&gt;exact_density.(data.sizes,t,Ref(p)))
+measurement = Measurement(data.times,data.values,observable;
+    likelihood=TruncatedGaussianLikelihood(sigma=data.noise),source=:density_measurements)
+experiment = InferenceExperiment(:growth,problem,measurement;solver=analytical_solver)
+parameters = [
+    ParameterSpec(:g0;initial=0.40,prior=LogNormal(log(0.4),0.4),transform=LogTransform()),
+    ParameterSpec(:g1;initial=0.23,prior=LogNormal(log(0.25),0.6),transform=LogTransform()),
+]
+estimation = EstimationProblem(parameters,(experiment,))
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    main()
+    fitted = fit(estimation;nstarts=3,seed=22,maxiters=500)
+    fitted.converged || error(&quot;MAP failed; inspect the fit diagnostics&quot;)
+    predicted = predictions(estimation,fitted.minimizer)
+    @show fitted.parameters.shared fitted.convention
+    # Optional: import PythonPlot
+    # plot_fit(estimation,predicted;abscissa=data.sizes,xlabel=&quot;Size coordinate&quot;,ylabel=&quot;Number density&quot;)
+    # plot_parameters(estimation,fitted;coordinates=:physical)
 end
-</code></pre><p>Optional plots reuse the returned result: after <code>import PythonPlot</code>, call <code>plot_results(result)</code>. See <a href="../../plotting/">plotting setup and interpretation</a>; numerical execution remains independent of plotting.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../transport/">« Growth in two particle dimensions</a><a class="docs-footer-nextpage" href="../milling_uncertainty/">Uncertainty in continuous milling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 23:33">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+# Numerical-forward estimation with an explicit point reconstruction, refinement
+# and local uncertainty are follow-on calculations in estimate_size_dependent_growth.jl.
+</code></pre><p>Optional plotting calls at the end use existing results after explicitly loading <code>PythonPlot</code>; they perform no simulation, fitting or propagation. See the <a href="../../plotting/">plotting guide</a> for the optional environment and saving figures.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../transport/">« Growth in two particle dimensions</a><a class="docs-footer-nextpage" href="../milling_uncertainty/">Uncertainty in continuous milling »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Tuesday 3 November 2026 03:13">Tuesday 3 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

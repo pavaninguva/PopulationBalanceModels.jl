@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Lipid nanoparticle formation · PopulationBalanceModels.jl</title><meta name="title" content="Lipid nanoparticle formation · PopulationBalanceModels.jl"/><meta property="og:title" content="Lipid nanoparticle formation · PopulationBalanceModels.jl"/><meta property="twitter:title" content="Lipid nanoparticle formation · PopulationBalanceModels.jl"/><meta name="description" content="Documentation for PopulationBalanceModels.jl."/><meta property="og:description" content="Documentation for PopulationBalanceModels.jl."/><meta property="twitter:description" content="Documentation for PopulationBalanceModels.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">PopulationBalanceModels.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting started</a></li><li><a class="tocitem" href="../../defining_models/">Defining models</a></li><li><a class="tocitem" href="../../forward_execution/">Preparing and executing forward problems</a></li><li><a class="tocitem" href="../../coupled_systems/">Coupled systems</a></li><li><a class="tocitem" href="../../axial_reactors/">Axially dispersed reactors</a></li><li><a class="tocitem" href="../../steady_state/">Stationary population balances</a></li><li><span class="tocitem">Numerical methods</span><ul><li><a class="tocitem" href="../../numerical_methods/">Overview and method selection</a></li><li><a class="tocitem" href="../../methods/growth/">Growth and dissolution</a></li><li><a class="tocitem" href="../../methods/dispersion/">Internal-coordinate diffusion and GRD</a></li><li><a class="tocitem" href="../../methods/characteristics/">Transport along growth trajectories</a></li><li><a class="tocitem" href="../../methods/nucleation/">Nucleation</a></li><li><a class="tocitem" href="../../methods/sources/">Birth, death, and dilution</a></li><li><a class="tocitem" href="../../methods/collisions/">Aggregation and breakage</a></li><li><a class="tocitem" href="../../methods/time/">Time integration</a></li><li><a class="tocitem" href="../../methods/compact/">Compact finite-volume growth</a></li><li><a class="tocitem" href="../../moment_methods/">Moment methods</a></li><li><a class="tocitem" href="../../methods/realizable_evolution/">Realizable evolution and particle removal</a></li></ul></li><li><a class="tocitem" href="../../inference/">Parameter estimation</a></li><li><a class="tocitem" href="../../uncertainty_quantification/">Forward uncertainty quantification</a></li><li><a class="tocitem" href="../../plotting/">Plotting numerical results</a></li><li><span class="tocitem">Case studies</span><ul><li><a class="tocitem" href="../">Overview</a></li><li><a class="tocitem" href="../constant_growth/">Comparing growth and time methods</a></li><li><a class="tocitem" href="../crystallization/">Batch cooling crystallization</a></li><li><a class="tocitem" href="../moment_crystallization/">Aggregation and nucleation with moments</a></li><li><a class="tocitem" href="../continuous_precipitation/">Continuous tubular precipitation</a></li><li><a class="tocitem" href="../protein_crystallization/">Isothermal protein crystallization</a></li><li><a class="tocitem" href="../stem_cells/">Stem-cell self-renewal and differentiation</a></li><li class="is-active"><a class="tocitem" href>Lipid nanoparticle formation</a><ul class="internal"><li><a class="tocitem" href="#Start-with-dissolved-lipid"><span>Start with dissolved lipid</span></a></li><li><a class="tocitem" href="#Write-the-population-balance"><span>Write the population balance</span></a></li><li><a class="tocitem" href="#Define-the-rate-callbacks"><span>Define the rate callbacks</span></a></li><li><a class="tocitem" href="#Coalesce-in-particle-volume"><span>Coalesce in particle volume</span></a></li><li><a class="tocitem" href="#lnp_dlvo"><span>DLVO interactions and the collision kernel</span></a></li><li><a class="tocitem" href="#Return-particle-uptake-to-the-lipid-balance"><span>Return particle uptake to the lipid balance</span></a></li><li><a class="tocitem" href="#Provide-the-material-inputs"><span>Provide the material inputs</span></a></li><li><a class="tocitem" href="#Integrate-formation-and-incubation"><span>Integrate formation and incubation</span></a></li><li><a class="tocitem" href="#Calculate-the-observation"><span>Calculate the observation</span></a></li><li><a class="tocitem" href="#Formation-profiles-and-long-time-checks"><span>Formation profiles and long-time checks</span></a></li><li><a class="tocitem" href="#Minimal-run-and-full-reproduction"><span>Minimal run and full reproduction</span></a></li></ul></li><li><a class="tocitem" href="../transport/">Growth in two particle dimensions</a></li><li><a class="tocitem" href="../estimating_growth/">Estimating size-dependent growth</a></li><li><a class="tocitem" href="../milling_uncertainty/">Uncertainty in continuous milling</a></li></ul></li><li><span class="tocitem">API reference</span><ul><li><a class="tocitem" href="../../api/">Overview and symbol index</a></li><li><a class="tocitem" href="../../api/models/">Models and representations</a></li><li><a class="tocitem" href="../../api/numerics/">Numerical methods and compilation</a></li><li><a class="tocitem" href="../../api/problems/">Problems, solvers and integrations</a></li><li><a class="tocitem" href="../../api/coupling/">Coupling and accounting</a></li><li><a class="tocitem" href="../../api/observations/">Observations and discrepancies</a></li><li><a class="tocitem" href="../../api/estimation/">Parameter estimation</a></li><li><a class="tocitem" href="../../api/uncertainty/">Forward uncertainty quantification</a></li><li><a class="tocitem" href="../../api/plotting/">Plotting</a></li></ul></li><li><a class="tocitem" href="../../development/">Contributing and internals</a></li><li><a class="tocitem" href="../../verification/">Verification and reproduction</a></li><li><a class="tocitem" href="../../methods/compact_verification/">Compact verification notes</a></li><li><a class="tocitem" href="../../publishing/">Publishing</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Case studies</a></li><li class="is-active"><a href>Lipid nanoparticle formation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Lipid nanoparticle formation</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/pavaninguva/PopulationBalanceModels.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/pavaninguva/PopulationBalanceModels.jl/blob/main/docs/src/case_studies/nanoparticles.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Lipid-nanoparticle-formation"><a class="docs-heading-anchor" href="#Lipid-nanoparticle-formation">Lipid nanoparticle formation</a><a id="Lipid-nanoparticle-formation-1"></a><a class="docs-heading-anchor-permalink" href="#Lipid-nanoparticle-formation" title="Permalink"></a></h1><p>Mixing an ethanolic lipid solution with water lowers lipid solubility. The resulting supersaturation creates particles, feeds their growth, and changes as lipid leaves solution. Coalescence then changes the size distribution even when little free lipid remains. Predicting a measured mean diameter requires following the distribution through both formation and subsequent incubation.</p><p>We model these processes with a diameter population balance coupled to free lipid. The formulation is based on <a href="https://web.mit.edu/braatzgroup/Shin_ChemEngJ_2025.pdf">Shin et al. (2025)</a>. The comparison of interest is the calculated distributions and mean-diameter history in Figure 4. <strong>Status:</strong> the figures retain historical diagnostic formation/incubation outputs through 4320 min. The current optional stiff driver fails a strict collision-rate check during startup; only the short native 10-µs startup below is checked with the current safeguards. These are not verified full-horizon reproductions. The recipe exposes the material inputs and conventions left unresolved by the paper and SI.</p><h2 id="Start-with-dissolved-lipid"><a class="docs-heading-anchor" href="#Start-with-dissolved-lipid">Start with dissolved lipid</a><a id="Start-with-dissolved-lipid-1"></a><a class="docs-heading-anchor-permalink" href="#Start-with-dissolved-lipid" title="Permalink"></a></h2><p>Let <span>$f(L,t)$</span> be the number density per unit diameter and per unit process volume. Initially,</p><p class="math-container">\[f(L,0)=0.\]</p><p>For instantaneous mixing, an organic-feed concentration of 10 mg/mL and an aqueous-to-organic flow-rate ratio of 3 give</p><p class="math-container">\[c(0)=\frac{10}{1+3}=2.5\ \mathrm{kg\,m^{-3}},\qquad
-w=\frac{3}{1+3}=0.75,\]</p><p>where <span>$w$</span> is the aqueous volume fraction. A concentration in mg/mL has the same numerical value in kg/m³. Empty particle bins therefore coexist with a nonzero dissolved concentration.</p><p>The recipe uses meters, seconds, kelvin, and kg/m³ internally. Its adapter sets these operating conditions and rejects a nonzero initial particle array:</p><pre><code class="language-julia hljs">using PopulationBalanceModels
-include(&quot;examples/shin_lnp_long_time.jl&quot;)
-import .ShinLNPLongTime
-
-# Explicit reconstructed inputs, described below; requires the optional solver environment.
-problem = ShinLNPLongTime.make_problem(bins=160,FRR=3.0)
-@assert all(iszero,population(problem,problem.u0,:lnp))</code></pre><h2 id="Write-the-population-balance"><a class="docs-heading-anchor" href="#Write-the-population-balance">Write the population balance</a><a id="Write-the-population-balance-1"></a><a class="docs-heading-anchor-permalink" href="#Write-the-population-balance" title="Permalink"></a></h2><p>The balance contains diameter transport, nucleation, and coalescence:</p><p class="math-container">\[\frac{\partial f(L,t)}{\partial t}
+w=\frac{3}{1+3}=0.75,\]</p><p>where <span>$w$</span> is the aqueous volume fraction. A concentration in mg/mL has the same numerical value in kg/m³. Empty particle bins therefore coexist with a nonzero dissolved concentration.</p><p>Use metres, seconds, kelvin and kg/m³ internally. The walkthrough selects one explicit reconstructed FRR=3 mixture; no long-time builder is needed to specify the initial state:</p><pre><code class="language-julia hljs">p = (An=2e22,kg=11.88,kPEG=6.5e-6,gamma=0.010,FRR=3.0,tau=0.0,
+     Vm=5e-28,rho=1000.0,nucleation_width=1e-9)
+w = p.FRR/(1+p.FRR)
+initial_particles = zeros(length(grid))
+initial_lipid = 10.0*(1-w)</code></pre><h2 id="Write-the-population-balance"><a class="docs-heading-anchor" href="#Write-the-population-balance">Write the population balance</a><a id="Write-the-population-balance-1"></a><a class="docs-heading-anchor-permalink" href="#Write-the-population-balance" title="Permalink"></a></h2><p>The balance contains diameter transport, nucleation, and coalescence:</p><p class="math-container">\[\frac{\partial f(L,t)}{\partial t}
 +\frac{\partial\!\left[G(L,t)f(L,t)\right]}{\partial L}
 =B_n(L,t)+B_c(L,t)-D_c(L,t).\]</p><p>Here <span>$D_c$</span> is a positive removal rate. Each coalescence event removes both parents and creates one product. The signs in the calculation follow that event balance; the printed positive loss integral must be subtracted.</p><p>Define the supersaturation <span>$S(t)=c(t)/C_\infty(w,T)$</span>. Classical nucleation gives</p><p class="math-container">\[L_c(t)=\frac{4\gamma V_m}{k_BT\ln S(t)},\qquad
 J(t)=A_n\exp\!\left[-\frac{16\pi\gamma^3V_m^2}
@@ -39,8 +37,8 @@ source = GaussianNucleation(rate=J,center=center,
         coordinate_map=AdditiveCoordinate(L-&gt;L^3,cbrt)),
     dilution = Dilution(rate=(L,p,t,ctx)-&gt;ctx.fields.dilution),
 )
-methods = TermMethods(growth=MUSCL(),aggregation=FixedPivot())
-operator = compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))</code></pre><p>This is the general recipe&#39;s default MUSCL treatment. The long-time runner below explicitly selects <code>Upwind()</code> and records that choice in its input file. Its incubation curves therefore do not demonstrate a completed MUSCL solve.</p><p>A product diameter is <span>$(L_1^3+L_2^3)^{1/3}$</span>. FixedPivot preserves this volume and one product per event within the pivot range. Products outside that range raise an error by default. The size boundaries above are closed, including for dissolution; there is no extinction model at the lower diameter edge. Choose positive diameter limits and check that neither edge controls the result. The dilution hazard is zero for instantaneous mixing.</p><h2 id="lnp_dlvo"><a class="docs-heading-anchor" href="#lnp_dlvo">DLVO interactions and the collision kernel</a><a id="lnp_dlvo-1"></a><a class="docs-heading-anchor-permalink" href="#lnp_dlvo" title="Permalink"></a></h2><p>DLVO theory modifies the chance that a Brownian encounter leads to attachment. It does not change the additive-volume deposition rule. Separate three steps: calculate an interaction energy, convert it into an attachment modifier, then multiply the Brownian encounter kernel. The recipe&#39;s callback <code>attachment_without_peg(L,M,w,T)</code> supplies the second step, excluding the PEG factor. The builder computes</p><p class="math-container">\[K(L,M,t)=k_{\mathrm{PEG}}\,\alpha_{\mathrm{base}}(L,M,w,T)\,
+methods = TermMethods(growth=Upwind(),aggregation=FixedPivot())
+operator = compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))</code></pre><p>This walkthrough selects Upwind, matching the retained reconstructed configuration. The general recipe also permits MUSCL; the historical incubation curves do not demonstrate a completed MUSCL solve.</p><p>A product diameter is <span>$(L_1^3+L_2^3)^{1/3}$</span>. FixedPivot preserves this volume and one product per event within the pivot range. Products outside that range raise an error by default. The size boundaries above are closed, including for dissolution; there is no extinction model at the lower diameter edge. Choose positive diameter limits and check that neither edge controls the result. The dilution hazard is zero for instantaneous mixing.</p><h2 id="lnp_dlvo"><a class="docs-heading-anchor" href="#lnp_dlvo">DLVO interactions and the collision kernel</a><a id="lnp_dlvo-1"></a><a class="docs-heading-anchor-permalink" href="#lnp_dlvo" title="Permalink"></a></h2><p>DLVO theory modifies the chance that a Brownian encounter leads to attachment. It does not change the additive-volume deposition rule. Separate three steps: calculate an interaction energy, convert it into an attachment modifier, then multiply the Brownian encounter kernel. The recipe&#39;s callback <code>attachment_without_peg(L,M,w,T)</code> supplies the second step, excluding the PEG factor. The builder computes</p><p class="math-container">\[K(L,M,t)=k_{\mathrm{PEG}}\,\alpha_{\mathrm{base}}(L,M,w,T)\,
 K_{\mathrm{Brownian}}(L,M,T,\eta).\]</p><p>The fixed-pivot implementation receives this final kernel in process-volume/time units. It does not evaluate an electrostatic potential internally. In particular, setting <code>attachment_without_peg=(L,M,w,T)-&gt;1.0</code> disables the DLVO size dependence; it is a material assumption, not a default DLVO calculation.</p><h3 id="Radii,-gaps,-and-energy-units"><a class="docs-heading-anchor" href="#Radii,-gaps,-and-energy-units">Radii, gaps, and energy units</a><a id="Radii,-gaps,-and-energy-units-1"></a><a class="docs-heading-anchor-permalink" href="#Radii,-gaps,-and-energy-units" title="Permalink"></a></h3><p>The population coordinate is <strong>diameter</strong>, while the supplement&#39;s energy laws use radii <span>$r_1=L/2$</span> and <span>$r_2=M/2$</span>. Let <span>$h&gt;0$</span> be the surface-to-surface gap. The centre separation is <span>$r_1+r_2+h$</span>. The reported van der Waals contribution is</p><p class="math-container">\[U_{\mathrm{vdW}}(h)=-\frac{A_H}{6}\left[
 \frac{2r_1r_2}{h^2+2h(r_1+r_2)}
 +\frac{2r_1r_2}{h^2+2h(r_1+r_2)+4r_1r_2}
@@ -78,162 +76,63 @@ ShinLNPLongTime.run_case(problem;saveat=times,
     solver=(p,t)-&gt;ShinLNPLongTime.stiff_solve(p,t),
     psd_times=60 .*collect(ShinLNPLongTime.FIGURE4_MINUTES),
     provenance=ShinLNPLongTime.provenance * &quot;\nEnlarged domain: 1 nm to 50 µm; 102 bins; FRR=3.\n&quot;,
-    output=&quot;docs/src/assets/shin_case/domain_check/frr3&quot;)</code></pre><p>The fourth panel checks negative contributions to the sixth moment, relative to its positive contributions. Tiny signed errors in nearly empty bins can affect intensity before appreciable particles form, despite an acceptable total-number error. The displayed floor of <span>$10^{-18}$</span> only makes zero diagnostic values visible; it does not alter a state. The raw histories, selected PSD snapshots, input provenance, and <a href="../../assets/shin_case/verification.csv">verification table</a> accompany the plots.</p><h2 id="Minimal-run-and-full-reproduction"><a class="docs-heading-anchor" href="#Minimal-run-and-full-reproduction">Minimal run and full reproduction</a><a id="Minimal-run-and-full-reproduction-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-run-and-full-reproduction" title="Permalink"></a></h2><p>The <a href="../../assets/source/examples/shin_lnp_long_time.jl">long-time driver</a>, <a href="../../assets/source/examples/shin_lnp_reproduction.jl">model assembly</a>, and <a href="../../assets/source/examples/papers/cej2025_lnp.jl">physical recipe</a> preserve the full reconstruction. Follow the <a href="../../verification/">shared setup guide</a> and include OrdinaryDiffEqRosenbrock, ADTypes and SciMLBase in that environment.</p><p>This 10-µs native run does not regenerate the historical long-time figures. Their reproduction limit is stated above; no clipping or relaxed deposition checks are applied. Including the driver defines its functions without running its benchmark or writing files.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>The script contains the physical laws, source normalization, model assembly, material exchange and explicit inputs, with <code>ForwardSolver</code> selecting the same fixed SSPRK33 maximum step. Empty populations remain explicit arrays. DLVO potential/attachment quadrature and per-mechanism accounting use the linked <a href="../../assets/source/examples/papers/cej2025_lnp.jl">material helpers</a>, whose implementation is separate from the model definition. The reconstruction specifies the solubility and DLVO assumptions and starts with no particles. This is the checked 10-µs native startup example, not a claim of full-horizon reproduction. It needs only the package and Julia standard libraries; the separate long-time workflow still needs its external stiff solver. No strict checks are relaxed.</p><p><a href="../../assets/source/tutorials/nanoparticles.jl">Download this standalone script</a>. Run it from a checkout with the package developed into the selected environment:</p><pre><code class="language-sh hljs">julia --project=. docs/src/assets/source/tutorials/nanoparticles.jl</code></pre><p>Physical definitions follow the maintained examples. Numerical helpers and full reproduction sources are linked above; this tutorial writes no retained results.</p><pre><code class="language-julia hljs"># Minimal nanoparticles tutorial.
-# Physical definitions and one calculation; numerical helpers are linked on the case page.
-# No benchmark exports or retained files are written. See the case-study page.
+    output=&quot;docs/src/assets/shin_case/domain_check/frr3&quot;)</code></pre><p>The fourth panel checks negative contributions to the sixth moment, relative to its positive contributions. Tiny signed errors in nearly empty bins can affect intensity before appreciable particles form, despite an acceptable total-number error. The displayed floor of <span>$10^{-18}$</span> only makes zero diagnostic values visible; it does not alter a state. The raw histories, selected PSD snapshots, input provenance, and <a href="../../assets/shin_case/verification.csv">verification table</a> accompany the plots.</p><h2 id="Minimal-run-and-full-reproduction"><a class="docs-heading-anchor" href="#Minimal-run-and-full-reproduction">Minimal run and full reproduction</a><a id="Minimal-run-and-full-reproduction-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-run-and-full-reproduction" title="Permalink"></a></h2><p>The <a href="../../assets/source/examples/shin_lnp_long_time.jl">long-time driver</a>, <a href="../../assets/source/examples/shin_lnp_reproduction.jl">model assembly</a>, and <a href="../../assets/source/examples/papers/cej2025_lnp.jl">physical recipe</a> preserve the full reconstruction. Follow the <a href="../../verification/">shared setup guide</a> and include OrdinaryDiffEqRosenbrock, ADTypes and SciMLBase in that environment.</p><p>This 10-µs native run does not regenerate the historical long-time figures. Their reproduction limit is stated above; no clipping or relaxed deposition checks are applied. Including the driver defines its functions without running its benchmark or writing files.</p><h3 id="Complete-script"><a class="docs-heading-anchor" href="#Complete-script">Complete script</a><a id="Complete-script-1"></a><a class="docs-heading-anchor-permalink" href="#Complete-script" title="Permalink"></a></h3><p>This advanced walkthrough selects FRR=3, instantaneous mixing, the Kelvin growth closure, Upwind growth, volume-additive fixed-pivot coalescence and the explicit total-rate Gaussian nucleation convention. It shows the material inputs, model, solute exchange, diagnostic balances and empty initial population directly. The <a href="../../assets/source/examples/support/lnp_material.jl">material formulas</a> and <a href="../../assets/source/examples/support/lnp_attachment.jl">DLVO table preparation</a> are named companions; neither imports a benchmark/export driver or starts a solve. Rebuild the parameter-specific attachment table if the mixture or mesh changes.</p><p>The 80-bin, 10-µs SSPRK33 calculation is a short native startup check. Its reconstructed solubility and mixture properties remain assumptions, and it does not reproduce the historical full-horizon figures. The separate <a href="../../assets/source/examples/support/lnp_stiff_execution.jl">scaled stiff executor</a> retains the existing long-time solver, numerical checks and limitations. It requires SciMLBase, OrdinaryDiffEqRosenbrock and ADTypes; its existence does not resolve the reported strict-driver failure.</p><p><a href="../../assets/source/tutorials/nanoparticles.jl">Download the authored script</a>. The displayed code below is read verbatim from <code>examples/tutorials/nanoparticles.jl</code>; the download is a byte-for-byte copy. Run from the checkout root:</p><pre><code class="language-sh hljs">julia --project=. examples/tutorials/nanoparticles.jl</code></pre><p>For downloaded files, preserve the relative directory layout described in the <a href="../../assets/source/examples/tutorials/README.txt">tutorial source guide</a>.</p><pre><code class="language-julia hljs"># Advanced reconstructed Shin LNP model: SI units, one fixed FRR=3 mixture.
+# The short startup below is not a reproduction of the long-time figures.
+using PopulationBalanceModels, LinearAlgebra
+include(joinpath(@__DIR__,&quot;..&quot;,&quot;support&quot;,&quot;lnp_material.jl&quot;))
+include(joinpath(@__DIR__,&quot;..&quot;,&quot;support&quot;,&quot;lnp_attachment.jl&quot;))
 
-using PopulationBalanceModels
-# DLVO quadrature and mechanism accounting are unchanged numerical helpers.
-include(joinpath(pkgdir(PopulationBalanceModels), &quot;examples&quot;, &quot;papers&quot;, &quot;cej2025_lnp.jl&quot;))
-using .CEJ2025LNP: kB, mechanism_rates
-const material = CEJ2025LNP
-
-# Physical definitions from examples/papers/cej2025_lnp.jl.
-critical_length(S,T,gamma,Vm)=S&gt;1 ? 4gamma*Vm/(kB*T*log(S)) : Inf
-
-nucleation_rate(S,T,gamma,Vm,An)=S&gt;1 ? An*exp(-16π*gamma^3*Vm^2/(3*(kB*T)^3*log(S)^2)) : 0.0
-
-brownian_kernel(L,M,T,mu)=2kB*T*(L+M)^2/(3mu*L*M)
-
-function aqueous_fraction(t,FRR,tau)
-    FRR&gt;=0 &amp;&amp; tau&gt;=0 || throw(ArgumentError(&quot;FRR and mixing time must be nonnegative&quot;))
-    tau==0 ? FRR/(FRR+1) : FRR/(FRR+1)*(-expm1(-t/tau))
+p = (An=2e22,kg=11.88,kPEG=6.5e-6,gamma=0.010,FRR=3.0,tau=0.0,
+     Vm=5e-28,rho=1000.0,nucleation_width=1e-9)
+T = 298.15
+w = p.FRR/(1+p.FRR)
+mu = 1.2e-3*(1-w)+0.89e-3*w
+permittivity = 24.3*(1-w)+78.4*w
+# Reconstructed mass solubility, inferred from approximate reported S values;
+# this is not an independently measured property or a fit to diameter curves.
+c3,c5 = (7/4)/240,(10/6)/600
+solubility(w,T) = exp(log(c3)+(w-3/4)/(5/6-3/4)*log(c5/c3))
+fields(p,t) = (w=w,T=T,mu=mu,Cinfinity=solubility(w,T),dilution=0.0)
+supersaturation(ctx) = ctx.bulk.lipid/ctx.fields.Cinfinity
+J(p,t,ctx) = nucleation_rate(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm,p.An)
+critical_size(p,t,ctx) = supersaturation(ctx)&gt;1 ?
+    critical_length(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm) : first(grid.centers)
+growth(L,p,t,ctx) = p.kg*L*ctx.fields.Cinfinity*(supersaturation(ctx)-
+    kelvin_ratio(L,ctx.fields.T,p.gamma,p.Vm))
+coalescence(L,M,p,t,ctx) = p.kPEG*attachment(L,M,ctx.fields.w,ctx.fields.T)*
+    brownian_kernel(L,M,ctx.fields.T,ctx.fields.mu)
+source = GaussianNucleation(J;center=critical_size,width=(p,t,ctx)-&gt;p.nucleation_width,
+    truncation=:renormalize) # J is the TOTAL represented number birth rate.
+model = PBMModel(nucleation=source,growth=Growth(growth),
+    coalescence=Aggregation(coalescence;coordinate_map=AdditiveCoordinate(L-&gt;L^3,cbrt),overflow=:discard),
+    dilution=Dilution((L,p,t,ctx)-&gt;ctx.fields.dilution))
+grid = Grid1D(exp.(range(log(1e-9),log(5e-6);length=81));coordinate=:diameter)
+attachment = prepare_attachment(grid;water_fraction=w,temperature=T,relative_permittivity=permittivity)
+operator = compile(model,grid;methods=TermMethods(growth=Upwind(),aggregation=FixedPivot()),
+    bc=SizeBC(NoFlux(),NoFlux()))
+exchange = ConservativeExchange(:lnp,:lipid,(L,p,t,ctx)-&gt;p.rho*pi/6*L^3;
+    mechanisms=(:growth,:nucleation))
+# Keep the production material diagnostics, including discarded collision mass.
+function balances(ctx,p,t)
+    rates = mechanism_rates(operator,ctx.populations.lnp,p,t,ctx.fields,ctx.bulk)
+    d = ctx.fields.dilution
+    (lipid=-d*ctx.bulk.lipid,
+     nucleated_lipid=rates.nucleation-d*ctx.bulk.nucleated_lipid,
+     grown_lipid=rates.growth-d*ctx.bulk.grown_lipid,
+     escaped_lipid=rates.overflow-d*ctx.bulk.escaped_lipid)
 end
-
-function build(;grid,initial_lipid,FRR,tau,temperature,viscosity,solubility,
-                equilibrium_ratio,attachment_without_peg,molecular_volume,
-                particle_density,nucleation_width,nucleation_normalization,
-                tspan,scheme=MUSCL(),initial_distribution=zeros(length(grid)),
-                An=2.0e22,kg=11.88,kPEG=6.5e-6,gamma=0.010,
-                overflow=:error,track_consumption=false)
-    grid.coordinate in (:diameter,:length) || throw(ArgumentError(&quot;CEJ recipe requires a length/diameter grid in meters&quot;))
-    all(x-&gt;isfinite(x) &amp;&amp; x&gt;0,(initial_lipid,molecular_volume,particle_density,nucleation_width,gamma)) ||
-        throw(ArgumentError(&quot;concentration and physical input scales must be positive&quot;))
-    first(tspan)==0 || throw(ArgumentError(&quot;the mixing recipe starts at t=0; supply a custom system for later initialization&quot;))
-    p=(An=An,kg=kg,kPEG=kPEG,gamma=gamma,FRR=FRR,tau=tau,
-       Vm=molecular_volume,rho=particle_density,nucleation_width=nucleation_width)
-    function fields(p,t)
-        w=aqueous_fraction(t,p.FRR,p.tau)
-        T=temperature(t); mu=viscosity(w,T); C=solubility(w,T)
-        all(x-&gt;isfinite(x) &amp;&amp; x&gt;0,(T,mu,C)) || throw(ArgumentError(&quot;invalid temperature, viscosity or solubility&quot;))
-        dw=p.tau==0 ? 0.0 : p.FRR/(p.FRR+1)*exp(-t/p.tau)/p.tau
-        # Volume growth of a material element: V/Vorganic=1/(1-w).
-        (;w,T,mu,Cinfinity=C,dilution=dw/(1-w))
-    end
-    supersaturation(ctx)=ctx.bulk.lipid/ctx.fields.Cinfinity
-    function J(p,t,ctx)
-        nucleation_rate(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm,p.An)
-    end
-    center=(p,t,ctx)-&gt;critical_length(supersaturation(ctx),ctx.fields.T,p.gamma,p.Vm)
-    # At S&lt;=1, J is zero and the source residual returns before evaluating its
-    # center. Use a finite unused center so the integral itself remains defined.
-    finite_center=(p,t,ctx)-&gt;supersaturation(ctx)&gt;1 ? center(p,t,ctx) : first(grid.centers)
-    gaussian=GaussianNucleation(J;center=finite_center,
-        width=(p,t,ctx)-&gt;p.nucleation_width,truncation=:renormalize)
-    nucleation_normalization in (:total_rate,:density_amplitude) ||
-        throw(ArgumentError(&quot;invalid nucleation normalization&quot;))
-    # Preserve the legacy unnormalized exp(-z²/2) amplitude convention explicitly.
-    physical=GaussianNucleation(J;center=finite_center,
-        width=(p,t,ctx)-&gt;p.nucleation_width,truncation=:physical)
-    source=nucleation_normalization===:total_rate ? gaussian :
-        IntegratedNucleation(J,(lo,hi,p,t,ctx)-&gt;sqrt(2π)*p.nucleation_width*
-            physical.fraction(lo,hi,p,t,ctx);normalization=:density_amplitude)
-    function growth_rate(L,p,t,ctx)
-        p.kg*L*ctx.fields.Cinfinity*
-            (supersaturation(ctx)-equilibrium_ratio(L,ctx.fields.w,ctx.fields.T))
-    end
-    function coalescence_kernel(L,M,p,t,ctx)
-        p.kPEG*attachment_without_peg(L,M,ctx.fields.w,ctx.fields.T)*
-            brownian_kernel(L,M,ctx.fields.T,ctx.fields.mu)
-    end
-    geometry=AdditiveCoordinate(L-&gt;L^3,cbrt)
-    model=PBMModel(
-        nucleation=source,
-        growth=Growth(rate=growth_rate),
-        coalescence=Aggregation(coalescence_kernel;coordinate_map=geometry,overflow=overflow),
-        dilution=Dilution(rate=(L,p,t,ctx)-&gt;ctx.fields.dilution))
-    methods=TermMethods(growth=scheme,aggregation=FixedPivot())
-    op=compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
-    exchange=ConservativeExchange(:lnp,:lipid,(L,p,t,ctx)-&gt;p.rho*π/6*L^3;
-        mechanisms=(:growth,:nucleation))
-    function balances(ctx,p,t)
-        lipid=-ctx.fields.dilution*ctx.bulk.lipid
-        track_consumption || return (;lipid)
-        rates=mechanism_rates(op,ctx.populations.lnp,p,t,ctx.fields,ctx.bulk)
-        (;lipid,nucleated_lipid=rates.nucleation-ctx.fields.dilution*ctx.bulk.nucleated_lipid,
-          grown_lipid=rates.growth-ctx.fields.dilution*ctx.bulk.grown_lipid,
-          escaped_lipid=rates.overflow-ctx.fields.dilution*ctx.bulk.escaped_lipid)
-    end
-    sys=PBMSystem((lnp=op,);fields,exchanges=(exchange,),nonnegative_bulk=(:lipid,),bulk_rhs=balances)
-    w0=aqueous_fraction(0.0,FRR,tau)
-    initial=(lipid=initial_lipid*(1-w0),)
-    bulk0=track_consumption ? merge(initial,(nucleated_lipid=0.0,grown_lipid=0.0,escaped_lipid=0.0)) : initial
-    PBMProblem(sys,(lnp=initial_distribution,),tspan;bulk0,p)
-end
-
-# Physical definitions from examples/shin_lnp_reproduction.jl.
-function figure4_problem(;grid,kwargs...)
-    inputs=(;kwargs...)
-    if haskey(inputs,:initial_distribution)
-        all(iszero,inputs.initial_distribution) || throw(ArgumentError(&quot;Figure 4 starts with zero particles&quot;))
-    end
-    defaults=(initial_lipid=10.0,FRR=3.0,tau=0.0,tspan=(0.0,4320*60.0))
-    options=merge(defaults,inputs,(initial_distribution=zeros(length(grid)),))
-    build(;grid,options...)
-end
-
-# Physical definitions from examples/shin_lnp_long_time.jl.
-function reconstructed_solubility(w,T)
-    # FRR=3, organic=7 kg/m³, S≈240; FRR=5, organic=10 kg/m³, S≈600.
-    c3=(7/4)/240; c5=(10/6)/600
-    exp(log(c3)+(w-3/4)/(5/6-3/4)*log(c5/c3))
-end
-
-function make_problem(;bins=120,FRR=3.0,scheme=Upwind(),diameter_limits=(1e-9,5e-6),equilibrium=:kelvin)
-    grid=Grid1D(exp.(range(log(first(diameter_limits)),log(last(diameter_limits));length=bins+1));coordinate=:diameter)
-    equilibrium in (:kelvin,:flat) || throw(ArgumentError(&quot;equilibrium must be :kelvin or :flat&quot;))
-    w=FRR/(1+FRR); T=298.15
-    # These mixture-property correlations and Vm/rho are assumptions. The SI
-    # supplies Hamaker and surface potential, but not a complete property table.
-    permittivity=24.3*(1-w)+78.4*w
-    mu=1.2e-3*(1-w)+0.89e-3*w
-    table=Matrix{Float64}(undef,bins,bins)
-    quadrature=material.dlvo_quadrature(128)
-    for j in 1:bins,i in 1:j
-        value=material.dlvo_attachment(grid.centers[i]/2,grid.centers[j]/2;
-            temperature=T,ionic_strength=100w,relative_permittivity=permittivity,quadrature)
-        table[i,j]=table[j,i]=value
-    end
-    println(&quot;DLVO table ready; range=&quot;,extrema(table));flush(stdout)
-    indices=Dict(x=&gt;i for (i,x) in enumerate(grid.centers))
-    attachment=(L,M,w,T)-&gt;table[indices[L],indices[M]]
-    figure4_problem(;grid,FRR,temperature=t-&gt;T,viscosity=(w,T)-&gt;mu,
-        solubility=reconstructed_solubility,
-        equilibrium_ratio=(L,w,T)-&gt;equilibrium===:kelvin ? material.kelvin_ratio(L,T,0.010,5e-28) : 1.0,
-        attachment_without_peg=attachment,molecular_volume=5e-28,particle_density=1000.0,
-        nucleation_width=1e-9,nucleation_normalization=:total_rate,
-        overflow=:discard,track_consumption=true,scheme)
-end
-
-function tutorial_problem(; bins=80)
-    # Explicit reconstruction assumptions are in make_problem above.
-    # This startup check does not reproduce the historical full-horizon figures.
-    remake(make_problem(; bins, FRR=3.0); tspan=(0.0, 1e-5))
-end
-
-function main(; bins=80, times=[0.0,1e-5])
-    problem = tutorial_problem(; bins)
-    solver = ForwardSolver(SSPRK33(); dt=1e-8)
-    solution = simulate(problem; solver, saveat=times)
-    @show bulk(problem, last(solution.u), :lipid)
-    solution
-end
-
-# Optional after import PythonPlot; the short startup only, not a full-horizon claim.
-plot_results(solution) = plot_observable(solution, BulkObservable(:lipid);
-    xlabel=&quot;Time (s)&quot;, ylabel=&quot;Dissolved lipid concentration&quot;)
+system = PBMSystem((lnp=operator,);fields,exchanges=(exchange,),
+    nonnegative_bulk=(:lipid,),bulk_rhs=balances)
+problem = PBMProblem(system,(lnp=zeros(length(grid)),),(0.0,1e-5);p,
+    bulk0=(lipid=10.0*(1-w),nucleated_lipid=0.0,grown_lipid=0.0,escaped_lipid=0.0))
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    main()
+    solution = simulate(problem;method=SSPRK33(),dt=1e-8,saveat=[0.0,1e-5])
+    @show observe(BulkObservable(:lipid),solution)
+    # Optional: import PythonPlot
+    # plot_observable(solution,BulkObservable(:lipid);xlabel=&quot;Time (s)&quot;,ylabel=&quot;Dissolved lipid (kg/m^3)&quot;)
 end
-</code></pre><p>Optional plots reuse the returned result: after <code>import PythonPlot</code>, call <code>plot_results(result)</code>. See <a href="../../plotting/">plotting setup and interpretation</a>; numerical execution remains independent of plotting.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../stem_cells/">« Stem-cell self-renewal and differentiation</a><a class="docs-footer-nextpage" href="../transport/">Growth in two particle dimensions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 2 November 2026 23:33">Monday 2 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+# Full-horizon stiff execution remains a separate, qualified workflow. Its
+# scaling/completion checks are in lnp_stiff_execution.jl; do not extend this
+# tiny native step to 259200 s and call it a verified long-time reproduction.
+</code></pre><p>Optional plotting calls at the end use existing results after explicitly loading <code>PythonPlot</code>; they perform no simulation, fitting or propagation. See the <a href="../../plotting/">plotting guide</a> for the optional environment and saving figures.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../stem_cells/">« Stem-cell self-renewal and differentiation</a><a class="docs-footer-nextpage" href="../transport/">Growth in two particle dimensions »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Tuesday 3 November 2026 03:13">Tuesday 3 November 2026</span>. Using Julia version 1.10.13.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

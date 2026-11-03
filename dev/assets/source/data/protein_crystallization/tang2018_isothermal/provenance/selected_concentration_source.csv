@@ -1,0 +1,17 @@
+experiment_id,paper,figure,pdf_page,printed_page,marker_index,color,cooling_rate_C_min,graph_time_min,pixel_x,pixel_y,graph_reading_dx_px,graph_reading_dy_px,shared_or_occluded_marker,status,concentration_g_L,role
+Tang_100mL_0Cmin,Tang2018,12a,9,194,1,teal,0.0,0.4281345565749235,154,74,2,2,True,manual_figure_marker_reading_not_raw_record,19.965841161400512,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,2,teal,0.0,31.253822629969417,190,82,2,2,True,manual_figure_marker_reading_not_raw_record,19.692570452604613,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,3,teal,0.0,46.666666666666664,208,92,2,2,True,manual_figure_marker_reading_not_raw_record,19.350982066609735,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,4,teal,0.0,61.223241590214066,225,101,2,2,False,manual_figure_marker_reading_not_raw_record,19.043552519214344,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,5,teal,0.0,75.77981651376147,242,110,2,2,False,manual_figure_marker_reading_not_raw_record,18.736122971818958,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,6,teal,0.0,90.33639143730886,259,226,2,2,False,manual_figure_marker_reading_not_raw_record,14.773697694278393,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,7,teal,0.0,120.30581039755351,294,277,2,2,False,manual_figure_marker_reading_not_raw_record,13.031596925704525,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,8,teal,0.0,180.2446483180428,364,365,2,2,False,manual_figure_marker_reading_not_raw_record,10.025619128949616,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,9,teal,0.0,240.1834862385321,434,388,2,2,False,manual_figure_marker_reading_not_raw_record,9.2399658411614,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,10,teal,0.0,300.1223241590214,504,439,2,2,False,manual_figure_marker_reading_not_raw_record,7.4978650725875315,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,11,teal,0.0,360.0611620795107,574,466,2,2,False,manual_figure_marker_reading_not_raw_record,6.575576430401366,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,12,teal,0.0,419.14373088685016,643,499,2,2,False,manual_figure_marker_reading_not_raw_record,5.448334756618275,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,13,teal,0.0,479.08256880733944,713,499,2,2,False,manual_figure_marker_reading_not_raw_record,5.448334756618275,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,14,teal,0.0,539.0214067278287,783,505,2,2,False,manual_figure_marker_reading_not_raw_record,5.243381725021349,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,15,teal,0.0,598.960244648318,853,512,2,2,False,manual_figure_marker_reading_not_raw_record,5.004269854824937,primary_fit_for_isothermal_only
+Tang_100mL_0Cmin,Tang2018,12a,9,194,16,teal,0.0,658.8990825688073,923,514,2,2,False,manual_figure_marker_reading_not_raw_record,4.9359521776259605,primary_fit_for_isothermal_only
