@@ -2,6 +2,7 @@
 |:--|--:|--:|--:|:--|
 | cnt | 1.14 | 0.551 | 1.0021 | 1457/1452 |
 | cnt_grd | 1.04 | 0.28 | 1.0023 | 1706/1502 |
+| cnt_growth_grd | 1.14 | 0.473 | 1.0021 | 1539/1401 |
 
 | Model | PSD time (min) | Use | CDF RMSE (fraction) | W2 (µm) | d10 error (µm) | d50 error (µm) | d90 error (µm) |
 |:--|--:|:--|--:|--:|--:|--:|--:|
@@ -13,3 +14,7 @@
 | cnt_grd | 180 | calibration | 0.0156 | 0.483 | -0.309 | 0.228 | 0.030 |
 | cnt_grd | 420 | calibration | 0.0226 | 0.472 | -0.628 | 0.116 | 0.706 |
 | cnt_grd | 660 | validation | 0.0326 | 0.716 | -1.048 | 0.003 | 1.099 |
+| cnt_growth_grd | 74 | calibration | 0.0444 | 1.094 | -0.861 | -0.596 | -0.571 |
+| cnt_growth_grd | 180 | calibration | 0.0132 | 0.444 | -0.120 | 0.221 | 0.008 |
+| cnt_growth_grd | 420 | calibration | 0.0159 | 0.416 | 0.205 | 0.302 | 0.070 |
+| cnt_growth_grd | 660 | validation | 0.0163 | 0.395 | 0.298 | 0.311 | -0.081 |

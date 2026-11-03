@@ -22,6 +22,8 @@ function cfl_solve(pb,times;maximum_dt=2.,cfl=.35,coefficient_interval=5.,maxste
         throw(ArgumentError("require positive step/interval and 0 < CFL ≤ 0.35"))
     p=pb.p
     p.AG>0 && p.g>0 && p.gamma>0 && p.grd_strength>=0 || throw(NumericalFailure("invalid CNT/GRD parameters"))
+    hasproperty(p,:k_D) && !(isfinite(p.k_D) && p.k_D>=0) &&
+        throw(NumericalFailure("invalid growth-dependent GRD coefficient k_D"))
     ts=collect(times)
     !isempty(ts) && all(isfinite,ts) && issorted(ts) &&
         first(pb.tspan)<=first(ts)<=last(ts)<=last(pb.tspan) ||
@@ -53,11 +55,13 @@ end
 
 """Three calibration-only starts, identical common priors and optimizer budget."""
 function fit_model(problem;maxiters=500,initial=nothing)
-    model=any(s->s.name===:grd_strength,problem.parameters) ? :cnt_grd : :cnt
+    model=any(s->s.name===:k_D,problem.parameters) ? :cnt_growth_grd :
+        any(s->s.name===:grd_strength,problem.parameters) ? :cnt_grd : :cnt
     S0=C0/problem.fixed.cstar
     starts=map(((1.5,.001),(2.5,.01),(4.,.05))) do (g,D0)
         values=(logAJ=log(1e8)+barrier(FIXED_GAMMA)/log(S0)^2,
             AG=.15/(S0-1)^g,g=g,grd_strength=model===:cnt ? 0. : D0)
+        model===:cnt_growth_grd && (values=merge(values,(grd_strength=0.,k_D=10D0,)))
         specs=parameter_specs(;p=parameters(;values...),model)
         initial_coordinates(EstimationProblem(specs,problem.experiments;fixed=problem.fixed))
     end

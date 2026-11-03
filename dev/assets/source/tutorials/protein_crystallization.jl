@@ -11,8 +11,12 @@ const SIGMA_F = 0.03
 const CORRELATION_LENGTH = 2.0
 const AJ_BOUNDS = (log(60/1000),100+log(60/1000))
 const D0_PRIOR_MEAN = 0.01 # Declared regularizing mean, micrometre^2/min.
-parameters(;logAJ=30.5,gamma=FIXED_GAMMA,AG=0.0002,g=3.3,cstar=2.16,grd_strength=0.0) =
-    (;logAJ,gamma,AG,g,cstar,grd_strength,c0=C0,rho=1.24e-12,kv=0.81)
+const KD_PRIOR_MEAN = 0.1 # Declared regularizing mean, micrometre.
+function parameters(;logAJ=30.5,gamma=FIXED_GAMMA,AG=0.0002,g=3.3,cstar=2.16,
+                    grd_strength=0.0,k_D=nothing)
+    p=(;logAJ,gamma,AG,g,cstar,grd_strength,c0=C0,rho=1.24e-12,kv=0.81)
+    k_D===nothing ? p : merge(p,(;k_D))
+end
 barrier(gamma) = 16pi*(1e-3gamma)^3*(2.97e-26)^2/(3*(1.380649e-23*293.15)^3)
 growth_rate(p,c) = c<=p.cstar ? zero(c) : p.AG*(c/p.cstar-1)^p.g
 function nucleation_rate(p,c)
@@ -77,7 +81,11 @@ function parameter_specs(;p=parameters(),model=:cnt)
               ParameterSpec(:AG;initial=p.AG,transform=LogTransform(),
                   prior=Prior(Uniform(log(1e-5),log(1.5));coordinates=:inference)),
               ParameterSpec(:g;initial=p.g,prior=Uniform(1.0,5.0),transform=LogitTransform(1.0,5.0)))
-    model===:cnt ? common : (common...,ParameterSpec(:grd_strength;
+    model===:cnt && return common
+    model===:cnt_growth_grd && return (common...,ParameterSpec(:k_D;
+        initial=hasproperty(p,:k_D) && p.k_D>0 ? p.k_D : KD_PRIOR_MEAN,
+        prior=Exponential(KD_PRIOR_MEAN),transform=LogTransform()))
+    (common...,ParameterSpec(:grd_strength;
         initial=p.grd_strength>0 ? p.grd_strength : D0_PRIOR_MEAN,
         prior=Exponential(D0_PRIOR_MEAN),transform=LogTransform()))
 end
@@ -107,4 +115,17 @@ grd_experiment = InferenceExperiment(:batch,batch_problem(grd_model;p=grd_parame
 grd_estimation = EstimationProblem(parameter_specs(p=grd_parameters,model=:cnt_grd),
     (grd_experiment,);fixed=(cstar=2.16,gamma=FIXED_GAMMA))
 # Run explicitly when ready: grd_fitted = fit_model(grd_estimation)
+
+# Third scenario: a size-independent diffusivity that vanishes with growth.
+# k_D has units of length; it is a different parameter from constant D0.
+growth_grd_model = PBMModel(;growth,primary,dispersion=SizeDiffusion(
+    PolynomialRate(((p,t,ctx)->p.k_D*growth_rate(p,stage_concentration(p,ctx)),))))
+growth_grd_parameters = parameters(k_D=KD_PRIOR_MEAN)
+growth_grd_experiment = InferenceExperiment(:batch,
+    batch_problem(growth_grd_model;p=growth_grd_parameters,tf=420.0),measurements...;solver)
+growth_grd_estimation = EstimationProblem(
+    parameter_specs(p=growth_grd_parameters,model=:cnt_growth_grd),(growth_grd_experiment,);
+    fixed=(cstar=2.16,gamma=FIXED_GAMMA))
+# Run explicitly: growth_grd_fitted = fit_model(growth_grd_estimation)
+# gn = gauss_newton_approximation(growth_grd_estimation,growth_grd_fitted)
 # Local uncertainty and posterior sampling remain separate subsequent analyses.
