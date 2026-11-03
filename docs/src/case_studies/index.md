@@ -35,9 +35,10 @@ boundaries, and numerical choices used in its implementation.
   and dispersion carry both solute and crystals; startup and outlet distributions
   are compared under refinement.
 - [Calibrating an isothermal protein batch](protein_crystallization.md): original
-  concentration and number distributions calibrate CNT and CNT with constant
-  growth dispersion, conditional on fixed interfacial energy, followed by frozen
-  predictions of later observations.
+  concentration and number distributions calibrate CNT, constant growth
+  dispersion and growth-dependent dispersion, conditional on fixed interfacial
+  energy and Pusey solubility. Frozen predictions test later observations;
+  matched Gauss–Newton/MCMC corners compare local and sampled uncertainty.
 - [Stem-cell self-renewal and differentiation](stem_cells.md): intracellular
   marker production, binary division and exit from pluripotency reshape a cell
   population. Synthetic examples distinguish cohort dynamics from distributions

@@ -9,7 +9,7 @@ from matplotlib.lines import Line2D
 import numpy as np
 
 from protein_plot import (
-    BASE, OUT, DOCS, LABELS, export, joint_density, marginal,
+    BASE, OUT, DOCS, LABELS, MODELS, export, joint_density, marginal,
     prior_density, probability_levels, read, support, verify_model,
 )
 import sys
@@ -100,7 +100,12 @@ def draw_corner(canvas,samples,metadata,point,limits,*,approximation=None):
     plot_parameters(samples,metadata=metadata,point=point,axes=axes,limits=limits,
         labels=[LABELS.get(m['name'],m['name']) for m in metadata],
         bounds=[support(m) for m in metadata],gaussian=gaussian,
-        raw_pairs=[(0,1)] if n>1 else [],kde_points=75)
+        raw_pairs=[],kde_points=151)
+    legend=axes[0,-1].get_legend()
+    if legend is not None:
+        legend.get_texts()[0].set_text(
+            APPROXIMATIONS[approximation.get('approximation','laplace')]+' (mapped)'
+            if approximation is not None else 'Retained MCMC posterior')
 
 
 def rejected_panel(canvas, report):
@@ -228,7 +233,7 @@ def write_tables(folder, rows, samples, cheap, metadata,kind='laplace'):
     (folder/(prefix+'marginal_comparison.md')).write_text(text)
     (folder/(prefix+'marginal_comparison.tex')).write_text(tex+r'\end{tabular}'+'\n')
     correlations=[]
-    for i,j in ((0,1),(2,3)):
+    for i,j in ([(0,1),(1,2)]+([(2,3)] if len(metadata)>3 else [])):
         correlations.append(dict(first=metadata[i]['name'],second=metadata[j]['name'],
                                  coordinates='display coordinates, including declared natural logs',
                                  MCMC=float(np.corrcoef(samples[:,i],samples[:,j])[0,1]),
@@ -239,16 +244,16 @@ def write_tables(folder, rows, samples, cheap, metadata,kind='laplace'):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--model',choices=['cnt','cnt_grd','both'],default='both')
+    parser.add_argument('--model',choices=[*MODELS,'both','all'],default='all')
     parser.add_argument('--approximation',choices=list(APPROXIMATIONS),default='laplace')
     parser.add_argument('--tables',action='store_true',help='Explicitly regenerate derived comparison tables')
     args=parser.parse_args(argv)
     with configure(require_dvipng=False):
-        for model in ('cnt','cnt_grd') if args.model=='both' else (args.model,):
+        for model in (MODELS if args.model=='all' else MODELS[:2] if args.model=='both' else (args.model,)):
             comparison(model,args.approximation,tables=args.tables)
         caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (a) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (b) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the selected MAP under its recorded density convention. Inference\_map\_v2 reports use the declared-coordinate posterior; physical\_map\_v1 reports and older unversioned analyses retain their producer convention. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
         if args.approximation=='gauss_newton':
-            caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (a) A joint Gaussian in the coordinates recorded by its producer: historical reports use the inference-density MAP and transformed-prior curvature; physical\_map\_v1 reports use the physical MAP, physical sensitivities and physical-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (b) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
+            caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (a) A joint Gaussian in the coordinates recorded by its producer: inference\_map\_v2 reports use the declared inference-density MAP, z sensitivities and full transformed-prior curvature; historical reports retain their producer conventions; physical\_map\_v1 reports use the physical MAP, physical sensitivities and physical-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (b) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
             if args.tables:
                 publish_gauss_newton_tables()
         (OUT/(args.approximation+'_captions.tex')).write_text(caption+'\n')
@@ -258,7 +263,7 @@ def publish_gauss_newton_tables():
     """Small manuscript/manual summaries; immutable production inputs untouched."""
     import shutil
     rows=[]
-    for model in ('cnt','cnt_grd'):
+    for model in MODELS:
         folder=ANALYSIS/model
         if not (folder/'gauss_newton.json').exists():
             continue

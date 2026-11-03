@@ -1,0 +1,10 @@
+{
+    "recorded_at": "2026-11-03T16:14:45.256",
+    "driver_files": {
+        "run.jl": "f3e3a44497fc7569ef8392e78a3562f20b832e52961266c120b897f66f6dcc9b",
+        "report.jl": "747c932ad5850ca93ce98026987e04e67d0b0a23ab6e812bfed16ba7c3a41570",
+        "config.toml": "e6c74a867c5f682f2b1f05aa9f14c871444364c130ef970573be0adf8af347f3"
+    },
+    "target_hash": "f465a92f35f88c7ab24438c18432ff8e533a5f54aace0bdb54d643e441f2d344",
+    "interpretation": "current export/reporting pass; original solve/sampling provenance remains separate"
+}

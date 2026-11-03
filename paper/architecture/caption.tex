@@ -1,31 +1,34 @@
 \newcommand{\PBMArchitectureCaption}{PopulationBalanceModels.jl architecture.
 (a) Physical terms compose a population equation for particles, cells or other
-entities. Their contributions can be differential or integral operators, sources
-or sinks. Direct bin-integrated discretizations and moment representations pass
-through compatibility checks and reusable numerical preparation. DQMOM uses
-weights and weighted abscissas rather than raw-moment state entries. A solid path
-connects compilation directly to transient or stationary problem construction.
+entities, with differential/integral contributions, sources and sinks. Direct
+bin-integrated discretization selects grids and per-term methods; a moment
+formulation selects a tracked basis and moment family. Compilation checks
+compatibility and prepares fixed structure. Supported moment equations use
+tracked moments analytically and the selected reconstruction only where needed;
+DQMOM stores weights and weighted abscissas rather than raw moments.
 Dashed side inputs denote optional population/bulk coupling through
-\texttt{PBMSystem} and optional prescribed reactor transport through
-\texttt{AxialDispersion}. These are separate additions that can be combined for
-eligible models; neither is required for a standalone population.
-Initial conditions and a time span
-belong to the transient branch; a numerical guess belongs to the stationary
-branch. Observation operators connect eligible transient and stationary forward calculations to
-MAP estimation and optional sensitivity-based Gauss--Newton, full-Hessian
-Laplace or MCMC analysis, with parameter updates
-returning to the forward inputs. Stationary calculations use checked equilibria;
-implicit sensitivities require a smooth isolated root, while AD-incompatible
-closures need explicit finite differences. Forward uncertainty quantification
-wraps the same eligible forward problems and observables through
-\texttt{UncertainInputs} and \texttt{UQProblem}, without requiring calibration
-data. Scenario setup varies physical inputs; Monte Carlo propagation and
-non-intrusive polynomial chaos supply output means, covariance, quantiles and
-event probabilities, with independent full-model validation of the surrogate.
-MC preserves declared joint inputs or posterior draws. PCE uses independent
-normal, uniform or beta reference coordinates with an explicit physical-input map;
-an arbitrary posterior does not automatically define a PCE basis. This does not
-imply universal compatibility of the displayed methods. (b) Required dependencies,
-optional extension roles and separate development/figure tools, checked against
-the current package declarations. MC and PCE add no optional backend requirement.
-The density glyph is conceptual.}
+\texttt{PBMSystem} and prescribed axial transport through \texttt{AxialDispersion}.
+Neither addition is required for a standalone population.
+The transient branch binds physical initial distributions or numerical states,
+a time span and optional prescribed inputs through \texttt{OperatingHistory}. Initialization converts
+eligible physical descriptions automatically. Automatic \texttt{prepare_run} binds
+parameter-dependent numerical data and isolates working storage; rates still use
+current integration inputs. \texttt{ForwardSolver} configures eligible transient
+execution and is reusable in estimation and UQ; simple method/step calls remain
+supported. Optional native controls address stability/admissibility, while
+external checks address completion and saved states. Stationary problems instead
+use numerical guesses, constraints and checked root solves; they do not inherit
+transient operating-history or step-control semantics.
+Both eligible branches feed observation and statistical interfaces. MAP and
+local approximations use the declared inference-coordinate posterior. Optional
+Gauss--Newton, full-Hessian Laplace and MCMC analyses retain their own checks;
+stationary implicit sensitivities require a smooth isolated root.
+Forward UQ reuses eligible solves and observables without requiring calibration
+data: MC accepts joint input laws or posterior draws, while non-intrusive PCE
+uses independent normal, uniform or beta reference coordinates and an explicit
+physical-input map. Independent full-model validation checks surrogate error.
+PCE means/covariances are analytical; output quantiles/events use polynomial
+evaluations. Method/representation/derivative restrictions still apply.
+(b) Required dependencies, optional extension roles and separate development
+and figure tools, checked against current declarations. MC/PCE add no backend
+dependency. The density glyph is conceptual.}

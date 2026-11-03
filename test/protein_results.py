@@ -11,7 +11,7 @@ import numpy as np
 ROOT=Path(__file__).resolve().parents[1]
 BASE=ROOT/'paper/protein/data'
 sys.path.insert(0,str(ROOT/'paper/_support'))
-from protein_plot import prior_density, verify_model
+from protein_plot import prior_density, verify_model, MODELS
 
 def rows(folder,name):
     with (folder/name).open(newline='') as f: return list(csv.DictReader(f))
@@ -20,8 +20,8 @@ def table(folder,name):
 def record(folder,name): return json.loads((folder/name).read_text())
 
 class ProteinResults(unittest.TestCase):
-    def test_producer_sources_match_checkout(self):
-        for name in ('cnt','cnt_grd'):
+    def test_retained_producer_integrity(self):
+        for name in MODELS:
             verify_model(BASE/name)
 
     def test_original_data_split_and_fixed_uncertainties(self):
@@ -61,7 +61,7 @@ class ProteinResults(unittest.TestCase):
 
     def test_targets_manifests_and_sampling(self):
         common=[]
-        for name,n in (('cnt',3),('cnt_grd',4)):
+        for name,n in (('cnt',3),('cnt_grd',4),('cnt_growth_grd',4)):
             folder=BASE/name;m=record(folder,'manifest.json')
             self.assertTrue(m['complete']);self.assertEqual(m['mode'],'production')
             for path,digest in m['files'].items():
@@ -84,12 +84,13 @@ class ProteinResults(unittest.TestCase):
             self.assertTrue(np.all(raw['gamma']==.64))
             self.assertNotIn('gamma',[p['name'] for p in prior])
             if name=='cnt': self.assertTrue(np.all(raw['grd_strength']==0))
-            else: self.assertTrue(np.all(raw['grd_strength']>0))
+            elif name=='cnt_grd': self.assertTrue(np.all(raw['grd_strength']>0))
+            else: self.assertTrue(np.all(raw['k_D']>0))
             self.assertTrue(np.all((raw['logAJ']>np.log(.06))&(raw['logAJ']<100+np.log(.06))&(raw['g']>1)&(raw['g']<5)))
-        self.assertEqual(common[0],common[1])
+        self.assertTrue(all(p==common[0] for p in common))
 
     def test_physical_invariants_and_distribution_diagnostics(self):
-        for name in ('cnt','cnt_grd'):
+        for name in MODELS:
             folder=BASE/name;trajectory=table(folder,'trajectory.csv')
             self.assertLess(np.max(np.abs(trajectory['material_error_g_L'])),1e-9)
             np.testing.assert_allclose(trajectory['concentration_g_L']+trajectory['solid_concentration_g_L']-19.965841161400512,
@@ -97,8 +98,10 @@ class ProteinResults(unittest.TestCase):
             self.assertGreaterEqual(np.min(trajectory['minimum_count_per_L']),0.)
             self.assertEqual(trajectory['number_per_m3'][0],0.)
             self.assertLess(np.max(trajectory['upper_bin_fraction']),1e-8)
-            theta=record(folder,'map.json')['parameters']['grd_strength']
-            np.testing.assert_allclose(trajectory['D_G_um2_min'],np.full(len(trajectory),theta),rtol=1e-13,atol=0)
+            params=record(folder,'map.json')['parameters']
+            expected=params['k_D']*trajectory['G_um_min'] if name=='cnt_growth_grd' else np.full(len(trajectory),params['grd_strength'])
+            np.testing.assert_allclose(trajectory['D_G_um2_min'],expected,rtol=1e-13,atol=0)
+            self.assertEqual(params['cstar'],2.16)
             curves=table(folder,'distribution_curves.csv');observed=table(folder,'psd_predictions.csv')
             metrics=table(folder,'distribution_metrics.csv');quantiles=table(folder,'quantile_predictions.csv')
             for t in (74.,180.,420.,660.):
@@ -142,7 +145,7 @@ class ProteinResults(unittest.TestCase):
 
     def test_latent_draws_summaries_and_refinement(self):
         estimates=table(BASE/'analysis/tables','parameter_estimates.csv')
-        for name in ('cnt','cnt_grd'):
+        for name in MODELS:
             folder=BASE/name;raw=table(folder,'posterior_draws.csv');meta=record(folder,'priors.json')
             for p in meta:
                 r=estimates[(estimates['model']==name)&(estimates['parameter']==p['name'])][0]
@@ -185,42 +188,66 @@ class ProteinResults(unittest.TestCase):
         self.assertEqual(fixed['MAP'],0.);self.assertTrue(np.isnan(fixed['median']))
 
     def test_analytical_prior_plot_coordinates(self):
-        metas=record(BASE/'shared','priors.json')
+        metas=record(BASE/'shared','priors.json')+[record(BASE/'cnt_growth_grd','priors.json')[-1]]
         for m in metas:
             if m['name']=='AG':
                 x=np.linspace(np.log(1e-5),np.log(1.5),10001)
                 np.testing.assert_allclose(prior_density(m,x),1/np.log(150000),rtol=1e-13)
-            elif m['name']=='grd_strength':
+            elif m['name'] in ('grd_strength','k_D'):
                 x=np.linspace(-25,np.log(4),20001)
-                np.testing.assert_allclose(prior_density(m,np.array([np.log(.01)])),[np.exp(-1)],rtol=1e-13)
+                np.testing.assert_allclose(prior_density(m,np.array([np.log(m['arguments'][0])])),[np.exp(-1)],rtol=1e-13)
             elif m['family']=='uniform': x=np.linspace(*m['arguments'],10001)
             else: x=np.geomspace(np.exp(m['arguments'][0]-8*m['arguments'][1]),np.exp(m['arguments'][0]+8*m['arguments'][1]),20001)
             self.assertAlmostEqual(np.trapz(prior_density(m,x),x),1.,delta=2e-6)
         # A cropped broad prior must retain its original density/normalizer.
         logAJ=metas[0];self.assertAlmostEqual(np.trapz(prior_density(logAJ,np.linspace(25,35,101)),np.linspace(25,35,101)),.1,places=12)
 
-    def test_density_guides_are_display_only_and_normalized(self):
-        from protein_plot import density_guide
-        original=table(BASE/'shared','psd.csv')
+    def test_digitized_observations_are_unaltered_scatter(self):
+        import matplotlib.pyplot as plt
+        from protein_plot import layout, observation_panels
         before=hashlib.sha256((BASE/'shared/psd.csv').read_bytes()).hexdigest()
-        for t in (74.,180.,420.,660.):
-            q=original[original['time_min']==t]
-            x,y=density_guide(q['size_um'],q['conditional_density_per_um'])
-            self.assertTrue(np.all(y>=0))
-            self.assertAlmostEqual(np.trapz(y,x),1.,places=12)
-            # Smooth positive densities do not acquire a sawtooth from drawing.
-            slope=np.diff(y)/np.diff(x)
-            self.assertLess(np.max(np.abs(np.diff(slope))),.003)
+        original=table(BASE/'shared','psd.csv')
+        fig,axes=layout()
+        observation_panels(axes,table(BASE/'shared','concentration.csv'),original,
+                           table(BASE/'shared','quantiles.csv'),guide=True)
+        for ax,times in ((axes[0,1],(74.,180.,420.)),(axes[1,0],(660.,))):
+            self.assertEqual(len(ax.lines),len(times))
+            for line,t in zip(ax.lines,times):
+                q=original[original['time_min']==t]
+                self.assertEqual(line.get_linestyle(),'None')
+                np.testing.assert_array_equal(line.get_xdata(),q['size_um'])
+                np.testing.assert_array_equal(line.get_ydata(),q['conditional_density_per_um'])
+        self.assertTrue(all(line.get_linestyle()=='None' for line in axes[1,1].lines))
+        plt.close(fig)
         self.assertEqual(hashlib.sha256((BASE/'shared/psd.csv').read_bytes()).hexdigest(),before)
 
-    def test_five_publication_figures(self):
+    def test_gauss_newton_comparisons(self):
+        from protein_uncertainty import gaussian_draws, approximation_coordinates
+        from protein_provenance import verify_recorded_analysis
+        for name in MODELS:
+            report=record(BASE/'analysis'/name,'gauss_newton.json')
+            self.assertEqual(report['status'],'accepted')
+            self.assertEqual(approximation_coordinates(report),'inference')
+            verify_recorded_analysis(BASE/name,report)
+            C=np.asarray(report['covariance']);P=np.asarray(report['precision'])
+            np.testing.assert_allclose(P@C,np.eye(len(C)),atol=3e-12)
+            np.testing.assert_allclose(P,np.asarray(report['jacobian']).T@np.asarray(report['jacobian'])+np.asarray(report['prior_hessian']),rtol=1e-12)
+            _,_,_,flags=gaussian_draws(report,count=5000)
+            self.assertEqual(flags['nonfinite_physical'],0)
+            self.assertEqual(flags['nonfinite_display'],0)
+            self.assertEqual(flags['filtering'],'none; no rejection, truncation or renormalization')
+            receipt=record(ROOT/'paper/protein/figures',f'protein_gauss_newton_mcmc_{name}.json')
+            for filename,digest in receipt['figures'].items():
+                self.assertEqual(hashlib.sha256((ROOT/'paper/protein/figures'/filename).read_bytes()).hexdigest(),digest)
+
+    def test_three_scenario_publication_figures(self):
         from PIL import Image
         folder=ROOT/'paper/protein/figures'
         receipt=record(folder,'plot_provenance.json')
         self.assertEqual(receipt['renderer'],'actual LaTeX')
         for name,digest in receipt['retained_inputs'].items():
             self.assertEqual(hashlib.sha256((BASE/name).read_bytes()).hexdigest(),digest,name)
-        for name in ('protein_data','protein_fit_cnt','protein_fit_cnt_grd','protein_corner_cnt','protein_corner_cnt_grd'):
+        for name in ('protein_data',)+tuple('protein_'+kind+'_'+m for kind in ('fit','corner') for m in MODELS):
             with Image.open(folder/f'{name}.png') as image:
                 self.assertEqual(image.width,2100);np.testing.assert_allclose(image.info['dpi'],[300,300],atol=.01)
             for ext in ('pdf','svg'):

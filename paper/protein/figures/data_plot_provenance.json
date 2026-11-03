@@ -2,18 +2,27 @@
   "renderer": "actual LaTeX",
   "dpi": 300,
   "files": {
-    "protein_data.png": "25674c83e43901350182885de6e13e7da70adfe61c9f923af1ccd5a255200e90"
+    "protein_data.png": "d052903eb54f1b6f203d790aad14bb2e6919478af7c13c3f1faefbdfa9acccce"
   },
+  "shared_renderer_sources": {
+    "__init__.py": "82e4a64c45a22d99c132663b4e4cad6c9f0f703053309841062332dbbdc551c6",
+    "coordinates.py": "a3040348a3828eb62faee611320ddfeea2c08cbefaa5af7317ac01e6c4ff02b1",
+    "density.py": "4edcbf4d9e5d27837ac5ee592aa6bbca2f4ae5ef597b48135dbbb67da399bfbf",
+    "render.py": "5889876470ce5b00903734dcf6460a0c9b34ad9a53e5c51f329d69ddbfa8e3e0",
+    "style.py": "6ee0b06d51b58bd7193e43257538dbe6e7cc7010fcab6c652129fef3db1b6425"
+  },
+  "map_only": false,
+  "posterior_bands": false,
   "retained_inputs": {
     "shared/concentration.csv": "5bf3970e14b4023de2f87a41d61e7a176e8964845125baf7732d079856029cc5",
     "shared/psd.csv": "98b7d269a05281dab94624393b3bde77ceca3dff27d51a3fb8c3e2a45591b4b4",
     "shared/quantiles.csv": "5468aebfdac664957a690b610ffb212bfb4c4af42ef107d209d0a673f2f90c9d"
   },
   "figures_only": true,
-  "display_only_density_bandwidth_um": 0.6,
+  "digitized_observations": "scatter only; no smoothing or connecting guides",
   "python": "3.12.15",
   "numpy": "1.26.4",
   "matplotlib": "3.8.4",
-  "driver_sha256": "5f1c4033ebf718feb7b9a07d6b88a5de56c0f102b082b8923c601278890375a8",
-  "density_helpers_sha256": "f99dafde90dc10fffe89b63d12f175957368baf00692f916c0884955c0754b34"
+  "driver_sha256": "1fca76f5bf7364f858dae907af0f2e23fd971f0fc3d0a88e9e29309a129e61bc",
+  "density_helpers_sha256": "3efd855e157cc2b638b30a79c1cad7622f04d25af969989ea5dd0f23d039fe59"
 }

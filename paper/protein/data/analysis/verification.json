@@ -1,0 +1,314 @@
+{
+  "checked_at": "2026-11-03T17:49:42.156335+00:00",
+  "reviewed_revision": "5fd0d50248d4750374c35658c17b4b1945e9146a",
+  "julia": "1.10.13",
+  "python": "Python 3.12.15",
+  "solubility_g_L": 2.16,
+  "gamma_mJ_m2": 0.64,
+  "new_model": "D_G = k_D G; size-independent mean growth",
+  "prior_k_D": "Exponential mean 0.1 micrometre; declared regularization, not a literature measurement",
+  "original_producer_inputs": {
+    "checked": 70,
+    "changed": []
+  },
+  "production": {
+    "cnt": {
+      "target_hash": "e97ac7025e1f0d20d76c3efe6c5631af85c2c4ce6bbcc87674b2e889cdb5a466",
+      "posterior_sha256": "a888fb2eecb7421385e9086cabaf29dd8dc5441c901b590f85b86d5cf22ab629",
+      "reused": true,
+      "chains": 4,
+      "draws_per_chain": 750,
+      "passed": true,
+      "maximum_rhat": 1.0020635592034663,
+      "minimum_bulk_tail_ess": 1452.3994250641001,
+      "divergences": 0,
+      "depth_hits": 0,
+      "minimum_bfmi": 1.0095403240410175
+    },
+    "cnt_grd": {
+      "target_hash": "7463153199e32ae4ef740648c6ba41eb6b0717e76ee78fc6525175f3db507076",
+      "posterior_sha256": "4dd63c9c49a2411c7c81d845bd026238cfb73997337885b5b5523c25e1bb7026",
+      "reused": true,
+      "chains": 4,
+      "draws_per_chain": 750,
+      "passed": true,
+      "maximum_rhat": 1.002252815317463,
+      "minimum_bulk_tail_ess": 1502.1841391803705,
+      "divergences": 0,
+      "depth_hits": 0,
+      "minimum_bfmi": 0.8779543573243891
+    },
+    "cnt_growth_grd": {
+      "target_hash": "f465a92f35f88c7ab24438c18432ff8e533a5f54aace0bdb54d643e441f2d344",
+      "posterior_sha256": "640641fe3d935d3d6ded6369b0ba3f604680e9aa079a3635271b0cc4bd085275",
+      "reused": false,
+      "chains": 4,
+      "draws_per_chain": 750,
+      "passed": true,
+      "maximum_rhat": 1.0020657222301697,
+      "minimum_bulk_tail_ess": 1400.8054990008366,
+      "divergences": 0,
+      "depth_hits": 0,
+      "minimum_bfmi": 0.932878884139404
+    }
+  },
+  "gauss_newton": {
+    "cnt": {
+      "coordinates": "inference",
+      "convention": "inference_map_v2",
+      "condition_number": 10658.48794142905,
+      "information_error": 5.819347260499208e-05,
+      "gradient_verification": 0.00011697055092717171,
+      "report_sha256": "f41e76fd25b2cbf529ade2e88ab6322dc74404cae2af6545a6bd8fd80c765f1a"
+    },
+    "cnt_grd": {
+      "coordinates": "inference",
+      "convention": "inference_map_v2",
+      "condition_number": 19165.143398813354,
+      "information_error": 8.649580179750835e-06,
+      "gradient_verification": 2.6313279965734634e-06,
+      "report_sha256": "d229d6e6f56d12b7246a28b1cdb6e85c650912f60fa8c888a08d31477e404abf"
+    },
+    "cnt_growth_grd": {
+      "coordinates": "inference",
+      "convention": "inference_map_v2",
+      "condition_number": 24417.959104252597,
+      "information_error": 3.0077789562370508e-06,
+      "gradient_verification": 1.5665525631258269e-06,
+      "report_sha256": "559acea964a5e5e9801b21a9d091f77b61d4885489eb1dff74967be82856ca38"
+    }
+  },
+  "figures": {
+    "protein_data.png": {
+      "pixels": [
+        2100,
+        1635
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "d052903eb54f1b6f203d790aad14bb2e6919478af7c13c3f1faefbdfa9acccce"
+    },
+    "protein_fit_cnt.png": {
+      "pixels": [
+        2100,
+        1635
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "930eaf80c74344b34a57c3eea17c74abad121c1652a2dadcf5ffa23723fd002c"
+    },
+    "protein_fit_cnt_grd.png": {
+      "pixels": [
+        2100,
+        1635
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "9d779ac28b3923aa7dd3128a70a930f98c93609f28d3abf606ca301f9922911f"
+    },
+    "protein_fit_cnt_growth_grd.png": {
+      "pixels": [
+        2100,
+        1635
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "49075a5b93baee61aa22cd81b7e790ca6d35d32ad1ffac18577bd65184cc14ed"
+    },
+    "protein_corner_cnt.png": {
+      "pixels": [
+        2100,
+        1560
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "53d841df7c88fd7083f5f8f7e038110c40779a7636dd6d9c5532b22bfdbf9625"
+    },
+    "protein_corner_cnt_grd.png": {
+      "pixels": [
+        2100,
+        1860
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "5ba1025cf7f8c5319404309431400606b69a7e876cdb380406e4d962b1e9339a"
+    },
+    "protein_corner_cnt_growth_grd.png": {
+      "pixels": [
+        2100,
+        1860
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "a13e213d5e903ebd3fe28f5ce9b4deaae41e82e8a3845ac48f34b8b93e18ec28"
+    },
+    "protein_gauss_newton_mcmc_cnt.png": {
+      "pixels": [
+        4200,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "c906eee3a1e5e5ba34462f31a996eb1e5e56628926cdf9f59022d0ce144af7ab"
+    },
+    "protein_gauss_newton_mcmc_cnt_grd.png": {
+      "pixels": [
+        4200,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "dfe5717a5754c0d5278e04696b64c810ca38797830713d5c410834973fcff661"
+    },
+    "protein_gauss_newton_mcmc_cnt_growth_grd.png": {
+      "pixels": [
+        4200,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "26c777a66ca66c4bed28d76c61ab53e49052cb1dd236844c58d07dc63e257ba6"
+    },
+    "protein_gauss_newton_panel_cnt.png": {
+      "pixels": [
+        2100,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "7f70682d48b1d8978310dbdbc57d15ec112485fbfbbb9a35e9cdf91d188eed0e"
+    },
+    "protein_gauss_newton_panel_cnt_grd.png": {
+      "pixels": [
+        2100,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "34ec47f457c4307acba6cfb1200064db6f09c4ba56c5825242f402b18ddd9dfb"
+    },
+    "protein_gauss_newton_panel_cnt_growth_grd.png": {
+      "pixels": [
+        2100,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "427b178c0d99f66a1e62545f50d4713e345b55e7fe286c403b72a6f227a2e4c0"
+    },
+    "protein_gauss_newton_mcmc_panel_cnt.png": {
+      "pixels": [
+        2100,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "0be13abc0131dd00f939c7a8b8559316eec458afdf7a1907f87b31863c58e05a"
+    },
+    "protein_gauss_newton_mcmc_panel_cnt_grd.png": {
+      "pixels": [
+        2100,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "e62c9c889137a5e1af1ecb73b4dcdd97df39d893c5e7966b064d21491f3f5f63"
+    },
+    "protein_gauss_newton_mcmc_panel_cnt_growth_grd.png": {
+      "pixels": [
+        2100,
+        1770
+      ],
+      "dpi": [
+        299.9994,
+        299.9994
+      ],
+      "sha256": "f47c2d2f453bd31f8bf4fa7845a2761a2d3ea2e068c76e81690e46af406a67a3"
+    }
+  },
+  "checks": {
+    "Pkg.test": {
+      "result": "passed",
+      "log_sha256": "3f250bba6abffbca80c12d4939459eecdc9c6b95a4f4a62ecf50933b33641df0"
+    },
+    "protein model regressions (514 assertions)": {
+      "result": "passed",
+      "log_sha256": "392d367d18dce9c43a981bee2ae76961ff3e3ac7e397372cd5f46e544562b99f"
+    },
+    "tutorial construction, portable downloads and short executions (229 assertions)": {
+      "result": "passed",
+      "log_sha256": "70e143e63be515685e2b532e028b64fac73c6e443989526ac0a52a0873c287c0"
+    },
+    "sampling integration (39 assertions)": {
+      "result": "passed",
+      "log_sha256": "30500398588d41dc3a4cbf476e32437e8e6e197765b99c106dd6667bb910af22"
+    },
+    "archived/publication contracts (11 tests)": {
+      "result": "passed",
+      "log_sha256": "84370e39203953c26fa4c3fe413a1277417e4076be1556ce3909632af89caa88"
+    },
+    "retained results and new plots (9 tests)": {
+      "result": "passed",
+      "log_sha256": "29325d1696cec203d73101b4a572b3f95b05ad8f76d11fcf6ea7b39f61eb68e0"
+    },
+    "plotting summaries (10 tests)": {
+      "result": "passed",
+      "log_sha256": "b7422b73914e91de380f50ad8d6192178b1f59a89e24a66aab93b85c92e02040"
+    },
+    "analysis output protection and repeated verification (32 assertions)": {
+      "result": "passed",
+      "log_sha256": "85bae5ef4de1fe58c5b8aaf3d90cb739f1847baf81318bac65c9e7d460379664"
+    },
+    "API reference routing (21 assertions)": {
+      "result": "passed",
+      "log_sha256": "51d71be1f502bc140705c3d35ec75483c3e0432ec00e903bb0c57e4e09d79661"
+    },
+    "strict Documenter build": {
+      "result": "passed",
+      "log_sha256": "0c4ac9fe8c10481b6648b760cce5bb140efd298146ec1f530d4be42309fef202"
+    },
+    "local links": {
+      "result": "passed",
+      "log_sha256": "8c66de3ffbc98ac41fd5e5ee7023ec742fcc3c9813717c68ef09f7fcbec56822"
+    }
+  },
+  "documentation": {
+    "html_pages": 48,
+    "checked_local_links_assets": 4603,
+    "broken_links": 0,
+    "advisory": "Documenter search index is 697.46 KiB, above its 500 KiB warning threshold; build succeeded with existing strict checks"
+  },
+  "interrupted_attempt": "Sandbox session terminated with status 143 during warmup, without exporting a posterior. Same settings/seed restarted through an approved detached runner; completed retained-run sampling time is in its producer record.",
+  "full_hessian_laplace": "Not computed for these three models; historical rejection records remain archived.",
+  "scope": "No src/, ext/, Project.toml, original CNT/constant-D0/shared numerical files or unrelated architecture edits changed by this work."
+}

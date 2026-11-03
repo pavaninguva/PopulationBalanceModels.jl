@@ -147,8 +147,9 @@ if Base.find_package("Optim")!==nothing
         @test all(isfinite,predictions(s.estimation,initial_coordinates(s.estimation))[1][1])
         @test !isdefined(s,:fitted)
         s=TUTORIALS[:protein_crystallization]
-        for terms in (s.cnt_model,s.grd_model)
-            pb=latest(s.batch_problem,terms;bins=8)
+        for (terms,p) in ((s.cnt_model,s.parameters()),(s.grd_model,s.grd_parameters),
+                          (s.growth_grd_model,s.growth_grd_parameters))
+            pb=latest(s.batch_problem,terms;p,bins=8)
             solution=latest(s.solver,pb,[0.,1.])
             previous=latest(IsothermalProteinCrystallization.cfl_solve,pb,[0.,1.])
             @test solution.u==previous.u && solution.steps==previous.steps

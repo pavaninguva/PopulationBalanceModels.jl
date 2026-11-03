@@ -47,17 +47,21 @@ function main(args=ARGS)
             ("--consecutive-passes","consecutive_passes",2))
         config[key]=parse(Int,option(flag,string(default)))
     end
-    model=option("--model","both")
-    model in ("cnt","cnt_grd","both") || error("--model=cnt, cnt_grd or both")
+    model=option("--model","all")
+    model in ("cnt","cnt_grd","cnt_growth_grd","both","all") ||
+        error("--model=cnt, cnt_grd, cnt_growth_grd, both (original two) or all")
     mode=smoke ? "smoke" : "production"
     default_root=smoke ? joinpath(ROOT,".cache","paper","checks","protein") : joinpath(CASE,"data")
     output=option("--output",nothing)
     analysis && output!==nothing && error("--output is for new calculations, not retained-result analyses")
     root=output===nothing ? default_root : abspath(output)
     normpath(dirname(dirname(pathof(PopulationBalanceModels))))==ROOT || error("develop this checkout in the paper environment; see paper/README.md")
-    (analysis || "--verify" in args) || export_data(root)
+    # Shared observations are producer records too. Reuse them when adding a
+    # scenario; exporting a new scenario must not overwrite the original inputs.
+    (analysis || "--verify" in args || isfile(joinpath(root,"shared","observation_model.json"))) || export_data(root)
     "--data-only" in args && return
-    for name in (model=="both" ? (:cnt,:cnt_grd) : (Symbol(model),))
+    for name in (model=="all" ? (:cnt,:cnt_grd,:cnt_growth_grd) :
+                 model=="both" ? (:cnt,:cnt_grd) : (Symbol(model),))
         active=copy(config)
         if !any(a->startswith(a,"--bins="),args) && haskey(config,"bins_by_model")
             active["bins"]=config["bins_by_model"][string(name)]

@@ -1,0 +1,104 @@
+{
+    "original": {
+        "density_coordinates": "inference",
+        "gradient": [
+            -2.067864324217794e-8,
+            -2.3098326806803016e-8,
+            -3.7511369122000815e-8,
+            -5.04302155590608e-11
+        ],
+        "converged": true,
+        "loglikelihood_whitened_CDF": 140.0396544935626,
+        "original_CDF_loglikelihood_offset": 14.448267079693075,
+        "z_coordinates": "inference",
+        "logposterior": 133.54452626176587,
+        "MAP_coordinates": "z: logit(logAJ), log(AG), logit(g), optional log(D0) or log(k_D); gamma fixed; parameters are the mapped z-mode",
+        "logprior": -6.495128231796728,
+        "failure_messages": [
+            "negative bulk concentration in coupled solve",
+            "trial exceeds 200000 explicit steps; inspect rate/dispersion scales or use a separately verified solver"
+        ],
+        "starts": [
+            {
+                "converged": true,
+                "start": [
+                    -0.8071413077593705,
+                    -7.641724454062337,
+                    -0.11011111841642396,
+                    -2.3025850929940455
+                ],
+                "objective": -133.54452626176575
+            },
+            {
+                "converged": true,
+                "start": [
+                    -0.7059509101195172,
+                    -7.170665827150146,
+                    -0.5108256237659907,
+                    -2.3025850929940455
+                ],
+                "objective": -133.54452626176587
+            },
+            {
+                "converged": true,
+                "start": [
+                    -0.7059509101195172,
+                    -10.334793332508706,
+                    1.0986122886681098,
+                    -0.6931471805599453
+                ],
+                "objective": -133.5445262617657
+            }
+        ],
+        "convention": "inference_map_v2",
+        "forward_solves": 198,
+        "z": [
+            -0.693413826388759,
+            -8.238536559405516,
+            0.11997699654517072,
+            -1.8444483053534588
+        ],
+        "elapsed_seconds": 28.433101332,
+        "gradient_norm": 3.7511369122000815e-8,
+        "parameters": {
+            "AG": 0.0002642707110904657,
+            "logAJ": 30.513997417067497,
+            "gamma": 0.64,
+            "rho": 1.24e-12,
+            "k_D": 0.1581125266664688,
+            "g": 3.1198332862017524,
+            "cstar": 2.16,
+            "grd_strength": 0,
+            "c0": 19.965841161400512,
+            "kv": 0.81
+        },
+        "failures": 18
+    },
+    "refined": false,
+    "convention": "inference_map_v2",
+    "density_coordinates": "inference",
+    "gradient_coordinates": "inference",
+    "selected_z": [
+        -0.693413826388759,
+        -8.238536559405516,
+        0.11997699654517072,
+        -1.8444483053534588
+    ],
+    "selected_parameters": {
+        "cstar": 2.16,
+        "gamma": 0.64,
+        "logAJ": 30.513997417067497,
+        "AG": 0.0002642707110904657,
+        "g": 3.1198332862017524,
+        "k_D": 0.1581125266664688
+    },
+    "converged": true,
+    "gradient": [
+        -2.067864324217794e-8,
+        -2.3098326806803016e-8,
+        -3.7511369122000815e-8,
+        -5.04302155590608e-11
+    ],
+    "inference_coordinates": "logit(logAJ), log(AG), logit(g), optional log(D0) or log(k_D); gamma fixed",
+    "evidence": "original optimizer evidence plus independently re-evaluated stationarity"
+}

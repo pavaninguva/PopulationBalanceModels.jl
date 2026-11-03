@@ -1,0 +1,35 @@
+{
+  "model": "cnt_grd",
+  "approximation": "gauss_newton",
+  "status": "accepted",
+  "approximation_sha256": "d229d6e6f56d12b7246a28b1cdb6e85c650912f60fa8c888a08d31477e404abf",
+  "compatibility": {
+    "producing_compatibility_sha256": "f2498efa673a33fe14e2f0d8d2891702e50b3eee54fa451ca990d1bf20729157",
+    "retained_redraw": true,
+    "current_source_equivalence": false
+  },
+  "posterior_sha256": "4dd63c9c49a2411c7c81d845bd026238cfb73997337885b5b5523c25e1bb7026",
+  "gaussian_draws": {
+    "seed": 20261026,
+    "draws": 100000,
+    "prior_support_violations": {
+      "logAJ": 0,
+      "AG": 0,
+      "g": 0,
+      "grd_strength": 0
+    },
+    "nonfinite_physical": 0,
+    "nonfinite_display": 0,
+    "filtering": "none; no rejection, truncation or renormalization"
+  },
+  "renderer": "actual LaTeX; 300-dpi PNG (in-memory vector rasterization)",
+  "plotting_source_sha256": "dfebeeb8278469c19c627c8c46174be0c9d1c67f559a38bb79bb598a7ac1b168",
+  "density_helpers_sha256": "3efd855e157cc2b638b30a79c1cad7622f04d25af969989ea5dd0f23d039fe59",
+  "figures": {
+    "protein_gauss_newton_mcmc_cnt_grd.png": "dfe5717a5754c0d5278e04696b64c810ca38797830713d5c410834973fcff661",
+    "protein_gauss_newton_panel_cnt_grd.png": "34ec47f457c4307acba6cfb1200064db6f09c4ba56c5825242f402b18ddd9dfb",
+    "protein_gauss_newton_mcmc_panel_cnt_grd.png": "e62c9c889137a5e1af1ecb73b4dcdd97df39d893c5e7966b064d21491f3f5f63"
+  },
+  "contour_convention": "MCMC whitened KDE 68/95%; local Gaussian transformed probability ellipses, not displayed-coordinate HDRs",
+  "numerical_production_files": "read only; no fit, sampling or latent propagation"
+}

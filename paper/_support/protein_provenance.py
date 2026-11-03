@@ -45,6 +45,9 @@ def verify_compatibility(folder, manifest):
         path = ROOT / "paper/_support/uncertainty_compatibility.json"
         if sha(path) != uncertainty_review:
             raise ValueError("Uncertainty compatibility review changed; re-evaluate")
+    case_review = review.get("case_review_sha256")
+    if case_review is not None and sha(ROOT / "paper/_support/protein_case_review.json") != case_review:
+        raise ValueError("Protein case review changed; re-evaluate")
     for name, digest in receipt["inputs"].items():
         if sha(folder / name) != digest:
             raise ValueError(f"Changed compatibility input: {name}")

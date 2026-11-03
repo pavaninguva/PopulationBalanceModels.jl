@@ -1,0 +1,65 @@
+[
+    {
+        "name": "logAJ",
+        "meaning": "Natural log of the numerical nucleation prefactor in particles/(L min)",
+        "units": "dimensionless",
+        "label": "ln A_J",
+        "family": "uniform",
+        "arguments": [
+            -2.8134107167600364,
+            97.18658928323997
+        ],
+        "density_coordinates": "physical",
+        "transform": "logit",
+        "plotting_coordinate": "physical",
+        "lower": -2.8134107167600364,
+        "upper": 97.18658928323997
+    },
+    {
+        "name": "AG",
+        "meaning": "Mean-growth prefactor",
+        "units": "μm/min",
+        "label": "A_G",
+        "family": "uniform",
+        "arguments": [
+            -11.512925464970229,
+            0.4054651081081644
+        ],
+        "density_coordinates": "inference",
+        "transform": "log",
+        "plotting_coordinate": "log",
+        "lower": null,
+        "upper": null
+    },
+    {
+        "name": "g",
+        "meaning": "Supersaturation growth exponent",
+        "units": "dimensionless",
+        "label": "g",
+        "family": "uniform",
+        "arguments": [
+            1,
+            5
+        ],
+        "density_coordinates": "physical",
+        "transform": "logit",
+        "plotting_coordinate": "physical",
+        "lower": 1,
+        "upper": 5
+    },
+    {
+        "name": "k_D",
+        "meaning": "Growth-dependent GRD coefficient in D_G = k_D G",
+        "units": "μm",
+        "label": "k_D",
+        "family": "exponential",
+        "arguments": [
+            0.1
+        ],
+        "density_coordinates": "physical",
+        "transform": "log",
+        "plotting_coordinate": "log",
+        "lower": null,
+        "upper": null
+    }
+]

@@ -143,7 +143,8 @@ if Base.find_package("Optim")!==nothing
         @test [first(r).time_min for r in s.calibration_psds]==[74.,180.,420.]
         @test [first(r).time_min for r in s.test_psds]==[660.]
         @test length(s.estimation.parameters)==3 && length(s.grd_estimation.parameters)==4
-        for (model,terms,p) in ((:cnt,s.cnt_model,s.parameters()),(:cnt_grd,s.grd_model,s.grd_parameters))
+        for (model,terms,p) in ((:cnt,s.cnt_model,s.parameters()),(:cnt_grd,s.grd_model,s.grd_parameters),
+                                  (:cnt_growth_grd,s.growth_grd_model,s.growth_grd_parameters))
             pb=latest(s.batch_problem,terms;p,bins=8,tf=420.)
             ex=InferenceExperiment(:batch,pb,s.measurements...;solver=s.solver)
             fixed=model===:cnt ? (cstar=p.cstar,gamma=s.FIXED_GAMMA,grd_strength=0.) :

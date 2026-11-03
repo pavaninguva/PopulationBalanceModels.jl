@@ -13,7 +13,7 @@ receipts remain alongside the figures and data.
 | [growth/](growth/) | Growth and time schemes | Available |
 | [milling/](milling/) | Cone-mill forward comparison and MC/PCE uncertainty | Retained production curves and original producers |
 | [precipitation/](precipitation/) | Tubular precipitation | Logarithmic WENO5 / axial MUSCL refinement study |
-| [protein/](protein/) | Fixed-γ CNT versus CNT + constant D0 | MAPs, MCMC draws and latent predictions available |
+| [protein/](protein/) | Fixed-γ CNT, constant D0 and growth-dependent GRD | MAPs, MCMC draws and latent predictions available |
 
 Run from the repository root. Set up the Julia checkout and Python 3.12 plotting
 environment once; final figures require LaTeX:
@@ -93,7 +93,20 @@ For protein, redraw the retained results without fitting or sampling:
 
 ```sh
 python paper/protein/plot.py
+python paper/protein/plot.py --gauss-newton
 ```
+
+Recalculate the separate Gauss–Newton analyses only when needed (new forward and
+derivative evaluations, and a recorded local MAP refinement for unversioned old
+records; no sampling or latent-prediction propagation):
+
+```sh
+julia --project=paper paper/protein/run.jl --gauss-newton --model=all
+python paper/protein/plot.py --gauss-newton --tables
+```
+
+Plot commands default to figures only. `--tables` additionally writes derived
+summaries under `data/analysis/`; it does not rewrite producer result tables.
 
 A deliberate full recalculation uses a fresh output directory:
 
@@ -102,7 +115,7 @@ julia --project=paper paper/protein/run.jl --full --output=/tmp/protein-controll
 python paper/protein/plot.py --input=/tmp/protein-controlled --tables
 ```
 
-This fits both MAPs, continues four chains per model until joint diagnostics pass
+This fits all three MAPs, continues four chains per model until joint diagnostics pass
 or a finite budget is reached, then propagates verified draws. The controller
 keeps one warmup per chain; `--min-samples=500 --batch-samples=250
 --max-samples=10000 --consecutive-passes=2` are the defaults. Its chains currently
@@ -111,13 +124,15 @@ budgets and isolated workers; an explicit `--samples=N` also selects fixed mode.
 `--map` fits only the MAPs. Existing posterior outputs cannot be replaced
 implicitly: use `--output` for a new run or deliberately select `--force`.
 The current three-/four-parameter models fix γ = 0.64 mJ/m², use g ~ Uniform(1,5),
-and use constant D0 in the GRD model. Rates are expressed in L, μm and min units.
+and compare zero dispersion, constant D0 and growth-dependent D_G = k_D G.
+Rates are expressed in L, μm and min units; k_D has units of length.
 The former four-/five-parameter posterior results and uncertainty receipts are
 preserved in `test/fixtures/archives/paper_history/protein_variable_gamma_theta_20261028.zip`;
-they are not samples from the revised target. The same plot
-script accepts `--data-only`, `--gauss-newton` or `--laplace` for those figures;
-the corresponding Julia `--gauss-newton`/`--laplace` modes calculate uncertainty
-separately. The [manual](../docs/src/case_studies/protein_crystallization.md)
+they are not samples from the revised target. The plot script accepts `--data-only` and `--gauss-newton` for the current
+figures; `--model=both` selects the original two scenarios. The Julia
+`--gauss-newton` mode calculates local uncertainty separately. An explicitly
+requested `--laplace` calculation/plot remains available; archived full-Hessian
+rejections are not claims of accepted Laplace results for the new models. The [manual](../docs/src/case_studies/protein_crystallization.md)
 explains these analyses and their limits.
 
 After a reviewed package change, `julia --project=paper paper/protein/run.jl
@@ -128,7 +143,7 @@ reuse requires matching observations, settings, priors and resolved dependencies
 [architecture/](architecture/README.md) is the independent schematic generator.
 `_support/` contains implementation helpers, not additional entry points.
 Tests and historical runs live under `test/`, not here. Current protein samples
-are in `protein/data/{cnt,cnt_grd}/`; original manifests remain alongside them.
+are in `protein/data/{cnt,cnt_grd,cnt_growth_grd}/`; original manifests remain alongside them.
 
 The growth case has exactly two figure outputs: `growth_profiles.png` and
 `growth_work_precision.png`. The profiles translate the Gaussian to 4 s on
@@ -148,3 +163,18 @@ python test/paper_data.py --case 1
 The protein plotting commands default to figures only, preserving stored numerical
 tables, posterior draws and uncertainty-analysis receipts. Add `--tables` explicitly
 when regenerating derived tables, including with `--gauss-newton` or `--laplace`.
+
+Protein uses the Pusey solubility, 2.16 g/L, for all three scenarios. The third
+scenario has size-independent mean growth and `D_G = k_D * G`, with `k_D` in
+micrometres and an Exponential prior of mean 0.1 micrometre. This is a distinct
+coefficient from constant `D0` (mean-prior 0.01 squared micrometres/min). To
+calculate only the new scenario, use
+`julia --project=paper paper/protein/run.jl --full --model=cnt_growth_grd`.
+This does not enter the production paths for the original two scenarios. Their
+draws, latent bands and producer manifests are retained; new compatibility and
+Gauss–Newton records live in `protein/data/analysis/`. The source review in
+`_support/protein_case_review.json` is tied to the checked source inventory and
+is invalidated by further numerical edits. A redraw checks recorded producer
+integrity rather than asserting equivalence to a newer checkout. Digitized PSDs
+and quantiles are scatter only; numerical density lines connect saved bin
+averages without smoothing or remeshing.

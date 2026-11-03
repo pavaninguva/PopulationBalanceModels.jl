@@ -1,0 +1,20 @@
+{
+    "bins": 400,
+    "converged": true,
+    "gradient_norm": 1.354742527603925e-7,
+    "parameters": {
+        "logAJ": 30.513128204875702,
+        "gamma": 0.64,
+        "AG": 0.00026401792779644884,
+        "g": 3.1205355743605363,
+        "cstar": 2.16,
+        "grd_strength": 0,
+        "c0": 19.965841161400512,
+        "rho": 1.24e-12,
+        "kv": 0.81,
+        "k_D": 0.15870483198011162
+    },
+    "calibration_concentration_prediction_change_g_L": 0.0011247681290988965,
+    "calibration_CDF_prediction_change": 0.0002784138573813655,
+    "interpretation": "one-start calibration-only finer-grid refit; not the primary posterior or a validation refit"
+}

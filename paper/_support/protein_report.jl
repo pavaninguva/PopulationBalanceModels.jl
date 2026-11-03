@@ -56,10 +56,10 @@ function export_data(root)
         length_units="μm",D0_prior_mean=C.D0_PRIOR_MEAN,D0_units="μm²/min"))
 end
 function model_settings(config,model)
-    (;model=string(model),formulation="fixed_gamma_constant_D0",map_convention="inference_map_v2",local_covariance_coordinates="inference",population_units="particles/L",
+    (;model=string(model),formulation=model===:cnt_growth_grd ? "fixed_gamma_growth_dependent_GRD" : "fixed_gamma_constant_D0",map_convention="inference_map_v2",local_covariance_coordinates="inference",population_units="particles/L",
       bins=config["bins"],Lmax_um=config["Lmax"],maximum_dt_min=config["maximum_dt"],
       coefficient_interval_min=config["coefficient_interval"],cfl=config["cfl"],
-      time_method="SSPRK33",growth_reconstruction="MUSCL",diffusion_method=model===:cnt_grd ? "FiniteVolumeDiffusion (Ito)" : "none",
+      time_method="SSPRK33",growth_reconstruction="MUSCL",diffusion_method=model===:cnt ? "none" : "FiniteVolumeDiffusion (Ito)",
       constants=(c0=C.C0,cstar=2.16,T=C.TEMPERATURE,nu=C.MOLECULAR_VOLUME,kB=C.BOLTZMANN,rho_g_um3=C.RHO,gamma_mJ_m2=C.FIXED_GAMMA,kv=.81),
       observation_model=(concentration_relative_sd=.05,CDF_absolute_sd=C.SIGMA_F,CDF_correlation_length_um=C.CORRELATION_LENGTH))
 end
@@ -76,7 +76,7 @@ function map_export(problem,fitted)
     (;convention=string(fitted.convention),density_coordinates="inference",z_coordinates="inference",z=fitted.minimizer,parameters=physical_from_z(problem,fitted.minimizer),converged=fitted.converged,
       loglikelihood_whitened_CDF=fitted.loglikelihood,logprior=fitted.logprior,logposterior=fitted.logposterior,
       original_CDF_loglikelihood_offset=-sum(sum(log,diag(C.cdf_factor(m.observable.points))) for m in only(problem.experiments).measurements[2:end]),
-      MAP_coordinates="z: logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed; parameters are the mapped z-mode",
+      MAP_coordinates="z: logit(logAJ), log(AG), logit(g), optional log(D0) or log(k_D); gamma fixed; parameters are the mapped z-mode",
       gradient_norm=fitted.diagnostics.gradient_norm,gradient=fitted.diagnostics.gradient,
       elapsed_seconds=fitted.diagnostics.elapsed_seconds,forward_solves=fitted.diagnostics.forward_solves,
       failures=fitted.diagnostics.failed_evaluations,failure_messages=fitted.diagnostics.failure_messages,
@@ -118,7 +118,7 @@ function state_diagnostics(sol,u,p,t)
     N=population(pb,u,:crystals);c=bulk(pb,u,:c);q=quantiles_at(sol,u)
     J,G=rates(p,t,c);solid=p.rho*p.kv*moment(g,N,3)
     (;concentration_g_L=c,number_per_L=sum(N),number_per_m3=1000sum(N),
-      J_per_L_min=J,G_um_min=G,D_G_um2_min=p.grd_strength,
+      J_per_L_min=J,G_um_min=G,D_G_um2_min=hasproperty(p,:k_D) ? p.k_D*G : p.grd_strength,
       solid_concentration_g_L=solid,material_error_g_L=c+solid-p.c0,
       minimum_count_per_L=minimum(N),upper_bin_fraction=sum(N)>0 ? N[end]/sum(N) : 0.,
       D10_um=q[1],D50_um=q[2],D90_um=q[3])
@@ -202,7 +202,7 @@ function moment_rate_checks(sol,p)
     map(zip(sol.t,sol.u)) do (t,u)
         du=zero(u);rhs!(du,u,pb.operator,p,t)
         N=population(pb,u,:crystals);dN=population(pb,du,:crystals)
-        c=bulk(pb,u,:c);J,G=rates(p,t,c);D=p.grd_strength
+        c=bulk(pb,u,:c);J,G=rates(p,t,c);D=hasproperty(p,:k_D) ? p.k_D*G : p.grd_strength
         discrete=moment(g,dN,3)
         continuum=3G*moment(g,N,2)+6D*moment(g,N,1)
         (bins=length(g),time_min=t,discrete_M3_rate=discrete,continuum_M3_rate=continuum,
@@ -266,7 +266,8 @@ function sample_chain(model,config,z,start,covariance,chain)
         max_depth=config["max_depth"],verbose=true)
 end
 function sample_model(folder,problem,z,config)
-    started=time_ns();model=any(s->s.name===:grd_strength,problem.parameters) ? :cnt_grd : :cnt
+    started=time_ns();model=any(s->s.name===:k_D,problem.parameters) ? :cnt_growth_grd :
+        any(s->s.name===:grd_strength,problem.parameters) ? :cnt_grd : :cnt
     n=length(z);map=sampling_map(problem,z,config)
     policy=get(config,"metric_initialization","expected_information")
     policy in ("expected_information","local_curvature","transport_empirical") || error("unknown sampler metric initialization: $policy")
@@ -478,7 +479,7 @@ function predict_draws(folder,problem,posterior,config,model)
     # Select posterior checks by rate/dispersion extremes, never held-out fit.
     p=[merge(parameters(),a.shared) for a in selected.physical]
     initialG=[last(rates(q,0.,C.C0)) for q in p]
-    theta=[q.grd_strength for q in p]
+    theta=[hasproperty(q,:k_D) ? q.k_D : q.grd_strength for q in p]
     checks=unique([argmin(initialG),argmax(initialG),argmin(theta),argmax(theta)])
     ts=[74.,180.,420.,660.]
     for i in checks

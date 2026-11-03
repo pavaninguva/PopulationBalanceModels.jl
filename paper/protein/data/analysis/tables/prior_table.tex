@@ -2,10 +2,11 @@
 \hline
 Parameter & Units & Prior & Model \\
 \hline
-$\gamma$ & mJ/m$^2$ & 0.64 (fixed) & Both \\
-$\ln A_J$ & dimensionless & Uniform(-2.8134, 97.187) & Both \\
-$A_G$ & $\mu$m/min & log-uniform AG on [1e-05, 1.5] & Both \\
-$g$ & dimensionless & Uniform(1, 5) & Both \\
-$D_0$ & $\mu$m$^2$/min & Exponential(scale/mean 0.01 $\mu$m$^2$/min) & CNT + GRD only \\
+$\gamma$ & mJ/m$^2$ & 0.64 (fixed) & All \\
+$\ln A_J$ & dimensionless & Uniform(-2.8134, 97.187) & All \\
+$A_G$ & $\mu$m/min & log-uniform AG on [1e-05, 1.5] & All \\
+$g$ & dimensionless & Uniform(1, 5) & All \\
+$D_0$ & $\mu$m$^2$/min & Exponential(scale/mean 0.01 $\mu$m$^2$/min) & Constant GRD \\
+$k_D$ & $\mu$m & Exponential(scale/mean 0.1 $\mu$m) & Growth-dependent GRD \\
 \hline
 \end{tabular}

@@ -2,6 +2,7 @@
 |:--|--:|--:|:--|--:|
 | cnt | 400 | 832 | 5.5e-06 / 0.0048 / 0 | 1e-12 |
 | cnt_grd | 200 | 1368 | 1.4e-07 / 0.0013 / 0 | 2.6e-12 |
+| cnt_growth_grd | 200 | 859 | 5.8e-08 / 0.00068 / 0 | 1.5e-12 |
 
 The refinements above hold parameters fixed. A separate calibration-only refit on twice as many bins gives:
 
@@ -9,3 +10,4 @@ The refinements above hold parameters fixed. A separate calibration-only refit o
 |:--|--:|--:|
 | cnt | 0.0115 | 0.11 |
 | cnt_grd | 0.000732 | 0.00258 |
+| cnt_growth_grd | 0.000278 | 0.00112 |

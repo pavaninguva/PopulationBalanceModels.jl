@@ -17,6 +17,7 @@ max_depth = 9
 [production.bins_by_model]
 cnt = 400
 cnt_grd = 200
+cnt_growth_grd = 200
 
 # Fixed gamma, g in [1,5], constant D0; no old sampler preconditioner is reused.
 [production.sampler_by_model.cnt]
@@ -24,6 +25,13 @@ warmup = 300
 target_acceptance = 0.90
 
 [production.sampler_by_model.cnt_grd]
+warmup = 300
+target_acceptance = 0.90
+max_depth = 10
+sampling_coordinates = "initial_rates"
+metric_initialization = "expected_information"
+
+[production.sampler_by_model.cnt_growth_grd]
 warmup = 300
 target_acceptance = 0.90
 max_depth = 10

@@ -22,6 +22,24 @@ coupled local problem. These additions compose subject to their own restrictions
 DQMOM evolves weights and weighted abscissas;
 the other displayed moment route need not have the same state layout.
 
+The numerical routes select different controls: `TermMethods` chooses direct
+discretization treatments, while `moment_method` selects a moment family and its
+resolution. `compile` prepares compatible structure and automatic mixed moment
+equations: tracked dependencies are evaluated analytically, with reconstruction
+only where needed. The family still determines its state and admissibility.
+
+The figure keeps the problem branches to their inputs and solve calls. In a
+transient calculation, physical initialization, parameter-bound run preparation
+and execution are separate stages. `PBMProblem` converts eligible physical initial data;
+`prepare_run` is automatic per parameter binding/operating interval, with local
+working storage. `ForwardSolver` supplies a reusable execution configuration;
+simple `method`/`dt` calls remain valid. Optional `OperatingHistory` holds each
+interval's conditions through endpoint stages and transfers state continuously.
+Native `StepControl` concerns stability/admissibility, not integration-error
+estimation; external saved-state checks do not certify native internal stages.
+These are transient contracts; stationary problems keep their own root/guess and
+implicit-derivative restrictions. See [preparation and execution](forward_execution.md).
+
 The [forward-UQ workflow](uncertainty_quantification.md) wraps the same problems,
 solvers and observables with `UncertainInputs` and `UQProblem`. Monte Carlo can
 propagate prescribed joint inputs or posterior draws without a fitting step;

@@ -22,6 +22,17 @@ ROOT = PAPER.parent
 sys.path.insert(0, str(PAPER))
 from plotting_style import configure, save_png
 
+ARCHITECTURE_SOURCES = tuple(Path(path) for path in (
+    'src/PopulationBalanceModels.jl', 'src/compilation/moments.jl',
+    'src/numerics/moments/automatic.jl', 'src/time_integration/initialization.jl',
+    'src/time_integration/preparation.jl', 'src/time_integration/forward_execution.jl',
+    'src/time_integration/operating_history.jl', 'src/modeling/laws.jl',
+    'src/coupling/systems.jl', 'src/compilation/axial.jl',
+    'src/stationary/problems.jl', 'src/inference/stationary.jl',
+    'src/inference/parameters.jl', 'src/uq/propagation.jl',
+))
+
+
 COLORS = dict(ink='#243548', muted='#5D6B78', line='#C7D0D8',
               dependency_heading='#080808', dependency_category='#303030',
               dependency_package='#555555',
@@ -74,7 +85,7 @@ def density_glyph(ax,x,y,w,h):
 def workflow(ax, *, equation_usetex=True):
     text(ax,3,207,'(a)',size=11,ha='left')
     card(ax,3,104,45,96,'Physical model','model')
-    card(ax,54,128,73,72,'Numerical preparation','numerics')
+    card(ax,54,141,73,59,'Numerical preparation','numerics')
     card(ax,133,112,44,88,'Parameter estimation','inference')
     text(ax,25.5,187,'PBMModel',color='model',size=8.5,family='monospace')
     text(ax,25.5,179,'Particles, cells,\nother populations')
@@ -84,53 +95,63 @@ def workflow(ax, *, equation_usetex=True):
          family='serif' if equation_usetex else 'DejaVu Serif',usetex=equation_usetex)
     text(ax,25.5,144,'Growth\nGrowth Rate Dispersion\nNucleation and Birth\n'
          'Death and Dilution\nAggregation and Breakage')
-    text(ax,25.5,125,'Differential/integral terms,\nsources and sinks',color='muted',size=7)
+    text(ax,25.5,125,'Rate, kernel and daughter laws',color='muted',size=7)
     text(ax,25.5,115,r'$G(x,\ldots),\;D(x,\ldots)$'+'\n'+r'$K(x,y,\ldots)$',size=8)
-    rect(ax,57,157,32,32);rect(ax,93,157,31,32)
-    text(ax,73,183,'Direct PDE solution',weight='bold')
-    text(ax,73,176,'Grid1D / Grid2D',family='monospace')
-    text(ax,73,170,'Bin-integrated state',size=7)
-    density_glyph(ax,61,159,24,7)
-    text(ax,108.5,183,'Moment methods',weight='bold')
-    text(ax,108.5,176,'MomentSet + method',family='monospace',size=7)
-    text(ax,108.5,165,'Raw moments, or\nweights and weighted\nabscissas (DQMOM)',size=7)
-    rect(ax,57,131,67,20,edge='numerics')
-    text(ax,90.5,146,'TermMethods + compile',size=8,color='numerics',family='monospace')
-    text(ax,90.5,137,'Compatibility, implementation selection,\nreusable numerical preparation',size=7.2)
-    arrow(ax,[(73,157),(73,151)],'numerics');arrow(ax,[(108.5,157),(108.5,151)],'numerics')
-    arrow(ax,[(48,141),(57,141)],'model')
-    # The solid route works for a standalone population. The two dashed side
-    # inputs augment that route independently; neither is a mandatory stage.
-    # Both feed the common problem-construction junction, not separate solvers.
-    rect(ax,54,105,31,19,fill='neutral',dashed=True)
-    rect(ax,96,105,31,19,fill='neutral',dashed=True)
-    text(ax,69.5,120,'Optional coupling',weight='bold',size=7)
-    text(ax,69.5,114,'PBMSystem',size=7.5,family='monospace')
-    text(ax,69.5,108,'Populations + bulk',size=7)
-    text(ax,111.5,120,'Optional transport',weight='bold',size=7)
-    text(ax,111.5,114,'AxialDispersion',size=7.5,family='monospace')
-    text(ax,111.5,108,'via axial_problem',size=6.8)
-    arrow(ax,[(90.5,131),(90.5,103)],'numerics')
-    arrow(ax,[(85,114),(90.5,114)],'numerics',dashed=True)
-    arrow(ax,[(96,114),(90.5,114)],'numerics',dashed=True)
-    rect(ax,54,78,35,23,edge='numerics');rect(ax,93,78,34,23,edge='numerics')
-    text(ax,71.5,96,'PBMProblem',color='numerics',size=8,family='monospace')
-    text(ax,71.5,90,'Initial state, time span')
-    text(ax,71.5,83,'simulate',size=8,family='monospace')
-    text(ax,110,96,'StationaryPBMProblem',color='numerics',size=7,family='monospace')
-    text(ax,110,90,'Numerical guess')
-    text(ax,110,83,'solve_stationary',size=7.5,family='monospace')
-    arrow(ax,[(90.5,103),(71.5,103),(71.5,101)],'numerics')
-    arrow(ax,[(90.5,103),(110,103),(110,101)],'numerics')
-    rect(ax,3,78,45,23,fill='neutral')
-    text(ax,25.5,95,'Forward inputs',weight='bold')
-    text(ax,25.5,85,'Parameters, prescribed fields,\nphysical boundaries')
-    arrow(ax,[(48,89),(50.5,89),(50.5,103),(90.5,103)])
+
+    # Selection belongs to each route. MomentSet is a basis, not a universal
+    # state layout; automatic mixed moment evaluation is prepared by compile.
+    rect(ax,57,165,32,26.5);rect(ax,93,165,31,26.5)
+    text(ax,73,188,'Direct discretization',weight='bold',size=7)
+    text(ax,73,182.5,'Grid1D / Grid2D',family='monospace',size=7)
+    text(ax,73,178,'TermMethods',family='monospace',size=7,color='numerics')
+    density_glyph(ax,61,166,24,7.5)
+    text(ax,108.5,188,'Moment formulations',weight='bold',size=7)
+    text(ax,108.5,180,'MomentSet',family='monospace',size=7)
+    text(ax,108.5,171,'moment_method',family='monospace',size=7,color='numerics')
+    rect(ax,57,144,67,16,edge='numerics')
+    text(ax,90.5,156,'compile',size=8,color='numerics',family='monospace')
+    text(ax,90.5,149,'Compatibility checks and numerical preparation',size=7)
+    arrow(ax,[(73,165),(73,160)],'numerics')
+    arrow(ax,[(108.5,165),(108.5,160)],'numerics')
+    arrow(ax,[(48,152),(57,152)],'model')
+
+    # Solid route: standalone population. Dashed side inputs are optional and
+    # equally prominent; neither is required before constructing a problem.
+    rect(ax,54,120,31,18,fill='neutral',dashed=True)
+    rect(ax,96,120,31,18,fill='neutral',dashed=True)
+    text(ax,69.5,134,'Optional coupling',weight='bold',size=7)
+    text(ax,69.5,128.5,'PBMSystem',size=7.5,family='monospace')
+    text(ax,69.5,123,'Populations + bulk',size=7)
+    text(ax,111.5,134,'Optional transport',weight='bold',size=7)
+    text(ax,111.5,128.5,'AxialDispersion',size=7.5,family='monospace')
+    text(ax,111.5,123,'compile / axial_problem',size=6.8)
+    arrow(ax,[(90.5,144),(90.5,119)],'numerics')
+    arrow(ax,[(85,128),(90.5,128)],'numerics',dashed=True)
+    arrow(ax,[(96,128),(90.5,128)],'numerics',dashed=True)
+
+    # Keep only problem inputs and solve calls in the overview. Preparation,
+    # execution controls and eligibility details belong to the caption/guide.
+    # No arrows between the labels inside these branches.
+    rect(ax,54,91,35,24,edge='numerics');rect(ax,93,91,34,24,edge='numerics')
+    text(ax,71.5,110,'PBMProblem',color='numerics',size=8,family='monospace')
+    text(ax,71.5,103,'Initial state\nand time span',size=7)
+    text(ax,71.5,96.5,'simulate',size=8,family='monospace')
+    text(ax,110,110,'StationaryPBMProblem',color='numerics',size=7,family='monospace')
+    text(ax,110,103,'Numerical guess',size=7)
+    text(ax,110,96.5,'solve_stationary',size=7.5,family='monospace')
+    arrow(ax,[(90.5,119),(71.5,119),(71.5,115)],'numerics')
+    arrow(ax,[(90.5,119),(110,119),(110,115)],'numerics')
+    rect(ax,3,86,45,15,fill='neutral')
+    text(ax,25.5,96,'Forward inputs',weight='bold')
+    text(ax,25.5,90.5,'Parameters, prescribed fields,\nphysical boundaries',size=7)
+    arrow(ax,[(48,94),(50.5,94),(50.5,119),(90.5,119)])
+
     rect(ax,136,171,38,17)
     text(ax,155,183,'Observation operators',weight='bold')
     text(ax,155,176,'Moments, bins\nCDFs, quantiles',size=7)
-    arrow(ax,[(71.5,78),(71.5,76),(130,76),(130,179),(136,179)],'numerics')
-    arrow(ax,[(110,78),(110,76),(130,76)],'numerics')
+    arrow(ax,[(71.5,91),(71.5,89),(130,89),(130,179),(136,179)],'numerics')
+    # Shared output connector has no extra arrowhead under solve_stationary.
+    ax.plot([110,110,130],[91,89,89],color=COLORS['numerics'],lw=.8,zorder=3)
     text(ax,168,163,'Data',color='inference')
     arrow(ax,[(155,171),(155,153)],'inference')
     arrow(ax,[(173,160),(155,160)],'inference')
@@ -140,35 +161,31 @@ def workflow(ax, *, equation_usetex=True):
     text(ax,155,134,'Optional uncertainty',weight='bold',size=7)
     text(ax,155,127,'Gauss–Newton / Laplace\nMCMC / NUTS')
     text(ax,155,118,'Transient and stationary\nforward problems',size=7,color='muted')
-    arrow(ax,[(155,112),(155,72),(25.5,72),(25.5,78)],'inference',dashed=True)
-    text(ax,78,73.5,'Update fitted parameters',size=7,color='inference')
-    text(ax,95,67,'Eligible forward/observation combinations; stationary derivatives need a smooth isolated root.',
-         size=7,color='muted')
+    arrow(ax,[(155,112),(155,81),(25.5,81),(25.5,86)],'inference',dashed=True)
+    text(ax,78,83,'Update fitted parameters',size=7,color='inference')
 
 
 def forward_uq(ax):
     """A wrapper around the forward problems, separate from fitting data."""
-    card(ax,3,29,174,32,'Forward uncertainty quantification','uq')
+    card(ax,3,44,174,32,'Forward uncertainty quantification','uq')
     for x,w in ((6,45),(59,57),(124,50)):
-        rect(ax,x,33,w,16,edge='uq')
-    text(ax,28.5,45,'UncertainInputs',color='uq',size=8,family='monospace')
-    text(ax,28.5,37.5,'Prescribed joint law\nor posterior draws',size=7)
-    text(ax,87.5,45,'UQProblem: scenario setup',color='uq',size=8)
-    text(ax,87.5,37.5,'Reuse forward solves + observables\nMonte Carlo / non-intrusive PCE',size=7)
-    text(ax,149,45,'Outputs and validation',color='uq',size=8)
-    text(ax,149,37.5,'Means, covariance, quantiles, events\nIndependent PCE validation',size=7)
-    arrow(ax,[(51,41),(59,41)],'uq')
-    arrow(ax,[(116,41),(124,41)],'uq')
+        rect(ax,x,48,w,16,edge='uq')
+    text(ax,28.5,60,'UncertainInputs',color='uq',size=8,family='monospace')
+    text(ax,28.5,52.5,'Prescribed joint law\nor posterior draws',size=7)
+    text(ax,87.5,60,'UQProblem: scenario setup',color='uq',size=8)
+    text(ax,87.5,52.5,'Reuse forward solves + observables\nMonte Carlo / non-intrusive PCE',size=7)
+    text(ax,149,60,'Outputs and validation',color='uq',size=8)
+    text(ax,149,52.5,'Means, covariance, quantiles, events\nIndependent PCE validation',size=7)
+    arrow(ax,[(51,56),(59,56)],'uq')
+    arrow(ax,[(116,56),(124,56)],'uq')
     # Uncertain scenario inputs enter the same forward construction above.
-    # This stays clear of the fitted-parameter return path at y=72.
-    arrow(ax,[(10,61),(10,78)],'uq')
-    text(ax,90,24,'PCE: independent normal / uniform / beta bases; MC also accepts joint / posterior draws.',
-         size=7,color='muted')
+    # This stays clear of the fitted-parameter return path at y=81.
+    arrow(ax,[(10,76),(10,86)],'uq')
 
 
 def dependencies(ax):
     # Panel (b): dark headings, medium category labels, lighter package names.
-    origin=-40
+    origin=-22
     text(ax,3,origin+60,'(b)',size=11,ha='left')
     for x,w in ((3,49),(56,76),(136,41)):
         rect(ax,x,origin+3,w,50,fill='neutral')
@@ -183,11 +200,11 @@ def dependencies(ax):
         (59,39,'Optimization','Optim'),
         (97,39,'Stationary solving','NonlinearSolve'),
         (59,26,'External ODE integration','SciMLBase + solver'),
-        (97,26,'Continuous sensitivities','SciMLBase,\nSciMLSensitivity,\nReverseDiff'),
+        (97,26,'Continuous sensitivities','SciMLBase, SciMLSensitivity\nReverseDiff'),
         (59,12,'Posterior sampling','AdvancedHMC\nMCMCDiagnosticTools'),
         (97,12,'Plotting','PythonPlot (PythonCall)')):
         text(ax,x,origin+y,title,size=7,weight='bold',ha='left',color='dependency_category')
-        text(ax,x,origin+y-(8 if title=='Continuous sensitivities' else 5),body,size=7,ha='left',color='dependency_package')
+        text(ax,x,origin+y-(6.5 if title=='Continuous sensitivities' else 5),body,size=7,ha='left',color='dependency_package')
     text(ax,156.5,origin+48,'Development tools',weight='bold',size=8,color='dependency_heading')
     text(ax,156.5,origin+38,'Docs and verification',color='dependency_category')
     text(ax,156.5,origin+30,'Documenter, Aqua, JET',color='dependency_package')
@@ -210,6 +227,9 @@ def check_architecture():
         actual=project['extensions']['PopulationBalanceModels'+name+'Ext']
         if set([actual] if isinstance(actual,str) else actual)!=set(deps):
             raise ValueError(f'Changed extension activation: {name}')
+    missing=[str(path) for path in ARCHITECTURE_SOURCES if not (ROOT/path).is_file()]
+    if missing:
+        raise ValueError('Architecture review sources moved: '+', '.join(missing))
     return project
 
 
@@ -222,6 +242,16 @@ def configure_schematic(usetex=False):
         'font.monospace': ['Courier'] if usetex else ['DejaVu Sans Mono'],
         'mathtext.fontset': 'stix',
     })
+
+
+def build_figure(*, equation_usetex=True):
+    """Compose the reviewed diagram; caller owns the scoped font/render style."""
+    fig=plt.figure(figsize=(7.2,8.2))
+    ax=fig.add_axes([0,0,1,1])
+    ax.set(xlim=(0,180),ylim=(-22,210));ax.axis('off')
+    workflow(ax,equation_usetex=equation_usetex)
+    forward_uq(ax);dependencies(ax)
+    return fig
 
 
 def main():
@@ -237,14 +267,12 @@ def main():
     project=check_architecture()
     with configure(preview=not args.usetex):
         configure_schematic(usetex=args.usetex)
-        fig=plt.figure(figsize=(7.2,8.8))
-        ax=fig.add_axes([0,0,1,1]);ax.set(xlim=(0,180),ylim=(-40,210));ax.axis('off')
-        workflow(ax,equation_usetex=not args.preview);forward_uq(ax);dependencies(ax)
+        fig=build_figure(equation_usetex=not args.preview)
         out=args.output_dir;out.mkdir(parents=True,exist_ok=True)
-        name='section2_architecture_revised'+('_preview' if args.preview else '')
+        name='architecture'+('_preview' if args.preview else '')
+        receipt_name='section2_architecture_revised'+('_preview' if args.preview else '')
         revision=subprocess.check_output(['git','-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
         export=save_png(fig,out/(name+'.png'),creator='generate_pbm_architecture.py')
-        plt.close(fig)
         receipt=dict(revision=revision,package_version=project['version'],
                      renderer=('actual LaTeX' if args.usetex else 'Matplotlib mathtext'
                                if args.preview else 'Matplotlib text with a LaTeX equation'),
@@ -252,21 +280,34 @@ def main():
                      font_family='sans-serif' if args.usetex else 'DejaVu Sans',
                      math_font=('external LaTeX' if args.usetex else 'STIX' if args.preview
                                 else 'Computer Modern equation; STIX rate symbols'),
-                     preview=args.preview,dpi=300,**export,
-                     width_inches=7.2,height_inches=8.8,
+                     preview=args.preview,dpi=300,png_filename=name+'.png',**export,
+                     width_inches=7.2,height_inches=8.2,
                      project_sha256=hashlib.sha256((ROOT/'Project.toml').read_bytes()).hexdigest(),
                      generator_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                      png_sha256=hashlib.sha256((out/(name+'.png')).read_bytes()).hexdigest(),
+                     architecture_source_sha256={str(path):hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
+                         for path in ARCHITECTURE_SOURCES},
                      uq_source_sha256={str(path):hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
                          for path in (Path('src/uq/inputs.jl'),Path('src/uq/propagation.jl'),
                                       Path('src/uq/polynomial_chaos.jl'),Path('src/uq/bases.jl'),
                                       Path('src/uq/refinement.jl'))},
                      dirty_state=subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain=v1'],text=True),
-                     scope='Conceptual glyph; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply')
-        (out/(name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
+                     scope='Conceptual glyph; direct/moment method selection and automatic mixed moment evaluation; physical initialization, parameter-bound run preparation, configured transient execution and optional operating history; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply')
+        (out/(receipt_name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
         if not args.preview:
             docs=ROOT/'docs/src/assets/architecture';docs.mkdir(parents=True,exist_ok=True)
-            shutil.copy2(out/(name+'.png'),docs/(name+'.png'))
+            docs_name='section2_architecture_revised'
+            shutil.copy2(out/(name+'.png'),docs/(docs_name+'.png'))
+            # Preserve the existing downloadable documentation formats, while
+            # keeping the paper output PNG-only. They use the identical canvas.
+            for ext in ('pdf','svg'):
+                destination=docs/(docs_name+'.'+ext)
+                fig.savefig(destination,dpi=300)
+                if ext=='svg':
+                    destination.write_text('\n'.join(
+                        line.rstrip() for line in destination.read_text().splitlines())+'\n')
+
+        plt.close(fig)
         print(out)
 
 

@@ -1,5 +1,5 @@
 {
-  "revision": "827a1bfab0c5b5a4576bc70ccc5bbcbd7054c338",
+  "revision": "5fd0d50248d4750374c35658c17b4b1945e9146a",
   "package_version": "0.4.0-DEV",
   "renderer": "Matplotlib text with a LaTeX equation",
   "equation_renderer": "actual LaTeX",
@@ -7,26 +7,50 @@
   "math_font": "Computer Modern equation; STIX rate symbols",
   "preview": false,
   "dpi": 300,
+  "png_filename": "architecture.png",
   "png_pixels": [
     2160,
-    2640
+    2460
   ],
   "png_dpi": [
     299.9994,
     299.9994
   ],
+  "renderer_sources": {
+    "__init__.py": "82e4a64c45a22d99c132663b4e4cad6c9f0f703053309841062332dbbdc551c6",
+    "coordinates.py": "a3040348a3828eb62faee611320ddfeea2c08cbefaa5af7317ac01e6c4ff02b1",
+    "density.py": "4edcbf4d9e5d27837ac5ee592aa6bbca2f4ae5ef597b48135dbbb67da399bfbf",
+    "render.py": "5889876470ce5b00903734dcf6460a0c9b34ad9a53e5c51f329d69ddbfa8e3e0",
+    "style.py": "6ee0b06d51b58bd7193e43257538dbe6e7cc7010fcab6c652129fef3db1b6425"
+  },
   "width_inches": 7.2,
-  "height_inches": 8.8,
-  "project_sha256": "45027810ea5e976bd31b1b411cb446ad199f91e2b046a21cf0658b9eef1ba473",
-  "generator_sha256": "fb539217bca155ac318aba80b7d2c06804ee0c56e29858473829a4a1d0d223cc",
-  "png_sha256": "46412b9d312fbc94992308a2e3c163d3f7e4f795ad59dda8295aa88be6a3d3a1",
+  "height_inches": 8.2,
+  "project_sha256": "30535a9a34aafae91a1d261ed48be8c1ec873c7d1974f3a3ae8dc7473a0eb8f8",
+  "generator_sha256": "50fabfad6660622bd6d7dd15b2ccf6c9b02839af90eecba66627926f0a942188",
+  "png_sha256": "63eaa84d575f4229d2cb29da102576bf9ac7b71e2ed826828fc7cfc62d160169",
+  "architecture_source_sha256": {
+    "src/PopulationBalanceModels.jl": "1f5cfacfe46b7d04bb996f45060bcbc28a213477a19b219d1fd740a9a1f6690b",
+    "src/compilation/moments.jl": "fb59aeece50fc21a0ea32012735ada135dbabffc570a948cafe0887647c0d4fe",
+    "src/numerics/moments/automatic.jl": "560713435fcafd6c9fe52935f2d129a83a82eca8cfda293c431d29e5aa1edd36",
+    "src/time_integration/initialization.jl": "d6bd0cbcb8e0bddbff5d22e11d0d3765e25a90d15e62981062dbfdb1d2932802",
+    "src/time_integration/preparation.jl": "80636b7d30b4db434160e2984d4657a22ab02d75c089fbfac15d4e27d6a2b4b0",
+    "src/time_integration/forward_execution.jl": "08a5c71adf50ec996e124c2b73ee8b78565a006ca449987b034fe5bd4021e172",
+    "src/time_integration/operating_history.jl": "1d6a19b4a2a9be3c41995a16e816f70eed96bd57695be47393b7097ffa9ca1da",
+    "src/modeling/laws.jl": "44eed74e9cef0c2db0f3fc57a659b3101b19f2f0180e84e09dabf4858ba0b243",
+    "src/coupling/systems.jl": "4fd690ac6dc497b5355017ebda178c421f864c7cbd76e4fcd6020e1ed4882701",
+    "src/compilation/axial.jl": "4b8c6d7c1500bf25c768e94d24d0d6e48ff344c73ee222d942706c62bec3392f",
+    "src/stationary/problems.jl": "f2908805dbae0ff354fc6783e0fbe59d497e8a87bc2a7a731c1f01b7686d6878",
+    "src/inference/stationary.jl": "68abea1ebf0deceb4571f5e859d544c4e07bac55bc4894312de816f233a87b5b",
+    "src/inference/parameters.jl": "0609b76b46af98d662cca5b2ab5ced3299c4079729d7d495057ce4f6a70f6b7a",
+    "src/uq/propagation.jl": "f6b05b0f6815c160cb1061990b3f59600ceb7660100444a350a657ab551be374"
+  },
   "uq_source_sha256": {
     "src/uq/inputs.jl": "789b05eedae835810b19c50efe5f54564b3981e73d803009e1084f4f3d5fcfaa",
-    "src/uq/propagation.jl": "5e6e17b79d59b19c4131b4bdcd4729c79f5d35b3f66fe928165507d80ca684cd",
+    "src/uq/propagation.jl": "f6b05b0f6815c160cb1061990b3f59600ceb7660100444a350a657ab551be374",
     "src/uq/polynomial_chaos.jl": "de504c483b6b877c89cef276459376ad99eb624b150f702b2a17984cbe0e85f5",
     "src/uq/bases.jl": "a6b719332aef4aea05660f0e18e814f054a2816206ead67180d9a4375dd8f115",
     "src/uq/refinement.jl": "f82516688afaa64e73a3cceb4b221d813fd107a950811ea309ff38f25b32d8f6"
   },
-  "dirty_state": " M CHANGELOG.md\n M docs/src/assets/architecture/section2_architecture_revised.png\n M docs/src/development.md\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/figures/00_architecture/section2_architecture_revised.json\n M paper/figures/00_architecture/section2_architecture_revised.png\n",
-  "scope": "Conceptual glyph; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply"
+  "dirty_state": " M docs/src/assets/architecture/section2_architecture_revised.pdf\n M docs/src/assets/architecture/section2_architecture_revised.png\n M docs/src/assets/architecture/section2_architecture_revised.svg\n M docs/src/development.md\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/figures/00_architecture/architecture.png\n M paper/figures/00_architecture/section2_architecture_revised.json\n?? test/architecture.py\n",
+  "scope": "Conceptual glyph; direct/moment method selection and automatic mixed moment evaluation; physical initialization, parameter-bound run preparation, configured transient execution and optional operating history; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply"
 }

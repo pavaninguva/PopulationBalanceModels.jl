@@ -32,6 +32,27 @@ end
 
 function source_review(manifest)
     current=numerical_sources();changes=NamedTuple[]
+    # A separate, bounded review of the current three-scenario implementation.
+    # This does not modify or replace the original producer hashes. Future
+    # numerical edits invalidate it and require another explicit review.
+    path=joinpath(@__DIR__,"protein_case_review.json")
+    if isfile(path)
+        review=readjson(path)
+        if manifest.target_hash in values(review.targets)
+            plain(review.current_sources)==plain(current) ||
+                error("Numerical sources changed after the protein case review")
+            hashfile(joinpath(ROOT,"Project.toml"))==review.project_sha256 ||
+                error("Project changed after the protein case review")
+            original=Dict(string(k)=>string(v) for (k,v) in pairs(manifest.source_files))
+            for entry in review.reviews
+                get(original,string(entry.path),nothing)==entry.original_sha256 ||
+                    error("Case review refers to another producer for $(entry.path)")
+            end
+            return (original_sources=original,current_sources=current,
+                changes=review.reviews,reviewed_current_revision=review.reviewed_revision,
+                case_review_sha256=hashfile(path),limitations=review.limitations)
+        end
+    end
     extension_path=joinpath(@__DIR__,"uncertainty_compatibility.json")
     extension=isfile(extension_path) ? readjson(extension_path) : nothing
     extension_sources=extension===nothing ? Dict{String,Any}() : Dict(string(k)=>v for (k,v) in pairs(extension.sources))
@@ -98,7 +119,14 @@ function compatible_target(root,model,config)
     review=original==current ? (original_sources=original,current_sources=current,
         changes=NamedTuple[],additions=String[],interpretation="exact current-source producer match") : source_review(manifest)
     settings=model_settings(config,model)
-    plain(settings)==JSON3.read(read(joinpath(folder,"run_settings.json"),String),Dict{String,Any}) ||
+    recorded=JSON3.read(read(joinpath(folder,"run_settings.json"),String),Dict{String,Any})
+    active=plain(settings)
+    # These two explicit metadata fields were absent in the unversioned
+    # inference-density producer. All physical/numerical settings still match.
+    for key in ("map_convention","local_covariance_coordinates")
+        haskey(recorded,key) || delete!(active,key)
+    end
+    active==recorded ||
         error("Numerical/physical settings differ from the retained target")
     problem=make_estimation(config,model)
     JSON3.read(JSON3.write(C.prior_metadata(problem)))==readjson(joinpath(folder,"priors.json")) ||
@@ -221,7 +249,7 @@ function analyze_uncertainty(root,model,config;compatibility_only=false,method=:
             convention="inference_map_v2",density_coordinates="inference",gradient_coordinates="inference",
             selected_z=result.minimizer,selected_parameters=physical_parameters(problem,result.minimizer,:batch),
             converged=result.converged,gradient=posterior_gradient(problem,result.minimizer),
-            inference_coordinates="logit(logAJ), log(AG), logit(g), optional log(D0); gamma fixed",
+            inference_coordinates="logit(logAJ), log(AG), logit(g), optional log(D0) or log(k_D); gamma fixed",
             evidence=refined ? "new local Optim MAP run from retained coordinates" : "original optimizer evidence plus independently re-evaluated stationarity"))
         attempts=Any[];approximation=nothing
         initial_step=method===:laplace ? eps(Float64)^(1/4) : cbrt(eps(Float64))

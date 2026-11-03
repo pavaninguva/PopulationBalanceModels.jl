@@ -292,3 +292,45 @@ end
         @test IsothermalProteinCrystallization.tabulated_wasserstein(grid,[1.,0.,0.,0.],grid.edges,[0.,1.,1.,1.,1.])≈0 atol=1e-14
     end
 end
+
+@testset "Growth-dependent GRD: physical coefficient and posterior" begin
+    C=IsothermalProteinCrystallization
+    p=parameters(k_D=.1)
+    pb=build(;bins=40,p,tf=74.,model=:cnt_growth_grd)
+    grid=pb.operator.system.populations.crystals.grid
+    N=exp.(-((grid.centers.-12.)./3).^2).*grid.widths
+    for c in (p.cstar,.8p.cstar)
+        u=copy(pb.u0);population(pb,u,:crystals).=N;u[end]=c
+        du=zero(u);rhs!(du,u,pb.operator,p,0.)
+        @test all(iszero,du) # Both J/G and diffusion stop at/below saturation.
+    end
+    # At fixed c, D=k_D*G matches an independently assembled constant-D operator.
+    for c in (p.c0,.8p.c0), k_D in (.02,.2)
+        candidate=merge(p,(;k_D))
+        constant=parameters(grd_strength=k_D*C.growth_rate(p,c))
+        reference=build(;bins=40,p=constant,tf=74.,model=:cnt_grd)
+        u=copy(pb.u0);population(pb,u,:crystals).=N;u[end]=c
+        actual=zero(u);expected=zero(u)
+        rhs!(actual,u,pb.operator,candidate,13.)
+        rhs!(expected,u,reference.operator,constant,13.)
+        @test actual≈expected rtol=2e-14 atol=1e-13
+        @test actual[end]+p.rho*p.kv*moment(grid,population(pb,actual,:crystals),3)≈0 atol=1e-20
+    end
+    a=forward(parameters(k_D=0.);bins=40,model=:cnt_growth_grd,times=[0.,74.,180.])
+    b=forward(parameters();bins=40,model=:cnt,times=[0.,74.,180.])
+    @test a.u==b.u
+    @test a.steps==b.steps
+    @test_throws ArgumentError build(p=parameters(k_D=-.1),model=:cnt_growth_grd)
+    ep=estimation_problem(bins=40,model=:cnt_growth_grd)
+    @test getproperty.(ep.parameters,:name)==(:logAJ,:AG,:g,:k_D)
+    @test last(C.prior_metadata(ep)).units=="μm"
+    z=initial_coordinates(ep)
+    # Independent exponential-prior Jacobian: pi(exp(z))*exp(z).
+    for w in (-4.,-2.,0.)
+        q=copy(z);q[4]=w
+        base=copy(z);base[4]=log(.1)
+        @test logprior(ep,q)-logprior(ep,base)≈(-exp(w)/.1+w)-(-1+log(.1))
+        @test ForwardDiff.hessian(v->-logprior(ep,v),q)[4,4]≈exp(w)/.1
+    end
+    @test check_gradient(ep,z).valid
+end
