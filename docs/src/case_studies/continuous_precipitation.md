@@ -384,35 +384,34 @@ is `paper/precipitation/run.jl`; the physical builder is
 
 ### Complete script
 
-The rates, population scaling, discrete solute exchange, reactor feed and
-independent size/axial methods are explicit below. This runs startup to 5 s on
-50 logarithmic size bins and 50 axial cells. The model-specific
-transport/depletion bound is visible, together with `ForwardSolver(RK4())` and
-`StepControl`. The package owns step selection, output landing, native stage
-checks and bounded trial rejection. The original fraction 0.3, maximum step
-0.25 s, minimum step 10⁻¹² s and negativity tolerance 10⁻⁸ are retained. The
-small excess-concentration allowance in the bound never modifies a state.
-`suggest_dt` alone does not bound future bulk depletion, and this control is
-not integration-error estimation or an unconditional WENO positivity guarantee.
-The initial reactor population/bulk arrays remain exactly empty; the axial
-initialization API still requires those explicit arrays. The production
-reference and refinement campaigns remain separate.
+Rates, the 10¹² population scaling, solute exchange, empty-reactor inlet and
+independently selected WENO5/MUSCL schemes remain visible. The numerical
+[transport/depletion bound](../assets/source/examples/support/precipitation_numerics.jl)
+is a named companion shared with the maintained example. `ForwardSolver` and
+`StepControl` show its use with fraction 0.3, maximum step 0.25 s, minimum step
+10⁻¹² s and negativity tolerance 10⁻⁸. This controls stability/admissibility;
+it does not estimate integration error or guarantee WENO positivity.
+The 50 × 50, 5-s startup is a demonstration. The retained fine-grid BDF
+reference, temporal/spatial refinements and timings remain separate.
 
-[Download this standalone script](../assets/source/tutorials/continuous_precipitation.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Download the authored script](../assets/source/tutorials/continuous_precipitation.jl).
+The displayed code below is read verbatim from `examples/tutorials/continuous_precipitation.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=. docs/src/assets/source/tutorials/continuous_precipitation.jl
+julia --project=. examples/tutorials/continuous_precipitation.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
+
+Keep `../support/precipitation_numerics.jl` beside the downloaded tutorial tree.
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:continuous_precipitation))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

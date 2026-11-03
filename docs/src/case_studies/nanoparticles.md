@@ -38,17 +38,16 @@ where ``w`` is the aqueous volume fraction. A concentration in mg/mL has the
 same numerical value in kg/m³. Empty particle bins therefore coexist with a
 nonzero dissolved concentration.
 
-The recipe uses meters, seconds, kelvin, and kg/m³ internally. Its adapter
-sets these operating conditions and rejects a nonzero initial particle array:
+Use metres, seconds, kelvin and kg/m³ internally. The walkthrough selects one
+explicit reconstructed FRR=3 mixture; no long-time builder is needed to specify
+the initial state:
 
 ```julia
-using PopulationBalanceModels
-include("examples/shin_lnp_long_time.jl")
-import .ShinLNPLongTime
-
-# Explicit reconstructed inputs, described below; requires the optional solver environment.
-problem = ShinLNPLongTime.make_problem(bins=160,FRR=3.0)
-@assert all(iszero,population(problem,problem.u0,:lnp))
+p = (An=2e22,kg=11.88,kPEG=6.5e-6,gamma=0.010,FRR=3.0,tau=0.0,
+     Vm=5e-28,rho=1000.0,nucleation_width=1e-9)
+w = p.FRR/(1+p.FRR)
+initial_particles = zeros(length(grid))
+initial_lipid = 10.0*(1-w)
 ```
 
 ## Write the population balance
@@ -178,13 +177,13 @@ model = PBMModel(
         coordinate_map=AdditiveCoordinate(L->L^3,cbrt)),
     dilution = Dilution(rate=(L,p,t,ctx)->ctx.fields.dilution),
 )
-methods = TermMethods(growth=MUSCL(),aggregation=FixedPivot())
+methods = TermMethods(growth=Upwind(),aggregation=FixedPivot())
 operator = compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
 ```
 
-This is the general recipe's default MUSCL treatment. The long-time runner
-below explicitly selects `Upwind()` and records that choice in its input file.
-Its incubation curves therefore do not demonstrate a completed MUSCL solve.
+This walkthrough selects Upwind, matching the retained reconstructed
+configuration. The general recipe also permits MUSCL; the historical incubation
+curves do not demonstrate a completed MUSCL solve.
 
 A product diameter is ``(L_1^3+L_2^3)^{1/3}``. FixedPivot preserves this volume
 and one product per event within the pivot range. Products outside that range
@@ -569,32 +568,39 @@ its benchmark or writing files.
 
 ### Complete script
 
-The script contains the physical laws, source normalization, model assembly,
-material exchange and explicit inputs, with `ForwardSolver` selecting the same
-fixed SSPRK33 maximum step. Empty populations remain explicit arrays. DLVO
-potential/attachment quadrature and per-mechanism
-accounting use the linked [material helpers](../assets/source/examples/papers/cej2025_lnp.jl),
-whose implementation is separate from the model definition. The reconstruction
-specifies the solubility and DLVO assumptions and starts with no particles. This is the
-checked 10-µs native startup example, not a claim of full-horizon reproduction.
-It needs only the package and Julia standard libraries; the separate long-time
-workflow still needs its external stiff solver. No strict checks are relaxed.
+This advanced walkthrough selects FRR=3, instantaneous mixing, the Kelvin growth
+closure, Upwind growth, volume-additive fixed-pivot coalescence and the explicit
+total-rate Gaussian nucleation convention. It shows the material inputs, model,
+solute exchange, diagnostic balances and empty initial population directly.
+The [material formulas](../assets/source/examples/support/lnp_material.jl) and
+[DLVO table preparation](../assets/source/examples/support/lnp_attachment.jl) are
+named companions; neither imports a benchmark/export driver or starts a solve.
+Rebuild the parameter-specific attachment table if the mixture or mesh changes.
 
-[Download this standalone script](../assets/source/tutorials/nanoparticles.jl).
-Run it from a checkout with the package developed into the selected environment:
+The 80-bin, 10-µs SSPRK33 calculation is a short native startup check. Its
+reconstructed solubility and mixture properties remain assumptions, and it does
+not reproduce the historical full-horizon figures. The separate
+[scaled stiff executor](../assets/source/examples/support/lnp_stiff_execution.jl)
+retains the existing long-time solver, numerical checks and limitations. It
+requires SciMLBase, OrdinaryDiffEqRosenbrock and ADTypes; its existence does not
+resolve the reported strict-driver failure.
+
+[Download the authored script](../assets/source/tutorials/nanoparticles.jl).
+The displayed code below is read verbatim from `examples/tutorials/nanoparticles.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=. docs/src/assets/source/tutorials/nanoparticles.jl
+julia --project=. examples/tutorials/nanoparticles.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:nanoparticles))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

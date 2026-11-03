@@ -1,214 +1,203 @@
-# Construction tests regenerate every download and verify maintained-source,
-# measurement and posterior consistency. The tests below execute REDUCED paths.
-# No production fit, posterior sampling, retained export or plotting is invoked.
+# Reduced executions of authored workflows; no fitting, MCMC or retained export.
 include("case_study_scripts.jl")
 using ForwardDiff
 using Distributions: Normal, Beta, cdf, ccdf
 
-latest(f,args...;kwargs...)=Base.invokelatest(f,args...;kwargs...)
-tutorial_main(scope;kwargs...)=latest(getfield(scope,:main);kwargs...)
+@testset "Initial integrals and short growth/cooling/moment trajectories" begin
+    s=TUTORIALS[:constant_growth];pb=s.problem
+    before=simulate(remake(pb;u0=ConstantGrowthMethods.gaussian_counts(s.grid,0.));
+        method=SSPRK33(),dt=s.dt,saveat=s.solution.t)
+    @test last(s.solution.u)≈last(before.u) rtol=2e-14 atol=3e-15
+    @test vec(pb.u0)≈ConstantGrowthMethods.gaussian_counts(s.grid,0.) atol=3e-15 rtol=0
+    area=sum(pb.u0)/pb.p.height
+    @test ForwardDiff.derivative(A->sum(remake(pb;p=merge(pb.p,(height=A,))).u0),100.)≈area atol=3e-15
+    @test pb.p.height==100. # parameter-dependent initialization did not mutate base
 
-@testset "Tutorial numerical infrastructure is public and explicit" begin
-    for name in CaseStudyScripts.CASES
-        code=CaseStudyScripts.script(name)
-        @test !occursin(r"PopulationBalanceModels\._",code)
-        # Physical rate/source loops are allowed; no native stepping controller
-        # or hand-built spectral daughter rule belongs in the displayed scripts.
-        @test !occursin(r"\bwhile\s",code)
-    end
-end
-
-@testset "Gaussian and cooling walkthrough initialization and actual solves" begin
-    scope=load_tutorial(:constant_growth)
-    case=construct(scope;bins=40)
-    sol=tutorial_main(scope;bins=40)
-    @test sol.t==[4.]
-    @test diagnostics(sol).settings.algorithm==string(typeof(SSPRK33()))
-    # Independent CDF integrals from the retained analytical reference. Moving
-    # the Gaussian mean or its integration limits is equivalent up to roundoff.
-    old=ConstantGrowthMethods.gaussian_counts(case.grid,0.)
-    @test maximum(abs,vec(case.problem.u0)-old)<3e-15
-    @test maximum(abs,case.reference-ConstantGrowthMethods.gaussian_counts(case.grid,4.))<3e-15
-    @test initialization_report(case.problem).policy===:physical
-    legacy=remake(case.problem;u0=old)
-    dt=.5first(case.grid.widths)/ConstantGrowthMethods.growth
-    before=simulate(legacy;dt,method=SSPRK33(),saveat=[4.])
-    @test last(sol.u)≈last(before.u) rtol=2e-14 atol=3e-15
-
-    scope=load_tutorial(:crystallization)
-    times=[0.,.05,.1]
-    sol=tutorial_main(scope;times)
-    pb=sol.problem;grid=pb.operator.system.populations.crystals.grid
-    initial=population(pb,pb.u0,:crystals)
+    s=TUTORIALS[:crystallization];pb=s.problem;grid=s.grid
     expected=map(grid.edges[1:end-1],grid.edges[2:end]) do left,right
         a=max(left,180.5);b=min(right,210.5)
         b<=a ? 0. : .08*((b-a)-((b-195.5)^3-(a-195.5)^3)/(3*15^2))
     end
-    @test initial≈expected rtol=3e-14 atol=2e-16
-    @test sum(initial)≈1.6 atol=3e-15
-    old=Gunawan2004Case2.initial_counts(grid,Gunawan2004Case2.benchmark_initial_density)
-    @test initial≈old rtol=3e-14 atol=2e-16
-    u0=copy(pb.u0);population(pb,u0,:crystals).=old
-    before=simulate(remake(pb;u0);dt=.05,method=SSPRK33(),saveat=times)
-    @test last(sol.u)≈last(before.u) rtol=5e-13 atol=1e-15
+    @test population(pb,pb.u0,:crystals)≈expected rtol=3e-14 atol=2e-16
+    times=[0.,.05,.1]
+    solution=simulate(remake(pb;tspan=(0.,.1));method=SSPRK33(),dt=.05,saveat=times)
+    old=Gunawan2004Case2.build(grid=grid,initial_density=Gunawan2004Case2.benchmark_initial_density,
+        c0=s.solubility(s.temperature(0.)),tspan=(0.,.1))
+    previous=simulate(old;method=SSPRK33(),dt=.05,saveat=times)
+    @test last(solution.u)≈last(previous.u) rtol=5e-13 atol=1e-15
     inventory(u)=bulk(pb,u,:c)+pb.p.rho*moment(grid,population(pb,u,:crystals),3)
-    @test maximum(abs(inventory(u)-inventory(pb.u0)) for u in sol.u)<3e-14
+    @test maximum(abs(inventory(u)-inventory(pb.u0)) for u in solution.u)<3e-14
+
+    s=TUTORIALS[:moment_crystallization]
+    solution=simulate(remake(s.problem;tspan=(0.,.04));method=SSPRK33(),dt=.02,saveat=[0.,.02,.04])
+    @test vec(solution.problem.u0)==QamarMomentBenchmarks.exact4(0.,0:5)
+    @test abs(only(observe(MomentObservable(0),solution))-QamarMomentBenchmarks.exact4(.04)[1])<3e-8
+    @test maximum(abs(only(observe(MomentObservable(3),solution;index=i))-.001) for i in eachindex(solution.t))<3e-15
 end
 
-@testset "Moment and tubular walkthroughs retain their method and bounds" begin
-    scope=load_tutorial(:moment_crystallization)
-    times=[0.,.02,.04]
-    sol=tutorial_main(scope;times)
-    @test vec(sol.problem.u0)==QamarMomentBenchmarks.exact4(0.,0:5)
-    @test abs(only(observe(MomentObservable(0),sol))-QamarMomentBenchmarks.exact4(.04)[1])<3e-8
-    @test maximum(abs(only(observe(MomentObservable(3),sol;index=i))-.001) for i in eachindex(times))<3e-15
+# Explicitly reduced NUMERICAL settings for the same tutorial physical model.
+# Keeping these fixtures in tests avoids adding tutorial factories/CLI switches.
+function small_precipitation(s)
+    p=s.p;nx,nz=8,6
+    grid=Grid1D(exp.(range(log(p.xc),log(p.xmax);length=nx+1));coordinate=:length)
+    op=compile(s.model,grid;methods=TermMethods(growth=WENO5(),nucleation=BoundaryInjection(:left)))
+    exchange=ConservativeExchange(:crystals,:c,(x,p,t,ctx)->1e12*p.rho*p.kv*x^3)
+    system=PBMSystem((crystals=op,);exchanges=(exchange,),nonnegative_bulk=(:c,))
+    local_pb=PBMProblem(system,(crystals=zeros(nx),),(0.,2.);p,bulk0=(c=0.,))
+    reactor=AxialDispersion(AxialGrid(range(0.,p.L;length=nz+1));
+        velocity=p.Q/(p.area*p.porosity),dispersion=p.Dax,
+        inlet=(p,t)->(populations=(crystals=zeros(nx),),bulk=(c=p.cfeed,)))
+    axial_problem(local_pb,reactor;axial_scheme=MUSCL())
+end
 
-    scope=load_tutorial(:continuous_precipitation)
-    times=[0.,.5,2.]
-    sol=tutorial_main(scope;nx=8,nz=6,times)
-    pb=sol.problem
-    @test all(iszero,pb.u0) # intentional packed axial arrays
-    @test sol.t==times && sol.steps>0
-    @test diagnostics(sol).control===:stability_and_admissibility
-    @test minimum(last(sol.u))>=-1e-8
-    before=latest(ContinuousPrecipitation.advance,pb,times;method=RK4())
-    @test sol.u==before.u
-    @test sol.steps==before.steps
-    # Independent reactor inventory equation: actual discrete uptake cancels
-    # between particles and bulk; only the axial boundary flux remains.
-    op=pb.operator;localop=first(op.local_operators)
-    g=localop.system.populations.crystals.grid;p=pb.p
-    for (u,t) in zip(sol.u,sol.t)
-        du=similar(u);rhs!(du,u,op,p,t)
+@testset "Preserved precipitation bound, execution and axial material balance" begin
+    s=TUTORIALS[:continuous_precipitation];pb=small_precipitation(s);times=[0.,.5,2.]
+    solution=latest(simulate,pb;solver=s.solver,saveat=times)
+    previous=latest(ContinuousPrecipitation.advance,pb,times;method=RK4())
+    @test solution.u==previous.u && solution.steps==previous.steps
+    @test diagnostics(solution).control===:stability_and_admissibility
+    @test minimum(last(solution.u))>=-1e-8
+    @test latest(s.precipitation_step_bound,pb,last(solution.u),2.)==
+        latest(ContinuousPrecipitation.precipitation_step_bound,pb,last(solution.u),2.)
+    op=pb.operator;localop=first(op.local_operators);g=localop.system.populations.crystals.grid;p=pb.p
+    for (u,t) in zip(solution.u,solution.t)
+        du=similar(u);latest(rhs!,du,u,op,p,t)
         crystal_rate=vec(sum((1e12p.rho*p.kv .*g.centers.^3).*population(pb,du,:crystals);dims=1))
         actual=sum(op.domain.grid.widths.*(bulk(pb,du,:c)+crystal_rate))
-        flux=axial_fluxes(op,u,p,t)
-        c=localop.bulk_indices.c;r=localop.ranges.crystals
+        flux=latest(axial_fluxes,op,u,p,t);c=localop.bulk_indices.c;r=localop.ranges.crystals
         boundary=flux[c,1]-flux[c,end]+sum(1e12p.rho*p.kv .*g.centers.^3 .*(flux[r,1]-flux[r,end]))
         @test actual≈boundary atol=1e-14 rtol=1e-12
     end
 end
 
-function beta_interval(d,a,b)
-    a>=b ? 0. : a>.5 ? ccdf(d,a)-ccdf(d,b) : cdf(d,b)-cdf(d,a)
-end
-@testset "Stem-cell continuous law, independent pivot hats and historical distinction" begin
-    scope=load_tutorial(:stem_cells)
-    sol=tutorial_main(scope;bins=40,times=[0.,.05,.1])
-    pb=sol.problem;op=pb.operator.system.populations.stem;g=op.grid
-    @test population(pb,pb.u0,:stem)==StemCellPopulation.initial_population(g)
-    for (u,t) in zip(sol.u,sol.t)
-        report=latest(StemCellPopulation.state_summary,pb,u,t)
-        @test report.minimum_count>=0
-        @test abs(report.number_balance)<3e-13
-        @test abs(report.cargo_balance)<3e-11
+beta_interval(d,a,b)=a>=b ? 0. : a>.5 ? ccdf(d,a)-ccdf(d,b) : cdf(d,b)-cdf(d,a)
+@testset "Stem dynamics without counters equal the complete accounting model" begin
+    s=TUTORIALS[:stem_cells]
+    g=Grid1D(range(0.,120.;length=41);coordinate=:oct4)
+    op=compile(s.model,g;methods=TermMethods(growth=MUSCL(),breakage=FixedPivot(daughter_quadrature=GaussLegendre(8))))
+    pb=PBMProblem(op,s.initial,(0.,.1);p=s.p)
+    dt=min(.05,suggest_dt(op,pb.u0,pb.p,0.;cfl=.35))
+    solution=latest(simulate,pb;method=SSPRK33(),dt,negative_tolerance=0.,saveat=[0.,.05,.1])
+    # Run the authored diagnostic extension with the same reduced geometry.
+    for (key,value) in ((:grid,g),(:operator,op),(:problem,pb))
+        Core.eval(s,Expr(:(=),key,QuoteNode(value)))
     end
-    # Expected daughter count integral: 2 Beta(40,40); its first partial raw
-    # moment is a Beta(41,40) CDF times the parent. These independent integrals
-    # determine every linear pivot-hat coefficient without spectral nodes.
+    Base.include(s,joinpath(dirname(CaseStudyScripts.source_path(:stem_cells)),"stem_cell_accounting.jl"))
+    accounted=latest(simulate,s.accounted_problem;method=SSPRK33(),dt,negative_tolerance=0.,saveat=solution.t)
+    ref=latest(StemCellPopulation.continuous_problem;bins=40,tf=.1,differentiation=true)
+    reference=latest(simulate,ref;method=SSPRK33(),dt,negative_tolerance=0.,saveat=solution.t)
+    @test pb.u0==reshape(StemCellPopulation.initial_population(g),:,1)
+    for i in eachindex(solution.t)
+        @test vec(solution.u[i])≈population(accounted.problem,accounted.u[i],:stem) rtol=2e-14 atol=3e-15
+        @test accounted.u[i]≈reference.u[i] rtol=5e-13 atol=1e-15
+        report=latest(StemCellPopulation.state_summary,accounted.problem,accounted.u[i],accounted.t[i])
+        @test report.minimum_count>=0
+        @test abs(report.number_balance)<3e-13 && abs(report.cargo_balance)<3e-11
+    end
+    # Independent incomplete-Beta integrals of the linear pivot hat functions.
     parent=g.centers[13];N=zeros(length(g),1);N[13]=1.
-    law=latest(StemCellPopulation.division_daughters)
-    term=Breakage((x,p,t,c)->1.,law;overflow=:discard,coordinate_map=AdditiveCoordinate(identity,identity))
-    direct=compile(PBMModel(term),g);du=zero(N);rhs!(du,N,direct,(;),0.)
+    term=Breakage((x,p,t,c)->1.,s.daughters;overflow=:discard,
+        coordinate_map=AdditiveCoordinate(identity,identity))
+    dop=compile(PBMModel(term),g);du=zero(N);rhs!(du,N,dop,(;),0.)
     births=vec(du+N);expected=zeros(length(g))
     for i in 1:12
         a,b=g.centers[i:i+1]
         m0=2beta_interval(Beta(40.,40.),a/parent,b/parent)
         m1=parent*beta_interval(Beta(41.,40.),a/parent,b/parent)
-        expected[i]+=(b*m0-m1)/(b-a)
-        expected[i+1]+=(m1-a*m0)/(b-a)
+        expected[i]+=(b*m0-m1)/(b-a);expected[i+1]+=(m1-a*m0)/(b-a)
     end
     @test births≈expected rtol=2e-12 atol=2e-14
-    # Reuse the existing normalized-event tolerances from stem_cells.jl.
-    # Beta's log-normalizer and the summed hat integrals incur roundoff; no
-    # computed daughter count is rescaled to enforce a balance.
     @test sum(births)/2≈1. atol=2e-13
-    @test sum(g.centers.*births)/2≈parent/2 rtol=1e-12
-    oldlaw=latest(StemCellPopulation.beta_daughters;order=12)
-    oldop=compile(PBMModel(Breakage((x,p,t,c)->1.,oldlaw;overflow=:discard,
-        coordinate_map=AdditiveCoordinate(identity,identity))),g)
-    olddu=zero(N);rhs!(olddu,N,oldop,(;),0.)
-    @test sum(olddu+N)/2≈sum(births)/2 atol=2e-13
-    @test sum(g.centers.*vec(olddu+N))≈parent atol=3e-13
-    @test norm(vec(olddu)-vec(du),1)>1e-6 # no false bitwise-equivalence claim
-    before=latest(StemCellPopulation.solve_case;bins=40,tf=.1,differentiation=true,saveat=sol.t)
-    for (u,t) in zip(before.u,before.t)
-        report=latest(StemCellPopulation.state_summary,before.problem,u,t)
-        @test abs(report.number_balance)<3e-13 && abs(report.cargo_balance)<3e-11
-    end
-    println("Stem migration short-run difference: ",(
-        population_l1=norm(population(pb,last(sol.u),:stem)-population(before.problem,last(before.u),:stem),1),
-        number=sum(population(pb,last(sol.u),:stem))-sum(population(before.problem,last(before.u),:stem)),
-        cargo=moment(g,population(pb,last(sol.u),:stem)-population(before.problem,last(before.u),:stem),1),
-        exits=bulk(pb,last(sol.u),:differentiated_cells)-bulk(before.problem,last(before.u),:differentiated_cells)))
+    @test sum(g.centers.*births)≈parent rtol=1e-12
 end
 
-@testset "Joint initial density remains parameter dependent; diagnostic transport and LNP" begin
-    scope=load_tutorial(:transport)
-    pb=construct(scope;bins=12);g=pb.operator.grid
-    reference=InguvaBraatzCase2.reference(g,0.,pb.p)
-    @test pb.u0≈reference rtol=3e-13 atol=2e-15
+@testset "Joint initialization, signed transport and checked LNP startup" begin
+    s=TUTORIALS[:transport]
+    g=Grid2D(range(0.,2.;length=13),range(0.,2.;length=13))
+    boundary=SizeBC(OpenBoundary(),NoFlux())
+    op=compile(s.model,g;methods=TermMethods(growth=WENO5(epsilon=1e-12)),bc=SizeBC2D(x=boundary,y=boundary))
+    pb=PBMProblem(op,s.initial,(0.,.02);p=s.p)
+    @test pb.u0≈InguvaBraatzCase2.reference(g,0.,pb.p) rtol=3e-13 atol=2e-15
     p=merge(pb.p,(amplitude=30.,center=(.5,.45),width=(.06,.04)))
     changed=remake(pb;p)
-    fresh=latest(getfield(scope,:problem),12;p,initial=pb.initial_description)
-    @test changed.u0==fresh.u0
     @test changed.u0≈InguvaBraatzCase2.reference(g,0.,p) rtol=3e-13 atol=2e-15
-    physical_area=2pi*prod(pb.p.width)*prod(cdf(Normal(pb.p.center[i],pb.p.width[i]),2.)-
+    area=2pi*prod(pb.p.width)*prod(cdf(Normal(pb.p.center[i],pb.p.width[i]),2.)-
         cdf(Normal(pb.p.center[i],pb.p.width[i]),0.) for i in 1:2)
-    f=A->sum(remake(pb;p=merge(pb.p,(amplitude=A,))).u0)
-    @test ForwardDiff.derivative(f,50.)≈physical_area atol=3e-15
-    @test pb.p.amplitude==50.
-    sol=tutorial_main(scope;bins=12,times=[0.,.02])
-    @test diagnostics(sol).settings.check_nonnegative===false
-    @test only(observe(MomentObservable((0,0)),sol))≈sum(sol.problem.u0) atol=3e-14
+    @test ForwardDiff.derivative(A->sum(remake(pb;p=merge(pb.p,(amplitude=A,))).u0),50.)≈area atol=3e-15
+    dt=suggest_dt(op,pb.u0,pb.p,0.;cfl=.4)
+    solution=latest(simulate,pb;method=SSPRK33(),dt,saveat=[0.,.02],check_nonnegative=false)
+    @test diagnostics(solution).settings.check_nonnegative===false
+    @test only(observe(MomentObservable((0,0)),solution))≈sum(pb.u0) atol=3e-14
 
-    scope=load_tutorial(:nanoparticles)
-    sol=tutorial_main(scope;bins=16,times=[0.,1e-8,2e-8])
-    @test sol.steps==2 && all(isfinite,last(sol.u))
-    @test sum(population(sol.problem,last(sol.u),:lnp))>0
+    s=TUTORIALS[:nanoparticles]
+    solution=latest(simulate,remake(s.problem;tspan=(0.,2e-8));method=SSPRK33(),dt=1e-8,saveat=[0.,1e-8,2e-8])
+    @test solution.steps==2 && all(isfinite,last(solution.u))
+    @test sum(population(solution.problem,last(solution.u),:lnp))>0
+    @test bulk(solution.problem,last(solution.u),:lipid)>0
+    reference=latest(simulate,remake(TUTORIAL_REFERENCES[:nanoparticles];tspan=(0.,2e-8));
+        method=SSPRK33(),dt=1e-8,saveat=solution.t)
+    @test last(solution.u)≈last(reference.u) rtol=5e-13 atol=1e-15
 end
 
 if Base.find_package("Optim")!==nothing
-    @testset "Retained analytical and bucketed inference callables execute" begin
-        scope=load_tutorial(:estimating_growth)
-        ep=construct(scope);ex=only(ep.experiments)
-        sol=latest(ex.solver,ex.problem,[0.,.1])
-        @test sol.problem===ex.problem && all(isfinite,last(sol.u))
-        @test ex.problem.initial_description isa InitialDistribution
-        @test all(isfinite,predictions(ep,initial_coordinates(ep))[1][1])
-        scope=load_tutorial(:protein_crystallization)
-        for model in (:cnt,:cnt_grd)
-            ep=construct(scope;model,bins=8);ex=only(ep.experiments)
-            @test ex.solver===getfield(scope,:cfl_solve)
-            modern=latest(ex.solver,ex.problem,[0.,1.])
-            before=latest(IsothermalProteinCrystallization.cfl_solve,ex.problem,[0.,1.])
-            @test modern.u==before.u && modern.steps==before.steps
+    @testset "Analytical and bucketed inference solvers without calibration" begin
+        s=TUTORIALS[:estimating_growth];ex=only(s.estimation.experiments)
+        solution=latest(ex.solver,ex.problem,[0.,.1])
+        @test solution.problem===ex.problem && all(isfinite,last(solution.u))
+        @test all(isfinite,predictions(s.estimation,initial_coordinates(s.estimation))[1][1])
+        @test !isdefined(s,:fitted)
+        s=TUTORIALS[:protein_crystallization]
+        for terms in (s.cnt_model,s.grd_model)
+            pb=latest(s.batch_problem,terms;bins=8)
+            solution=latest(s.solver,pb,[0.,1.])
+            previous=latest(IsothermalProteinCrystallization.cfl_solve,pb,[0.,1.])
+            @test solution.u==previous.u && solution.steps==previous.steps
+            g=pb.operator.system.populations.crystals.grid
+            inventory(u)=bulk(pb,u,:c)+pb.p.rho*pb.p.kv*moment(g,population(pb,u,:crystals),3)
+            @test maximum(abs(inventory(u)-inventory(pb.u0)) for u in solution.u)<1e-12
         end
+        @test !isdefined(s,:fitted)
     end
 end
 
-if Base.find_package("Sundials")!==nothing && Base.find_package("SciMLBase")!==nothing
-    @testset "Reduced milling main: direct, MC and PCE share the specialized solver" begin
-        scope=load_tutorial(:milling_uncertainty)
-        result=tutorial_main(scope;bins=12,mc_samples=2,validation_samples=2,training_samples=6,surrogate_draws=50)
-        @test result.mc.metadata.solves==2 && all(result.mc.success)
-        @test result.pce.training.metadata.solves==6 && all(result.pce.training.success)
-        @test result.nominal.t==result.mc.problem.times
-        pb=result.nominal.problem
-        @test all(iszero,pb.u0)
-        u=result.nominal.u[4] # exactly 30 s, new speed for the outlet observation
-        before=latest(scope.MillingModel.outlet,merge(pb.p,(segment_speed=4923.,)),population(pb,u,:mill),30.)
-        after=latest(scope.MillingModel.outlet,pb.p,population(pb,u,:mill),30.)
+if haskey(TUTORIALS,:milling_uncertainty)
+    @testset "Separate nominal, MC, PCE and independent validation stages" begin
+        s=TUTORIALS[:milling_uncertainty];pb=latest(s.build_mill;bins=12)
+        nominal=latest(s.solver,pb,s.times)
+        @test all(iszero,pb.u0) && all(isfinite,last(nominal.u))
+        # Instantaneous observations at the transition use the right-hand speed.
+        u=nominal.u[4];N=population(pb,u,:mill)
+        before=latest(s.MillingModel.outlet,merge(pb.p,(segment_speed=4923.,)),N,30.)
+        after=latest(s.MillingModel.outlet,pb.p,N,30.)
         @test after.resolved≈(1500/4923).*before.resolved.+(1-1500/4923).*(1 .-pb.p.retained).*pb.p.feed rtol=3e-15
-        _load_example(:MillingUncertainty,"milling_uncertainty.jl")
-        exact=latest(MillingUncertainty.exponential_reference,pb,result.nominal.t)
-        @test maximum(maximum(abs,result.nominal.u[i]-exact.u[i]) for i in eachindex(exact.t))<5e-8
-        @test latest(MillingUncertainty.state_diagnostics,pb,result.nominal).maximum_mass_error_kg<1e-11
-        # sigma changes the cached daughter projection: each scenario rebuilds
-        # the SAME model, rather than silently reusing the nominal operator.
-        theta=merge(scope.MEAN,(sigma=scope.MEAN.sigma+.1,))
-        rebuilt=latest(result.mc.problem.setup,theta,pb)
-        @test rebuilt.p.sigma==theta.sigma && rebuilt.p.Q!=pb.p.Q
-        @test pb.p.sigma==scope.MEAN.sigma
+        # Independent augmented affine-system exponential in material coordinates.
+        units=vcat(pb.p.rho*pb.p.number_scale.*pb.p.pivots,1.,1.)
+        state=copy(pb.u0);lasttime=0.;exact=typeof(state)[]
+        for t in s.times
+            stops=lasttime<pb.p.change_time<t ? [pb.p.change_time,t] : [t]
+            for endpoint in stops
+                rpm=lasttime<pb.p.change_time ? pb.p.speed_before : pb.p.speed_after
+                local_pb=remake(pb;p=merge(pb.p,(segment_speed=rpm,)))
+                A,b=latest(s.MillingModel.linear_system,local_pb)
+                augmented=[(A.*units)./units' units.*b;zeros(1,length(b)+1)]
+                mass=exp((endpoint-lasttime)*augmented)*vcat(units.*state,1.)
+                state=mass[1:end-1]./units
+                lasttime=endpoint
+            end
+            push!(exact,copy(state))
+        end
+        @test maximum(maximum(abs,nominal.u[i]-exact[i]) for i in eachindex(exact))<5e-8
+        mass_errors=[pb.p.rho*pb.p.number_scale*dot(pb.p.pivots,population(pb,u,:mill))+
+            bulk(pb,u,:discharged_mass)-pb.p.mass_feed*t for (u,t) in zip(nominal.u,nominal.t)]
+        @test maximum(abs,mass_errors)<1e-11
+        uq=UQProblem(pb,s.inputs;setup=s.setup,solver=s.solver,times=s.times,outputs=(d50=s.d50,),
+            output_coordinates=s.uq.output_coordinates)
+        Core.eval(s,:(uq=$uq))
+        Base.include(s,joinpath(dirname(CaseStudyScripts.source_path(:milling_uncertainty)),"milling_propagation.jl"))
+        @test s.mc.metadata.solves==16 && all(s.mc.success)
+        @test s.pce.training.metadata.solves==12 && all(s.pce.training.success)
+        @test s.pce.validation!==nothing # its failed/pass diagnostic is retained
+        @test s.pce.validation.passed isa Bool
+        @test !isdefined(s,:cheap) # no automatic polynomial-draw campaign
     end
 end

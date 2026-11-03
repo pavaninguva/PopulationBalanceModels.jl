@@ -57,20 +57,19 @@ growth and nucleation to zero below saturation: it does not describe dissolution
 
 ## Supply parameters and the cooling trajectory
 
-The reusable recipe is in `examples/papers/gunawan2004_case2.jl`. Load it from
-the installed source directory:
+Declare the physical inputs directly; the separate reference recipe is linked
+in the verification/reproduction sections:
 
 ```@example cooling
 using PopulationBalanceModels
-include(joinpath(pkgdir(PopulationBalanceModels),"examples","papers","gunawan2004_case2.jl"))
-import .Gunawan2004Case2
-const recipe = Gunawan2004Case2
-p = recipe.parameters()
+p = (kb=4.64e-7,b=1.78,kg=116.0,g=1.32,rho=2.11e-12,size_factor=0.1)
+temperature(t) = 32.0-4.0*(-expm1(-t/18600.0))
+solubility(T) = 1.721e-4*T^2-5.88e-3*T+0.1286
+nothing # hide
 ```
 
 The fields are ``k_b=4.64\times10^{-7}``, ``b=1.78``, ``k_g=116``, ``g=1.32``,
-``\rho_c=2.11\times10^{-12}`` g/µm³, and ``\alpha=0.1`` µm⁻¹. They can be
-changed explicitly, for example with `recipe.parameters(kg=120.0)`.
+``\rho_c=2.11\times10^{-12}`` g/µm³, and ``\alpha=0.1`` µm⁻¹. They are ordinary physical parameters; `merge(p,(kg=120.0,))` creates an alternative tuple.
 
 Temperature is a prescribed operating history:
 
@@ -79,7 +78,7 @@ T(t)=32-4(1-e^{-t/18600}),\qquad
 c_{\mathrm{sat}}(T)=1.721\times10^{-4}T^2-5.88\times10^{-3}T+0.1286.
 ```
 
-The recipe implements these as `temperature(t)` and `solubility(T)`. Unlike
+The callbacks above implement these laws. Unlike
 temperature, concentration belongs in the state vector because the model must
 solve for it.
 
@@ -88,7 +87,7 @@ solve for it.
 The following are the callbacks used by the recipe:
 
 ```@example cooling
-supersaturation(ctx) = max(ctx.bulk.c / recipe.solubility(ctx.fields.T) - 1, 0.0)
+supersaturation(ctx) = max(ctx.bulk.c / solubility(ctx.fields.T) - 1, 0.0)
 
 function growth_rate(L,p,t,ctx)
     p.kg * supersaturation(ctx)^p.g * (1 + p.size_factor * L)
@@ -116,11 +115,11 @@ We use a finite length range, 0–1600 µm. The initial distribution is split at
 so a cell does not straddle the jump in the initial density:
 
 ```@example cooling
-edges = sort!(unique(vcat(collect(0.0:0.5:1600.0),180.5,210.5)))
+edges = sort!(unique(vcat(collect(0.0:2.0:1600.0),180.5,210.5)))
 grid = Grid1D(edges;coordinate=:length)
 methods = TermMethods(
     growth = MUSCL(),
-    by_term = (nucleation=BoundaryInjection(:left),),
+    nucleation = BoundaryInjection(:left),
 )
 operator = compile(model,grid;methods,bc=SizeBC(NoFlux(),NoFlux()))
 nothing # hide
@@ -142,7 +141,7 @@ calculate how much solute the resolved population gains:
 
 ```@example cooling
 system = PBMSystem((crystals=operator,);
-    fields = (p,t)->(T=recipe.temperature(t),),
+    fields = (p,t)->(T=temperature(t),),
     nonnegative_bulk = (:c,),
     exchanges = (ConservativeExchange(:crystals,:c,
         (L,p,t,ctx)->p.rho*L^3;
@@ -199,14 +198,13 @@ paper coefficients or a claim to reproduce its original distribution curves.
 The kinetics, cooling trajectory, and coupled balances are retained.
 
 ```@example cooling
-f0 = recipe.benchmark_initial_density
-c0 = recipe.solubility(recipe.temperature(0.0))
+f0(L) = 180.5<=L<=210.5 ? 0.08*(1-((L-195.5)/15)^2) : 0.0
+c0 = solubility(temperature(0.0))
 initial = InitialDensity((L,p,t)->f0(L);
     support=(180.5,210.5),quadrature=GaussLegendre(3))
 problem = PBMProblem(system,(crystals=initial,),(0.0,10.0);
     bulk0=(c=c0,),p)
-solver = ForwardSolver(SSPRK33();dt=0.05)
-solution = simulate(problem;solver,saveat=[0.0,10.0])
+solution = simulate(problem;method=SSPRK33(),dt=0.05,saveat=[0.0,10.0])
 crystals = population(problem,solution.u[end],:crystals)
 final_concentration = bulk(problem,solution.u[end],:c)
 nothing # hide
@@ -339,29 +337,30 @@ adds the reference calculation and error tables. Follow the
 
 ### Complete script
 
-The temperature and solubility laws, kinetics, chosen initial density and
-`ConservativeExchange` assembly are defined below. `InitialDensity` integrates
-that number density without normalization; its support breakpoints are grid
-edges. The quadrature starts with the original three-point rule and checks its
-accuracy by order refinement. `ForwardSolver` retains SSPRK33 and the 0.05-s
-maximum step. There is no imported integration helper. The 10-second run
-checks the coupling; the full 1000-second refinement study remains separate.
+The walkthrough declares the cooling and solubility functions, growth and
+nucleation, `PBMModel`, boundary injection and `ConservativeExchange` directly.
+`InitialDensity` integrates the stated alternative parabolic seed without
+normalization; its endpoints are grid edges. The 2-µm background grid, 10-s
+horizon and 0.05-s step are introductory settings, separate from the retained
+1000-s refinement campaign. The analytical moment reference remains in the
+[maintained recipe](../assets/source/examples/papers/gunawan2004_case2.jl).
 
-[Download this standalone script](../assets/source/tutorials/crystallization.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Download the authored script](../assets/source/tutorials/crystallization.jl).
+The displayed code below is read verbatim from `examples/tutorials/crystallization.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=. docs/src/assets/source/tutorials/crystallization.jl
+julia --project=. examples/tutorials/crystallization.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:crystallization))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

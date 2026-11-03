@@ -46,15 +46,21 @@ to reuse an axis; multi-block fits/corners accept `axes`. Draw comparisons by
 calling the function again on the same axis with prepared references or another
 solution. Save explicitly after changing labels, legends or spacing.
 
-For a generated minimum case-study script, numerical-only execution is unchanged:
+The authored tutorials end with direct optional plotting recipes. For example:
 
 ```julia
-include("docs/src/assets/source/tutorials/stem_cells.jl")
-result = main(bins=40,times=[0.0,0.05,0.1])
+include("examples/tutorials/stem_cells.jl") # Prepare the model; no solve on include.
+solution = simulate(problem;method=SSPRK33(),dt,negative_tolerance=0.0,
+    saveat=[0.0,0.05,0.1])
 import PythonPlot
-pictures = plot_results(result) # No new forward evaluations.
-save_figure(pictures.distribution,"stem_distribution.png")
+picture = plot_distribution(solution;xlabel="Cargo (arbitrary units)",
+    ylabel="Cell number density")
+save_figure(picture,"stem_distribution.png")
 ```
+
+This plot uses the existing solution. There is no additional solve or required
+case-specific plotting wrapper. Estimation and UQ plots likewise consume explicit
+prepared predictions or summaries.
 
 ## Scientific meaning of the plots
 

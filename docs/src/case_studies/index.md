@@ -54,7 +54,7 @@ adds a physical position coordinate to an intrinsic growth model.
 Each page ends with a complete downloadable tutorial: one configuration,
 physical rates, initial/boundary conditions, assembly and a solve. Estimation
 cases also show observations, priors and likelihoods; the milling example adds
-one MC/PCE calculation. Comparisons and reporting/export loops stay in the full
+an explicitly invoked MC/PCE stage. Comparisons and reporting/export loops stay in the full
 reproduction drivers.
 
 Ordinary initialization and execution use the public
@@ -73,12 +73,13 @@ reduced-state/constraint backend currently prevents a direct OperatingHistory
 migration. Smooth cooling remains a field callback; autonomous cases introduce
 no artificial operating transitions.
 
-Every minimum script also defines `plot_results(result)` for its existing
-solution or inference/UQ result. After `import PythonPlot`, these short optional
-calls use the [shared plotting interface](../plotting.md); `main()` and ordinary
-numerical inclusion do not load Python or write figures. Inference scripts return
-prepared predictions and their estimation context so display needs no new solve.
-Paper layouts remain separate plot-only compositions over retained values.
+The authored scripts live in `examples/tutorials/`. The displayed complete code
+and download are read from the same file. Their short optional plotting recipes
+call the [shared plotting interface](../plotting.md) on existing solutions,
+predictions and UQ summaries. Python is not required for numerical execution.
+Milling propagation and stem-cell diagnostic accounting are separate explicit
+stages; including an estimation tutorial never starts a fit or posterior chain.
+Paper layouts remain plot-only compositions over retained values.
 
 Use the [common setup](../verification.md#Examples-and-figures) for dependencies
 and the original data. Retained figures and production campaigns are separate

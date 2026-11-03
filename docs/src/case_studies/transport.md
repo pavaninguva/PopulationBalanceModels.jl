@@ -49,16 +49,13 @@ closed upper edges.
 
 ## Enter the growth law and parameters
 
-The script `examples/inguva_braatz_case2.jl` contains the model, reference
-integrals, and comparison runner. We use its parameter constructor so that the
-numerical and analytical calculations read the same values:
+The first calculation declares its physical inputs directly. The analytical
+reference integrals and comparison runner are separate follow-on calculations:
 
 ```@example growth2d
 using PopulationBalanceModels
-include(joinpath(pkgdir(PopulationBalanceModels),"examples","inguva_braatz_case2.jl"))
-import .InguvaBraatzCase2
-const study = InguvaBraatzCase2
-p = study.parameters()
+p = (offset=(0.1,0.5),slope=(0.05,0.25),amplitude=50.0,
+     center=(0.4,0.4),width=(0.05,0.05))
 ```
 
 `offset` and `slope` specify the two affine velocities; `amplitude`, `center`,
@@ -85,16 +82,19 @@ N_{ij}(t)=\int_{a_{1,i-1/2}}^{a_{1,i+1/2}}
 \int_{a_{2,j-1/2}}^{a_{2,j+1/2}}f(a_1,a_2,t)\,da_2\,da_1.
 ```
 
-The reference routine evaluates these integrals from the Gaussian, avoiding
-an initial midpoint approximation. Here we use a small grid for an interactive run:
+`InitialDensity` integrates the explicit joint Gaussian over each rectangle.
+It is a number density, not an implicitly normalized probability product.
+Here we use a small grid for an interactive run:
 
 ```@example growth2d
 grid = Grid2D(range(0,2;length=41),range(0,2;length=41))
-initial = study.reference(grid,0.0,p)
-sum(initial)
+initial = InitialDensity((xy,p,t)->p.amplitude*exp(
+    -0.5*((xy[1]-p.center[1])/p.width[1])^2-0.5*((xy[2]-p.center[2])/p.width[2])^2);
+    support=((0.0,2.0),(0.0,2.0)))
+nothing # hide
 ```
 
-To reconstruct a density for plotting, call `density(grid,initial)`. Dividing
+To reconstruct a density for plotting, call `density(grid,problem.u0)` after problem construction. Dividing
 by one width rather than the bin area would give the wrong two-dimensional density.
 
 ## Choose face fluxes, boundaries, and a time step
@@ -105,7 +105,7 @@ operator = compile(model,grid;
     methods=TermMethods(growth=WENO5(epsilon=1e-12)),
     bc=SizeBC2D(x=boundary,y=boundary))
 problem = PBMProblem(operator,initial,(0.0,1.0);p)
-dt = suggest_dt(operator,initial,p,0.0;cfl=0.4)
+dt = suggest_dt(operator,problem.u0,p,0.0;cfl=0.4)
 solution = simulate(problem;method=SSPRK33(),dt,saveat=[1.0],
     check_nonnegative=false)
 nothing # hide
@@ -147,6 +147,9 @@ We compare each numerical bin number with the integral of this solution over
 the same bin:
 
 ```@example growth2d
+include(joinpath(pkgdir(PopulationBalanceModels),"examples","inguva_braatz_case2.jl"))
+import .InguvaBraatzCase2
+const study = InguvaBraatzCase2
 truth = study.reference(grid,1.0,p)
 final = solution.u[end]
 (integrated_absolute_error=sum(abs,final-truth),
@@ -284,33 +287,31 @@ also runs refinement and the eligible characteristic method. Follow the
 
 ### Complete script
 
-Both directional growth laws, the joint Gaussian number density, boundaries and
-numerical assembly are defined below. `InitialDensity` integrates rectangles on
-[0,2]² without normalization or an inferred independence assumption. Its callback
-uses the current parameters, including when `remake` changes the initial profile.
-The axis-integral formulas serve as an independent analytical reference rather
-than initial-state infrastructure. The final call configures `ForwardSolver`
-for one WENO5 + SSPRK33
-configuration and reads total number as a joint moment of order (0,0). The
-refinement, distribution-error and signed-undershoot comparisons remain in the
-linked full driver. The diagnostic solve retains its explicitly disabled
-nonnegativity check so signed WENO undershoots stay visible.
+The first calculation shows both affine growth velocities, the joint Gaussian
+number density, `Grid2D`, each axis's boundaries, WENO5 and SSPRK33 directly.
+`InitialDensity` integrates rectangles without introducing an independence or
+normalization assumption. The explicit `check_nonnegative=false` diagnostic
+policy retains signed WENO undershoots; no state is clipped. The 50 × 50 mesh
+and one-unit horizon are introductory settings. Analytical bin-integral
+comparisons and characteristic/travel-time methods remain later calculations.
+The optional `plot_field` call uses actual cell edges and an explicit orientation.
 
-[Download this standalone script](../assets/source/tutorials/transport.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Download the authored script](../assets/source/tutorials/transport.jl).
+The displayed code below is read verbatim from `examples/tutorials/transport.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=. docs/src/assets/source/tutorials/transport.jl
+julia --project=. examples/tutorials/transport.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:transport))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

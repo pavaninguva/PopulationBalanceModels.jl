@@ -74,9 +74,11 @@ biological meaning explicit:
 
 ```julia
 using PopulationBalanceModels
-using Distributions: Beta, pdf
-include("examples/stem_cell_population.jl")
-using .StemCellPopulation
+using Distributions: Normal, Beta, pdf
+p = (differentiation=true,)
+cargo_rate(x,p,t,ctx) = (50+x^2)/(100+x^2)-0.005x
+division_rate(x,p,t,ctx) = (x/100)^5
+differentiation_rate(x,p,t,ctx) = p.differentiation ? 0.5/(1+0.005exp(0.25x)) : zero(x)
 
 grid = Grid1D(range(0.0, 120.0; length=601); coordinate=:oct4)
 daughters = ContinuousDaughters((r,parent,p,t,ctx)->2pdf(Beta(40.0,40.0),r);
@@ -91,22 +93,34 @@ model = PBMModel(
 operator = compile(model, grid;
     methods=TermMethods(growth=MUSCL(),breakage=FixedPivot(daughter_quadrature=GaussLegendre(8))),
     bc=SizeBC())
+initial = InitialDistribution(Normal(50.0,0.5);total=1.0,
+    support=(0.0,100.0),truncation=:renormalize)
+problem = PBMProblem(operator,initial,(0.0,20.0);p)
+dt = min(0.05,suggest_dt(operator,problem.u0,p,0.0;cfl=0.35))
+solution = simulate(problem;method=SSPRK33(),dt,negative_tolerance=0.0,
+    saveat=[0.0,10.0,20.0])
+observe(MomentObservable(0),solution)
 ```
 
 `ContinuousDaughters` specifies the expected daughter-number density in the
 ratio ``r=x/y``. Its integral is two and its first ratio moment is one.
 The native fixed-pivot method prepares positive quadrature and deposits daughters while preserving their
 number and additive cargo when they lie between represented pivots. Daughters
-below the first pivot are explicitly discarded into a cumulative loss ledger;
-they are never silently assigned to the smallest cell. Their tiny contribution
-is reported separately from biological differentiation.
+below the first pivot are explicitly discarded, never silently assigned to the
+smallest cell. The optional accounting extension records their contribution
+separately from biological differentiation.
 
 The retained figures below used the same physical law with the example's older
 12-node Gauss–Jacobi rule. The continuous-density walkthrough has its own
 projection checks; the [complete script](#Complete-script) explains this
 distinction from historical results.
 
-To retain exit counts and cargo, the example wraps the operator in `PBMSystem`.
+### Add diagnostic counts and cargo
+
+The standalone calculation above contains the full population dynamics,
+including the differentiation sink. To retain exit counts and cargo, wrap the
+same operator in `PBMSystem` using the accounting block linked below. These
+counters do not feed back into any population rate.
 Its coupled scalar balances are
 
 ```math
@@ -305,44 +319,49 @@ and the paper's supplement specify the source functions and initialization.
 
 ## Complete script
 
-Cargo dynamics, division and differentiation hazards, model assembly and
-historical counters are defined below. `ContinuousDaughters` declares the number
-measure ``2\,\mathrm{Beta}(40,40)`` in cargo ratio: its count is two and it
-conserves cargo, not cargo cubed. `FixedPivot` owns positive quadrature and
-conservative projection; sub-grid daughters remain explicit losses recorded by
-`CumulativeAccounting`. `InitialDistribution` supplies Normal(50,0.5) conditioned
-on [0,100] with unit total cell concentration. Neither integration nor state
-packing is a reader-supplied helper. `ForwardSolver` keeps the autonomous fixed
-step recommendation, SSPRK33 and zero negativity tolerance.
+The first script shows cargo growth, division, the differentiation sink and the
+continuous expected daughter-number law `2 Beta(40,40)`. It initializes the
+explicitly conditioned Normal(50,0.5) distribution with total concentration one
+and solves the standalone population. No `PBMSystem` is needed for these dynamics.
+Daughter underflow is discarded without redistribution, as declared; adding the
+accounting extension records that unresolved measure.
 
-The [maintained source](../assets/source/examples/stem_cell_population.jl) shares
-one physical assembly between `continuous_problem` (this walkthrough) and
-`build_problem` (the retained 12-node Gauss–Jacobi production recipe). The physical
-daughter law is the same, but integrating its continuous density changes the
-finite quadrature/deposition approximation. Resolved daughter profiles need not
-match the old 12-node profiles. The figures and historical numerical checks above
-still describe their original producer; this migration does not certify a
-reproduction of them. Count/cargo and short-transient checks are separate.
+The [accounting block](../assets/source/examples/tutorials/stem_cell_accounting.jl)
+adds division counts, counts/cargo at differentiation exit, synthesis bookkeeping
+and cumulative daughter losses to the same operator. These diagnostics have no
+feedback, and reduced trajectory checks compare the population with and without
+them. The exit counters are not an evolving differentiated-cell population.
+The 20-unit transient is in synthetic model time. The continuous-density
+projection remains distinct from the retained producer's 12-node Gauss–Jacobi
+rule; no historical figures or producer records have been changed.
 
-The final call solves one 20-model-time transient with
-differentiation; use `tutorial_problem(differentiation=false)` for the other
-cohort. The full balanced-growth/refinement study remains separate.
-
-[Download this standalone script](../assets/source/tutorials/stem_cells.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Download the authored script](../assets/source/tutorials/stem_cells.jl).
+The displayed code below is read verbatim from `examples/tutorials/stem_cells.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=. docs/src/assets/source/tutorials/stem_cells.jl
+julia --project=. examples/tutorials/stem_cells.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
+
+After including `stem_cells.jl`, include `stem_cell_accounting.jl` in the same
+scope when those diagnostics are needed; it prepares `accounted_problem` without
+running a second solve. Its example calls use the same step and output times.
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:stem_cells))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.
+
+The complete diagnostic extension is also authored separately:
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", read(joinpath(Main.CaseStudyScripts.ROOT,"examples","tutorials","stem_cell_accounting.jl"),String))])
+```

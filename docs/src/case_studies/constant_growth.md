@@ -41,18 +41,17 @@ only about ``1.3\times10^{-11}`` of the untruncated number below zero.
 
 ```@example growth_comparison
 using PopulationBalanceModels
-using Distributions: Normal
-include(joinpath(pkgdir(PopulationBalanceModels),"examples","constant_growth_methods.jl"))
-import .ConstantGrowthMethods
-model = PBMModel(growth=Growth(AffineGrowth(0.1,0.0)))
-grid = Grid1D(range(0.,1.;length=201);coordinate=:length)
+p = (speed=0.1,height=100.0,center=0.2,width=0.03)
+growth(a,p,t,ctx) = p.speed
+initial_density(a,p,t) = p.height*exp(-0.5*((a-p.center)/p.width)^2)
+model = PBMModel(growth=Growth(growth))
+grid = Grid1D(range(0.0,1.0;length=201);coordinate=:length)
 bc = SizeBC(OpenBoundary(),OpenBoundary())
-initial = InitialDistribution(Normal(0.2,0.03);
-    total=100*0.03*sqrt(2pi), support=(0.0,1.0), truncation=:physical)
 operator = compile(model,grid;methods=TermMethods(growth=MUSCL()),bc)
-problem = PBMProblem(operator,initial,(0.,4.))
-solver = ForwardSolver(SSPRK33();dt=0.5*first(grid.widths)/0.1)
-solution = simulate(problem;solver)
+initial = InitialDensity(initial_density;support=(0.0,1.0))
+problem = PBMProblem(operator,initial,(0.0,4.0);p)
+solution = simulate(problem;method=SSPRK33(),dt=0.5*minimum(grid.widths)/p.speed,
+    saveat=[0.0,2.0,4.0])
 nothing # hide
 ```
 
@@ -77,8 +76,13 @@ uniform in travel time and a step that moves one whole cell. For constant
 ``G=0.1``, an ordinary uniform mesh meets that requirement:
 
 ```@example growth_comparison
-shift_operator = compile(model,grid;evolution=Inguva2022(),bc)
-shift_problem = PBMProblem(shift_operator,initial,(0.,4.))
+# The analytical comparison belongs to verification, after the first solve.
+include(joinpath(pkgdir(PopulationBalanceModels),"examples","constant_growth_methods.jl"))
+import .ConstantGrowthMethods
+# The complete update needs a declared affine law, not an inferred callback form.
+shift_model = PBMModel(growth=Growth(AffineGrowth(p.speed,0.0)))
+shift_operator = compile(shift_model,grid;evolution=Inguva2022(),bc)
+shift_problem = PBMProblem(shift_operator,initial,(0.,4.);p)
 shift_solution = simulate(shift_problem;dt=first(grid.widths)/0.1)
 maximum(abs.(last(shift_solution.u).-ConstantGrowthMethods.gaussian_counts(grid,4.)))
 ```
@@ -92,8 +96,8 @@ schemes remain documented in [Growth](../methods/growth.md) and
 HOC is selected through the same model and bin-integrated initial state:
 
 ```julia
-compact_operator = compile(model,grid;evolution=HOCFiniteVolume(),bc)
-compact_solution = simulate(PBMProblem(compact_operator,initial,(0.,4.));
+compact_operator = compile(shift_model,grid;evolution=HOCFiniteVolume(),bc)
+compact_solution = simulate(PBMProblem(compact_operator,initial,(0.,4.);p);
     dt=0.5*first(grid.widths)/0.1,check_nonnegative=false)
 ```
 
@@ -211,30 +215,29 @@ julia --project=docs docs/make.jl
 
 ### Complete script
 
-The script declares the Gaussian through `InitialDistribution`, including the
-height-to-total conversion and original [0,1] support. Truncation is physical:
-omitted tails are not renormalized. `PBMProblem` creates the bin integrals;
-`initialize` evaluates the analytically translated profile for comparison.
-An explicit `ForwardSolver` runs MUSCL + SSPRK33 at the same fixed maximum
-step and checks the integrated density error. The seven
-method pairings, signed-undershoot diagnostics and timings remain in the linked
-comparison driver. The tutorial retains the native nonnegativity checks.
+The authored walkthrough declares the physical Gaussian number density directly,
+compiles MUSCL on 200 bins with open size boundaries, and advances it with
+SSPRK33 at CFL 0.5. There is no probability/total conversion, reference factory,
+error calculation or export loop. The initial bin integrals agree with the
+original Gaussian input. Exact translation, scheme sweeps, grid errors and
+measurements of cost belong to the verification/reproduction workflow above.
 
-[Download this standalone script](../assets/source/tutorials/constant_growth.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Download the authored script](../assets/source/tutorials/constant_growth.jl).
+The displayed code below is read verbatim from `examples/tutorials/constant_growth.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=. docs/src/assets/source/tutorials/constant_growth.jl
+julia --project=. examples/tutorials/constant_growth.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:constant_growth))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

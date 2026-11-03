@@ -76,10 +76,9 @@ value = rand(rng,truncated(Normal(density,sigma),0.0,Inf))
 
 ```@example growth_inference
 using PopulationBalanceModels, Distributions
-include(joinpath(pkgdir(PopulationBalanceModels),"examples","estimate_size_dependent_growth.jl"))
-import .EstimateSizeDependentGrowth
-const recipe = EstimateSizeDependentGrowth
-data = recipe.synthetic_measurements(seed=2022,noise=1.0)
+using Random, LinearAlgebra
+include(joinpath(pkgdir(PopulationBalanceModels),"examples","support","affine_growth_reference.jl"))
+data = synthetic_measurements(seed=2022,noise=1.0)
 size(data.values)
 ```
 
@@ -94,7 +93,7 @@ FunctionObservable evaluates the analytical density at the measured sizes:
 
 ```julia
 profile = FunctionObservable((N,operator,p,t)->
-    recipe.exact_density.(data.sizes,t,Ref(p)))
+    exact_density.(data.sizes,t,Ref(p)))
 measurement = Measurement(data.times,data.values,profile;
     likelihood=TruncatedGaussianLikelihood(sigma=data.noise))
 ```
@@ -158,6 +157,9 @@ producer conventions; this interface update does not recompute them.
 The builder joins the physical problem, measurements and selected priors:
 
 ```@example growth_inference
+include(joinpath(pkgdir(PopulationBalanceModels),"examples","estimate_size_dependent_growth.jl"))
+import .EstimateSizeDependentGrowth
+const recipe = EstimateSizeDependentGrowth
 problem = recipe.estimation_problem(data;prior=:lognormal)
 posterior_components(problem,initial_coordinates(problem))
 ```
@@ -372,33 +374,36 @@ Use an environment with Optim and the checkout developed into it; see the
 
 ### Complete script
 
-The continuous density and bin-integral reference, synthetic observation
-process, forward-model assembly, observable, likelihood, physical priors and
-explicit inference transforms are included below. It fixes the analytical
-forward calculation. Initial populations use `InitialDistribution` with the
-declared Gaussian's physical total and unnormalized domain truncation; its bin
-integrals agree with the analytical initial condition. The `analytical_solver`
-callable is retained deliberately: changing to a numerical forward solve would
-change this reference likelihood. Its CDF formulas describe the exact transported
-solution, not a numerical initialization helper. Numerical-backend switches and their refinement loops stay
-in the full reproduction driver. The final call performs one MAP fit and does
-not sample or overwrite retained Bayesian results.
+The [analytical reference companion](../assets/source/examples/support/affine_growth_reference.jl)
+contains exact densities, bin integrals, and independently seeded synthetic data
+generation. The walkthrough then declares the forward model, point observable,
+normalized nonnegative truncated-Gaussian likelihood, two explicit lognormal
+priors with log transforms, and the fit. Its context grid supplies the PBM state;
+the analytical solver and continuous point observable determine this likelihood.
+Changing an unused reconstruction choice cannot improve that analytical fit.
 
-[Download this standalone script](../assets/source/tutorials/estimating_growth.jl).
-Run it from a checkout with the package developed into the selected environment:
+The same seed, observation positions/times, noise, starting values and prior laws
+are retained. Including the script prepares the data and estimation problem
+without fitting. Executing it performs only the small MAP example and prepared
+predictions; local uncertainty, MCMC, numerical-forward reconstruction and
+refinement remain separate follow-on workflows above.
+
+[Download the authored script](../assets/source/tutorials/estimating_growth.jl).
+The displayed code below is read verbatim from `examples/tutorials/estimating_growth.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=docs docs/src/assets/source/tutorials/estimating_growth.jl
+julia --project=docs examples/tutorials/estimating_growth.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:estimating_growth))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

@@ -137,27 +137,20 @@ by occupancy and domain extension. See the [diffusion contract](../methods/dispe
 
 The model uses ordinary package terms and conservative solute exchange.
 `grd_strength` is retained as the Julia keyword; it means D0 in μm²/min.
-The complete script below defines the kinetic laws and priors. This assembly
-uses the maintained callbacks and their interval-bound guard:
+Start with CNT alone, using the kinetic functions and stage guard defined in
+the complete walkthrough below. Measurements, priors, calibration and held-out
+prediction follow that first forward calculation. Constant GRD is added last:
 
 ```julia
-using PopulationBalanceModels, Optim
-include("examples/isothermal_protein_crystallization.jl")
-const I = IsothermalProteinCrystallization
-
-p = I.parameters(grd_strength=0.01)
-grid = Grid1D(range(0.0,50.0;length=201);coordinate=:length)
-terms = (
-    growth=Growth((L,p,t,ctx)->I.growth_rate(p,I.stage_concentration(p,ctx))),
-    primary=Nucleation((p,t,ctx)->I.nucleation_rate(p,I.stage_concentration(p,ctx)),0.0),
-    dispersion=SizeDiffusion((L,p,t,ctx)->p.grd_strength),
+# After defining parameters, growth_rate, nucleation_rate and the shared stage guard:
+p = parameters() # grd_strength=0; fixed gamma=0.64 mJ/m^2.
+model = PBMModel(
+    growth=Growth(PolynomialRate(((p,t,ctx)->growth_rate(p,stage_concentration(p,ctx)),))),
+    primary=Nucleation((p,t,ctx)->nucleation_rate(p,stage_concentration(p,ctx)),0.0),
 )
-methods = TermMethods(growth=MUSCL(),by_term=(primary=BoundaryInjection(:left),))
-operator = compile(PBMModel(;terms...),grid;methods,bc=SizeBC())
-exchange = ConservativeExchange(:crystals,:c,(L,p,t,ctx)->p.rho*p.kv*L^3)
-system = PBMSystem((crystals=operator,);exchanges=(exchange,),nonnegative_bulk=(:c,))
-problem = PBMProblem(system,(crystals=zeros(length(grid)),),(0.0,660.0);
-    bulk0=(c=p.c0,),p)
+problem = batch_problem(model;p) # The visible repeated-construction builder below.
+solver = cfl_solve
+nominal = solver(problem,[0.0,74.0,180.0,420.0,660.0])
 ```
 
 A `PBMSystem` couples this population to concentration. Bin states are physical
@@ -331,39 +324,51 @@ adds reporting, figures and saved provenance. Plotting the data alone needs no f
 
 ### Complete script
 
-The script shows CNT laws and units, optional constant GRD,
-`ConservativeExchange`, fixed-error measurements and physical priors. CSV
-selection, the checked interval solver and the three calibration-only starts are
-imported from the [maintained example](../assets/source/examples/isothermal_protein_crystallization.jl).
-Those helpers do not choose new observations, priors or physical terms.
-The same solver callable is used in the experiment and subsequent prediction.
-Its interval controller bounds current-stage coefficients and retains the
-bucketed schedule used by the study's derivative implementation. `StepControl`
-rejects differentiation through state-dependent step selection; wrapping or
-replacing this helper would not preserve that contract. It remains maintained
-in one place, with no changes to derivatives, rate buckets or interval lengths.
-A single initial `suggest_dt` call is insufficient for this coupled calculation.
-The unseeded population remains an explicit zero array.
-`main(model=:cnt)` fits CNT and freezes it before the later prediction;
-use `main(model=:cnt_grd)` for the extension. These fits can take several
-minutes. There is no MCMC or file export here; the retained posterior figures
-are not recomputed by this minimal calculation.
+The script first constructs and simulates CNT. It then shows the 11 calibration
+concentrations, the three 22-ordinate conditional number CDF blocks, fixed errors
+and correlated covariance, physical prior laws and explicit inference transforms.
+The fixed initial concentration, four later concentrations, 660-min PSD and
+PSD-derived quantiles are excluded from calibration. The MAP is defined in the
+declared inference coordinates; transformations do not change the physical
+parameters passed to the PBM.
 
-[Download this standalone script](../assets/source/tutorials/protein_crystallization.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Data reading and selection](../assets/source/examples/support/protein_data.jl)
+and the [checked interval solver and prescribed calibration starts](../assets/source/examples/support/protein_execution.jl)
+are the two companions. The power-of-two rate buckets, stage bounds, interval
+lengths, SSPRK33 schedule and three starts are unchanged. Generic `StepControl`
+is not a derivative-equivalent replacement. The original-CDF covariance below
+is probability-equivalent to the producer's whitened blocks; their normalized
+log likelihoods differ by the known, parameter-independent whitening determinant.
+
+Executing the file performs the nominal CNT solve and CNT calibration, then
+freezes its parameters for held-out prediction. These steps can take minutes.
+The final block prepares constant GRD as a separate extension;
+`grd_fitted = fit_model(grd_estimation)` runs its calibration explicitly.
+Neither path automatically calculates local uncertainty, runs MCMC, or writes
+retained results. We verify construction, likelihoods/priors/gradients and short
+forward paths here, without repeating either production fit.
+
+[Download the authored script](../assets/source/tutorials/protein_crystallization.jl).
+The displayed code below is read verbatim from `examples/tutorials/protein_crystallization.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=docs docs/src/assets/source/tutorials/protein_crystallization.jl
+julia --project=docs examples/tutorials/protein_crystallization.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
+
+The data companion reads the supplied [concentration CSV](../assets/source/examples/data/protein_crystallization/tang2018_isothermal/concentration.csv),
+[CDF CSV](../assets/source/examples/data/protein_crystallization/tang2018_isothermal/psd_cdf.csv)
+and [summary CSV](../assets/source/examples/data/protein_crystallization/tang2018_isothermal/psd_summary.csv).
+Preserve their `../data/protein_crystallization/tang2018_isothermal/` paths.
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:protein_crystallization))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

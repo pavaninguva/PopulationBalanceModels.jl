@@ -54,52 +54,89 @@ const PyCallPlot=PythonPlot.PythonCall
     end
 end
 
-@testset "Tutorial optional plotting runs on existing small results" begin
+@testset "Direct tutorial plotting recipes use prepared numerical objects" begin
     include("case_study_scripts.jl")
-    for name in (:constant_growth,:crystallization,:moment_crystallization,:continuous_precipitation,
-                 :stem_cells,:nanoparticles,:transport)
-        scope=load_tutorial(name)
-        # Reuse already supported reduced settings; no production campaign.
-        kwargs=name===:constant_growth ? (;bins=40) : name===:crystallization ? (;times=[0.,.05]) :
-            name===:moment_crystallization ? (;times=[0.,.02]) :
-            name===:continuous_precipitation ? (;nx=8,nz=6,times=[0.,.5]) :
-            name===:stem_cells ? (;bins=40,times=[0.,.05]) :
-            name===:nanoparticles ? (;bins=16,times=[0.,1e-8]) : (;bins=12,times=[0.,.02])
-        result=Base.invokelatest(getfield(scope,:main);kwargs...)
-        plots=Base.invokelatest(getfield(scope,:plot_results),result)
-        @test plots isa NamedTuple
-        if haskey(plots,:figure)
-            PythonPlot.plotclose(plots.figure)
+    for name in (:constant_growth,:crystallization,:moment_crystallization,
+                 :continuous_precipitation,:stem_cells,:nanoparticles,:transport)
+        s=TUTORIALS[name]
+        solution = if name===:constant_growth
+            s.solution
+        elseif name===:continuous_precipitation
+            latest(simulate,remake(s.problem;tspan=(0.,.01));solver=s.solver,saveat=[0.,.01])
+        elseif name===:stem_cells
+            latest(simulate,remake(s.problem;tspan=(0.,.05));method=SSPRK33(),dt=s.dt,
+                negative_tolerance=0.,saveat=[0.,.05])
+        elseif name===:nanoparticles
+            latest(simulate,remake(s.problem;tspan=(0.,1e-8));method=SSPRK33(),dt=1e-8,saveat=[0.,1e-8])
+        elseif name===:transport
+            latest(simulate,remake(s.problem;tspan=(0.,.02));method=SSPRK33(),dt=s.dt,
+                check_nonnegative=false,saveat=[0.,.02])
         else
-            for figure in values(plots);PythonPlot.plotclose(figure.figure);end
+            last_time=name===:crystallization ? .05 : .02
+            latest(simulate,remake(s.problem;tspan=(0.,last_time));method=SSPRK33(),
+                dt=last_time,saveat=[0.,last_time])
+        end
+        original=deepcopy(solution.u)
+        figures = if name===:continuous_precipitation
+            [plot_field(solution;population=:crystals,orientation=:axial_x,
+                xlabel="Axial position (m)",ylabel="Size (m)",colorbar_label="Scaled number density"),
+             plot_distribution(solution;population=:crystals,cell=s.nz,times=[last(solution.t)],
+                xlabel="Size (m)",ylabel="Scaled number density")]
+        elseif name===:transport
+            [plot_field(solution;orientation=:internal_x,xlabel="First coordinate",ylabel="Second coordinate")]
+        elseif name===:moment_crystallization
+            [plot_observable(solution,MomentObservable(0);xlabel="Time (s)",ylabel="Total number")]
+        elseif name===:nanoparticles
+            [plot_observable(solution,BulkObservable(:lipid);xlabel="Time (s)",ylabel="Dissolved lipid")]
+        elseif name===:crystallization
+            [plot_distribution(solution;population=:crystals,xlabel="Length (micrometres)"),
+             plot_observable(solution,BulkObservable(:c);ylabel="Solute mass / water mass")]
+        else
+            [plot_distribution(solution;xlabel=name===:stem_cells ? "Cargo (arbitrary units)" : "Size coordinate",
+                ylabel="Number density")]
+        end
+        @test solution.u==original
+        for figure in figures
+            @test haskey(figure,:figure) && haskey(figure,:axes)
+            PythonPlot.plotclose(figure.figure)
         end
     end
     for name in (:protein_crystallization,:estimating_growth)
-        scope=load_tutorial(name)
-        ep=name===:protein_crystallization ? construct(scope;bins=8) : construct(scope)
+        s=TUTORIALS[name]
+        ep=if name===:protein_crystallization
+            pb=latest(s.batch_problem,s.cnt_model;bins=8,tf=420.)
+            EstimationProblem(s.parameter_specs(),
+                (InferenceExperiment(:batch,pb,s.measurements...;solver=s.solver),);fixed=s.estimation.fixed)
+        else
+            s.estimation
+        end
         z=initial_coordinates(ep)
-        # An explicitly UNCONVERGED display fixture tests plumbing without any
-        # optimizer call. Its diagnostic failure must remain visible.
         point=MAPResult(z,physical_parameters(ep,z),NaN,NaN,NaN,false,
             (;display_fixture=true),ParameterSpec[ep.parameters...],nothing;convention=:inference_map_v2)
-        if name===:protein_crystallization
-            ex=only(ep.experiments)
-            sol=Base.invokelatest(ex.solver,ex.problem,[0.,1.])
-            result=(;estimation=ep,fitted=point,solution=sol)
+        prepared=predictions(ep,z) # Expensive work is explicit, before rendering.
+        snapshot=deepcopy(prepared)
+        figures=[plot_parameters(ep,point;coordinates=:physical)]
+        if name===:estimating_growth
+            push!(figures,plot_fit(ep,prepared;abscissa=s.data.sizes,xlabel="Size coordinate",ylabel="Number density"))
         else
-            result=(;estimation=ep,fitted=point,predicted=predictions(ep,z))
+            ex=only(ep.experiments)
+            sol=latest(ex.solver,ex.problem,[0.,1.])
+            push!(figures,plot_observable(sol,BulkObservable(:c);xlabel="Time (min)",ylabel="Concentration (g/L)"))
         end
-        plots=Base.invokelatest(getfield(scope,:plot_results),result)
-        @test !PyCallPlot.pyconvert(Bool,plots.parameters.figure._pbm_parameter_diagnostics["passed"])
-        for figure in values(plots);PythonPlot.plotclose(figure.figure);end
+        @test prepared==snapshot
+        @test !PyCallPlot.pyconvert(Bool,first(figures).figure._pbm_parameter_diagnostics["passed"])
+        for figure in figures;PythonPlot.plotclose(figure.figure);end
     end
-    if Base.find_package("Sundials")!==nothing
-        scope=load_tutorial(:milling_uncertainty)
-        result=Base.invokelatest(getfield(scope,:main);bins=12,mc_samples=2,
-            validation_samples=2,training_samples=6,surrogate_draws=50)
-        count=result.mc.metadata.solves+result.pce.training.metadata.solves
-        plots=Base.invokelatest(getfield(scope,:plot_results),result)
-        @test result.mc.metadata.solves+result.pce.training.metadata.solves==count
-        for figure in values(plots);PythonPlot.plotclose(figure.figure);end
+    if haskey(TUTORIALS,:milling_uncertainty)
+        s=TUTORIALS[:milling_uncertainty];pb=latest(s.build_mill;bins=12)
+        uq=UQProblem(pb,s.inputs;setup=s.setup,solver=s.solver,times=s.times,outputs=(d50=s.d50,),
+            output_coordinates=s.uq.output_coordinates)
+        mc=propagate(uq,MonteCarlo(2;seed=2018255);max_solves=2)
+        design=pce_design(uq.inputs;n=6,seed=2018257,bounds=hcat(fill(-2.,4),fill(2.,4)))
+        pce=fit_pce(uq,PolynomialChaos(1);design,validation=mc,max_solves=6)
+        count=mc.metadata.solves+pce.training.metadata.solves
+        figures=[plot_uq(mc;output=:d50),plot_uq(pce;output=:d50,band=:sd)]
+        @test mc.metadata.solves+pce.training.metadata.solves==count
+        for figure in figures;PythonPlot.plotclose(figure.figure);end
     end
 end

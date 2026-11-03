@@ -38,25 +38,23 @@ residuals; it does not fit, sample, advance a case study or write results. In an
 environment with Optim and NonlinearSolve it also constructs the stationary
 estimation example. Long benchmark/reproduction commands are separate.
 
-`julia --project=docs test/case_study_scripts.jl` assembles all ten standalone
-case-study scripts and checks their initial conditions, rates and inference
-declarations against the maintained builders. Protein additionally checks the
-full-covariance versus whitened likelihood normalizer, posterior gradients and
-a short conservative-coupling calculation. It does not call tutorial `main`
-entry points. The full check, including the milling/Sundials constructor, can
-run in the prepared paper environment with
-`julia --project=paper test/case_study_scripts.jl`. Generated scripts are also
-published as downloads by `docs/make.jl`; neither command regenerates figures.
+`julia --project=docs test/case_study_scripts.jl` checks all ten authored
+walkthroughs, verbatim display/download copies, portable relative companions,
+physical inputs, initial integrals and representative rates against maintained
+examples. Protein additionally checks calibration/test exclusion, normalized
+CDF likelihood equivalence (including the known whitening determinant), priors
+and posterior gradients at fixed parameters. No fit or posterior chain runs.
 
-`julia --project=paper test/case_study_migration.jl` includes those construction
-checks and executes reduced tutorial entry points. It checks independent CDF/
-pivot-hat integrals, short population/bulk/accounting balances and callable
-solver reuse in inference/UQ. The small milling run uses 11 full solves (one
-nominal, two MC, two validation, six PCE training); it is not the production
-ensemble. No fit, posterior sampling or retained export is run. Documentation
-CI runs the same entry point with `--project=docs`; optional milling checks need
-the paper environment. The stem walkthrough uses continuous daughter integration;
-its legacy 12-node producer remains separately tested by `stem_cells.jl`.
+`julia --project=docs test/case_study_migration.jl` includes those checks and
+executes short numerical paths with explicitly reduced settings. It verifies
+independent initial/CDF/pivot-hat integrals, population/bulk/material balances,
+unchanged precipitation controls and the stem population with/without diagnostic
+counters. In an environment also containing Sundials and SciMLBase, it executes
+one nominal milling solve and the separately invoked MC/PCE stage (16 MC and
+12 training solves; existing MC supplies validation). No production ensemble,
+benchmark export or publication figure is regenerated. PythonPlot recipes are
+checked separately by `test/plotting_integration.jl`. The legacy stem producer's
+12-node rule remains separately tested by `stem_cells.jl`.
 
 ## Optional integrations
 

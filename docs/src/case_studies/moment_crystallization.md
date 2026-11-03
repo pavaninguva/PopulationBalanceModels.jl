@@ -104,9 +104,7 @@ the daughter law by an equal-volume split:
 
 ```@example qamar_case
 using PopulationBalanceModels
-include(joinpath(pkgdir(PopulationBalanceModels),"examples","qamar_moment_benchmarks.jl"))
-import .QamarMomentBenchmarks
-const benchmark = QamarMomentBenchmarks
+using SpecialFunctions: gamma
 volume = AdditiveCoordinate(x->x^3,cbrt)
 model = PBMModel(
     aggregation=Aggregation(ConstantKernel(1.);coordinate_map=volume),
@@ -115,8 +113,9 @@ model = PBMModel(
 )
 basis = MomentSet(0:5;coordinate=:length)
 operator = compile(model,basis;moment_method=QMOM())
-problem = PBMProblem(operator,benchmark.exact4(0.),(0.,50.))
-solution = simulate(problem;dt=0.01,saveat=[0.,10.,50.])
+initial = [0.001^(k/3)*gamma(1+k/3) for k in basis.orders]
+problem = PBMProblem(operator,initial,(0.0,50.0))
+solution = simulate(problem;method=SSPRK33(),dt=0.02,saveat=[0.0,10.0,50.0])
 vec(last(solution.u))
 ```
 
@@ -164,6 +163,8 @@ The same laws can be compiled with different moment families. The builders choos
 that family's required state layout and initialize it from the same distribution:
 
 ```julia
+include("examples/qamar_moment_benchmarks.jl")
+const benchmark = QamarMomentBenchmarks
 qmom = benchmark.problem4(method=QMOM(3))
 adaptive = benchmark.problem4(method=RankAdaptiveQMOM(3))
 extended = benchmark.problem4(method=EQMOM(3))
@@ -472,31 +473,29 @@ contains the other families, pulse calculation and reporting. Follow the
 
 ### Complete script
 
-The script fixes one formulation: three-node QMOM with orders 0:5. Its physical
-terms, prescribed initial moments, compilation and configured `ForwardSolver`
-are explicit. The benchmark moment array is retained intentionally: it states
-the known moments of the exponential volume law in the length basis, without
-reconstructing an invented initial distribution. The last two calls
-read the number and conserved material moment through observation operators.
-The family comparisons and DQMOM state conversion are explained above and
-implemented in the linked full driver; this first calculation needs no
-family-selection or reconstruction helper.
+The first calculation retains the raw moment formula for the exponential
+volume distribution, orders 0:5, and three-node QMOM. It shows the two physical
+terms, additive volume mapping, solve, and number/material observations directly.
+Other families, state adapters, reconstruction and the nucleation pulse remain
+in the later recipes above and the
+[comparison driver](../assets/source/examples/qamar_moment_benchmarks.jl).
 
-[Download this standalone script](../assets/source/tutorials/moment_crystallization.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Download the authored script](../assets/source/tutorials/moment_crystallization.jl).
+The displayed code below is read verbatim from `examples/tutorials/moment_crystallization.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=. docs/src/assets/source/tutorials/moment_crystallization.jl
+julia --project=. examples/tutorials/moment_crystallization.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:moment_crystallization))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.

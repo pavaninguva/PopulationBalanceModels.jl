@@ -19,7 +19,8 @@ end
 hashfile(path)=bytes2hex(sha256(read(path)))
 readjson(path)=JSON3.read(read(path,String))
 function numerical_sources()
-    paths=vcat(["examples/isothermal_protein_crystallization.jl"],
+    paths=vcat(["examples/isothermal_protein_crystallization.jl",
+        "examples/support/protein_data.jl","examples/support/protein_execution.jl"],
         [relpath(joinpath(dir,f),ROOT) for folder in ("src","ext") for (dir,_,files) in walkdir(joinpath(ROOT,folder)) for f in files if endswith(f,".jl")],
         [relpath(joinpath(C.DATA,f),ROOT) for f in ("concentration.csv","psd_cdf.csv","psd_summary.csv")])
     Dict(path=>hashfile(joinpath(ROOT,path)) for path in sort(paths))

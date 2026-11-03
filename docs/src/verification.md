@@ -54,8 +54,8 @@ Enzyme stacks have recorded loading failures; they are not numerical test passes
 
 ## Examples and figures
 
-Each case page ends with a standalone tutorial, available as a download after
-building the docs. It shows physical rates, inputs, model assembly and one
+Each case page ends with an authored script in `examples/tutorials/`, available
+verbatim as a download after building the docs. It shows physical rates, inputs, model assembly and one
 calculation. Rate definitions follow the maintained sources. Public physical
 initialization and configured solvers own ordinary preparation/execution. The
 remaining specialist imports and their limitations are identified beside each
@@ -83,8 +83,8 @@ After building the docs, an individual reduced run can be executed without any
 export or plotting:
 
 ```sh
-julia --project=. -e 'include("docs/src/assets/source/tutorials/continuous_precipitation.jl"); main(nx=8,nz=6,times=[0.0,0.5,2.0])'
-julia --project=. -e 'include("docs/src/assets/source/tutorials/stem_cells.jl"); main(bins=40,times=[0.0,0.05,0.1])'
+julia --project=. examples/tutorials/continuous_precipitation.jl
+julia --project=. examples/tutorials/stem_cells.jl
 ```
 
 Including an example module defines its builders; executing the script invokes its driver.

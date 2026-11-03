@@ -20,6 +20,36 @@ from protein_uncertainty import physical, display, gaussian_marginal, gaussian_d
 
 
 class PublicationContracts(unittest.TestCase):
+    def test_extracted_helpers_remain_in_numerical_reuse_inventory(self):
+        helpers = ('examples/support/protein_data.jl',
+                   'examples/support/protein_execution.jl')
+        files = ('examples/isothermal_protein_crystallization.jl', *helpers,
+                 'src/model.jl', 'ext/solver.jl',
+                 *(f'examples/data/protein_crystallization/tang2018_isothermal/{name}'
+                   for name in ('concentration.csv', 'psd_cdf.csv', 'psd_summary.csv')))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in files:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(name)
+            with patch.object(provenance, 'ROOT', root):
+                original = provenance.numerical_sources()
+                self.assertEqual(set(original), set(files))
+                for helper in helpers:
+                    path = root / helper
+                    content = path.read_text()
+                    path.write_text(content + '\nchanged implementation\n')
+                    changed = provenance.numerical_sources()
+                    self.assertNotEqual(original[helper], changed[helper])
+                    self.assertEqual([name for name in files
+                                      if original[name] != changed[name]], [helper])
+                    path.write_text(content)
+        # Julia exports and Python numerical reuse must fingerprint both files.
+        producer = (ROOT / 'paper/_support/protein_report.jl').read_text()
+        for helper in helpers:
+            self.assertIn('"' + helper + '"', producer)
+
     @classmethod
     def setUpClass(cls):
         # These uncertainty reports describe the superseded 4/5-parameter

@@ -16,7 +16,9 @@ def sha(path):
 
 
 def numerical_sources():
-    paths = [ROOT / "examples/isothermal_protein_crystallization.jl"]
+    paths = [ROOT / "examples/isothermal_protein_crystallization.jl",
+             ROOT / "examples/support/protein_data.jl",
+             ROOT / "examples/support/protein_execution.jl"]
     paths += [p for d in ("src", "ext") for p in (ROOT / d).rglob("*.jl")]
     data = ROOT / "examples/data/protein_crystallization/tang2018_isothermal"
     paths += [data / f for f in ("concentration.csv", "psd_cdf.csv", "psd_summary.csv")]

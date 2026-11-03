@@ -223,11 +223,8 @@ nonnegative net outlet flux.
 ### MC and PCE through the same interface
 
 ```julia
-include("examples/milling_uncertainty.jl")
-using PopulationBalanceModels
-
-uq = MillingUncertainty.problem()
-mc = propagate(uq, MonteCarlo(12_000; seed=2018255); max_solves=12_000)
+include("examples/tutorials/milling_uncertainty.jl") # Prepare nominal model and UQ inputs.
+mc = propagate(uq,MonteCarlo(16;seed=2018255);max_solves=16) # Small demonstration budget.
 summary = uq_summary(mc; covariance=false)
 ```
 
@@ -238,11 +235,13 @@ history. A PCE uses the same forward problem at regression inputs:
 ```julia
 box = hcat(fill(-2.0, 4), fill(2.0, 4)) # standard-normal coordinates
 training = pce_design(uq.inputs; n=12, seed=2018257, bounds=box)
-validation = propagate(uq, MonteCarlo(512; seed=2018256); max_solves=512)
+validation = mc # Existing independent MC inputs; no extra validation ensemble.
 pce = fit_pce(uq, PolynomialChaos(1);
     design=training, validation=validation, max_solves=12)
-moments = uq_summary(pce)
-cheap_draws = evaluate_pce(pce, MonteCarlo(50_000; seed=2018259))
+@show pce.validation.passed pce.validation.rmse
+moments = uq_summary(pce) # Analytical mean and variance of the polynomial.
+# After validation, cheap surrogate evaluations can supply pointwise quantiles:
+# cheap_draws = evaluate_pce(pce,MonteCarlo(50_000;seed=2018259))
 ```
 
 Degree one has five coefficients; degree two has fifteen. The first-degree
@@ -251,8 +250,9 @@ instead describes nine sigma-design points. A separate nine-point centre/axial
 design checks that choice. Degree two uses nine centre/axial points plus
 23 LHS points. These declared designs are not recovered author samples.
 The bounded training box covers about 83% of the four-dimensional Gaussian
-probability; it does not truncate the propagated law. The 512 independent
-validation inputs also test outside that box.
+probability; it does not truncate the propagated law. The commands above use only 16 validation realizations as a demonstration;
+validation failure must remain visible. The retained production study uses 512
+independent validation inputs, which also test outside that box.
 
 ### Results and what the bands mean
 
@@ -365,52 +365,57 @@ interface; [verification instructions](../verification.md) describe environments
 
 ## Complete script
 
-The script defines the feed, breakage coefficients, algebraic screen, material
-accounting, input law, scenario rebuild and one MC/PCE calculation. The cached
-`MillingHazard` evaluates ``S(v,t)=\alpha\,\mathrm{RPM}(t)(v/v_{\rm ref})^\gamma``.
-The [model helpers](../assets/source/examples/support/milling_model.jl) supply its
-prepared conservative daughter projection and outlet-CDF integration. The
-daughter law and outlet volume-median convention are specified above; the
-numerical projection and quantile-search implementations are not repeated here.
+The first file shows physical inputs, the breakage/classification model,
+representation, empty mill, specialized solver and nominal outlet volume median.
+It also prepares the uncertain inputs and `UQProblem`, but **does not launch an
+ensemble**. Parameter-dependent daughter projections rebuild through `setup`.
+The [daughter/classifier/median companion](../assets/source/examples/support/milling_model.jl)
+and [constrained material-coordinate BDF executor](../assets/source/examples/support/milling_solver.jl)
+retain their physical and numerical contracts. Generic `ForwardSolver` is not an
+equivalent replacement for that reduction and its constraints.
 
-The checked [BDF adapter](../assets/source/examples/support/milling_solver.jl)
-advances this package residual in mass coordinates and restarts exactly at the
-30-s speed change. It is imported separately and retains its completion and
-nonnegativity checks. Run in the milling environment prepared above.
+The separate [propagation stage](../assets/source/examples/tutorials/milling_propagation.jl)
+shows MC, PCE fitting, independent validation and summaries as ordinary calls.
+Its 16 MC realizations also serve as validation for 12 disjoint first-order LHS
+training points, avoiding another validation ensemble. Including both stages
+performs 28 uncertain full solves; an explicitly requested nominal solve makes
+29. These are 40-pivot demonstration budgets, not the retained 12,000-run study.
+The 30-s restart and right-hand outlet convention remain unchanged. Validation
+failure is reported, and no polynomial-draw campaign runs automatically.
+Analytical PCE means/variances and quantiles from polynomial evaluations remain
+different summaries.
 
-This helper is a genuine specialization. The public external `ForwardSolver`
-does not yet declare the active-coordinate reduction, exact diagonal mass
-scaling/Jacobian and CVODE inequality constraints together. Its saved-state
-validation is also distinct from CVODE's internal constraint handling. Therefore
-the existing reduction and interval integration remain together in one adapter.
-`OperatingHistory` alone cannot replace that adapter without these hooks; the
-30-s transition and right-hand outlet convention remain unchanged. The empty
-mill remains an explicit initial array, and each UQ scenario rebuilds the
-parameter-dependent projection also required by the algebraic screen.
-
-This small demonstration uses 40 pivots, 16 MC solves, 8 validation solves and
-12 first-order PCE training solves, plus one nominal solve: 37 full solves.
-The nominal calculation and UQ use the same callable solver. It is separate from the
-production 12,000-realization study and the degree-two comparison. Surrogate
-draws require no further PBM solves. The script propagates them only if the
-independent validation passes; otherwise it reports the errors and requests
-degree/design refinement. A small first-order design is not assumed accurate.
-
-[Download this standalone script](../assets/source/tutorials/milling_uncertainty.jl).
-Run it from a checkout with the package developed into the selected environment:
+[Download the authored script](../assets/source/tutorials/milling_uncertainty.jl).
+The displayed code below is read verbatim from `examples/tutorials/milling_uncertainty.jl`;
+the download is a byte-for-byte copy. Run from the checkout root:
 
 ```sh
-julia --project=examples/environments/milling docs/src/assets/source/tutorials/milling_uncertainty.jl
+julia --project=examples/environments/milling examples/tutorials/milling_uncertainty.jl
 ```
 
-Physical definitions follow the maintained examples. Numerical helpers and full
-reproduction sources are linked above; this tutorial writes no retained results.
+For downloaded files, preserve the relative directory layout described in the
+[tutorial source guide](../assets/source/examples/tutorials/README.txt).
+
+To execute the stages explicitly in the milling environment:
+
+```julia
+include("examples/tutorials/milling_uncertainty.jl") # Prepare only.
+nominal = solver(problem,times)
+include("examples/tutorials/milling_propagation.jl") # MC, PCE and validation.
+```
 
 ```@eval
 using Markdown
 Markdown.MD([Markdown.Code("julia", Main.CaseStudyScripts.script(:milling_uncertainty))])
 ```
 
-Optional plots reuse the returned result: after `import PythonPlot`, call
-`plot_results(result)`. See [plotting setup and interpretation](../plotting.md);
-numerical execution remains independent of plotting.
+Optional plotting calls at the end use existing results after explicitly loading
+`PythonPlot`; they perform no simulation, fitting or propagation. See the
+[plotting guide](../plotting.md) for the optional environment and saving figures.
+
+The explicitly invoked propagation stage is:
+
+```@eval
+using Markdown
+Markdown.MD([Markdown.Code("julia", read(joinpath(Main.CaseStudyScripts.ROOT,"examples","tutorials","milling_propagation.jl"),String))])
+```
