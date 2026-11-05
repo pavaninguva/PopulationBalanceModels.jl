@@ -1,54 +1,70 @@
-# Included inside ConstantGrowthMethods: exports and single-run timing protocol.
-function run(;grids=(50,100,200,400,800,1600),smooth_grids=(40,80,160,320,640),
-        courants=(0.5,1.0),tf=4.,output=joinpath(@__DIR__,"..","..","docs","src","assets","constant_growth"))
-    mkpath(output);choices=combinations()
-    # Compile each scheme on a tiny grid for BOTH boundary classes. Timings
-    # then describe stepping/allocation, not Julia's first-call compilation.
-    for (_,_,scheme,time) in choices,periodic in (false,true)
-        g=Grid1D(range(0.,1.;length=21));dt=(time isa Inguva2022 ? 1. : .5)/(20growth)
-        bc=periodic ? SizeBC(Periodic(),Periodic()) : SizeBC(OpenBoundary(),OpenBoundary())
-        simulate(make_problem(g,gaussian_counts(g,0.),scheme,time,dt,bc);method=time,dt,check_nonnegative=false)
+# Included inside ConstantGrowthMethods. Every recorded run is the same
+# translating Gaussian with zero inflow/open outflow and exact bin integrals.
+function run(;grids=refinement_bins,courants=profile_courants,tf=comparison_time,
+        profile_resolution=profile_bins,
+        output=joinpath(@__DIR__,"..","..",".cache","benchmarks","constant_growth"))
+    mkpath(output)
+    choices=combinations()
+    boundary=SizeBC(OpenBoundary(),OpenBoundary())
+    for (_,_,scheme,time) in choices
+        grid=Grid1D(range(0.,1.;length=21))
+        dt=(time isa Inguva2022 ? 1. : refinement_courant)/(20growth)
+        # One tiny, separate compilation warmup with the actual boundary and
+        # time method. The measured integration is not repeated for timing.
+        simulate(make_problem(grid,gaussian_counts(grid,0.),scheme,time,dt,boundary);
+            method=time,dt,check_nonnegative=false)
     end
-    open(joinpath(output,"errors.csv"),"w") do io
-        println(io,"scheme,time_method,courant,bins,rmse,l1,max_error,minimum_density,negative_number,number_drift,seconds,steps,bytes,gc_seconds")
-        for n in grids,C in courants,(name,tname,scheme,time) in choices
-            name=="inguva2022" && C!=1. && continue
-            g=Grid1D(range(0.,1.;length=n+1);coordinate=:length);truth=gaussian_counts(g,tf)
-            # A common zero-inflow/open-outflow condition; initial outgoing tails
-            # are negligible at t=4. Characteristic transport requires this pair.
-            result=measure(g,gaussian_counts(g,0.),truth,scheme,time,tf,C/(n*growth),SizeBC(OpenBoundary(),OpenBoundary()))
-            println(io,join((name,tname,C,n,result.rmse,result.l1,result.maximum_error,
-                result.minimum_density,result.negative_number,result.number_drift,result.seconds,result.steps,result.bytes,result.gc_seconds),','))
-            if n==200
-                open(joinpath(output,"$(name)_$(tname)_$(C)_$(n).csv"),"w") do data
-                    println(data,"size,density,exact")
-                    for i in eachindex(result.f);println(data,join((g.centers[i],result.f[i],truth[i]/g.widths[i]),','));end
+    metrics=joinpath(output,"gaussian_metrics.csv")
+    profiles=joinpath(output,"gaussian_profiles.csv")
+    open(metrics,"w") do summary
+        println(summary,"method,profile,bins,courant,dt,tf,rmse,l1,maximum_error,minimum_density,negative_number,number_drift,seconds,steps,bytes,gc_seconds")
+        open(profiles,"w") do curves
+            println(curves,"method,courant,bins,left,right,number,density,exact_number,exact_density")
+            for (name,tname,scheme,time) in choices
+                id=comparison_id(name,tname)
+                c=name=="inguva2022" ? 1. : refinement_courant
+                jobs=[(n,c) for n in grids]
+                append!(jobs,[(profile_resolution,C) for C in courants if name!="inguva2022" || C==1.])
+                for (n,C) in unique(jobs)
+                    grid=Grid1D(range(0.,1.;length=n+1);coordinate=:length)
+                    truth=gaussian_counts(grid,tf)
+                    dt=C/(n*growth)
+                    result=measure(grid,gaussian_counts(grid,0.),truth,scheme,time,tf,dt,boundary)
+                    println(summary,join((id,"gaussian",n,C,dt,tf,result.rmse,result.l1,
+                        result.maximum_error,result.minimum_density,result.negative_number,
+                        result.number_drift,result.seconds,result.steps,result.bytes,result.gc_seconds),','))
+                    if n==profile_resolution
+                        for i in eachindex(result.f)
+                            println(curves,join((id,C,n,grid.edges[i],grid.edges[i+1],
+                                result.N[i],result.f[i],truth[i],truth[i]/grid.widths[i]),','))
+                        end
+                    end
                 end
             end
         end
     end
-    open(joinpath(output,"smooth_errors.csv"),"w") do io
-        println(io,"scheme,time_method,bins,dt,courant,rmse,l1,observed_rmse_order,observed_l1_order,seconds,steps,minimum_density,number_drift,bytes,gc_seconds")
-        for (name,tname,scheme,time) in choices
-            old_rms=NaN;old_l1=NaN;old_n=0
-            for n in smooth_grids
-                g=Grid1D(range(0.,1.;length=n+1));C=name=="inguva2022" ? 1. : .5;dt=C/(n*growth)
-                result=measure(g,smooth_counts(g,0.),smooth_counts(g,tf),scheme,time,tf,dt,SizeBC(Periodic(),Periodic()))
-                qr=name!="inguva2022" && isfinite(old_rms) ? log(old_rms/result.rmse)/log(n/old_n) : NaN
-                ql=name!="inguva2022" && isfinite(old_l1) ? log(old_l1/result.l1)/log(n/old_n) : NaN
-                println(io,join((name,tname,n,dt,C,result.rmse,result.l1,qr,ql,result.seconds,result.steps,result.minimum_density,result.number_drift,result.bytes,result.gc_seconds),','))
-                old_rms=result.rmse;old_l1=result.l1;old_n=n
-            end
-        end
+    root=normpath(joinpath(@__DIR__,"..",".."))
+    numerical_files=[joinpath(root,"Project.toml")]
+    for folder in ("src","ext"), (directory,_,names) in walkdir(joinpath(root,folder)), name in names
+        endswith(name,".jl") && push!(numerical_files,joinpath(directory,name))
     end
-    write(joinpath(output,"inputs.txt"),
-        "Adapted constant-growth comparison: g=$growth, f0=$gaussian_height*exp(-.5*((a-$gaussian_center)/$gaussian_width)^2), domain [0,1], tf=$tf.\n"*
-        "Same transport equation as Inguva et al. (2022), Case 1; Gaussian initial data replace the published exponential. Width is the standard deviation.\n"*
-        "All errors compare analytical bin integrals. Zero inflow/open outflow; incoming truncation and far-boundary Gaussian tails are negligible at t=4.\n"*
-        "Smooth check: f0=1+.2sin(2πa)+.1cos(4πa), periodic [0,1].\n"*
-        "Seven representative pairings. HOC uses its native midpoint update (fourth-order space, second-order time). Common C=.5; Inguva2022 requires C=1 and is labelled separately. Gaussian profiles also compare C=1.\n"*
-        "One measured solve per configuration, following tiny separate compilation warmups with the same explicit time-method keyword. Full GC before each measurement is excluded; in-solve allocation and GC seconds are exported. No timing medians, repeated production runs or timing bands.\n"*
-        "Observed L1 and RMSE orders are measured from successive grids; no fitted or arbitrarily anchored order-guide lines.\n"*
-        "Signed density minima and number drift retained. Julia $(VERSION); CPU $(first(Sys.cpu_info()).model); Julia CPU target $(Sys.CPU_NAME); Julia threads $(Threads.nthreads()); BLAS threads $(PopulationBalanceModels.LinearAlgebra.BLAS.get_num_threads()).\n")
-    println("Growth comparison written to ",output)
+    digest(files)=bytes2hex(sha256(join((relpath(p,root)*"\0"*bytes2hex(sha256(read(p)))*"\n" for p in sort(files)))))
+    source=digest(numerical_files)
+    workflow=digest([joinpath(root,"examples","constant_growth_methods.jl"),@__FILE__])
+    config=Dict("bins"=>collect(grids),"profile_bins"=>profile_resolution,
+        "profile_courants"=>collect(courants),"final_time"=>tf,"courant"=>refinement_courant,
+        "profile_family"=>"gaussian","roundoff_factor"=>roundoff_factor)
+    benchmark=Dict("profile"=>"gaussian","height"=>gaussian_height,"center"=>gaussian_center,
+        "standard_deviation"=>gaussian_width,"growth"=>growth,"final_time"=>tf,
+        "domain"=>[0.,1.],"boundary"=>"zero inflow / open outflow")
+    provenance=Dict("kind"=>"new Gaussian benchmark calculation","source_digest"=>source,
+        "workflow_digest"=>workflow,"environment"=>Dict("julia"=>string(VERSION),
+            "cpu"=>first(Sys.cpu_info()).model,"cpu_target"=>Sys.CPU_NAME,
+            "julia_threads"=>Threads.nthreads(),"blas_threads"=>PopulationBalanceModels.LinearAlgebra.BLAS.get_num_threads()),
+        "timing_protocol"=>"one measured solve after separate tiny compilation warmups; setup, explicit GC, export and plotting excluded")
+    open(joinpath(output,"gaussian_source.toml"),"w") do io
+        TOML.print(io,Dict("schema"=>1,"benchmark"=>benchmark,"configuration"=>config,
+            "provenance"=>provenance,"files"=>Dict(basename(path)=>bytes2hex(sha256(read(path))) for path in (metrics,profiles)));sorted=true)
+    end
+    println("Gaussian comparison written to ",output)
 end

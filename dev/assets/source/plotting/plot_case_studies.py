@@ -19,7 +19,7 @@ def save_figure(fig,folder,name,vector=True):
 
 def load(path):
     if not path.is_file():
-        raise FileNotFoundError(f"Missing {path}. Run the corresponding Julia case first; no substitute data are plotted.")
+        raise FileNotFoundError(f"Missing {path}. Fetch retained inputs with python tools/retained_data.py fetch --profile docs; no substitute data are plotted.")
     return np.genfromtxt(path,delimiter=",",names=True)
 
 def field(path):

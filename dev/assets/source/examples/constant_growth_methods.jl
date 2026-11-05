@@ -1,12 +1,14 @@
 module ConstantGrowthMethods
 using PopulationBalanceModels
 using Distributions: Normal, cdf, ccdf
+using SHA, TOML
 
 # tutorial:start velocity
 const growth = 0.1
 # tutorial:end velocity
 
-# The separate paper workflow retains this original exponential reference.
+# Legacy exponential reference retained for independent analytical verification.
+# It is not an input to the active Gaussian case study or paper figures.
 initial_density(a) = a >= 0 ? 100exp(-a/0.01) : 0.0
 primitive(a) = a <= 0 ? 0.0 : -expm1(-a/0.01)
 
@@ -21,6 +23,12 @@ end
 const gaussian_height = 100.0
 const gaussian_center = 0.2
 const gaussian_width = 0.03 # standard deviation, independent of bin width
+const refinement_bins = (40,80,160,320,640)
+const profile_bins = 200
+const profile_courants = (0.5,1.0)
+const comparison_time = 4.0
+const refinement_courant = 0.5
+const roundoff_factor = 1000.0
 const gaussian_profile = Normal(gaussian_center,gaussian_width)
 """Physical translating Gaussian, restricted to its original [0,1] support.
 The height determines the untruncated total; excluded tails are not renormalized.
@@ -72,6 +80,8 @@ combinations() = [
 ]
 
 # tutorial:end pairings
+
+comparison_id(name,time) = name=="weno5" && time=="ssprk33" ? "weno5_ssprk33" : name
 
 function make_problem(grid,initial,scheme,time_method,tf,bc)
     model = PBMModel(growth=Growth(AffineGrowth(growth,0.0)))
