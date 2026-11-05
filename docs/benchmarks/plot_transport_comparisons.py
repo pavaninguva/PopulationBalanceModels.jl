@@ -17,80 +17,106 @@ def read(path):
     return np.genfromtxt(path, delimiter=",", names=True, dtype=None, encoding="utf-8")
 
 
-def constant_growth():
-    folder = ASSETS / "constant_growth"
-    front = read(folder / "errors.csv")
-    smooth = read(folder / "smooth_errors.csv")
-    choices = [("upwind","euler","Upwind + Euler", "C0"),
-               ("muscl","ssprk33","MUSCL + SSPRK3", "C1"),
-               ("weno3","ssprk33","WENO3 + SSPRK3", "C6"),
-               ("weno5","ssprk33","WENO5 + SSPRK3", "C2"),
-               ("weno5","rk4","WENO5 + RK4", "C3"),
-               ("hoc","midpoint","HOC FV + midpoint", "C4"),
-               ("inguva2022","coupled","Inguva2022 ($C=1$)", "C5")]
-    # Compact curves should remain distinguishable in print and where errors
-    # overlap another method; method selection itself comes from the exports.
-    def line_style(name, *, markers=True):
-        if name == 'hoc':
-            return dict(linestyle='--', linewidth=1.8, zorder=5,
-                        **({'marker':'D', 'markersize':4} if markers else {}))
-        return dict(linestyle='-', linewidth=1.2,
-                    **({'marker':'o', 'markersize':3} if markers else {}))
-    fig, axes = plt.subplots(1,2,figsize=(10,3.8),layout="constrained",sharey=True)
+def constant_growth(input_path=None,output_dir=None):
+    # Both manuals and manuscript plots select this same retained Gaussian.
+    import sys
+    root=Path(__file__).resolve().parents[2]
+    sys.path.insert(0,str(root/'paper'))
+    from _support.growth_results import load_results,refinement,profile,observed_orders
+    from pbm_plotting.style import method_style,panel_letters
+    data=load_results(input_path)
+    folder=Path(output_dir) if output_dir is not None else ASSETS/'constant_growth'
+    cfg,benchmark=data['configuration'],data['benchmark']
+    names=[('upwind','Upwind + Euler'),('muscl','MUSCL + SSPRK3'),
+           ('weno3','WENO3 + SSPRK3'),('weno5_ssprk33','WENO5 + SSPRK3'),
+           ('weno5','WENO5 + RK4'),('hoc','HOC FV + midpoint'),
+           ('inguva2022',r'Inguva2022 ($\mathrm{CFL}=1$)')]
+
+    def options(method,label,*,markers=True):
+        result=method_style(method,markers=markers)
+        result['label']=label
+        if method=='hoc':result.update(ls='--',lw=1.8,zorder=5)
+        return result
+
+    def panels(*,legend=False):
+        fig,axes=plt.subplots(1,2,figsize=(7.1,3.7 if legend else 3.25))
+        fig.subplots_adjust(left=.11,right=.985,bottom=.29 if legend else .18,
+                            top=.92,wspace=.40)
+        panel_letters(axes)
+        return fig,axes
+
+    def shared_legend(fig,axes):
+        fig.legend(*axes[0].get_legend_handles_labels(),loc='lower center',
+                   ncol=3,fontsize=6.6,handlelength=2.2,columnspacing=1.2)
+
+    fig,axes=panels()
     a=np.linspace(0,1,4001)
-    truth=np.where(a>=.4,100*np.exp(-.5*((a-.6)/.03)**2),0.)
-    for ax,C in zip(axes,(.5,1.)):
-        ax.plot(a,truth,"k-",lw=1.2,label="Analytical density")
-        reference=read(folder/f"upwind_euler_{C}_200.csv")
-        ax.plot(reference["size"],reference["exact"],"k.",ms=3,label="Analytical bin averages")
-        for name,time,label,color in choices:
-            if name=="inguva2022" and C!=1:continue
-            d=read(folder/f"{name}_{time}_{C}_200.csv")
-            plot_observable(d['size'],d['density'],ax=ax,
-                styles=[dict(color=color,label=label,**line_style(name,markers=False))],legend=False)
-        ax.set(xlim=(.42,.78),xlabel="$a$",title=fr"$C={C:g}$, 200 bins")
-    axes[0].set_ylabel("$f(a,4)$");axes[1].legend(fontsize=7)
-    save_figure(fig,folder,"solutions")
+    original=a-benchmark['growth']*benchmark['final_time']
+    truth=np.where((original>=0)&(original<=1),benchmark['height']*
+                   np.exp(-.5*((original-benchmark['center'])/benchmark['standard_deviation'])**2),0.)
+    for ax,courant in zip(axes,cfg['profile_courants']):
+        ax.plot(a,truth,color='.5',lw=1.2,label='Analytical density')
+        reference=profile(data,'upwind',courant)
+        x=(reference['left']+reference['right'])/2
+        ax.plot(x,reference['exact_density'],'k.',ms=2,label='Analytical bin averages')
+        for method,label in names:
+            if method=='inguva2022' and courant!=1:continue
+            curve=profile(data,method,courant)
+            plot_observable((curve['left']+curve['right'])/2,curve['density'],ax=ax,
+                            styles=[options(method,label,markers=False)],legend=False)
+        ax.axhline(0,color='.75',lw=.5)
+        ax.set(xlim=(0,1),xlabel=r'Size coordinate $a$',ylabel=r'$n(a,4\,\mathrm{s})$')
+        ax.text(.97,1.035,rf'$\mathrm{{CFL}}={courant:g},\ N={cfg["profile_bins"]}$',
+                transform=ax.transAxes,ha='right',va='bottom',fontsize=8)
+    limits=(min(ax.get_ylim()[0] for ax in axes),max(ax.get_ylim()[1] for ax in axes))
+    for ax in axes:ax.set_ylim(limits)
+    axes[1].set_ylabel('')
+    axes[1].legend(loc='upper left',fontsize=6.2,handlelength=2.0,labelspacing=.3)
+    save_figure(fig,folder,'solutions')
 
-    # Two physical inputs, with the SAME two error norms for each.
-    # Exact shifts have roundoff-level cell-integral errors, not a power-law order.
-    for source,filename,title in [(front,'performance','Gaussian with zero inflow'),
-                                  (smooth,'smooth_refinement','Smooth periodic translation')]:
-        fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained")
-        for name,time,label,color in choices:
-            data=source[(source['scheme']==name)&(source['time_method']==time)]
-            if source is front:data=data[data['courant']==(1. if name=='inguva2022' else .5)]
-            for ax,key in zip(axes,['l1','rmse']):
-                # Display roundoff as roundoff, without a fitted convergence line.
-                ax.loglog(data['bins'],np.maximum(data[key],1e-16),color=color,
-                          label=label,**line_style(name))
-        axes[0].set(xlabel='Number of bins',ylabel=r'$L^1$ density error')
-        axes[1].set(xlabel='Number of bins',ylabel='RMSE')
-        axes[0].legend(fontsize=7);fig.suptitle(title)
-        save_figure(fig,folder,filename)
+    fig,axes=panels(legend=True)
+    for method,label in names:
+        values=refinement(data,method)
+        for ax,key in zip(axes,('l1','rmse')):
+            style=options(method,label)
+            if method=='inguva2022':style['ls']='none' # no fitted trend through roundoff
+            ax.loglog(values['bins'],np.where(values[key]>0,values[key],np.nan),**style)
+    axes[0].set(xlabel='Number of bins',ylabel=r'$L^1$ density error')
+    axes[1].set(xlabel='Number of bins',ylabel='RMSE')
+    for ax in axes:
+        ax.set_xticks(cfg['bins'],labels=[str(n) for n in cfg['bins']])
+        ax.xaxis.set_minor_locator(NullLocator())
+    shared_legend(fig,axes)
+    save_figure(fig,folder,'performance')
 
-    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained")
-    for name,time,label,color in choices:
-        data=smooth[(smooth['scheme']==name)&(smooth['time_method']==time)]
-        axes[0].loglog(data['bins'],data['seconds'],color=color,label=label,**line_style(name))
-        axes[1].loglog(data['seconds'],np.maximum(data['rmse'],1e-16),color=color,
-                       label=label,**line_style(name))
-    axes[0].set(xlabel='Number of bins',ylabel=r'Elapsed time $(\mathrm{s})$')
-    axes[1].set(xlabel=r'Elapsed time $(\mathrm{s})$',ylabel='RMSE')
-    axes[0].legend(fontsize=7);save_figure(fig,folder,'timings')
-
-    # Measured refinement orders explain the curves without arbitrary h^p guides.
-    fig,axes=plt.subplots(1,2,figsize=(10,3.8),layout="constrained",sharey=True)
-    for name,time,label,color in choices:
-        if name=='inguva2022':continue # order is undefined at roundoff
-        data=smooth[(smooth['scheme']==name)&(smooth['time_method']==time)]
-        for ax,key in zip(axes,['observed_l1_order','observed_rmse_order']):
-            ax.semilogx(data['bins'],data[key],color=color,label=label,**line_style(name))
-    axes[0].set(xlabel='Number of bins',ylabel='Measured refinement order',title=r'$L^1$')
-    axes[1].set(xlabel='Number of bins',title='RMSE')
-    handles,labels=axes[0].get_legend_handles_labels()
-    fig.legend(handles,labels,loc='outside lower center',ncol=3,fontsize=7)
+    fig,axes=panels(legend=True)
+    orders=observed_orders(data)
+    for method,label in names:
+        if method=='inguva2022':continue
+        values=[row for row in orders if row['method']==method]
+        for ax,key in zip(axes,('observed_l1_order','observed_rmse_order')):
+            ax.semilogx([row['bins'] for row in values],[row[key] for row in values],
+                        **options(method,label))
+    axes[0].set(xlabel='Number of bins',ylabel=r'Measured order in $L^1$')
+    axes[1].set(xlabel='Number of bins',ylabel='Measured order in RMSE')
+    for ax in axes:
+        ax.set_xticks(cfg['bins'][1:],labels=[str(n) for n in cfg['bins'][1:]])
+        ax.xaxis.set_minor_locator(NullLocator())
+    shared_legend(fig,axes)
     save_figure(fig,folder,'observed_orders')
+
+    fig,axes=panels()
+    for method,label in names:
+        values=refinement(data,method)
+        axes[0].loglog(values['bins'],values['seconds'],**options(method,label))
+        axes[1].loglog(values['seconds'],values['rmse'],**options(method,label))
+    axes[0].set(xlabel='Number of bins',ylabel='Integration wall time (s)')
+    axes[1].set(xlabel='Integration wall time (s)',ylabel='RMSE')
+    axes[0].set_xticks(cfg['bins'],labels=[str(n) for n in cfg['bins']])
+    axes[0].xaxis.set_minor_locator(NullLocator())
+    axes[0].set_ylim(top=max(1.,axes[0].get_ylim()[1]))
+    axes[0].legend(loc='upper left',fontsize=6.2,handlelength=2.0,labelspacing=.3)
+    save_figure(fig,folder,'timings')
 
 def cooling():
     folder = ASSETS / "gunawan_example2"
@@ -161,8 +187,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument("case", choices=("constant", "cooling", "axial", "all"))
     parser.add_argument("--usetex", action="store_true")
+    parser.add_argument("--input",type=Path,help="Explicit Gaussian calculation or retained selection")
+    parser.add_argument("--output",type=Path,help="Separate output directory for constant-growth figures")
     args = parser.parse_args()
     with configure(usetex=args.usetex):
         for name, plot in (("constant", constant_growth), ("cooling", cooling), ("axial", axial)):
             if args.case in (name, "all"):
-                plot()
+                plot(args.input,args.output) if name=="constant" else plot()

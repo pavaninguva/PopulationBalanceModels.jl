@@ -2,7 +2,6 @@
 from pathlib import Path
 import sys
 import gzip
-import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
@@ -16,6 +15,8 @@ from plotting_style import panel, DOUBLE
 from pbm_plotting import plot_distribution, plot_field
 
 def precipitation(*,sync_docs=True):
+    docs_folder=(PAPER.parent/"docs/src/assets/continuous_precipitation_log"
+                 if figures.MODE=="production" and sync_docs else None)
     base,info,runs = load_case(3)
     runtime = []
     for name,(_,provenance) in runs.items():
@@ -114,7 +115,7 @@ def precipitation(*,sync_docs=True):
     formatter = ScalarFormatter(useMathText=True)
     formatter.set_powerlimits((0,0))
     fig.colorbar(mesh,cax=coloraxis,label=r"Number density $n$ (m$^{-4}$)",format=formatter)
-    export(fig,3,"precipitation_fields",info)
+    export(fig,3,"precipitation_fields",info,docs_folder=docs_folder)
     fig,axes = plt.subplots(1,2,figsize=(DOUBLE,3.55))
     fig.subplots_adjust(left=.09,right=.98,bottom=.18,top=.93,wspace=.3)
     colors = ["#0072B2", "#D55E00", "#009E73", "#6A3D9A"]
@@ -166,7 +167,7 @@ def precipitation(*,sync_docs=True):
         panel(ax,letter);ax.set(xscale="log",xlim=(1,900),xlabel=r"Particle size $x$ ($\mu$m)")
     axes[1].legend(*axes[0].get_legend_handles_labels(),loc="upper left",fontsize=7.5,
                    handlelength=2.0,borderaxespad=.4)
-    export(fig,3,"precipitation_outlet",info)
+    export(fig,3,"precipitation_outlet",info,docs_folder=docs_folder)
 
     # Changing one coordinate at a time prevents fine-axial/coarse-size runs
     # from being mixed into a misleading convergence or work-precision curve.
@@ -201,14 +202,7 @@ def precipitation(*,sync_docs=True):
             ax.text(.96,.95,rf"$N_z={nz}$" if direction=="size" else rf"$N_x={nx}$",
                 transform=ax.transAxes,ha="right",va="top",fontsize=8)
         fig.legend(*axes[0].get_legend_handles_labels(),loc="lower center",ncol=2)
-        export(fig,3,filename,info)
-
-    if figures.MODE=="production" and sync_docs:
-        destination = PAPER.parent/"docs/src/assets/continuous_precipitation_log"
-        destination.mkdir(parents=True,exist_ok=True)
-        for name in ("precipitation_fields","precipitation_outlet","precipitation_refinement","precipitation_work_precision"):
-            for suffix in (".png",".json"):
-                shutil.copyfile(PAPER/"precipitation/figures"/(name+suffix),destination/(name+suffix))
+        export(fig,3,filename,info,docs_folder=docs_folder)
 
 if __name__=="__main__":
     figures.run_plot(3,precipitation)

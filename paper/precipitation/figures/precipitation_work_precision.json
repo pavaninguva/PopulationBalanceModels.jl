@@ -20,15 +20,11 @@
     "paper/precipitation/data/time_refinement_41a05ed955c2/provenance.toml": "a2b77d9dee637b0ecae24422e10f60b6e6da1e7dcda78920d9a27f6add651e3e",
     "paper/precipitation/data/literature/cadet_reference.csv": "00d3110974538318bf76079eaa46fb1f1f7dd80b4567c6e1804e35e03af32d68",
     "paper/precipitation/data/literature/zhang_figure9c_digitized.csv": "a21e043ba1e2663c6f2dbf6ce24887df7d4a1f71ca0fb06ccebde6e57789dbb9",
-    "paper/precipitation/data/literature/provenance.json": "110b2f0e2c75562d99a38942ca7c8b93013922a79b826dfdf8aba237db77c6d6",
-    "paper/precipitation/data/analysis/runtimes.csv": "a508cf12c19300885f4ef1c5fee7dc726ad605d5b390093b5481161db30c1d29",
-    "paper/precipitation/data/analysis/refinement_observables.csv": "101cd45e65512f6fc3542e79f8427ec536eb673fc9155c24d879b5adcd50b717",
-    "paper/precipitation/data/analysis/public_cadet_comparison.csv": "9f38dd4fdfe4a005ba889248217f6d9d01e6ba1b5cf983e2385ab04fa1bf65ba",
-    "paper/precipitation/data/analysis/digitized_point_comparison.csv": "4193ab0591c54787cc7c4421d740559bd729acc24fb7db81b79252ce839919fa"
+    "paper/precipitation/data/literature/provenance.json": "110b2f0e2c75562d99a38942ca7c8b93013922a79b826dfdf8aba237db77c6d6"
   },
-  "plotter_sha256": "3f02b0fd4dcfb4a8660929e11b54b066d7466e102407d29c57eb8ad14a6c5928",
-  "shared_plotting_sha256": "53e3f9d85f53656dcc538aebc32e9e72254484be3d3f55376ed32b9ef04b8fb9",
-  "style_sha256": "e1a0a1ac74bef5c2dd15f5059824dd9d63dc29af12d9f9b5691515c4c19cbfb0",
+  "plotter_sha256": "db2f82b1acfb9053b9ef64a247c6180b5c93903148f8ef7f66f58e22361eb25f",
+  "shared_plotting_sha256": "7384c585d0fb170eef17dcf89a0b35de8cba1fa7580e510a510dc91e83a9456f",
+  "style_sha256": "0d2a7e0b47267d90aed5ceb3c44da682ed75899f8606c409716667762657a4c9",
   "requirements_sha256": "03c79348e486af8d19c2478fd578450a30e5ed154d00b00ccba035c0749f2a04",
   "python": "3.12.15 (main, Oct 13 2026, 16:52:04) [GCC 15.3.0]",
   "matplotlib": "3.8.4",
@@ -59,6 +55,7 @@
       2318745607809357.5
     ]
   },
+  "panel_labels": "lowercase Roman numerals",
   "inches": [
     7.0,
     3.65
@@ -71,7 +68,37 @@
     299.9994,
     299.9994
   ],
+  "renderer_sources": {
+    "__init__.py": "82e4a64c45a22d99c132663b4e4cad6c9f0f703053309841062332dbbdc551c6",
+    "coordinates.py": "a3040348a3828eb62faee611320ddfeea2c08cbefaa5af7317ac01e6c4ff02b1",
+    "density.py": "4edcbf4d9e5d27837ac5ee592aa6bbca2f4ae5ef597b48135dbbb67da399bfbf",
+    "render.py": "5889876470ce5b00903734dcf6460a0c9b34ad9a53e5c51f329d69ddbfa8e3e0",
+    "style.py": "6ee0b06d51b58bd7193e43257538dbe6e7cc7010fcab6c652129fef3db1b6425"
+  },
   "files": {
-    ".png": "79667c3098b0ba26e8f257895ada89697fe8df00d9802857b2dbec302878e85f"
+    ".png": "377246d31143d9d89a195299860b21084224c0c3a3e7138f6aa0f8d547ef1850"
+  },
+  "presentation_update": {
+    "change": "Alphabetic panel labels to lowercase Roman numerals",
+    "scope": "paper only",
+    "execution": "Rendering in an isolated temporary source copy; no simulations, fits, sampling or numerical-table updates",
+    "verification": [
+      {
+        "path": "paper/precipitation/figures/precipitation_work_precision.png",
+        "labels": [
+          "(i)",
+          "(ii)"
+        ],
+        "changed_pixels": 797,
+        "outside_label_regions": 0,
+        "maximum_channel_difference_outside_labels": 0,
+        "size": [
+          2100,
+          1095
+        ],
+        "dpi": 300,
+        "previous_png_sha256": "79667c3098b0ba26e8f257895ada89697fe8df00d9802857b2dbec302878e85f"
+      }
+    ]
   }
 }

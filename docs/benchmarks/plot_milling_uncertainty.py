@@ -31,7 +31,7 @@ LABELS = {"mc": "MC", "pce1": "PCE, degree 1", "pce2": "PCE, degree 2"}
 def table(folder, name):
     path = folder / name
     if not path.is_file():
-        raise FileNotFoundError(f"Missing numerical export {path}; run the Julia workflow first")
+        raise FileNotFoundError(f"Missing numerical export {path}; fetch retained inputs with python tools/retained_data.py fetch --profile docs")
     return np.genfromtxt(path, delimiter=",", names=True, encoding="utf-8")
 
 

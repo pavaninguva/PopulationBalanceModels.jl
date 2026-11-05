@@ -4,7 +4,7 @@ using PopulationBalanceModels, SHA, TOML, Dates, Pkg, LinearAlgebra
 const ROOT = dirname(dirname(@__DIR__))
 const PAPER = dirname(@__DIR__)
 normpath(dirname(dirname(pathof(PopulationBalanceModels)))) == normpath(ROOT) ||
-    error("The paper must load PopulationBalanceModels from this checkout; run paper/setup.jl")
+    error("Develop this checkout in the paper environment: julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'")
 
 filehash(path) = bytes2hex(sha256(read(path)))
 function digest_files(files)

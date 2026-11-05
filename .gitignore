@@ -13,3 +13,35 @@ docs/src/assets/source/
 
 # Optional historical fixtures and non-manual example outputs.
 /.cache/
+
+# Optional retained payloads. Original producer metadata stays versioned.
+# Restore explicitly with python tools/retained_data.py fetch --profile all.
+/docs/src/assets/**/*.csv
+/docs/src/assets/**/*.gz
+/docs/src/assets/**/*.png
+/docs/src/assets/**/*.pdf
+/docs/src/assets/**/*.svg
+!/docs/src/assets/*.csv
+!/docs/src/assets/benchmark_2d.*
+!/docs/src/assets/architecture/*
+!/docs/src/assets/audit/*.csv
+# Current Gaussian case: compact retained analysis and its four manual figures.
+!/docs/src/assets/constant_growth/gaussian_*.csv
+!/docs/src/assets/constant_growth/solutions.*
+!/docs/src/assets/constant_growth/performance.*
+!/docs/src/assets/constant_growth/observed_orders.*
+!/docs/src/assets/constant_growth/timings.*
+/docs/benchmarks/diagnostics/**/*.csv
+/docs/benchmarks/diagnostics/**/*.png
+/docs/benchmarks/diagnostics/**/*.pdf
+/docs/benchmarks/diagnostics/**/*.svg
+/paper/*/data/**/*.csv
+/paper/*/data/**/*.gz
+/paper/*/data/**/*.png
+/paper/*/data/**/*.pdf
+/paper/*/data/**/*.svg
+/paper/*/figures/*.pdf
+/paper/*/figures/*.svg
+/test/fixtures/archives/legacy_docs_assets.zip
+/test/fixtures/archives/paper_history/protein_variable_gamma_theta_20261028.zip
+/test/fixtures/archives/paper_history/04_protein_crystallization/grd_100bin_acceptance099_completed_20261025.zip

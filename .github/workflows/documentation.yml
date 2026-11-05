@@ -29,6 +29,8 @@ jobs:
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1.10'
+      - name: Fetch retained manual assets (no numerical calculations)
+        run: python3 tools/retained_data.py fetch --profile docs
       - name: Install documentation dependencies
         shell: julia --color=yes --project=docs {0}
         run: |

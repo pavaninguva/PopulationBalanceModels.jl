@@ -418,23 +418,34 @@ The interval estimates condition on the primary mesh. In particular, CNT's
 grid comparison. The table retains this difference; the MCMC bands do not include
 discretization or model error.
 
-From the checkout root:
+To redraw the retained comparison from the checkout root:
 
 ```sh
-julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
 python -m pip install -r paper/requirements.txt
-julia --project=paper paper/protein/run.jl --smoke
-julia --project=paper paper/protein/run.jl --full --output=/tmp/protein-declared-coordinates
-python paper/protein/plot.py --tables --input=/tmp/protein-declared-coordinates
+python tools/retained_data.py fetch --profile paper
 # Figures only: no fits, sampling, forward solves or result-table rewrites.
 python paper/protein/plot.py
 python paper/protein/plot.py --gauss-newton
-# Add --tables explicitly to regenerate derived summaries in data/analysis/.
-# Separate local uncertainty: reads retained inputs, no sampling/latent propagation.
-julia --project=paper paper/protein/run.jl --gauss-newton --model=all
-python paper/protein/plot.py --gauss-newton --tables
-python test/protein_results.py
+python test/protein_results.py --retained
 ```
+
+Fetching and plotting preserve the original producers; they do not establish
+equivalence to a later checkout. A new calibration/sampling calculation is
+separate and uses a fresh output directory:
+
+```sh
+julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
+julia --project=paper paper/protein/run.jl --smoke
+julia --project=paper paper/protein/run.jl --full --output=/tmp/protein-declared-coordinates
+python paper/protein/plot.py --tables --input=/tmp/protein-declared-coordinates
+```
+
+Separate `--gauss-newton`/`--laplace` analysis performs new derivative/forward
+evaluations and requires its compatibility checks; it never samples or propagates
+latent predictions automatically. See the
+[paper driver guide](https://github.com/pavaninguva/PopulationBalanceModels.jl/tree/main/paper).
+`--tables` explicitly regenerates derived plotting
+summaries; ordinary redraws leave numerical tables unchanged.
 
 Use `--model=cnt`, `--model=cnt_grd` or `--model=cnt_growth_grd` to run one model, `--map` for calibration
 without sampling, and `--verify` to check active posterior densities and gradients.

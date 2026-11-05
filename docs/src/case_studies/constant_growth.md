@@ -7,19 +7,21 @@ compared without uncertainty about the physical kinetics.
 
 We use the constant-growth equation from Case 1 of
 [Inguva, Schickel and Braatz (2022)](https://web.mit.edu/braatzgroup/Inguva_ComputChemEng_2022.pdf),
-replacing its exponential initial condition with a localized Gaussian. We then
-use a separate smooth periodic distribution to measure
-convergence. The Gaussian makes numerical spreading and distortion easy to see;
-the periodic input separates refinement behaviour from physical boundaries.
+replacing its exponential initial condition with a localized Gaussian.
+**Every profile, error, refinement order and timing below uses this same
+Gaussian problem**, with the same growth rate, domain, final time and physical
+boundaries. Only the numerical resolution, selected growth/time pairing and
+stated CFL change. The Gaussian makes numerical spreading and distortion easy
+to see.
 
 ## Model, initial condition and boundaries
 
 For ``0\le a\le1``,
 
 ```math
-\frac{\partial f(a,t)}{\partial t}
-+0.1\frac{\partial f(a,t)}{\partial a}=0,
-\qquad f(a,0)=100\exp\!\left[-\frac{(a-0.2)^2}{2(0.03)^2}\right].
+\frac{\partial n(a,t)}{\partial t}
++0.1\frac{\partial n(a,t)}{\partial a}=0,
+\qquad n(a,0)=100\exp\!\left[-\frac{(a-0.2)^2}{2(0.03)^2}\right].
 ```
 
 The incoming number flux is zero. The far boundary lets particles leave; the
@@ -28,7 +30,7 @@ deviation is 0.03, independent of bin width, and its centre moves from 0.2 to 0.
 The analytical density is
 
 ```math
-f(a,t)=\begin{cases}
+n(a,t)=\begin{cases}
 100\exp\!\left[-\frac{(a-0.1t-0.2)^2}{2(0.03)^2}\right],&0\le a-0.1t\le1,\\
 0,&\text{otherwise}.
 \end{cases}
@@ -61,7 +63,7 @@ The comparison uses seven pairings. This keeps the plots readable while showing
 first-order transport, limited reconstruction, high-order reconstruction,
 temporal error and a characteristic shift.
 
-| Growth treatment | Time method | Courant number in the smooth/timing comparison |
+| Growth treatment | Time method | CFL in the Gaussian refinement/timing comparison |
 |:--|:--|:--|
 | Upwind | Forward Euler | 0.5 |
 | MUSCL | SSPRK33 | 0.5 |
@@ -123,63 +125,67 @@ appropriate positivity-preserving method and retain the state checks.
 
 ## Compare both error norms
 
-For analytical bin averages ``\bar f_i^{\mathrm{exact}}``, we report
+For analytical bin averages ``\bar n_i^{\mathrm{exact}}``, we report
 
 ```math
-E_{L^1}=\sum_i\Delta a_i\left|\bar f_i-\bar f_i^{\mathrm{exact}}\right|,
+E_{L^1}=\sum_i\Delta a_i\left|\bar n_i-\bar n_i^{\mathrm{exact}}\right|,
 \qquad
 E_{\mathrm{RMS}}=\left[
-\frac{\sum_i\Delta a_i(\bar f_i-\bar f_i^{\mathrm{exact}})^2}
+\frac{\sum_i\Delta a_i(\bar n_i-\bar n_i^{\mathrm{exact}})^2}
 {a_{\max}-a_{\min}}\right]^{1/2}.
 ```
 
 ![L1 and RMSE for the translating Gaussian](../assets/constant_growth/performance.png)
 
-These errors measure translation of a localized smooth peak with open
-boundaries; the negligible incoming truncation jump is retained in the exact
-reference. The companion calculation keeps its periodic boundaries and
+Every curve uses the same Gaussian at ``t=4``. The common refinement sequence
+is **40, 80, 160, 320 and 640 bins** in both the manual and paper figures.
+The Gaussian standard deviation remains 0.03 on every mesh; it spans only 1.2
+bin widths on the coarsest grid and 19.2 on the finest. The 200-bin profiles
+above are a representative resolution, not a different initial condition.
+Errors use the stored signed solution and exact bin averages, without clipping,
+smoothing or changing the incoming truncation in the analytical reference.
 
-```math
-f(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a),
-\qquad f(a,t)=f(a-0.1t,0)
-```
-
-with periodic continuation. Both initialization and comparison again use exact
-bin integrals.
-
-![L1 and RMSE for smooth periodic transport](../assets/constant_growth/smooth_refinement.png)
-
-Rather than placing arbitrarily anchored ``h^2`` and ``h^5`` lines on these
-plots, we calculate the observed order from each pair of grids:
+We calculate the observed order from successive Gaussian refinements:
 
 ```math
 p_{\mathrm{obs}}=
 \frac{\log[E(N)/E(2N)]}{\log2}.
 ```
 
-![Measured orders in both error norms](../assets/constant_growth/observed_orders.png)
+![Measured Gaussian refinement orders in both error norms](../assets/constant_growth/observed_orders.png)
 
-The purple dashed HOC + midpoint curves have measured RMSE orders 2.019, 2.005, 2.001 and 2.000
-on the 40–640-bin grids. At the shared ``C=0.5``, temporal error limits this
-complete method to second order; this plot does not isolate its fourth-order
-spatial reconstruction.
+The table gives the final 320-to-640-bin slopes. These are measured slopes
+for this finite mesh range, not independent estimates of formal spatial order.
 
-WENO3 + SSPRK33 has measured RMSE orders 1.73, 2.28, 3.34, 4.27
-on the successive 40–640-bin refinements. Third-order face reconstruction does
-not ensure an immediate third-order curve: nonlinear weights near extrema and
-the third-order time update both contribute at these resolutions. The fixed
-WENO weight parameter also changes its importance as the mesh is refined.
-The final slope above three is finite-range behaviour, not evidence for a
-higher formal order.
+| Growth/time pairing | Last ``L^1`` slope | Last RMSE slope |
+|:--|--:|--:|
+| Upwind + Euler | 0.82 | 0.78 |
+| MUSCL + SSPRK33 | 1.80 | 1.70 |
+| WENO3 + SSPRK33 | 1.95 | 1.60 |
+| WENO5 + SSPRK33 | 3.42 | 3.47 |
+| WENO5 + RK4 | 4.94 | 4.92 |
+| HOC + midpoint | 2.01 | 2.01 |
 
-Upwind approaches first order. MUSCL approaches
-second order in ``L^1`` but about 1.8 in RMSE here, because limiting near smooth
-extrema affects the norms differently. WENO5 with SSPRK33 approaches third
-order as time error dominates. RK4 gives much smaller errors on this mesh range;
-its observed slopes above five are finite-range behaviour, not proof of a new
-order or of fifth-order space–time accuracy. At sufficiently fine resolution,
-fourth-order temporal error can dominate that pairing too. The characteristic
-shift is at roundoff, where an inferred convergence order is meaningless.
+Upwind still visibly broadens this narrow peak, and has not reached its
+asymptotic first-order slope on these grids. Limited/nonlinear reconstructions
+and the resolution of the Gaussian extremum affect the MUSCL and WENO3 curves.
+The data do not establish third-order whole-solve convergence for WENO3 on
+this mesh range. WENO5 with SSPRK33 approaches the time-method-limited regime;
+WENO5 with RK4 has much smaller errors and slopes near five here, without
+establishing fifth-order space-time accuracy.
+
+HOC + midpoint has RMSE slopes 1.97, 2.10, 2.03 and 2.01. Its second-order
+time update dominates at fixed CFL; this comparison does not isolate its
+fourth-order spatial reconstruction. Spatial and temporal error remain
+combined for every pairing.
+
+The matched characteristic shift reproduces the bin translation to floating-point
+accuracy. Its actual reported errors remain visible as isolated markers in the
+error plot; no convergence slope is assigned. The analysis screen is
+``1000\epsilon H`` for RMSE and ``1000\epsilon H(a_{\max}-a_{\min})`` for
+``L^1``, with Gaussian height ``H=100``. This scales with density/coordinate
+units and only suppresses unresolved order estimates. It does not change the
+errors, solver tolerances or numerical states.
 
 ## Measure computation time once
 
@@ -192,23 +198,52 @@ and exclude compilation, file output and plotting. A full garbage collection
 before each timer prevents earlier configurations' garbage being charged to the
 next method; allocation bytes and in-solve GC time are exported too. They have no averaging or
 repeatability bands and will vary between runs and machines. The retained timings
-were measured together in the benchmark run; [inputs.txt](../assets/constant_growth/inputs.txt)
-records the Julia version, CPU and thread counts.
+were measured together for the Gaussian runs using Julia 1.10.12, an
+Intel Core i9-13900H, the `goldmont` CPU target, one Julia thread and one BLAS
+thread. They retain the original producing environment; redrawing them does
+not measure current-source performance.
 
-Raw results are in [errors.csv](../assets/constant_growth/errors.csv) and
-[smooth_errors.csv](../assets/constant_growth/smooth_errors.csv). They also retain
-negative number, total-number drift and actual step counts.
+The compact [Gaussian metrics](../assets/constant_growth/gaussian_metrics.csv)
+contain the 35 refinement measurements and 13 profile configurations.
+[Gaussian profile bin integrals](../assets/constant_growth/gaussian_profiles.csv),
+[derived orders](../assets/constant_growth/gaussian_orders.csv) and the
+[selection/provenance record](../assets/constant_growth/gaussian_selection.json)
+are downloadable. The selection records the original numerical-file hashes,
+producer records, configuration and measured timings. The earlier periodic
+experiment remains an independent verification example; it supplies none of
+this case study's figures or quoted slopes.
 
 ## Minimal run and full reproduction
 
-The first calculation above is a complete minimal run. To reproduce the full
-comparison, use a checkout with the [standard environment](../verification.md):
+The small Gaussian figure selection ships with the source, so redrawing this
+case does not require fetching the production-data directories:
 
 ```sh
-julia --project=. examples/constant_growth_methods.jl
+python -m pip install -r paper/requirements.txt
 python docs/benchmarks/plot_transport_comparisons.py constant --usetex
-julia --project=docs docs/make.jl
+python paper/growth/plot.py
 ```
+
+Both plotters select the same measured Gaussian runs. The manual keeps
+alphabetic panel labels; the paper uses lowercase Roman labels. Neither command
+solves the PBM or rewrites numerical tables.
+
+The first calculation above is a complete minimal run. A deliberate new full
+comparison uses the [standard environment](../verification.md) and a separate
+output directory, preserving retained producers:
+
+```sh
+julia --project=. -e 'include("examples/constant_growth_methods.jl"); ConstantGrowthMethods.run(output="/tmp/gaussian-growth")'
+python docs/benchmarks/plot_transport_comparisons.py constant --input /tmp/gaussian-growth --output /tmp/gaussian-growth-doc-figures --usetex
+python paper/growth/plot.py --input /tmp/gaussian-growth --output /tmp/gaussian-growth-paper-figures
+```
+
+The driver records Gaussian runs only, on the same refinement grids and
+boundaries as the retained comparison. Its default output is under `.cache/`;
+new calculations have their own source/configuration hashes and timings.
+An explicitly requested new figure-selection export is available through
+`python paper/_support/growth_results.py --input CALCULATION --output NEW_SELECTION`.
+This derives plotting tables and orders without modifying the calculation.
 
 - [Complete comparison driver](../assets/source/examples/constant_growth_methods.jl).
 - [Benchmark/export helpers](../assets/source/examples/support/constant_growth_benchmark.jl).

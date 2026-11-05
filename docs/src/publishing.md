@@ -6,6 +6,7 @@ From the package root:
 
 ```sh
 julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
+python tools/retained_data.py fetch --profile docs
 julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
 julia --project=docs docs/make.jl
 ```
@@ -15,7 +16,22 @@ HTML build is excluded from source archives. Ordinary local builds do not deploy
 Source and edit links are disabled when `GITHUB_REPOSITORY` is unset; CI obtains
 the owner and repository from that environment variable.
 
+## Retained case-study outputs
+
+Retained figures and numerical tables are optional reproduction payloads. The
+explicit fetch above reads an immutable source snapshot and verifies every
+selected file's SHA-256 and size. It runs no numerical calculations. Existing
+differing results are not overwritten. `--profile paper` prepares the publication
+cases; `--profile all` also prepares historical uncertainty fixtures. Numerical
+package use and small authored tutorials need none of these downloads.
+
+The storage inventory is separate from the original producer manifests. A
+successful download establishes byte integrity, not equivalence of a historical
+producer to the current source. Preserve the verification qualifications in the
+[reproduction guide](verification.md#Retained-results-and-present-source-equivalence).
+
 ## Repository address
+
 
 The repository is `pavaninguva/PopulationBalanceModels.jl`. Its source and
 versioned manual addresses are:
@@ -44,7 +60,9 @@ credentials or local environment files.
 In repository Settings → Pages choose deployment from branch `gh-pages` at
 `/ (root)`. Main builds publish `/dev/`. After an ordinary `vX.Y.Z` release tag
 with a matching package version, Documenter supplies versioned pages and the
-`/stable/` alias. The current development version is `0.4.0-DEV`.
+`/stable/` alias. The prepared package version is `0.4.0`; registration,
+tagging and deployment are separate release actions. Historical producer
+manifests retain their original development-version metadata.
 
 If deployment fails, check the Documentation job, matching SSH deploy key and
 secret, actual repository slug, and Pages branch settings. A missing `/stable/`

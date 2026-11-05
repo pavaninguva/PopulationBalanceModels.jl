@@ -367,6 +367,11 @@ replace them only after checking the new calculation and its provenance.
 
 ## Minimal run and full reproduction
 
+To redraw retained figures without a numerical campaign, first run
+`python tools/retained_data.py fetch --profile docs` from the checkout root,
+then use the relevant Python plotter. The full Julia reproduction commands
+are separate; see [retained-result preparation](../verification.md#Retained-results-and-present-source-equivalence).
+
 The [full driver](../assets/source/examples/estimate_size_dependent_growth.jl)
 adds uncertainty calculations, sampling and numerical-refinement comparisons.
 Use an environment with Optim and the checkout developed into it; see the

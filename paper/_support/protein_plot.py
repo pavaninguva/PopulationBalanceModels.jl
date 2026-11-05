@@ -14,7 +14,7 @@ from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 from protein_provenance import verify_compatibility
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from plotting_style import configure, save_png, DOUBLE
+from plotting_style import configure, save_png, DOUBLE, panel, alphabetic_panels
 from _support.posterior_density import joint_density, probability_levels, marginal_on_grid
 from pbm_plotting import plot_observable, plot_distribution, plot_parameters
 from pbm_plotting.coordinates import prior_density
@@ -62,7 +62,8 @@ def export(fig,name):
     creator='PopulationBalanceModels isothermal CNT/GRD comparison'
     path=OUT/f'{name}.png'
     save_png(fig,path,creator=creator)
-    shutil.copy2(path,DOCS/path.name)
+    with alphabetic_panels(fig):
+        save_png(fig,DOCS/path.name,creator=creator)
     plt.close(fig)
     print(f'Rendered {name}',flush=True)
 
@@ -148,7 +149,7 @@ def layout():
     fig,axes=plt.subplots(2,2,figsize=(DOUBLE,5.45))
     fig.subplots_adjust(left=.095,right=.985,bottom=.18,top=.95,wspace=.30,hspace=.36)
     for letter,ax in zip('abcd',axes.flat):
-        ax.text(0.,1.025,f'({letter})',transform=ax.transAxes,ha='left',va='bottom',fontsize=9)
+        panel(ax,letter,x=0.,y=1.025,fontsize=9)
         ax.tick_params(direction='out',length=3,width=.7,pad=3,labelsize=8)
         for spine in ax.spines.values(): spine.set_linewidth(.7)
     axes[0,0].set(xlim=(-8,690),ylim=(0,22),xlabel='Time (min)',ylabel=r'$c$ (g L$^{-1}$)')
@@ -353,7 +354,7 @@ def captions(data_only=False,map_only=False,models=MODELS):
             'No posterior bands or parameter-distribution claims are displayed. '
             'Lines connect stored bin averages; digitized observations are scatter only.\n')
         return
-    text=r'''\newcommand{\ProteinDataCaption}{Original graph-digitized Tang et al. (2018) 100 mL isothermal lysozyme observations at 20 degrees C. (a) Dissolved concentration with assumed 5\% standard deviations; the diamond fixes the initial condition, filled circles train and open squares test. (b) Training conditional number densities at 74, 180 and 420 min. (c) Held-out 660-min density. (d) Conditional number $d_{10},d_{50},d_{90}$; connecting dotted lines are guides only. All sizes and quantiles condition on 2.5--25 $\mu$m. No model prediction or invented PSD uncertainty is shown.}
+    text=r'''\newcommand{\ProteinDataCaption}{Original graph-digitized Tang et al. (2018) 100 mL isothermal lysozyme observations at 20 degrees C. (i) Dissolved concentration with assumed 5\% standard deviations; the diamond fixes the initial condition, filled circles train and open squares test. (ii) Training conditional number densities at 74, 180 and 420 min. (iii) Held-out 660-min density. (iv) Conditional number $d_{10},d_{50},d_{90}$; connecting dotted lines are guides only. All sizes and quantiles condition on 2.5--25 $\mu$m. No model prediction or invented PSD uncertainty is shown.}
 \newcommand{\ProteinFitCaption}{CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview. Solid curves/stairs show the inference-coordinate MAP; markers retain the graph readings without connecting guides. Shading is the pointwise 95\% latent interval from screened NUTS draws, conditional on fixed observation errors and physical constants; it excludes additional measurement noise. The vertical dotted line marks the end of training at 420 min. The 660-min PSD and later concentrations are predicted without refitting. Quantile segments are omitted when the conditioning window is empty; quantiles derived from PSDs are not independent likelihood data. Numerical densities use actual bin edges without smoothing.}
 \newcommand{\ProteinCornerCaption}{Three-parameter CNT or four-parameter CNT+GRD NUTS posterior, identified by filename. Diagonals show normalized posterior KDEs and dashed analytical priors generated from the active specifications; positive wide-scale parameters use labelled natural-log plotting coordinates, including the correct prior Jacobian. Broad priors are not renormalized to the displayed posterior window; full support is in the prior table. In each two-parameter marginal, KDE contours enclose approximately 68\% and 95\% probability. Interfacial energy is fixed at 0.64 mJ per squared metre and is absent from these inferred coordinates. Orange markers denote the transformed inference-coordinate MAP. Sampling convergence does not establish numerical convergence, identifiability or physical model adequacy.}
 '''
@@ -373,7 +374,7 @@ def captions(data_only=False,map_only=False,models=MODELS):
         'Symbols retain the original readings without connecting guides; the likelihood and supplied CDFs are unchanged. No model prediction or invented PSD uncertainty is shown.')
     text=text.replace(r'\ProteinFitCaption',r'\ProteinFitDetails').replace(r'\ProteinCornerCaption',r'\ProteinCornerDetails')
     text=text.replace('CNT or CNT with native random-fluctuation GRD, identified by the filename. Panels have the same meanings and axes as the data overview.',
-        '(a) Concentration; (b) training conditional number densities at 74, 180 and 420 min; (c) held-out 660-min density; (d) conditional number quantiles. All densities and quantiles condition on 2.5--25 $\\mu$m.')
+        '(i) Concentration; (ii) training conditional number densities at 74, 180 and 420 min; (iii) held-out 660-min density; (iv) conditional number quantiles. All densities and quantiles condition on 2.5--25 $\\mu$m.')
     text=text.replace('Three-parameter CNT or four-parameter CNT+GRD NUTS posterior, identified by filename. ','')
     if data_only:
         # A data-only redraw must not replace captions or provenance belonging
@@ -445,7 +446,8 @@ def plot(data_only=False,figures_only=True,map_only=False,models=MODELS):
                           ('manifest.json','posterior_draws.csv','map.json','latent_predictions.csv','latent_distribution_curves.csv')))}
         receipt='data_plot_provenance.json' if data_only else 'plot_provenance.json'
         (OUT/receipt).write_text(json.dumps(dict(renderer='actual LaTeX',dpi=300,files=files,
-            shared_renderer_sources=renderer_sources(),
+            shared_renderer_sources=renderer_sources(),panel_labels='lowercase Roman numerals',
+            paper_style_sha256=hashlib.sha256((PAPER/'plotting_style.py').read_bytes()).hexdigest(),
             map_only=map_only,posterior_bands=not data_only and not map_only,
             retained_inputs=inputs,figures_only=figures_only,digitized_observations="scatter only; no smoothing or connecting guides",
             python=platform.python_version(),numpy=np.__version__,matplotlib=plt.matplotlib.__version__,

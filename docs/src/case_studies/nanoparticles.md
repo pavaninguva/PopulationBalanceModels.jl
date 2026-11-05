@@ -555,6 +555,11 @@ visible; it does not alter a state. The raw histories, selected PSD snapshots, i
 
 ## Minimal run and full reproduction
 
+To redraw retained figures without a numerical campaign, first run
+`python tools/retained_data.py fetch --profile docs` from the checkout root,
+then use the relevant Python plotter. The full Julia reproduction commands
+are separate; see [retained-result preparation](../verification.md#Retained-results-and-present-source-equivalence).
+
 The [long-time driver](../assets/source/examples/shin_lnp_long_time.jl),
 [model assembly](../assets/source/examples/shin_lnp_reproduction.jl), and
 [physical recipe](../assets/source/examples/papers/cej2025_lnp.jl) preserve the

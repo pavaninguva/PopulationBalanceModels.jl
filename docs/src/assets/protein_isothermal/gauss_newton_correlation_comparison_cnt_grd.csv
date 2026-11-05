@@ -1,4 +1,0 @@
-first,second,coordinates,MCMC,GaussNewton
-logAJ,AG,"display coordinates, including declared natural logs",-0.09762469562267818,-0.17333760480307528
-AG,g,"display coordinates, including declared natural logs",-0.9931682037346282,-0.9930218252196958
-g,grd_strength,"display coordinates, including declared natural logs",0.5322407400383682,0.5087585235201891

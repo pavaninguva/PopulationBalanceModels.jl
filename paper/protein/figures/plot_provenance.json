@@ -2,10 +2,10 @@
   "renderer": "actual LaTeX",
   "dpi": 300,
   "files": {
-    "protein_data.png": "d052903eb54f1b6f203d790aad14bb2e6919478af7c13c3f1faefbdfa9acccce",
-    "protein_fit_cnt.png": "930eaf80c74344b34a57c3eea17c74abad121c1652a2dadcf5ffa23723fd002c",
-    "protein_fit_cnt_grd.png": "9d779ac28b3923aa7dd3128a70a930f98c93609f28d3abf606ca301f9922911f",
-    "protein_fit_cnt_growth_grd.png": "49075a5b93baee61aa22cd81b7e790ca6d35d32ad1ffac18577bd65184cc14ed",
+    "protein_data.png": "4439f378d2ef57bf1ce2676b4720ea3bab5e17625580d38774bbe16ceeafa528",
+    "protein_fit_cnt.png": "6b97f03b0a836fe5269fd60cf64e3f21930bd1ed7414335216a9ef8d457e733e",
+    "protein_fit_cnt_grd.png": "c16c920db213803d1458f001ccd15870d1a9706d614846c045ef07603fbd732b",
+    "protein_fit_cnt_growth_grd.png": "78058ab68fcdd5df7eac8409f00623d8b830fdd930c9725f4ffd980798228c8c",
     "protein_corner_cnt.png": "53d841df7c88fd7083f5f8f7e038110c40779a7636dd6d9c5532b22bfdbf9625",
     "protein_corner_cnt_grd.png": "5ba1025cf7f8c5319404309431400606b69a7e876cdb380406e4d962b1e9339a",
     "protein_corner_cnt_growth_grd.png": "a13e213d5e903ebd3fe28f5ce9b4deaae41e82e8a3845ac48f34b8b93e18ec28"
@@ -17,6 +17,8 @@
     "render.py": "5889876470ce5b00903734dcf6460a0c9b34ad9a53e5c51f329d69ddbfa8e3e0",
     "style.py": "6ee0b06d51b58bd7193e43257538dbe6e7cc7010fcab6c652129fef3db1b6425"
   },
+  "panel_labels": "lowercase Roman numerals",
+  "paper_style_sha256": "0d2a7e0b47267d90aed5ceb3c44da682ed75899f8606c409716667762657a4c9",
   "map_only": false,
   "posterior_bands": true,
   "retained_inputs": {
@@ -39,11 +41,90 @@
     "cnt_growth_grd/latent_predictions.csv": "03d56210124433d0b814a3ecff6d47f2f497ed27596c59ec38a6a11ae2053f26",
     "cnt_growth_grd/latent_distribution_curves.csv": "f33d6c1c829e628f997eddf5c06f16793241011d54f7a894fd9202c56ff22b08"
   },
-  "figures_only": false,
+  "figures_only": true,
   "digitized_observations": "scatter only; no smoothing or connecting guides",
   "python": "3.12.15",
   "numpy": "1.26.4",
   "matplotlib": "3.8.4",
-  "driver_sha256": "1fca76f5bf7364f858dae907af0f2e23fd971f0fc3d0a88e9e29309a129e61bc",
-  "density_helpers_sha256": "3efd855e157cc2b638b30a79c1cad7622f04d25af969989ea5dd0f23d039fe59"
+  "driver_sha256": "c76bb4ccc93372112c6279fd019e2d249dd421470233c834ecb078ec0cbfb320",
+  "density_helpers_sha256": "3efd855e157cc2b638b30a79c1cad7622f04d25af969989ea5dd0f23d039fe59",
+  "presentation_update": {
+    "change": "Alphabetic panel labels to lowercase Roman numerals",
+    "scope": "paper only",
+    "execution": "Rendering in an isolated temporary source copy; no simulations, fits, sampling or numerical-table updates",
+    "verification": [
+      {
+        "path": "paper/protein/figures/protein_data.png",
+        "labels": [
+          "(i)",
+          "(ii)",
+          "(iii)",
+          "(iv)"
+        ],
+        "changed_pixels": 1796,
+        "outside_label_regions": 0,
+        "maximum_channel_difference_outside_labels": 0,
+        "size": [
+          2100,
+          1635
+        ],
+        "dpi": 300,
+        "previous_png_sha256": "d052903eb54f1b6f203d790aad14bb2e6919478af7c13c3f1faefbdfa9acccce"
+      },
+      {
+        "path": "paper/protein/figures/protein_fit_cnt.png",
+        "labels": [
+          "(i)",
+          "(ii)",
+          "(iii)",
+          "(iv)"
+        ],
+        "changed_pixels": 1796,
+        "outside_label_regions": 0,
+        "maximum_channel_difference_outside_labels": 0,
+        "size": [
+          2100,
+          1635
+        ],
+        "dpi": 300,
+        "previous_png_sha256": "930eaf80c74344b34a57c3eea17c74abad121c1652a2dadcf5ffa23723fd002c"
+      },
+      {
+        "path": "paper/protein/figures/protein_fit_cnt_grd.png",
+        "labels": [
+          "(i)",
+          "(ii)",
+          "(iii)",
+          "(iv)"
+        ],
+        "changed_pixels": 1796,
+        "outside_label_regions": 0,
+        "maximum_channel_difference_outside_labels": 0,
+        "size": [
+          2100,
+          1635
+        ],
+        "dpi": 300,
+        "previous_png_sha256": "9d779ac28b3923aa7dd3128a70a930f98c93609f28d3abf606ca301f9922911f"
+      },
+      {
+        "path": "paper/protein/figures/protein_fit_cnt_growth_grd.png",
+        "labels": [
+          "(i)",
+          "(ii)",
+          "(iii)",
+          "(iv)"
+        ],
+        "changed_pixels": 1796,
+        "outside_label_regions": 0,
+        "maximum_channel_difference_outside_labels": 0,
+        "size": [
+          2100,
+          1635
+        ],
+        "dpi": 300,
+        "previous_png_sha256": "49075a5b93baee61aa22cd81b7e790ca6d35d32ad1ffac18577bd65184cc14ed"
+      }
+    ]
+  }
 }

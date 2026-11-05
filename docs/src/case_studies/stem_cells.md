@@ -14,7 +14,7 @@ observations, fitted parameters or claims of experimental validation here.
 
 The figures are retained outputs from the recorded producing environment.
 All eight numerical-file hashes match their manifest. The current strict
-checker stops at a `Project.toml` **dependency/extension metadata** guard before
+checker stops at a `Project.toml` **package metadata** guard before
 numerical assertions; current-source equivalence has not been established.
 File integrity, replay in the original environment and verified equivalence
 to a later checkout are separate checks. The producer records are preserved.
@@ -253,6 +253,11 @@ is fixed: there is no differentiation-event PDF and no reconstructed curve in
 that panel. Its exported zero is the fixed model value.
 
 ## Reproduce and check the calculation
+
+To redraw retained figures without a numerical campaign, first run
+`python tools/retained_data.py fetch --profile docs` from the checkout root,
+then use the relevant Python plotter. The full Julia reproduction commands
+are separate; see [retained-result preparation](../verification.md#Retained-results-and-present-source-equivalence).
 
 From the repository root:
 

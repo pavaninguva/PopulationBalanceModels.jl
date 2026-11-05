@@ -467,6 +467,11 @@ This retains separate timestep and reconstruction-quadrature checks.
 
 ## Minimal run and full reproduction
 
+To redraw retained figures without a numerical campaign, first run
+`python tools/retained_data.py fetch --profile docs` from the checkout root,
+then use the relevant Python plotter. The full Julia reproduction commands
+are separate; see [retained-result preparation](../verification.md#Retained-results-and-present-source-equivalence).
+
 The [full benchmark driver](../assets/source/examples/qamar_moment_benchmarks.jl)
 contains the other families, pulse calculation and reporting. Follow the
 [shared setup guide](../verification.md) to retain its directory layout.

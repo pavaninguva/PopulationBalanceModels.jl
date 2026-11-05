@@ -361,7 +361,16 @@ route; the production wrapper reuses its physical terms and numerical preparatio
 with the stage-derivative bulk balance shown above. Use the
 [standard environment](../verification.md) from a checkout.
 
-For the complete study, including the numerical reference and its time check:
+To redraw and check the retained study without numerical production:
+
+```sh
+python tools/retained_data.py fetch --profile paper
+python paper/precipitation/plot.py
+python test/paper_data.py --case 3 --retained
+```
+
+For a new complete study, including the numerical reference and its time check,
+use a separate calculation checkout and its paper environment:
 
 ```sh
 julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'

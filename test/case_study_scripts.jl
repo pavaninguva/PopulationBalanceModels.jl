@@ -42,16 +42,18 @@ end
         # data, companion includes and the separate accounting/propagation stage.
         for name in (:continuous_precipitation,:protein_crystallization,:estimating_growth,:nanoparticles)
             scope=load_tutorial(name;path=joinpath(target,"$name.jl"))
-            @test getfield(scope,:problem) isa PBMProblem
+            # Julia 1.13 versions global bindings as well as methods. This
+            # closure predates the module just included above.
+            @test latest(getfield,scope,:problem) isa PBMProblem
         end
         @test isfile(joinpath(target,"stem_cell_accounting.jl"))
         stem=load_tutorial(:stem_cells;path=joinpath(target,"stem_cells.jl"))
         Base.include(stem,joinpath(target,"stem_cell_accounting.jl"))
-        @test stem.accounted_problem isa PBMProblem
+        @test latest(getfield,stem,:accounted_problem) isa PBMProblem
         @test isfile(joinpath(target,"milling_propagation.jl"))
         if Base.find_package("Sundials")!==nothing && Base.find_package("SciMLBase")!==nothing
             mill=load_tutorial(:milling_uncertainty;path=joinpath(target,"milling_uncertainty.jl"))
-            @test mill.problem isa PBMProblem && !isdefined(mill,:mc)
+            @test latest(getfield,mill,:problem) isa PBMProblem && !latest(isdefined,mill,:mc)
         end
     end
     @test_throws ArgumentError CaseStudyScripts.script(:unknown_case)

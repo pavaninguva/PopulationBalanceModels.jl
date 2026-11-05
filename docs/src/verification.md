@@ -118,7 +118,8 @@ These are distinct levels of evidence:
 The inexpensive checks are:
 
 ```sh
-python test/protein_results.py
+python tools/retained_data.py fetch --profile all
+python test/protein_results.py --retained
 python test/protein_publication.py
 python test/plotting_summaries.py
 python test/paper_data.py --case 1 --retained
@@ -132,7 +133,9 @@ equivalence. Protein separately validates reviewed compatibility receipts while
 preserving original producers. The paper precipitation check requires all
 independent logarithmic-size/axial runs and the same-reference-mesh
 `time_refinement` dataset; a partial campaign is rejected. The stem-cell check rejects changed
-Project weak-dependency/extension declarations before numerical assertions, although its eight
+package metadata before numerical assertions: the prepared release version is
+now the first mismatch with its original development-version Project snapshot;
+the optional-dependency declarations also require a compatibility review. Its eight
 numerical-file hashes match. Preserve failure reports: editing prose or
 redrawing figures cannot complete numerical or source-equivalence verification.
 

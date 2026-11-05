@@ -281,6 +281,11 @@ characteristics; its near-roundoff error is specific to this compatible problem.
 
 ## Minimal run and full reproduction
 
+To redraw retained figures without a numerical campaign, first run
+`python tools/retained_data.py fetch --profile docs` from the checkout root,
+then use the relevant Python plotter. The full Julia reproduction commands
+are separate; see [retained-result preparation](../verification.md#Retained-results-and-present-source-equivalence).
+
 The [full comparison driver](../assets/source/examples/inguva_braatz_case2.jl)
 also runs refinement and the eligible characteristic method. Follow the
 [shared setup guide](../verification.md) to retain its directory layout.

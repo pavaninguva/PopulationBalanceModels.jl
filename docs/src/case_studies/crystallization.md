@@ -329,6 +329,11 @@ consistently specified numerical benchmark.
 
 ## Minimal run and full reproduction
 
+To redraw retained figures without a numerical campaign, first run
+`python tools/retained_data.py fetch --profile docs` from the checkout root,
+then use the relevant Python plotter. The full Julia reproduction commands
+are separate; see [retained-result preparation](../verification.md#Retained-results-and-present-source-equivalence).
+
 The [physical recipe](../assets/source/examples/papers/gunawan2004_case2.jl)
 supplies the kinetic callbacks and physical initial density. The
 [full comparison driver](../assets/source/examples/cooling_crystallization_benchmark.jl)

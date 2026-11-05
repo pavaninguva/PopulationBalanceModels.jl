@@ -75,6 +75,8 @@ def milling(input_path=None):
         plot_uq(t,data["mean_um"],ax=ax,
             quantiles=np.stack([data["q025_um"],data["q975_um"]],axis=-1)[None,:,:],
             probabilities=[.025,.975],styles=[dict(color=color,lw=1.25)],legend=False)
+        # Keep the retained paper band's opacity when using the shared renderer.
+        ax.collections[-1].set_alpha(.20)
         ax.plot(t,data["gaussian_low_um"],color=color,ls=":",lw=.75,alpha=.75)
         ax.plot(t,data["gaussian_high_um"],color=color,ls=":",lw=.75,alpha=.75)
         ax.plot(nominal["time_s"],nominal["d50_um"],color="#424242",ls="--",lw=.8)

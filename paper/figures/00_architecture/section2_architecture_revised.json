@@ -1,6 +1,6 @@
 {
-  "revision": "5fd0d50248d4750374c35658c17b4b1945e9146a",
-  "package_version": "0.4.0-DEV",
+  "revision": "f5a9a86f3ca7251096f4930e86839cae3174d1e1",
+  "package_version": "0.4.0",
   "renderer": "Matplotlib text with a LaTeX equation",
   "equation_renderer": "actual LaTeX",
   "font_family": "DejaVu Sans",
@@ -23,11 +23,13 @@
     "render.py": "5889876470ce5b00903734dcf6460a0c9b34ad9a53e5c51f329d69ddbfa8e3e0",
     "style.py": "6ee0b06d51b58bd7193e43257538dbe6e7cc7010fcab6c652129fef3db1b6425"
   },
+  "panel_labels": "lowercase Roman numerals",
+  "documentation_updated": false,
   "width_inches": 7.2,
   "height_inches": 8.2,
-  "project_sha256": "30535a9a34aafae91a1d261ed48be8c1ec873c7d1974f3a3ae8dc7473a0eb8f8",
-  "generator_sha256": "50fabfad6660622bd6d7dd15b2ccf6c9b02839af90eecba66627926f0a942188",
-  "png_sha256": "63eaa84d575f4229d2cb29da102576bf9ac7b71e2ed826828fc7cfc62d160169",
+  "project_sha256": "8c7599067ba2ed7d75db57598042c2e6abbef76c7faa51ce1741d48d47bdc1ff",
+  "generator_sha256": "21d85f79ba53d74de926754486b5f6a9cd91076723d144471bba9380b95d885c",
+  "png_sha256": "91e1e2839ed885e498a9f3f1eeb1544eaa07a84d7f9071ffed766320a9cff745",
   "architecture_source_sha256": {
     "src/PopulationBalanceModels.jl": "1f5cfacfe46b7d04bb996f45060bcbc28a213477a19b219d1fd740a9a1f6690b",
     "src/compilation/moments.jl": "fb59aeece50fc21a0ea32012735ada135dbabffc570a948cafe0887647c0d4fe",
@@ -51,6 +53,29 @@
     "src/uq/bases.jl": "a6b719332aef4aea05660f0e18e814f054a2816206ead67180d9a4375dd8f115",
     "src/uq/refinement.jl": "f82516688afaa64e73a3cceb4b221d813fd107a950811ea309ff38f25b32d8f6"
   },
-  "dirty_state": " M docs/src/assets/architecture/section2_architecture_revised.pdf\n M docs/src/assets/architecture/section2_architecture_revised.png\n M docs/src/assets/architecture/section2_architecture_revised.svg\n M docs/src/development.md\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/figures/00_architecture/architecture.png\n M paper/figures/00_architecture/section2_architecture_revised.json\n?? test/architecture.py\n",
-  "scope": "Conceptual glyph; direct/moment method selection and automatic mixed moment evaluation; physical initialization, parameter-bound run preparation, configured transient execution and optional operating history; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply"
+  "dirty_state": " M .github/workflows/CI.yml\n M .github/workflows/documentation.yml\n M .github/workflows/plotting.yml\n M .gitignore\n M CHANGELOG.md\n M Project.toml\n M README.md\n M docs/benchmarks/README.md\n D docs/benchmarks/diagnostics/inguva_case1/compact_adi4_100.csv\n D docs/benchmarks/diagnostics/inguva_case1/compact_adi4_200.csv\n D docs/benchmarks/diagnostics/inguva_case1/environment.txt\n D docs/benchmarks/diagnostics/inguva_case1/errors.csv\n D docs/benchmarks/diagnostics/inguva_case1/errors.png\n D docs/benchmarks/diagnostics/inguva_case1/exact_shift_100.csv\n D docs/benchmarks/diagnostics/inguva_case1/exact_shift_200.csv\n D docs/benchmarks/diagnostics/inguva_case1/reference_100.csv\n D docs/benchmarks/diagnostics/inguva_case1/reference_200.csv\n D docs/benchmarks/diagnostics/inguva_case1/solutions.png\n D docs/benchmarks/diagnostics/inguva_case1/solutions.svg\n D docs/benchmarks/diagnostics/inguva_case1/upwind_100.csv\n D docs/benchmarks/diagnostics/inguva_case1/upwind_200.csv\n D docs/benchmarks/diagnostics/inguva_case1/weno5_100.csv\n D docs/benchmarks/diagnostics/inguva_case1/weno5_200.csv\n M docs/benchmarks/plot_case_studies.py\n M docs/benchmarks/plot_milling_uncertainty.py\n M docs/make.jl\n D docs/src/assets/audit/environments.csv\n D docs/src/assets/audit/legacy_protein_predictive_indices.csv\n D docs/src/assets/audit/performance.csv\n D docs/src/assets/audit/protein_checks.csv\n D docs/src/assets/audit/test_resolutions.csv\n D docs/src/assets/audit/verification.csv\n D docs/src/assets/continuous_precipitation/coordinate_refinement.png\n D docs/src/assets/continuous_precipitation/coordinate_refinement.svg\n D docs/src/assets/continuous_precipitation/fields.png\n D docs/src/assets/continuous_precipitation/fields.svg\n D docs/src/assets/continuous_precipitation/fields_log.png\n D docs/src/assets/continuous_precipitation/fields_log.svg\n D docs/src/assets/continuous_precipitation/outlets.png\n D docs/src/assets/continuous_precipitation/outlets.svg\n D docs/src/assets/continuous_precipitation/performance.png\n D docs/src/assets/continuous_precipitation/performance.svg\n M docs/src/case_studies/constant_growth.md\n M docs/src/case_studies/continuous_precipitation.md\n M docs/src/case_studies/crystallization.md\n M docs/src/case_studies/estimating_growth.md\n M docs/src/case_studies/milling_uncertainty.md\n M docs/src/case_studies/moment_crystallization.md\n M docs/src/case_studies/nanoparticles.md\n M docs/src/case_studies/protein_crystallization.md\n M docs/src/case_studies/stem_cells.md\n M docs/src/case_studies/transport.md\n M docs/src/publishing.md\n M docs/src/verification.md\n M paper/README.md\n M paper/_support/common.jl\n M paper/_support/figures.py\n M paper/_support/protein_plot.py\n M paper/_support/protein_uncertainty.py\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/captions.tex\n M paper/figures/00_architecture/architecture.png\n M paper/plotting_style.py\n M paper/precipitation/plot.py\n M paper/protein/data/README.md\n M paper/protein/figures/captions.tex\n M paper/protein/figures/data_caption.tex\n M paper/protein/figures/gauss_newton_captions.tex\n M test/README.md\n M test/architecture.py\n M test/case_study_scripts.jl\n M test/fixtures/archives/README.md\n D test/fixtures/archives/paper_history/01_growth_time_methods/README.md\n D test/fixtures/archives/paper_history/01_growth_time_methods/exponential_production.zip\n D test/fixtures/archives/paper_history/01_growth_time_methods/superseded_runs.zip\n D test/fixtures/archives/paper_history/03_tubular_precipitation/README.md\n D test/fixtures/archives/paper_history/03_tubular_precipitation/log_400x400_partial.zip\n M test/fixtures/archives/paper_history/04_protein_crystallization/README.md\n D test/fixtures/archives/paper_history/04_protein_crystallization/cnt_inferred_noise_8abcd0f.zip\n D test/fixtures/archives/paper_history/04_protein_crystallization/fixed_error_sampling_pilots_20261024.zip\n D test/fixtures/archives/paper_history/04_protein_crystallization/grd_200bin_acceptance099_interrupted_20261025.zip\n D test/fixtures/archives/paper_history/04_protein_crystallization/grd_acceptance090_completed_20261025.zip\n D test/fixtures/archives/paper_history/04_protein_crystallization/grd_transport_warmup_before_tail_guard_20261025.zip\n D test/fixtures/archives/paper_history/04_protein_crystallization/soft_barrier_expected_information_pilot_20261025.zip\n D test/fixtures/archives/paper_history/04_protein_crystallization/unit_shear_sampling_tuning_20261025.zip\n M test/fixtures/archives/paper_history/README.md\n D test/fixtures/archives/paper_history/development_pilots.zip\n D test/fixtures/archives/paper_history/former_entrypoints/check_data.py\n D test/fixtures/archives/paper_history/former_entrypoints/check_protein.py\n D test/fixtures/archives/paper_history/former_entrypoints/plot_all.py\n D test/fixtures/archives/paper_history/former_entrypoints/run_all.jl\n D test/fixtures/archives/paper_history/former_entrypoints/setup.jl\n D test/fixtures/archives/paper_history/retired_moments_and_growth_figures_20261028.zip\n M test/plotting_integration.jl\n?? docs/src/migration.md\n?? test/fixtures/archives/relocated_assets_20261103.json\n?? test/retained_data.py\n?? tools/\n",
+  "scope": "Conceptual glyph; direct/moment method selection and automatic mixed moment evaluation; physical initialization, parameter-bound run preparation, configured transient execution and optional operating history; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply",
+  "presentation_update": {
+    "change": "Alphabetic panel labels to lowercase Roman numerals",
+    "scope": "paper only",
+    "execution": "Rendering in an isolated temporary source copy; no simulations, fits, sampling or numerical-table updates",
+    "verification": [
+      {
+        "path": "paper/figures/00_architecture/architecture.png",
+        "labels": [
+          "(i)",
+          "(ii)"
+        ],
+        "changed_pixels": 1515,
+        "outside_label_regions": 0,
+        "maximum_channel_difference_outside_labels": 0,
+        "size": [
+          2160,
+          2460
+        ],
+        "dpi": 300,
+        "previous_png_sha256": "63eaa84d575f4229d2cb29da102576bf9ac7b71e2ed826828fc7cfc62d160169"
+      }
+    ]
+  }
 }

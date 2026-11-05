@@ -2,6 +2,11 @@ using Documenter
 using PopulationBalanceModels
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
+for payload in ("constant_growth/gaussian_selection.json", "gunawan_example2/coupled_solution.png",
+                "milling_uncertainty/data/mc_summary.csv")
+    isfile(joinpath(@__DIR__,"src","assets",payload)) ||
+        error("Retained manual assets are optional downloads. From the checkout root run: python tools/retained_data.py fetch --profile docs")
+end
 include("api_reference.jl")
 include("case_study_scripts.jl")
 const API_REFERENCE_SOURCES = APIReference.source_index(ROOT)
@@ -80,6 +85,7 @@ makedocs(;
         "Parameter estimation" => "inference.md",
         "Forward uncertainty quantification" => "uncertainty_quantification.md",
         "Plotting numerical results" => "plotting.md",
+        "Migrating existing workflows" => "migration.md",
         "Case studies" => [
             "Overview" => "case_studies/index.md",
             "Comparing growth and time methods" => "case_studies/constant_growth.md",

@@ -18,6 +18,8 @@ jobs:
         with:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
+      - name: Check retained-data download contracts (offline)
+        run: python test/retained_data.py
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
   extensions:
@@ -28,6 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JULIA_LOAD_PATH: '@:@stdlib'
+      JULIA_PKG_PRECOMPILE_AUTO: '0'
+      JULIA_NUM_PRECOMPILE_TASKS: '1'
+      OPENBLAS_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -38,7 +43,7 @@ jobs:
           # Keep sources, but rebuild compiler images on the selected Julia.
           cache-name: julia-extensions-source-v1
           cache-compiled: 'false'
-      - name: Optional integration tests
+      - name: Prepare optional integration environment
         env:
           JULIA_PROJECT: ${{ runner.temp }}/pbm-extensions
         shell: julia --color=yes {0}
@@ -51,6 +56,17 @@ jobs:
           Pkg.develop(path=root)
           Pkg.add(["Optim", "SciMLBase", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff", "AdvancedHMC", "MCMCDiagnosticTools", "NonlinearSolve", "Statistics"])
           Pkg.status(;mode=Pkg.PKGMODE_MANIFEST)
+          Pkg.precompile(;strict=true)
+      # Test in a new process, after dependency activation/precompilation has
+      # finished. Keep normal compiler optimization and every derivative test.
+      - name: Optional integration tests
+        env:
+          JULIA_PROJECT: ${{ runner.temp }}/pbm-extensions
+        shell: julia --startup-file=no --color=yes {0}
+        run: |
+          using InteractiveUtils
+          versioninfo()
+          root = pwd()
           include(joinpath(root,"test","stationary_integration.jl"))
           include(joinpath(root,"test","stationary_inference.jl"))
           include(joinpath(root,"test","tensor_integration.jl"))

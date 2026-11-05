@@ -1,4 +1,0 @@
-check,bins,Lmax_um,maximum_dt_min,cfl,maximum_concentration_change_g_L,maximum_CDF_change
-time,200,50.0,1.0,0.175,5.969419039075774e-7,5.779444645082066e-8
-size,400,50.0,2.0,0.35,0.0011241816006020144,0.0006752478251149663
-domain,300,75.0,2.0,0.35,0.0,0.0

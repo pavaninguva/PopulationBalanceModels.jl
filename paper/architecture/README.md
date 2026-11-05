@@ -3,7 +3,7 @@
 From the repository root, with `paper/requirements.txt` installed:
 
 ```sh
-python paper/architecture/generate_pbm_architecture.py
+python paper/architecture/generate_pbm_architecture.py --paper-only
 ```
 
 This runs no Julia calculations. It checks dependency and extension roles against
@@ -12,10 +12,11 @@ revision/hash receipt under `paper/figures/00_architecture/`. DejaVu Sans letter
 keeps the softer style; the population-balance equation alone uses external
 LaTeX with Computer Modern. Other mathematical labels use STIX mathtext.
 The artwork is rasterized from an in-memory vector image; no PDF/SVG
-derivatives are saved under `paper/`. The identical PNG is copied to
-`docs/src/assets/architecture/section2_architecture_revised.png`, preserving the
-manual's existing URL. Its existing PDF/SVG downloads are refreshed from the same
-canvas. The receipt retains its `section2_architecture_revised.json` name and
+derivatives are saved under `paper/`. Paper panels use lowercase Roman numerals.
+Omit `--paper-only` to also refresh
+`docs/src/assets/architecture/section2_architecture_revised.png` and its PDF/SVG
+downloads, retaining alphabetic labels for the manual. The receipt retains
+its `section2_architecture_revised.json` name and
 records the paper PNG filename. Matplotlib, NumPy and PyMuPDF use the existing
 paper environment; LaTeX is required for the equation. `--usetex` renders all
 lettering through LaTeX. `--preview` uses mathtext throughout and produces a
@@ -28,7 +29,7 @@ MPLBACKEND=Agg python test/architecture.py
 ```
 
 They check label spacing, branch/optional-input structure, export dimensions,
-paper/docs agreement and preview isolation without running simulations.
+paper/docs label scopes and preview isolation without running simulations.
 
 The drawing adapts the supplied two-panel Matplotlib generator. Its architecture
 is reviewed against the current public exports, source layout and extension

@@ -22,13 +22,38 @@
     "filtering": "none; no rejection, truncation or renormalization"
   },
   "renderer": "actual LaTeX; 300-dpi PNG (in-memory vector rasterization)",
-  "plotting_source_sha256": "dfebeeb8278469c19c627c8c46174be0c9d1c67f559a38bb79bb598a7ac1b168",
+  "plotting_source_sha256": "35d7b7c90da9a010883cea892674fecd8c2c14def3bf188fd64c51ae11578edc",
+  "paper_style_sha256": "0d2a7e0b47267d90aed5ceb3c44da682ed75899f8606c409716667762657a4c9",
+  "panel_labels": "lowercase Roman numerals",
   "density_helpers_sha256": "3efd855e157cc2b638b30a79c1cad7622f04d25af969989ea5dd0f23d039fe59",
   "figures": {
-    "protein_gauss_newton_mcmc_cnt.png": "c906eee3a1e5e5ba34462f31a996eb1e5e56628926cdf9f59022d0ce144af7ab",
+    "protein_gauss_newton_mcmc_cnt.png": "3f396fb01abfae0941bf173f5fd2dfed851314ae01160f3f9e3a88ca151c6426",
     "protein_gauss_newton_panel_cnt.png": "7f70682d48b1d8978310dbdbc57d15ec112485fbfbbb9a35e9cdf91d188eed0e",
     "protein_gauss_newton_mcmc_panel_cnt.png": "0be13abc0131dd00f939c7a8b8559316eec458afdf7a1907f87b31863c58e05a"
   },
   "contour_convention": "MCMC whitened KDE 68/95%; local Gaussian transformed probability ellipses, not displayed-coordinate HDRs",
-  "numerical_production_files": "read only; no fit, sampling or latent propagation"
+  "numerical_production_files": "read only; no fit, sampling or latent propagation",
+  "presentation_update": {
+    "change": "Alphabetic panel labels to lowercase Roman numerals",
+    "scope": "paper only",
+    "execution": "Rendering in an isolated temporary source copy; no simulations, fits, sampling or numerical-table updates",
+    "verification": [
+      {
+        "path": "paper/protein/figures/protein_gauss_newton_mcmc_cnt.png",
+        "labels": [
+          "(i)",
+          "(ii)"
+        ],
+        "changed_pixels": 790,
+        "outside_label_regions": 0,
+        "maximum_channel_difference_outside_labels": 0,
+        "size": [
+          4200,
+          1770
+        ],
+        "dpi": 300,
+        "previous_png_sha256": "c906eee3a1e5e5ba34462f31a996eb1e5e56628926cdf9f59022d0ce144af7ab"
+      }
+    ]
+  }
 }

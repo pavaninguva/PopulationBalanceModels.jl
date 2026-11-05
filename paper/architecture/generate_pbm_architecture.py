@@ -20,7 +20,7 @@ import numpy as np
 PAPER = Path(__file__).resolve().parents[1]
 ROOT = PAPER.parent
 sys.path.insert(0, str(PAPER))
-from plotting_style import configure, save_png
+from plotting_style import configure, save_png, panel_label, alphabetic_panels
 
 ARCHITECTURE_SOURCES = tuple(Path(path) for path in (
     'src/PopulationBalanceModels.jl', 'src/compilation/moments.jl',
@@ -83,7 +83,7 @@ def density_glyph(ax,x,y,w,h):
 
 
 def workflow(ax, *, equation_usetex=True):
-    text(ax,3,207,'(a)',size=11,ha='left')
+    text(ax,3,207,panel_label('a'),size=11,ha='left')
     card(ax,3,104,45,96,'Physical model','model')
     card(ax,54,141,73,59,'Numerical preparation','numerics')
     card(ax,133,112,44,88,'Parameter estimation','inference')
@@ -184,9 +184,9 @@ def forward_uq(ax):
 
 
 def dependencies(ax):
-    # Panel (b): dark headings, medium category labels, lighter package names.
+    # Panel (ii): dark headings, medium category labels, lighter package names.
     origin=-22
-    text(ax,3,origin+60,'(b)',size=11,ha='left')
+    text(ax,3,origin+60,panel_label('b'),size=11,ha='left')
     for x,w in ((3,49),(56,76),(136,41)):
         rect(ax,x,origin+3,w,50,fill='neutral')
     text(ax,27.5,origin+48,'Required dependencies',weight='bold',size=8,color='dependency_heading')
@@ -257,6 +257,7 @@ def build_figure(*, equation_usetex=True):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir',type=Path,default=PAPER/'figures/00_architecture')
+    parser.add_argument('--paper-only',action='store_true',help='Update paper outputs without writing documentation copies')
     parser.add_argument('--usetex',action='store_true',help='Opt in to external LaTeX instead of Matplotlib lettering')
     parser.add_argument('--preview',action='store_true',help='Use mathtext for the equation too; write a separate preview without updating docs')
     args=parser.parse_args()
@@ -281,6 +282,8 @@ def main():
                      math_font=('external LaTeX' if args.usetex else 'STIX' if args.preview
                                 else 'Computer Modern equation; STIX rate symbols'),
                      preview=args.preview,dpi=300,png_filename=name+'.png',**export,
+                     panel_labels='lowercase Roman numerals',
+                     documentation_updated=not args.preview and not args.paper_only,
                      width_inches=7.2,height_inches=8.2,
                      project_sha256=hashlib.sha256((ROOT/'Project.toml').read_bytes()).hexdigest(),
                      generator_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -294,18 +297,19 @@ def main():
                      dirty_state=subprocess.check_output(['git','-C',str(ROOT),'status','--porcelain=v1'],text=True),
                      scope='Conceptual glyph; direct/moment method selection and automatic mixed moment evaluation; physical initialization, parameter-bound run preparation, configured transient execution and optional operating history; standalone forward path with optional population/bulk coupling and optional axial transport; shared transient/stationary forward problems and observations for estimation and forward MC/PCE; built-in PCE bases cover independent normal/uniform/beta reference marginals with an explicit physical-input map; representation, root-branch and derivative restrictions apply')
         (out/(receipt_name+'.json')).write_text(json.dumps(receipt,indent=2)+'\n')
-        if not args.preview:
+        if not args.preview and not args.paper_only:
             docs=ROOT/'docs/src/assets/architecture';docs.mkdir(parents=True,exist_ok=True)
             docs_name='section2_architecture_revised'
-            shutil.copy2(out/(name+'.png'),docs/(docs_name+'.png'))
             # Preserve the existing downloadable documentation formats, while
-            # keeping the paper output PNG-only. They use the identical canvas.
-            for ext in ('pdf','svg'):
-                destination=docs/(docs_name+'.'+ext)
-                fig.savefig(destination,dpi=300)
-                if ext=='svg':
-                    destination.write_text('\n'.join(
-                        line.rstrip() for line in destination.read_text().splitlines())+'\n')
+            # keeping the paper output PNG-only and documentation alphabetic.
+            with alphabetic_panels(fig):
+                save_png(fig,docs/(docs_name+'.png'),creator='generate_pbm_architecture.py')
+                for ext in ('pdf','svg'):
+                    destination=docs/(docs_name+'.'+ext)
+                    fig.savefig(destination,dpi=300)
+                    if ext=='svg':
+                        destination.write_text('\n'.join(
+                            line.rstrip() for line in destination.read_text().splitlines())+'\n')
 
         plt.close(fig)
         print(out)

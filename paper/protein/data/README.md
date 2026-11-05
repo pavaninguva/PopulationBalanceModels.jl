@@ -1,4 +1,9 @@
-# Fixed-gamma CNT and constant-diffusion GRD
+# Fixed-gamma CNT and two GRD models
+
+The active comparison contains `cnt`, constant-diffusion `cnt_grd`, and
+growth-dependent `cnt_growth_grd` with D_G = k_D G. Restore their original numerical
+payloads with `python tools/retained_data.py fetch --group paper-protein` from the
+repository root. Producer metadata remains versioned separately from the downloads.
 
 Fresh calibration-only fits and posterior samples for the revised Tang isothermal
 comparison: gamma = 0.64 mJ/m², g ~ Uniform(1,5), three CNT or four CNT+GRD
@@ -10,7 +15,8 @@ MAP, raw NUTS draws, checkpoint diagnostics, latent forward predictions and
 refinement checks. `shared/` holds the unchanged observations and fixed-error
 assumptions. `analysis/tables/` contains derived summaries, not new fit inputs.
 `producer_recipe.zip` preserves the exact example, drivers and configuration
-used by these runs. Subsequent reporting-only fixes put refreshed verification
+used by the original CNT/constant-D0 runs; the third model has its separately
+recorded producer files and settings. Subsequent reporting-only fixes put refreshed verification
 receipts in `analysis/` and avoid re-exporting shared inputs in verification
 mode, preserving the original producer records and posterior definition.
 

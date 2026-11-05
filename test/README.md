@@ -126,6 +126,7 @@ production fits, MCMC or ensembles. Publication rendering needs `latex`/`dvipng`
 ordinary plotting and simulation do not. API routing/link checks remain separate.
 
 ```sh
+python tools/retained_data.py fetch --profile all
 python test/protein_results.py --retained
 python test/paper_data.py --case 1 --retained
 python test/paper_data.py --case 2 --retained
@@ -148,9 +149,11 @@ is not a reason to overwrite posterior draws or their provenance. The longer sta
 questions and are not run as part of a directory-cleanup smoke check.
 
 `tools/` contains executable reporting utilities, not extra core test suites.
-The tubular paper dataset's missing time-refinement run is an existing incomplete
-study; its separate `--case 3 --retained` check must continue to fail until that
-run is completed. No documentation figure is substituted for it.
+The active logarithmic-grid tubular dataset includes its same-mesh
+time-refinement run; check it with `python test/paper_data.py --case 3 --retained`.
+The superseded 400 × 400 study was incomplete and is preserved as such in the
+external recovery archive described in the
+[archive catalogue](fixtures/archives/README.md#relocated-legacy-outputs).
 Superseded manual figures and older protein draws are preserved in
 [`fixtures/archives/`](fixtures/archives/README.md); its README explains extraction
 for the optional historical protein audit. Current protein samples remain in the
@@ -163,11 +166,12 @@ Publication analysis adds focused, inexpensive contracts (no protein resampling)
 ```sh
 julia --project=paper test/protein_analysis_modes.jl
 python test/protein_publication.py
-python test/protein_results.py
+python test/protein_results.py --retained
 ```
 
-The active protein case has fixed gamma and constant D0 (three/four inferred
-coordinates). Its fresh producer and posterior checks are separate from the
+The active protein case fixes gamma and compares CNT, constant-D0 GRD and
+growth-dependent GRD (three/four inferred coordinates). Its producer and
+posterior checks are separate from the
 archived four/five-coordinate targets. `protein_publication.py` verifies and
 extracts the historical uncertainty receipts into a temporary directory for
 its Laplace/Gauss–Newton artifact tests; this does not assert equivalence of

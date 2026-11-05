@@ -3,9 +3,9 @@
 \newcommand{\GrowthProfilesCaption}{%
 Translation of the Gaussian $n(a,0)=100\exp[-(a-0.2)^2/(2(0.03)^2)]$
 initially restricted to $0\le a\le1$, with $G=0.1$ and $t=4\,\mathrm{s}$.
-Zero inflow and open outflow are used on 200 uniform bins. Panels (a,b) use
+Zero inflow and open outflow are used on 200 uniform bins. Panels (i,ii) use
 $\mathrm{CFL}=0.5$ and $\mathrm{CFL}=1$, respectively; the characteristic Inguva2022 update is
-eligible only in (b). The initial centre moves from 0.2 to 0.6. Grey lines
+eligible only in (ii). The initial centre moves from 0.2 to 0.6. Grey lines
 show the analytical density and black points its exact bin averages.
 Coloured lines join computed bin averages, with sparse markers at actual bin
 centres; they do not add subcell resolution. The seven pairings match the
@@ -13,13 +13,16 @@ manual, including WENO5 with SSPRK3 and RK4 and conservative HOC with its
 native midpoint update. Signed undershoots are retained without clipping.}
 
 \newcommand{\GrowthWorkPrecisionCaption}{%
-Smooth periodic translation on $[0,1]$, with
-$n(a,0)=1+0.2\sin(2\pi a)+0.1\cos(4\pi a)$, $G=0.1$ and $t=4\,\mathrm{s}$.
-Meshes have 40, 80, 160, 320 and 640 bins; $\mathrm{CFL}=0.5$ except for
-Inguva2022's required $\mathrm{CFL}=1$. Initial and reference states are exact
-bin integrals. (a) Integration wall time versus number of bins; (b) RMSE versus
-the same measured wall time. RMSE is
+The same translating Gaussian as the profile figure, with height 100, centre
+0.2, standard deviation 0.03, $G=0.1$, domain $[0,1]$, zero inflow/open outflow
+and $t=4\,\mathrm{s}$. Meshes have 40, 80, 160, 320 and 640 bins;
+$\mathrm{CFL}=0.5$ except for Inguva2022's required $\mathrm{CFL}=1$.
+Initial and analytical reference states are exact bin integrals.
+(i) Integration wall time versus number of bins; (ii) RMSE versus the same
+measured wall time, using Gaussian runs in both panels. RMSE is
 $[\sum_i\Delta a_i(\bar n_i-\bar n_i^{\mathrm{exact}})^2/\sum_i\Delta a_i]^{1/2}$.
+The characteristic shift has floating-point-level error; its values do not
+establish a convergence slope.
 Each marker identifies one recorded mesh configuration. HOC uses its native
 midpoint update, which is second order in time.
 A separate compilation warmup precedes one measured solve per actual
@@ -30,7 +33,7 @@ and saved states are included. There are no repeatability error bars.}
 \newcommand{\PrecipitationFieldsCaption}{%
 Transient number density in an axially dispersed continuous precipitator,
 using Zhang et al. (2024), Case 7A, SI Table S8.
-(a--d) $t=5,40,80,200\,\mathrm{s}$ in chronological order.
+(i--iv) $t=5,40,80,200\,\mathrm{s}$ in chronological order.
 The computational logarithmic size edges span $1$--$900\,\mu\mathrm{m}$;
 the linear size axis displays a $1$--$100\,\mu\mathrm{m}$ zoom.
 The full size domain is retained for outlet curves, errors and inventories.
@@ -58,7 +61,7 @@ exists for this case.}
 
 \newcommand{\PrecipitationOutletCaption}{%
 Outlet distributions at $t=200\,\mathrm{s}$ for the same Case 7A model.
-(a) Absolute number density; (b) normalized volume-weighted size density,
+(i) Absolute number density; (ii) normalized volume-weighted size density,
 $q_3(x_i)=x_i^3N_i/[\Delta x_i\sum_jx_j^3N_j]$, expressed per micrometre.
 Here $x_i$ is the arithmetic bin centre.
 The particle-size axis is logarithmic; densities remain per linear size,
@@ -66,14 +69,14 @@ not per log-size. Curves at axial counts 50, 100, 200 and 400 use 1000
 logarithmic size bins, with a separately identified numerical reference solution.
 The legend labels it ``Reference solution; it has $1000\times500$ cells.
 Low axial resolution changes peak number and the distribution of solid material.
-Open circles in (a), labelled ``Reference data, are digitized from the published Figure 9(c),
+Open circles in (i), labelled ``Reference data, are digitized from the published Figure 9(c),
 $N_x=N_z=200$, WENO35 in both coordinates; bars show conservative two-pixel
 extraction uncertainty over the unambiguous 1.5--40 micrometre interval.
 Published ordinate readings are unchanged and interpreted on the model's SI
 m$^{-4}$ scale; taking the source figure's printed per-micrometre label
 literally would exceed the feed's available material by orders of magnitude.
 Only the number-density branch is digitized; its partial size window cannot
-define an independently normalized volume distribution in (b).
+define an independently normalized volume distribution in (ii).
 The package uses size WENO5/axial MUSCL and the rounded SI flow rate
 $1.67\times10^{-7}\,\mathrm{m^3\,s^{-1}}$; the public CADET input uses
 $10\,\mathrm{mL\,min^{-1}}$. Volume densities integrate to one with actual
@@ -82,8 +85,8 @@ bin. Literature data and a finite numerical reference are not exact solutions.}
 
 \newcommand{\PrecipitationRefinementCaption}{%
 Separate refinement at $t=200\,\mathrm{s}$ against the common logarithmic-size
-$1000\times500$ numerical reference. (a) Size counts 50, 100, 200 and 400 at
-$N_z=500$; (b) axial counts 50, 100, 200 and 400 at $N_x=1000$.
+$1000\times500$ numerical reference. (i) Size counts 50, 100, 200 and 400 at
+$N_z=500$; (ii) axial counts 50, 100, 200 and 400 at $N_x=1000$.
 Whole-field and outlet differences integrate the absolute difference of
 piecewise-constant number densities over common partitions, divided by the
 reference number integral on the corresponding domain. This differs from the
@@ -104,7 +107,7 @@ There are no repeatability error bars.}
 \newcommand{\MillingForwardCaption}{%
 Constant-speed cone-mill startup compared with Barrasso et al. (2013),
 DOI 10.1007/s12247-013-9155-0, Figure 7.
-(a) Instantaneous volume-weighted outlet diameter median; (b) mill hold-up.
+(i) Instantaneous volume-weighted outlet diameter median; (ii) mill hold-up.
 Solid curves use one conservative fixed-pivot breakage/classification scheme
 and the checked CVODE-BDF solver at 3350 and 4923 RPM. There are 100 power-grid
 volume pivots; the initial material is one second of feed (7.4 g), a declared
@@ -121,8 +124,8 @@ initial mill and speed change.}
 
 \newcommand{\MillingUQCaption}{%
 Forward uncertainty in the instantaneous volume-weighted outlet median of the
-shared cone-mill model: (a) Monte Carlo, 12,000 realizations; (b) degree-one
-Hermite PCE, 12 LHS training inputs; (c) degree-two Hermite PCE, 32 hybrid training
+shared cone-mill model: (i) Monte Carlo, 12,000 realizations; (ii) degree-one
+Hermite PCE, 12 LHS training inputs; (iii) degree-two Hermite PCE, 32 hybrid training
 inputs. Four Gaussian kinetic/classification inputs are assumed independent.
 Solid curves are propagated means; grey dashed curves use the parameter means.
 Shading gives pointwise 2.5/97.5 percentiles; dotted curves give the explicitly

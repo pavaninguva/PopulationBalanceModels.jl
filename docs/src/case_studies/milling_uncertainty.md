@@ -329,7 +329,19 @@ material is negligible. Conservation does not establish continuum accuracy.
 
 ## Reproduction
 
-Run from a checkout, using its optional BDF/export environment:
+For retained figures, fetch the original outputs and run the plotters only:
+
+```sh
+python tools/retained_data.py fetch --profile docs
+python test/milling_results.py --forward --retained
+python docs/benchmarks/plot_milling_uncertainty.py --forward --usetex
+python test/milling_results.py --retained
+python docs/benchmarks/plot_milling_uncertainty.py --usetex
+```
+
+This checks producer-file integrity without asserting current-source equivalence.
+To calculate a new study, use a separate calculation checkout and its optional
+BDF/export environment:
 
 ```sh
 julia --project=examples/environments/milling -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'

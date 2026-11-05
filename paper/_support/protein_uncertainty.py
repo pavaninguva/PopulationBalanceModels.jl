@@ -14,7 +14,7 @@ from protein_plot import (
 )
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from plotting_style import configure
+from plotting_style import configure, panel_label
 from protein_provenance import ANALYSIS, sha, verify_analysis_compatibility, verify_recorded_analysis
 
 APPROXIMATIONS = {'laplace': 'Laplace', 'gauss_newton': 'Gauss--Newton'}
@@ -172,8 +172,8 @@ def comparison(model,kind='laplace', *, tables=False):
     else:
         draw_corner(left, cheap, metadata, point, limits, approximation=report)
     draw_corner(right, samples, metadata, point, limits)
-    fig.text(.01,.98,'(a)',va='top',fontsize=10)
-    fig.text(.51,.98,'(b)',va='top',fontsize=10)
+    fig.text(.01,.98,panel_label('a'),va='top',fontsize=10)
+    fig.text(.51,.98,panel_label('b'),va='top',fontsize=10)
     figure_names=['protein_'+kind+'_mcmc_'+model]
     export(fig, figure_names[-1])
     for label, values in ((kind,cheap),('mcmc',samples)):
@@ -203,6 +203,8 @@ def comparison(model,kind='laplace', *, tables=False):
                  posterior_sha256=sha(folder/'posterior_draws.csv'),gaussian_draws=diagnostics,
                  renderer='actual LaTeX; 300-dpi PNG (in-memory vector rasterization)',
                  plotting_source_sha256=sha(Path(__file__)),
+                 paper_style_sha256=sha(Path(__file__).resolve().parents[1]/'plotting_style.py'),
+                 panel_labels='lowercase Roman numerals',
                  density_helpers_sha256=sha(Path(__file__).resolve().parents[1]/'_support/posterior_density.py'),
                  figures={f'{name}.{ext}':sha(OUT/f'{name}.{ext}')
                           for name in figure_names for ext in ('png',)},
@@ -251,9 +253,9 @@ def main(argv=None):
     with configure(require_dvipng=False):
         for model in (MODELS if args.model=='all' else MODELS[:2] if args.model=='both' else (args.model,)):
             comparison(model,args.approximation,tables=args.tables)
-        caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (a) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (b) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the selected MAP under its recorded density convention. Inference\_map\_v2 reports use the declared-coordinate posterior; physical\_map\_v1 reports and older unversioned analyses retain their producer convention. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
+        caption=r'''\newcommand{\ProteinLaplaceComparisonCaption}{Full-posterior Laplace verification versus retained NUTS draws for the model identified by the filename. (i) The local approximation is rejected when derivative agreement or weak-curvature resolution fails; no Gaussian draws, covariance or intervals are substituted. (ii) Retained NUTS marginal densities and joint summaries, with normalized analytical priors and the selected MAP under its recorded density convention. Inference\_map\_v2 reports use the declared-coordinate posterior; physical\_map\_v1 reports and older unversioned analyses retain their producer convention. A separate single-corner panel is provided for legible manuscript layouts. Logarithmic coordinates use the reference units defined in the main corner caption. Curved compensation, prior-bound contact and multiple calibration basins need not be captured by a local approximation, even when its Hessian passes. The MCMC latent bands in the fit figures are unchanged.}'''
         if args.approximation=='gauss_newton':
-            caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (a) A joint Gaussian in the coordinates recorded by its producer: inference\_map\_v2 reports use the declared inference-density MAP, z sensitivities and full transformed-prior curvature; historical reports retain their producer conventions; physical\_map\_v1 reports use the physical MAP, physical sensitivities and physical-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (b) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
+            caption=r'''\newcommand{\ProteinGaussNewtonComparisonCaption}{Sensitivity-based Gauss--Newton uncertainty versus retained NUTS draws for the model identified by the filename. (i) A joint Gaussian in the coordinates recorded by its producer: inference\_map\_v2 reports use the declared inference-density MAP, z sensitivities and full transformed-prior curvature; historical reports retain their producer conventions; physical\_map\_v1 reports use the physical MAP, physical sensitivities and physical-prior curvature. Residual-weighted second prediction derivatives are omitted. Diagonals are exact transformed Gaussian marginal densities; joint curves are transformed 68\% and 95\% Gaussian probability ellipses, not highest-density contours in the displayed physical coordinates. (ii) Retained NUTS draws summarized as in the main corner figures. Axis limits, prior overlays and MAP markers match between panels. Gaussian parameter draws are untruncated; prior-support violations are reported. All intervals are local, conditional on the fixed likelihood and discretization. The approximation need not capture prior-bound effects, curved compensation or multiple basins. Existing MCMC latent bands and numerical production results are unchanged.}'''
             if args.tables:
                 publish_gauss_newton_tables()
         (OUT/(args.approximation+'_captions.tex')).write_text(caption+'\n')

@@ -48,6 +48,13 @@ case's stated density normalization; they do not create missing numerical data.
 The [case pages](../src/case_studies/index.md) supply model assumptions,
 interpretation, parameters and numerical restrictions.
 
+Before redrawing retained manual exports, run
+`python tools/retained_data.py fetch --profile docs`. The explicit fetch verifies
+the original bytes without running Julia. Use `--profile paper` when also
+redrawing publication figures, and see the [data instructions](../../tools/README.md)
+for individual groups and offline snapshots. Missing exports are not a request
+to launch an expensive production calculation.
+
 The moment, cooling and historical compact-comparison plotters export 300-dpi
 PNG plus vector PDF/SVG using the shared style. Their presentation updates
 leave the original CSVs, timings and producer records unchanged. Moment
@@ -71,10 +78,9 @@ warmed timing protocol; other cases keep their own stated timing protocols.
 | Axial advection/dispersion | `axially_dispersed_growth.jl` | `plot_transport_comparisons.py axial --usetex` |
 | Gamma density reconstruction | `quadrature_moment_methods.jl` | `plot_population_studies.py moments --usetex` |
 
-For example:
+For example, redraw the bundled Gaussian comparison without a numerical run:
 
 ```sh
-julia --project=. examples/constant_growth_methods.jl
 python docs/benchmarks/plot_transport_comparisons.py constant --usetex
 julia --project=docs docs/make.jl
 python test/docs_links.py docs/build
@@ -87,9 +93,17 @@ for its driver, unresolved closures and retained long-time limitations.
 
 The cooling calculation uses a declared nonnegative initial distribution and a
 refined numerical reference, not a repaired version of the printed polynomial.
-The manual and paper growth comparisons use the same Gaussian and periodic
-problem definitions. Their numerical exports and timings are generated
-independently; they are not interchangeable cached results.
+The manual and paper growth figures read the same compact Gaussian selection
+under `docs/src/assets/constant_growth/`: 40--640-bin refinements, 200-bin
+profiles, zero inflow/open outflow and final time 4. Its checksums and original
+Julia 1.10.12 timing environment are retained in `gaussian_selection.json`.
+No current figure or quoted order uses the older periodic experiment.
+For a deliberate new calculation, run
+`ConstantGrowthMethods.run(output="/tmp/gaussian-growth")` after including
+`examples/constant_growth_methods.jl`, and pass `--input /tmp/gaussian-growth`
+to either plotter. Both accept `--output` for separate figures. The numerical
+driver otherwise writes to `.cache/benchmarks/constant_growth`; it does not
+overwrite the bundled selection or its producer records.
 Qamar `--methods-only` reuses the retained sectional reference; it still records
 failed closures and incomplete trajectories. Collision EQMOM remains unresolved.
 
@@ -108,20 +122,21 @@ and domain checks. It does not fit experimental measurements.
 
 ## Active protein comparison
 
-The isothermal CNT/CNT + GRD case shares one model/inference implementation and
-one paper/documentation figure producer:
+The isothermal comparison has three scenarios: CNT, constant-D0 GRD and
+growth-dependent GRD (`D_G = k_D G`). They share the model/inference implementation
+and paper/documentation figure producer:
 
 ```sh
 julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
-julia --project=paper paper/protein/run.jl --data-only
+python tools/retained_data.py fetch --profile paper
 python paper/protein/plot.py --data-only
-# Expensive: refit and sample both targets only when intentionally reproducing them.
-julia --project=paper paper/protein/run.jl --full
 python paper/protein/plot.py
+# Expensive: calculate new results only when intentionally reproducing them.
+julia --project=paper paper/protein/run.jl --full --model=all --output=/tmp/protein-reproduction
 ```
 
 The [case driver guide](../../paper/README.md)
-records its settings. The five paper figures are copied to
+records its settings. The sixteen selected paper PNGs are copied to
 `docs/src/assets/protein_isothermal/` by that producer. Preserve the retained
 posterior draws, priors, chain diagnostics, coordinate settings, predictions and
 provenance under `paper/protein/data/`.
@@ -146,7 +161,17 @@ The supplement's literal coefficient transcription remains separate from its
 independently corrected interpretation. Moving the files does not strengthen
 any order, stability, positivity or paper-reproduction claim.
 
-`diagnostics/` holds earlier transport/cooling/LNP evidence. The earlier protein calculation
+`diagnostics/` retains earlier cooling/LNP evidence used by historical plotters.
+Unused constant-growth tensor exports from `diagnostics/inguva_case1/`, the
+superseded uniform-size precipitation PNG/SVG figures, and dated development
+audit tables were moved to the external recovery archive; see the
+[archive catalogue](../../test/fixtures/archives/README.md#relocated-legacy-outputs).
+The tensor benchmark's producing fixture remains in
+`test/fixtures/constant_growth_gaussian.jl`. All uniform-size precipitation CSVs
+remain for the historical plot command above and retained-data tests; that
+command can recreate its old images without affecting the current log-grid figures.
+
+The earlier protein calculation
 is `examples/protein_crystallization.jl`; its samples and figures are preserved in
 `test/fixtures/archives/legacy_docs_assets.zip`, with different observations and
 priors from the active isothermal comparison. Its plotters remain available as

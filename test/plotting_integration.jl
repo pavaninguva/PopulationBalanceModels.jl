@@ -54,8 +54,11 @@ const PyCallPlot=PythonPlot.PythonCall
     end
 end
 
+# Include at top level so subsequent test code sees the newly defined tutorial
+# bindings and methods on Julia versions with global-binding world ages.
+include("case_study_scripts.jl")
+
 @testset "Direct tutorial plotting recipes use prepared numerical objects" begin
-    include("case_study_scripts.jl")
     for name in (:constant_growth,:crystallization,:moment_crystallization,
                  :continuous_precipitation,:stem_cells,:nanoparticles,:transport)
         s=TUTORIALS[name]

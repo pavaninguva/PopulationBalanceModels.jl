@@ -6,6 +6,13 @@ _load_example(:ContinuousPrecipitation, "continuous_precipitation.jl")
 
 @testset "Gaussian constant-growth reference" begin
     C = ConstantGrowthMethods
+    cfg=C.TOML.parsefile(joinpath(@__DIR__,"..","paper","growth","config.toml"))["production"]
+    @test cfg["bins"]==collect(C.refinement_bins)
+    @test cfg["profile_bins"]==C.profile_bins
+    @test cfg["profile_courants"]==collect(C.profile_courants)
+    @test cfg["final_time"]==C.comparison_time
+    @test cfg["courant"]==C.refinement_courant
+    @test cfg["roundoff_factor"]==C.roundoff_factor
     g = Grid1D([0.,.11,.19,.215,.29,.53,.8,1.])
     q = PopulationBalanceModels._gauss_legendre(GaussLegendre(64))
     # Independent physical-coordinate quadrature, including partially crossed
@@ -34,7 +41,7 @@ _load_example(:ContinuousPrecipitation, "continuous_precipitation.jl")
     solution = simulate(shift;dt=.05)
     @test maximum(abs.(vec(solution.u[end])-exact)) < 2e-14
     @test g.centers[argmax(exact)] ≈ .6 atol=.003
-    # The separately retained paper benchmark has not changed its input.
+    # The legacy exponential formula remains a separate analytical verification.
     @test sum(C.exact_counts(g,0.)) ≈ -expm1(-100.) atol=2e-15
 end
 

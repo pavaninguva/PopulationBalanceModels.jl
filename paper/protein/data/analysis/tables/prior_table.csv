@@ -1,7 +1,0 @@
-parameter,meaning,units,prior,prior_coordinates,transform,model
-gamma,Effective interfacial energy,mJ/m²,0.64 (fixed),fixed,none,All
-logAJ,Natural log of the numerical nucleation prefactor in particles/(L min),dimensionless,"Uniform(-2.8134, 97.187)",physical,logit,All
-AG,Mean-growth prefactor,μm/min,"log-uniform AG on [1e-05, 1.5]",inference,log,All
-g,Supersaturation growth exponent,dimensionless,"Uniform(1, 5)",physical,logit,All
-grd_strength,Constant internal-coordinate diffusivity D0,μm²/min,Exponential(scale/mean 0.01 μm²/min),physical,log,Constant GRD
-k_D,Growth-dependent GRD coefficient in D_G = k_D G,μm,Exponential(scale/mean 0.1 μm),physical,log,Growth-dependent GRD

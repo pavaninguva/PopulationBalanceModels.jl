@@ -79,12 +79,14 @@ class Summaries(unittest.TestCase):
             self.assertAlmostEqual(np.sum(q['volume_density']*np.diff(edges)),1.,places=12)
 
     def test_compact_comparison_exports(self):
-        folder=Path(__file__).resolve().parents[1]/'docs/src/assets/constant_growth'
-        errors=np.genfromtxt(folder/'errors.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
-        rows=errors[(errors['scheme']=='hoc')&(errors['bins']==200)]
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'paper'))
+        from _support.growth_results import load_results,profile,observed_orders
+        retained=load_results()
+        errors=retained['metrics']
+        rows=errors[(errors['method']=='hoc')&(errors['bins']==200)]
         self.assertEqual(len(rows),2)
         for row in rows:
-            data=np.genfromtxt(folder/f"hoc_midpoint_{row['courant']}_200.csv",delimiter=',',names=True)
+            data=profile(retained,'hoc',row['courant'])
             edges=np.linspace(0.,1.,201)
             left=np.maximum(edges[:-1],.4)
             right=edges[1:]
@@ -95,16 +97,16 @@ class Summaries(unittest.TestCase):
                 (b-a)/2*np.dot(weights,100*np.exp(-.5*((
                     (a+b)/2+(b-a)/2*nodes-.6)/.03)**2))*200
                 for a,b in zip(left,right)])
-            np.testing.assert_allclose(data['exact'],reference,atol=2e-12)
+            np.testing.assert_allclose(data['exact_density'],reference,atol=2e-12)
             self.assertAlmostEqual(np.sqrt(np.mean((data['density']-reference)**2)),row['rmse'],places=10)
             self.assertAlmostEqual(data['density'].min(),row['minimum_density'],places=12)
             self.assertAlmostEqual(-np.minimum(data['density'],0.).sum()/200,
                                    row['negative_number'],places=12)
-        smooth=np.genfromtxt(folder/'smooth_errors.csv',delimiter=',',names=True,dtype=None,encoding='utf8')
-        hoc=smooth[smooth['scheme']=='hoc']
+        hoc=sorted((row for row in errors if row['method']=='hoc' and row['bins'] in retained['configuration']['bins'] and row['courant']==.5),key=lambda row:row['bins'])
         self.assertEqual(len(hoc),5)
-        measured=np.log(hoc['rmse'][:-1]/hoc['rmse'][1:])/np.log(2)
-        np.testing.assert_allclose(measured,2.,atol=.03)  # complete midpoint update at fixed CFL
+        measured=np.log(np.array([r['rmse'] for r in hoc[:-1]])/np.array([r['rmse'] for r in hoc[1:]]))/np.log(2)
+        reported=[r['observed_rmse_order'] for r in observed_orders(retained) if r['method']=='hoc'][1:]
+        np.testing.assert_allclose(measured,reported,rtol=2e-14)
 
     def test_tubular_size_resolution_exports(self):
         folder=Path(__file__).resolve().parents[1]/'docs/src/assets/continuous_precipitation'
@@ -137,7 +139,7 @@ class Summaries(unittest.TestCase):
             figures[name] = fig
         with patch.object(plot_transport_comparisons, 'save_figure', capture):
             plot_transport_comparisons.constant_growth()
-        self.assertEqual(len(figures), 5)
+        self.assertEqual(set(figures), {'solutions','performance','observed_orders','timings'})
         for fig in figures.values():
             lines = [line for ax in fig.axes for line in ax.lines]
             compact = [line for line in lines if line.get_label() == 'HOC FV + midpoint']

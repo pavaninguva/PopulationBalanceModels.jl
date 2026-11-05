@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tomllib
-from plotting_style import configure,save_png,METHODS
+from plotting_style import configure,save_png,METHODS,alphabetic_panels
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,9 +20,16 @@ PREVIEW = False
 RETAINED = False
 INPUTS = {}
 TABLES = False
+OUTPUT = None
 
 def sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    path = Path(path)
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except FileNotFoundError as failure:
+        if path.is_relative_to(PAPER):
+            raise FileNotFoundError(f"Missing retained payload {path}; run python tools/retained_data.py fetch --profile paper") from failure
+        raise
 
 def digest(files):
     content = "".join(f"{p.relative_to(ROOT).as_posix()}\0{sha(p)}\n" for p in sorted(files))
@@ -67,7 +74,7 @@ def analysis_table(number,base,name,data):
         writer.writerows(data)
     INPUTS[number][str(path.relative_to(ROOT))] = sha(path)
 
-def load_case(number, *, check_checkout=None, input_path=None):
+def load_case(number, *, check_checkout=None, input_path=None, mode=None):
     """Validate recorded inputs; current producer equivalence is required by default.
 
     The independent checker can require current-producer equality. Figure-only
@@ -75,15 +82,18 @@ def load_case(number, *, check_checkout=None, input_path=None):
     """
     if check_checkout is None:
         check_checkout = not RETAINED
+    active_mode=MODE if mode is None else mode
+    if active_mode not in ('smoke','production'):
+        raise ValueError('Expected smoke or production results')
     if number == 2:
         return load_milling(input_path,check_checkout=check_checkout)
-    if input_path is not None:
-        raise ValueError("A custom input path is currently supported by the milling plotter")
+    if input_path is not None and number != 1:
+        raise ValueError("A custom input path is supported by the growth and milling plotters")
     name = CASES[number-1]
-    base = ROOT/".cache/paper/checks"/name if MODE == "smoke" else PAPER/name/"data"
+    base = Path(input_path) if input_path is not None else (ROOT/".cache/paper/checks"/name if active_mode == "smoke" else PAPER/name/"data")
     index_path = base/"index.toml"
     info = tomllib.loads(index_path.read_text())
-    if info["mode"] != MODE or info["case"] not in (name, ORIGINAL_CASES[number-1]):
+    if info["mode"] != active_mode or info["case"] not in (name, ORIGINAL_CASES[number-1]):
         raise ValueError("Incorrect result mode or case")
     if check_checkout and info["source_digest"] != source_digest():
         raise ValueError("Numerical source differs from the production provenance; regenerate results")
@@ -96,7 +106,7 @@ def load_case(number, *, check_checkout=None, input_path=None):
         cfg=info['configuration']
         if cfg.get('profile_family')!='gaussian':
             raise ValueError('The active growth workflow requires fresh Gaussian results; run paper/growth/run.jl')
-        expected = {f"smooth_{m}_N{n}" for m in METHODS for n in cfg["bins"]}
+        expected = set()
         for method in METHODS:
             courant=1.0 if method=='inguva2022' else cfg['courant']
             expected |= {gaussian_key(method,n,courant) for n in cfg['bins']}
@@ -113,15 +123,26 @@ def load_case(number, *, check_checkout=None, input_path=None):
     if missing:
         raise ValueError(f"Incomplete paper dataset: missing {sorted(missing)}")
     info = dict(info, checkout_verified=bool(check_checkout), retained_redraw=not check_checkout)
+    if number == 1:
+        # Older producer indexes also contain a separate periodic experiment.
+        # Preserve that index, but select only the Gaussian for this case study.
+        info["ignored_legacy_runs"] = [key for key in info["runs"] if not key.startswith("gaussian_")]
+        info["runs"] = {key:value for key,value in info["runs"].items() if key.startswith("gaussian_")}
     runs = {}
     compute_environments = set()
     for key,relative in info["runs"].items():
         folder = base/relative
         provenance = tomllib.loads((folder/"provenance.toml").read_text())
-        if not provenance["complete"] or provenance["mode"] != MODE:
+        if not provenance["complete"] or provenance["mode"] != active_mode:
             raise ValueError(f"Incomplete or smoke input: {folder}")
         if provenance["source_digest"] != info["source_digest"] or provenance["workflow_digest"] != info["workflow_digest"]:
             raise ValueError("Mixed source states in one figure")
+        if number == 1:
+            settings = provenance["settings"]
+            required = dict(profile="gaussian",growth=0.1,tf=4.0,height=100.0,
+                            center=0.2,standard_deviation=0.03,boundary="zero inflow / open outflow")
+            if any(settings.get(key) != value for key,value in required.items()):
+                raise ValueError(f"{key} differs from the declared Gaussian benchmark")
         if number == 3 and key != "solver_verification":
             settings = provenance["settings"]
             required_mesh = (info["configuration"]["reference_nx"],
@@ -147,12 +168,15 @@ def load_case(number, *, check_checkout=None, input_path=None):
     if len(compute_environments) != 1:
         raise ValueError("Mixed compute environments: archive these results and rerun before comparing timings")
     for item in info.get("derived_files",[]):
+        if number == 1 and item["path"] != "gaussian_orders.csv":
+            continue # legacy periodic orders are not inputs to Gaussian analysis
         if sha(base/item["path"]) != item["sha256"]:
             raise ValueError("Changed derived numerical table")
-    INPUTS[number] = {str(index_path.relative_to(ROOT)):sha(index_path)}
+    input_name=lambda path:str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path.resolve())
+    INPUTS[number] = {input_name(index_path):sha(index_path)}
     for folder,_ in runs.values():
         path = folder/"provenance.toml"
-        INPUTS[number][str(path.relative_to(ROOT))] = sha(path)
+        INPUTS[number][input_name(path)] = sha(path)
     if number == 3:
         for name in ("cadet_reference.csv","zhang_figure9c_digitized.csv","provenance.json"):
             path = PAPER/"precipitation/data/literature"/name
@@ -219,8 +243,8 @@ def gaussian_key(method,bins,courant):
     tag=str(float(courant)).replace('.', 'p')
     return f'gaussian_{method}_C{tag}_N{bins}'
 
-def export(fig,number,name,info):
-    folder = ROOT/".cache/paper/figures"/CASES[number-1] if MODE == "smoke" else PAPER/CASES[number-1]/"figures"
+def export(fig,number,name,info,*,docs_folder=None):
+    folder = Path(OUTPUT) if OUTPUT is not None else (ROOT/".cache/paper/figures"/CASES[number-1] if MODE == "smoke" else PAPER/CASES[number-1]/"figures")
     folder.mkdir(parents=True,exist_ok=True)
     stem = name+("_PREVIEW" if PREVIEW else "")
     image=save_png(fig,folder/(stem+".png"))
@@ -234,26 +258,37 @@ def export(fig,number,name,info):
         pillow=__import__("PIL").__version__,pymupdf=__import__("pymupdf").VersionBind,
         latex_version=(subprocess.check_output(["latex","--version"],text=True).splitlines()[0]
                        if not PREVIEW else "not used; fallback preview"),
-        display_conventions=info.get("display_conventions",{}),
+        display_conventions=info.get("display_conventions",{}),panel_labels="lowercase Roman numerals",
         inches=list(fig.get_size_inches()),**image,
         files={".png":sha(folder/(stem+".png"))})
     (folder/(stem+".json")).write_text(json.dumps(provenance,indent=2)+"\n")
+    if docs_folder is not None:
+        docs_folder.mkdir(parents=True,exist_ok=True)
+        with alphabetic_panels(fig):
+            docs_image=save_png(fig,docs_folder/(stem+".png"))
+        docs_provenance=dict(provenance,**docs_image)
+        docs_provenance.update(panel_labels="alphabetic",files={".png":sha(docs_folder/(stem+".png"))})
+        (docs_folder/(stem+".json")).write_text(json.dumps(docs_provenance,indent=2)+"\n")
     plt.close(fig)
     print("Rendered",folder/stem,flush=True)
 
 
 def run_plot(number, renderer, argv=None):
     """Common CLI; retained redraws validate original payloads, never relabel producers."""
-    global MODE, PREVIEW, RETAINED, TABLES
+    global MODE, PREVIEW, RETAINED, TABLES, OUTPUT
     parser=argparse.ArgumentParser(description=renderer.__doc__)
     parser.add_argument('--retained',action='store_true',help='Redraw recorded production exports; do not assert current producer equality')
     parser.add_argument('--smoke',action='store_true',help='Ignored small-check output, never a production figure')
     parser.add_argument('--preview',action='store_true')
     parser.add_argument('--tables',action='store_true',help='Explicitly export derived plotting summaries under analysis/')
+    parser.add_argument('--input',type=Path,help='Explicit Gaussian growth calculation or compact figure-selection directory')
+    parser.add_argument('--output',type=Path,help='Separate growth figure directory')
     args=parser.parse_args(argv)
     MODE='smoke' if args.smoke else 'production'
-    PREVIEW=args.preview; RETAINED=True; TABLES=args.tables
+    PREVIEW=args.preview; RETAINED=True; TABLES=args.tables; OUTPUT=args.output
     if PREVIEW and MODE!='smoke': parser.error('--preview requires --smoke')
+    if args.input is not None and number != 1: parser.error('--input is supported here only for growth')
+    if args.output is not None and number != 1: parser.error('--output is supported here only for growth')
     if RETAINED: print('Redrawing retained exports; original producer provenance is preserved.',flush=True)
     with configure(PREVIEW):
-        renderer()
+        renderer(input_path=args.input) if args.input is not None else renderer()

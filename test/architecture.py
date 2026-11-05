@@ -39,6 +39,14 @@ class Architecture(unittest.TestCase):
 
     def test_routes_and_optional_inputs(self):
         architecture.check_architecture()
+        self.assertIn('(i)',self.labels)
+        self.assertIn('(ii)',self.labels)
+        with architecture.alphabetic_panels(self.figure):
+            labels={text.get_text() for text in self.axes.texts}
+            self.assertIn('(a)',labels)
+            self.assertIn('(b)',labels)
+            self.assertNotIn('(i)',labels)
+        self.assertIn('(i)',{text.get_text() for text in self.axes.texts})
         self.assertIn('TermMethods',self.labels)
         self.assertIn('moment_method',self.labels)
         transient=self.labels['PBMProblem'].get_position()[0]
@@ -73,7 +81,9 @@ class Architecture(unittest.TestCase):
         png=directory/receipt['png_filename']
         docs=ROOT/'docs/src/assets/architecture'
         self.assertEqual(digest(png),receipt['png_sha256'])
-        self.assertEqual(png.read_bytes(),(docs/'section2_architecture_revised.png').read_bytes())
+        self.assertEqual(receipt['panel_labels'],'lowercase Roman numerals')
+        # The paper has Roman labels; documentation deliberately stays alphabetic.
+        self.assertNotEqual(png.read_bytes(),(docs/'section2_architecture_revised.png').read_bytes())
         self.assertFalse(receipt['preview'])
         self.assertEqual(receipt['equation_renderer'],'actual LaTeX')
         self.assertEqual(receipt['font_family'],'DejaVu Sans')

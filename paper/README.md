@@ -8,9 +8,15 @@ All figure exporters save **300-dpi PNG only**, including the architecture
 schematic. No PDF/SVG derivatives are retained. Numerical tables and provenance
 receipts remain alongside the figures and data.
 
+Paper panels use lowercase Roman labels `(i)`, `(ii)`, `(iii)`, `(iv)`.
+Documentation copies keep alphabetic labels; the package's shared plotting
+defaults are unchanged. Caption references follow the destination's convention.
+The current paper PNGs stay with the source; their numerical inputs are optional
+downloads.
+
 | Directory | Case | Saved results |
 |:--|:--|:--|
-| [growth/](growth/) | Growth and time schemes | Available |
+| [growth/](growth/) | One translating Gaussian: growth and time schemes | Compact retained figure selection bundled with the source |
 | [milling/](milling/) | Cone-mill forward comparison and MC/PCE uncertainty | Retained production curves and original producers |
 | [precipitation/](precipitation/) | Tubular precipitation | Logarithmic WENO5 / axial MUSCL refinement study |
 | [protein/](protein/) | Fixed-γ CNT, constant D0 and growth-dependent GRD | MAPs, MCMC draws and latent predictions available |
@@ -19,6 +25,7 @@ Run from the repository root. Set up the Julia checkout and Python 3.12 plotting
 environment once; final figures require LaTeX:
 
 ```sh
+python tools/retained_data.py fetch --profile paper
 julia --project=paper -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
 python -m pip install -r paper/requirements.txt
 ```
@@ -26,9 +33,23 @@ python -m pip install -r paper/requirements.txt
 For example:
 
 ```sh
-julia --project=paper paper/growth/run.jl
 python paper/growth/plot.py
 ```
+
+The growth plotter reads the bundled Gaussian metrics/profiles under
+`docs/src/assets/constant_growth/`; neither growth figure needs the production
+folders restored. The profile, error and timing views use the same Gaussian,
+zero inflow/open outflow, $G=0.1$ and final time 4, with common refinements
+40, 80, 160, 320 and 640. The old periodic experiment is not selected.
+`--input` accepts an explicit fresh Gaussian calculation or another derived
+selection; `--output` keeps its figures separate. The growth production driver
+also accepts `--output=...` and otherwise writes under `.cache/`.
+
+Other cases redraw retained results after fetching their inputs.
+A deliberate new calculation uses `run.jl` with
+the documented case settings; fetching never runs a simulation. The payload
+inventory and offline snapshot instructions are in [tools/README.md](../tools/README.md).
+Original producer metadata stays alongside the optional numerical exports.
 
 Use `precipitation` in the same commands. Plotting validates the
 saved data and preserves its original producer identity; it never reruns a
@@ -85,8 +106,9 @@ Staging and plotting validate retained numerical hashes without asserting
 that historical producers equal today's checkout. Figure-only commands never
 rewrite numerical tables or producer records.
 
-The retired moments paper case and obsolete growth plots are preserved outside
-`paper/` in the historical archive under `test/fixtures/archives/paper_history/`.
+The retired moments paper case and obsolete growth plots are preserved in the
+external recovery archive listed in the
+[historical-asset catalogue](../test/fixtures/archives/README.md#relocated-legacy-outputs).
 The documentation's aggregation/moment case and its verification remain active.
 
 For protein, redraw the retained results without fitting or sampling:

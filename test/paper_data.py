@@ -13,6 +13,7 @@ import numpy as np
 import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"paper"))
 from _support import figures as plots
+from _support.growth_results import load_results, observed_orders
 
 CHECK_CHECKOUT=True
 
@@ -48,13 +49,15 @@ class GrowthData(unittest.TestCase):
                 np.testing.assert_allclose(data['exact_number'],exact,rtol=2e-12,atol=2e-14)
 
     def test_observed_orders_and_characteristic_resolution(self):
-        data = plots.table(self.base/"observed_orders.csv")
+        # Derive slopes from the selected Gaussian metrics, never the legacy
+        # periodic observed_orders.csv still named by the original producer.
+        rows=observed_orders(load_results(self.base))
         for method in plots.METHODS:
-            part = data[data["method"]==method]
+            part = [row for row in rows if row['method']==method]
             for error,order in (("rmse","observed_rmse_order"),("l1","observed_l1_order")):
                 for i in range(1,len(part)):
                     a,b = part[i-1],part[i]
-                    if min(a[error],b[error])<=b["roundoff_limit"]:
+                    if min(a[error],b[error])<=b["roundoff_limit_"+error]:
                         self.assertTrue(np.isnan(b[order]))
                     else:
                         expected = math.log(a[error]/b[error])/math.log(b["bins"]/a["bins"])
@@ -98,7 +101,8 @@ class GrowthData(unittest.TestCase):
                 shutil.copytree(self.base/relative,base/relative)
             shutil.copy(self.base/"index.toml",base/"index.toml")
             for item in self.info.get("derived_files",[]):
-                shutil.copy(self.base/item["path"],base/item["path"])
+                if item['path']=='gaussian_orders.csv':
+                    shutil.copy(self.base/item["path"],base/item["path"])
             with mock.patch.object(plots,"ROOT",paper.parent), mock.patch.object(plots,"PAPER",paper),mock.patch.object(plots,"source_digest",return_value=self.info["source_digest"]),mock.patch.object(plots,"digest",return_value=self.info["workflow_digest"]):
                 plots.load_case(1)
                 with mock.patch.object(plots,"source_digest",return_value="different-checkout"):

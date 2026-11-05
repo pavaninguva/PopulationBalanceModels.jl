@@ -8,7 +8,8 @@ from matplotlib.ticker import NullLocator
 PAPER=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(PAPER))
 from _support import figures
-from _support.figures import load_case, rows, table, export, analysis_table, gaussian_key
+from _support.figures import export, analysis_table
+from _support.growth_results import load_results, refinement, profile
 from plotting_style import panel,method_style,DOUBLE,METHODS
 from pbm_plotting import plot_distribution
 
@@ -27,30 +28,34 @@ def mesh_axes(axes,bins):
         ax.xaxis.set_minor_locator(NullLocator())
 
 
-def growth():
-    base,info,runs=load_case(1)
-    cfg=info['configuration']
+def growth(input_path=None):
+    if input_path is None and figures.MODE=='smoke':
+        input_path=figures.ROOT/'.cache/paper/checks/growth'
+    data=load_results(input_path)
+    cfg=data['configuration']
+    producer=data['provenance']
+    info=dict(configuration=cfg,source_digest=producer['source_digest'],
+              workflow_digest=producer['workflow_digest'],checkout_verified=False,retained_redraw=True)
+    figures.INPUTS[1]=data.get('selection_files',{'original_index':producer.get('index_sha256','new calculation')})
     n,tf=cfg['profile_bins'],cfg['final_time']
     if figures.MODE=='production' and (n!=200 or tf!=4.):
         raise ValueError('The Gaussian manuscript profiles require 200 bins at t=4 s')
-    summaries=[]
-    for name,(folder,record) in runs.items():
-        row=rows(folder/'metrics.csv')[0]
-        row['dataset']=name
-        row['api_time_method']=record['settings']['api_time_method']
-        summaries.append(row)
-    analysis_table(1,base,'growth_comparison.csv',summaries)
+    if figures.TABLES:
+        base=Path(input_path) if input_path is not None else figures.ROOT/'docs/src/assets/constant_growth'
+        analysis_table(1,base,'growth_comparison.csv',
+            [{name:row[name].item() for name in data['metrics'].dtype.names} for row in data['metrics']])
     info['display_conventions']=dict(
         profile='Gaussian on [0,1]; two Courant panels',
         density='bin integrals divided by actual widths; straight lines connect bin centres',
         errors='integrated L1 and width-weighted RMSE; no clipping',
-        orders='successive smooth-periodic refinements; undefined at the recorded roundoff limit')
+        orders='successive Gaussian refinements; undefined at a density-scaled floating-point screen',
+        benchmark='the same Gaussian, zero inflow/open outflow, G=0.1 and t=4 in both figures',
+        timing_producer=producer['environment'],timing_protocol=producer['timing_protocol'])
 
     fig,axes=panels()
     for ax,courant in zip(axes,cfg['profile_courants']):
-        folder,record=runs[gaussian_key('upwind',n,courant)]
-        exact=table(folder/'profile.csv')
-        settings=record['settings']
+        exact=profile(data,'upwind',courant)
+        settings=data['benchmark']
         a=np.linspace(0,1,4001)
         initial_a=a-settings['growth']*tf
         truth=np.where((initial_a>=0)&(initial_a<=1),
@@ -61,12 +66,12 @@ def growth():
         for i,method in enumerate(METHODS):
             if method=='inguva2022' and courant!=1.:
                 continue
-            data=table(runs[gaussian_key(method,n,courant)][0]/'profile.csv')
-            x=(data['left']+data['right'])/2
+            values=profile(data,method,courant)
+            x=(values['left']+values['right'])/2
             style=method_style(method)
             style.update(markevery=(i*2,17),ms=2.8)
-            edges=np.r_[data['left'],data['right'][-1]]
-            plot_distribution(data['density'],edges,ax=ax,curve='centers',styles=[style],legend=False)
+            edges=np.r_[values['left'],values['right'][-1]]
+            plot_distribution(values['density'],edges,ax=ax,curve='centers',styles=[style],legend=False)
         ax.axhline(0,color='.75',lw=.5)
         ax.set(xlim=(0,1),xlabel=r'Size coordinate $a$',ylabel=r'$n(a,4\,\mathrm{s})$')
         ax.text(.97,1.035,rf'$\mathrm{{CFL}}={courant:g},\ N={n}$',transform=ax.transAxes,
@@ -81,7 +86,7 @@ def growth():
 
     fig,axes=panels()
     for method in METHODS:
-        points=[rows(runs[f'smooth_{method}_N{bins}'][0]/'metrics.csv')[0] for bins in cfg['bins']]
+        points=refinement(data,method)
         seconds=np.asarray([float(row['seconds']) for row in points])
         rms=np.asarray([float(row['rmse']) for row in points])
         axes[0].loglog(cfg['bins'],seconds,**method_style(method))

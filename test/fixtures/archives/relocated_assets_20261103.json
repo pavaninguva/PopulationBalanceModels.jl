@@ -1,0 +1,313 @@
+{
+  "archive_bytes": 25794609,
+  "archive_location": "External sibling directory: PopulationBalanceModels-legacy-20261103",
+  "archive_name": "legacy-assets-f5a9a86-20261103.zip",
+  "archive_sha256": "93246e0d2045db28ecef483b088dfc237c021cfa8cbf4bb0affe2ac02047f362",
+  "files": [
+    {
+      "bytes": 344901,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/compact_adi4_100.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "2f945b3fefb8ef92efc0bbb68a48748c0a77a82b02f5c4d6abc3a500188cf2e0"
+    },
+    {
+      "bytes": 1678293,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/compact_adi4_200.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "93d9eef3606b4231db8e4db1a9af6578b136fcccf72a210b25dadc57833e96a6"
+    },
+    {
+      "bytes": 421,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/environment.txt",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "5a3dc14e9b6df44c396a5666313b69479b34e2688e26adaf1b13c92af4187791"
+    },
+    {
+      "bytes": 1729,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/errors.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "d0cb2ec91af727bbc7582d6e69d9e2196fc45c8cfd9c04dabc172d9fce86d662"
+    },
+    {
+      "bytes": 76894,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/errors.png",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "b304ee42a19249206d481bd00a02510d4addeaecb3a35a68c1d1865a79a64071"
+    },
+    {
+      "bytes": 207972,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/exact_shift_100.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "9782bdc3bea1ee27c3c87905bc0a75f9f3dc89731d6722e1332ec4dca55c0a8d"
+    },
+    {
+      "bytes": 1111669,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/exact_shift_200.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "105a70c484d6740807a6927facc74778022c7005ad98cdeee40fdbeadf61b548"
+    },
+    {
+      "bytes": 207925,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/reference_100.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "bd6864839ba6b0112fdf1c75253720241f19289a5fd8950c9b4db4d32d849403"
+    },
+    {
+      "bytes": 1111715,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/reference_200.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "85e3d328e8b1796d676e5573a502de88fe6f402531e7a2ebd4b56c78bb2f8bc1"
+    },
+    {
+      "bytes": 177324,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/solutions.png",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "4b323b2f69280bac800cd694a32e55a5ae4e3518ceea1be95d6c39929698b17a"
+    },
+    {
+      "bytes": 9696315,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/solutions.svg",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "193dd849a863c727e7aad392853f7f770d0cba261e4dbd53038d8cb38e74db4d"
+    },
+    {
+      "bytes": 338614,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/upwind_100.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "7cc4b64f6b71217ba16f802b8e1f9a8ba3a21b48a7145e476065fed0ace57f26"
+    },
+    {
+      "bytes": 1644818,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/upwind_200.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "0e5d22d6939f7c99071dfef5f9b8fd20877455ad9ff3ad7543c0e0f5310981ff"
+    },
+    {
+      "bytes": 348497,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/weno5_100.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "2905ba08c8e576d0f9eaee0418ee3d6163d46664922518abac6a99db2b551fa0"
+    },
+    {
+      "bytes": 1679482,
+      "path": "docs/benchmarks/diagnostics/inguva_case1/weno5_200.csv",
+      "reason": "superseded constant-growth two-coordinate exports",
+      "sha256": "86bdd68a6b2802879dd6cbfaac1c4eab0cdf2dc58591ff4c070fec438fecb96b"
+    },
+    {
+      "bytes": 132179,
+      "path": "docs/src/assets/audit/environments.csv",
+      "reason": "dated development audit reports",
+      "sha256": "3924b02a401b2c927cd70de2aa103b018a6a33012605738b2a1da691cb0b5c56"
+    },
+    {
+      "bytes": 943,
+      "path": "docs/src/assets/audit/legacy_protein_predictive_indices.csv",
+      "reason": "dated development audit reports",
+      "sha256": "3b39b32d2741c7e4140b3a63e8c3a047e8bd41d28834c6fbb6e1e437fa4ad157"
+    },
+    {
+      "bytes": 419,
+      "path": "docs/src/assets/audit/performance.csv",
+      "reason": "dated development audit reports",
+      "sha256": "c00423ea1d069a960c035a06427af0d044a6f9faa0e0f42d16c94e383d63061b"
+    },
+    {
+      "bytes": 653,
+      "path": "docs/src/assets/audit/protein_checks.csv",
+      "reason": "dated development audit reports",
+      "sha256": "0d54ec1f8bf4e2663e30f6557a309e39678192acc8ebb7f76237cd123727d399"
+    },
+    {
+      "bytes": 15118,
+      "path": "docs/src/assets/audit/test_resolutions.csv",
+      "reason": "dated development audit reports",
+      "sha256": "fb157e5c97622ea3a3dc379c63f28bf23c9e38133f786f260581ca8d7a35a211"
+    },
+    {
+      "bytes": 18288,
+      "path": "docs/src/assets/audit/verification.csv",
+      "reason": "dated development audit reports",
+      "sha256": "bfd9bf71ae1171f48f1387810ef298a9e6885ba6b01b2fa80dd07d3f04c92d3b"
+    },
+    {
+      "bytes": 121184,
+      "path": "docs/src/assets/continuous_precipitation/coordinate_refinement.png",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "e13a8b417e900acf93c3e2e3776b609280543657b7e7a728784b5c4ed4b90585"
+    },
+    {
+      "bytes": 76146,
+      "path": "docs/src/assets/continuous_precipitation/coordinate_refinement.svg",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "b5750250477a53ea74f416848e4990707e34e79af34232ffecbbf3f365621ecd"
+    },
+    {
+      "bytes": 85452,
+      "path": "docs/src/assets/continuous_precipitation/fields.png",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "3e6ad485cc47f23a1de3ffdf0abee045839baed0ef46c48e0be94dbb27e23cb1"
+    },
+    {
+      "bytes": 99595,
+      "path": "docs/src/assets/continuous_precipitation/fields.svg",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "600ea7dbf880900953d6cd5a597c9a30e801165642702b65b683d0829c83de19"
+    },
+    {
+      "bytes": 82220,
+      "path": "docs/src/assets/continuous_precipitation/fields_log.png",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "9c48dcafd20301ff77cc37406fd5835f530cbd6c80ab33eb1ee547575b248b63"
+    },
+    {
+      "bytes": 112480,
+      "path": "docs/src/assets/continuous_precipitation/fields_log.svg",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "67ef94e75f37f71e2e2f1e0201da1d31abd7bf13a0b0c87c11a6af8238b57ac4"
+    },
+    {
+      "bytes": 116477,
+      "path": "docs/src/assets/continuous_precipitation/outlets.png",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "ba35ca6be85cacfe392557cefd777dcf62bafcfe6257ec13707fd492277583a0"
+    },
+    {
+      "bytes": 71586,
+      "path": "docs/src/assets/continuous_precipitation/outlets.svg",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "021bef2a1b2a8820bd22489ae6f458860b4f22fe24b60fa1626249c696ac4b81"
+    },
+    {
+      "bytes": 118686,
+      "path": "docs/src/assets/continuous_precipitation/performance.png",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "9bf17d438e398ad915845933016b7542c84d4ba20144592b9172ce48093cb9c4"
+    },
+    {
+      "bytes": 87449,
+      "path": "docs/src/assets/continuous_precipitation/performance.svg",
+      "reason": "superseded uniform-size precipitation figures",
+      "sha256": "018eca05eabd85fcbea9605ea9c604a34f96622545ded5446d757d9cf0a6080e"
+    },
+    {
+      "bytes": 892,
+      "path": "test/fixtures/archives/paper_history/01_growth_time_methods/README.md",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "2b74b3ffb9cef165dd0376a2afaed0f6c9ec300e86a8217f44fb48e58fcb5a43"
+    },
+    {
+      "bytes": 1471038,
+      "path": "test/fixtures/archives/paper_history/01_growth_time_methods/exponential_production.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "9e0d449161142bb001a4229917000315cc1f86580f52fb429141c2c9441a8e6c"
+    },
+    {
+      "bytes": 507877,
+      "path": "test/fixtures/archives/paper_history/01_growth_time_methods/superseded_runs.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "da062aae55a25b8b7304d0f763a6107f91346b3630b51b018be6b6db0afbd16a"
+    },
+    {
+      "bytes": 606,
+      "path": "test/fixtures/archives/paper_history/03_tubular_precipitation/README.md",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "7b46e0fc2c7bfc6387e1fdb7f11cd317d4abd19a229dfb9a43e6ea6f25c7f7e3"
+    },
+    {
+      "bytes": 14130049,
+      "path": "test/fixtures/archives/paper_history/03_tubular_precipitation/log_400x400_partial.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "f6821abdfe64664a50ff300c303035bc2b15ab1bbd06c9defb2a438d8079209c"
+    },
+    {
+      "bytes": 3571108,
+      "path": "test/fixtures/archives/paper_history/04_protein_crystallization/cnt_inferred_noise_8abcd0f.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "1b1d19573685599abd4cd942acd1f9627a8ba82e1520f2332718526a98806fcf"
+    },
+    {
+      "bytes": 263086,
+      "path": "test/fixtures/archives/paper_history/04_protein_crystallization/fixed_error_sampling_pilots_20261024.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "55a86fff1411e70510712a6654d1485e29c8f7bc1cbc9e1c8e2c4deb1c66468e"
+    },
+    {
+      "bytes": 123190,
+      "path": "test/fixtures/archives/paper_history/04_protein_crystallization/grd_200bin_acceptance099_interrupted_20261025.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "f0d32f2962f2b1dfcdb20d4bed24890f3141ee8f036fbe332c23094664806a73"
+    },
+    {
+      "bytes": 676214,
+      "path": "test/fixtures/archives/paper_history/04_protein_crystallization/grd_acceptance090_completed_20261025.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "980b6418c355ebda30a45a5ff72b9c01f92f16c6e8ccc17bc9c3727275cc8b14"
+    },
+    {
+      "bytes": 59660,
+      "path": "test/fixtures/archives/paper_history/04_protein_crystallization/grd_transport_warmup_before_tail_guard_20261025.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "924070456ad2f6fe4dffb5cf21aed782f05c7b06ed4c5fe106e0353401169564"
+    },
+    {
+      "bytes": 73762,
+      "path": "test/fixtures/archives/paper_history/04_protein_crystallization/soft_barrier_expected_information_pilot_20261025.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "212933328910d525b27c210f8c9391228a283b4ef2ba202182e02fcbbd44bde4"
+    },
+    {
+      "bytes": 37406,
+      "path": "test/fixtures/archives/paper_history/04_protein_crystallization/unit_shear_sampling_tuning_20261025.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "47096410c5755ce502cd4797958780be4a84ebbafb40d0a8103bfc2968a8d503"
+    },
+    {
+      "bytes": 17935,
+      "path": "test/fixtures/archives/paper_history/development_pilots.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "ffd37d73f503af7ee0832d490988608a376b994e3a68330e4605bd026aba8faf"
+    },
+    {
+      "bytes": 239,
+      "path": "test/fixtures/archives/paper_history/former_entrypoints/check_data.py",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "df1c3b24f79734d50f2f0bb5366467c1398258c5031a04dda00702fdbb87b4b8"
+    },
+    {
+      "bytes": 319,
+      "path": "test/fixtures/archives/paper_history/former_entrypoints/check_protein.py",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "0af0bd9d0f5e7dafd1a1f027dd405207b87fd4e415060fd59f234926559fd69d"
+    },
+    {
+      "bytes": 2630,
+      "path": "test/fixtures/archives/paper_history/former_entrypoints/plot_all.py",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "bded8ba875c83198380c16d70495869114a0023289b9326a260193e37d8d711b"
+    },
+    {
+      "bytes": 1119,
+      "path": "test/fixtures/archives/paper_history/former_entrypoints/run_all.jl",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "4634e2310bf804a4183cae290cdf07cd82754f8a075c5332b2d3867f04d0c08d"
+    },
+    {
+      "bytes": 150,
+      "path": "test/fixtures/archives/paper_history/former_entrypoints/setup.jl",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "8ef13b88654f328f1e33c19cb9b33db95318948f72f0d8afbc6c8c2bea32c8f1"
+    },
+    {
+      "bytes": 912989,
+      "path": "test/fixtures/archives/paper_history/retired_moments_and_growth_figures_20261028.zip",
+      "reason": "retired paper studies, unsuccessful pilots and former entry points",
+      "sha256": "e19742d3b57ae8bc9b87cbc9ef0e836f512e2989f16070d79b977ce58edd6a0d"
+    }
+  ],
+  "interpretation": "Historical outputs only; no active numerical data, producer manifests or required regression fixtures removed.",
+  "original_paths_relative_to": "PopulationBalanceModels.jl checkout root",
+  "reviewed_revision": "f5a9a86f3ca7251096f4930e86839cae3174d1e1",
+  "schema": 1,
+  "total_original_bytes": 41615713
+}

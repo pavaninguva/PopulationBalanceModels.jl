@@ -38,7 +38,7 @@ in particles/mL. Run this complete example in Julia started with `julia --projec
 
 ```julia
 using PopulationBalanceModels
-using Distributions: Normal, cdf
+using Distributions: Normal
 
 p = (G=0.3, J=0.05, k=0.02)
 model = PBMModel(
@@ -54,8 +54,8 @@ methods = TermMethods(
 )
 operator = compile(model, grid; methods, bc=SizeBC(NoFlux(), NoFlux()))
 
-# Integrate a Gaussian density over each bin; initial total is about 1 particle/mL.
-initial = diff(cdf.(Normal(2.0, 0.4), grid.edges))
+# Total before domain truncation is 1 particle/mL; omitted tails are not redistributed.
+initial = InitialDistribution(Normal(2.0, 0.4); total=1.0)
 problem = PBMProblem(operator, initial, (0.0, 1.0); p)
 solution = simulate(problem; method=SSPRK33(), dt=0.01, saveat=0.0:0.25:1.0)
 
@@ -90,7 +90,7 @@ shows how these components fit together.
 
 ## From a model to a scientific calculation
 
-![Coupled cooling crystallization: solute concentration, moment comparisons, crystal-size distributions and material balance](docs/src/assets/gunawan_example2/coupled_solution.png)
+![Coupled cooling crystallization: solute concentration, moment comparisons, crystal-size distributions and material balance](https://raw.githubusercontent.com/pavaninguva/PopulationBalanceModels.jl/f5a9a86f3ca7251096f4930e86839cae3174d1e1/docs/src/assets/gunawan_example2/coupled_solution.png)
 
 **Batch cooling crystallization.** The population and solute balance evolve
 together: crystal growth and nucleation consume dissolved material. This retained
@@ -113,7 +113,19 @@ also includes short capability demonstrations and full reproduction drivers.
 
 ## Development and reproducibility
 
+Small tutorials run without retained production exports. For the manual or
+plot-only reproduction, fetch the original checksum-verified payloads explicitly:
+
+```sh
+python tools/retained_data.py fetch --profile docs
+# Use --profile paper for publication cases, or --profile all for every retained check.
+```
+
+See the [retained-data instructions](tools/README.md). Fetching performs no
+simulations or inference and preserves original producer records.
+
 See [contributing](CONTRIBUTING.md) for development and documentation builds,
 [test instructions](test/README.md) for core and optional checks, and the separate
 [paper workflow](paper/README.md) for manuscript figures. Release history is in
-the [changelog](CHANGELOG.md). The package is distributed under the [MIT license](LICENSE).
+the [changelog](CHANGELOG.md); existing users can consult the
+[migration guide](docs/src/migration.md). The package is distributed under the [MIT license](LICENSE).
