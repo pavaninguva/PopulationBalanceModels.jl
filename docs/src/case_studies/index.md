@@ -7,7 +7,7 @@ boundaries, and numerical choices used in its implementation.
 - [Uncertainty in continuous milling](milling_uncertainty.md): compare the
   deterministic startup with Barrasso's Figure 7, then propagate four uncertain
   breakage/screen parameters by MC and PCE. The partial forward reproduction
-  and the retained UQ reconstruction have distinct configurations and limits.
+  and UQ use the same numerical configuration, with their respective limits.
 
 - [Batch cooling crystallization](crystallization.md): seeds grow and new crystals
   nucleate as cooling changes solubility. The population consumes dissolved
@@ -19,11 +19,6 @@ boundaries, and numerical choices used in its implementation.
   analytical aggregation–fragmentation balance and a short nucleation pulse test
   QMOM, rank-adaptive QMOM, Gamma EQMOM, DQMOM and lognormal closure, separating
   shape, reconstruction and time-integration errors.
-- [Lipid nanoparticle formation](nanoparticles.md): an initially particle-free
-  solution nucleates, grows, and coalesces after solvent mixing. Scattering
-  observations weight the resulting distribution strongly toward larger particles.
-  Historical full-horizon curves are diagnostic: the current strict stiff driver
-  fails at startup, while a short native startup is checked.
 - [Growth in two particle dimensions](transport.md): coordinate-dependent growth
   moves and stretches a joint distribution. An analytical solution exposes
   numerical broadening, oscillations, and errors under grid refinement.
@@ -46,10 +41,9 @@ boundaries, and numerical choices used in its implementation.
 
 The constant-growth and two-dimensional calculations have analytical solutions.
 The cooling calculation uses an explicitly chosen nonnegative initial condition
-and a finer sectional reference, with an independent moment check. The
-nanoparticle reconstruction retains historical profiles with unresolved
-full-horizon replay and measurement conventions. These qualifications stay
-beside the relevant inputs and figures. The [axial reactor tutorial](../axial_reactors.md)
+and a finer sectional reference, with an independent moment check. Numerical
+qualifications stay beside the relevant inputs and figures.
+The [axial reactor tutorial](../axial_reactors.md)
 adds a physical position coordinate to an intrinsic growth model.
 
 Each page ends with a complete downloadable tutorial: one configuration,
@@ -67,9 +61,9 @@ implementing a time loop. Automatic preparation needs no reader-managed cache.
 
 The remaining helper imports have narrower roles: CSV selection, the protein
 bucketed derivative schedule, the milling constrained algebraic reduction,
-the analytical growth reference and DLVO material physics. Their meaning and
+and the analytical growth reference. Their meaning and
 limits stay beside the relevant code. The only piecewise operating change in
-these ten walkthroughs is milling's 30-s speed reduction; its specialized
+these nine walkthroughs is milling's 30-s speed reduction; its specialized
 reduced-state/constraint backend currently prevents a direct OperatingHistory
 migration. Smooth cooling remains a field callback; autonomous cases introduce
 no artificial operating transitions.

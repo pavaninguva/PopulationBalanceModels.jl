@@ -115,47 +115,6 @@ def cooling(folder, output=None):
     axes[1, 0].legend(fontsize=6.5, ncol=2, columnspacing=.6, handlelength=1.6)
     save_figure(fig, output, "coupled_solution")
 
-def lnp(folder):
-    history=load(folder/"history.csv");psd=load(folder/"psd.csv")
-    if "intensity_peak_scaled" not in psd.dtype.names:
-        raise ValueError("Re-export with the current Figure 4 driver; peak scaling must be explicit.")
-    fig,axes=plt.subplots(1,5,figsize=(13,3.4),layout="constrained")
-    for ax,minutes in zip(axes,(1,40,100,170,4320)):
-        target=60.0*minutes;mask=np.isclose(psd["time"],target,rtol=1e-10,atol=1e-9)
-        if not np.any(mask):raise ValueError(f"No snapshot at {minutes} min. Use figure4_saveat().")
-        d=psd[mask];ax.plot(d["diameter_m"]*1e9,d["intensity_peak_scaled"],"k-")
-        ax.set(xlabel=r"$L\;[\mathrm{nm}]$",title=rf"$t={minutes}\;\mathrm{{min}}$",xlim=(0,500),ylim=(0,1.05))
-    axes[0].set_ylabel("Peak-scaled intensity-weighted density")
-    fig.suptitle("Lipid nanoparticle formation: calculated intensity distributions")
-    save_figure(fig,folder,"figure4a_model")
-    fig,ax=plt.subplots(figsize=(7,4),layout="constrained")
-    valid=(history["time"]>0)&np.isfinite(history["intensity_mean_m"])
-    ax.semilogx(history["time"][valid]/60,history["intensity_mean_m"][valid]*1e9,"k-")
-    ax.set(xlabel=r"$t\;[\mathrm{min}]$",ylabel=r"$\overline{L}\;[\mathrm{nm}]$",title="Lipid nanoparticle formation and incubation")
-    save_figure(fig,folder,"figure4b_model")
-
-
-def illustrations():
-    diagnostics=Path(__file__).resolve().parent/"diagnostics"
-    cooling(diagnostics/"cooling_benchmark",ASSETS.parents[2]/".cache/legacy_docs_assets/illustrations/cooling")
-    folder=diagnostics/"lnp_demo";history=load(folder/"history.csv");psd=load(folder/"psd.csv")
-    fig,axes=plt.subplots(2,2,figsize=(9,6.5),layout="constrained")
-    axes[0,0].plot(history["time"]*1e3,history["number"])
-    axes[0,0].set(xlabel=r"$t\;[\mathrm{ms}]$",ylabel=r"$M_0\;[\mathrm{m}^{-3}]$")
-    axes[0,1].plot(history["time"]*1e3,history["free_lipid"])
-    axes[0,1].set(xlabel=r"$t\;[\mathrm{ms}]$",ylabel=r"$c\;[\mathrm{kg}\,\mathrm{m}^{-3}]$")
-    for t in (0.005,0.01,0.02):
-        data=psd[np.isclose(psd["time"],t,atol=1e-12,rtol=0)]
-        axes[1,0].semilogx(data["diameter_m"]*1e9,data["intensity_density_per_m"],label=rf"${t*1e3:g}\;\mathrm{{ms}}$")
-    axes[1,0].set(xlabel=r"$L\;[\mathrm{nm}]$",ylabel=r"$I(L)/\!\int I\,\mathrm{d}L\;[\mathrm{m}^{-1}]$")
-    axes[1,0].legend()
-    material=history["material_element_lipid"]
-    axes[1,1].plot(history["time"]*1e3,(material-material[0])/material[0])
-    axes[1,1].set(xlabel=r"$t\;[\mathrm{ms}]$",ylabel=r"$[m_{\mathrm{lipid}}(t)-m_{\mathrm{lipid}}(0)]/m_{\mathrm{lipid}}(0)$")
-    fig.suptitle("Nanoparticle formation: synthetic material and mixing inputs")
-    save_figure(fig,ASSETS.parents[2]/".cache/legacy_docs_assets/illustrations/lnp","demonstration")
-
-
 def temperature_moments(folder):
     data=np.genfromtxt(folder/"history.csv",delimiter=",",names=True,dtype=None,encoding="utf-8")
     ref=data[data["method"]=="moments"]
@@ -267,13 +226,10 @@ def estimation(folder):
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("case",choices=("transport","cooling","lnp","illustrations","moments","temperature_moments","estimation"))
+    parser.add_argument("case",choices=("transport","cooling","moments","temperature_moments","estimation"))
     parser.add_argument("--usetex",action="store_true",help="Render with an installed LaTeX distribution instead of Matplotlib MathText.")
     parser.add_argument("--data-dir",type=Path)
     args=parser.parse_args()
     with configure(usetex=args.usetex):
-        if args.case=="illustrations":
-            illustrations()
-        else:
-            folder=args.data_dir or ASSETS/{"transport":"inguva_case2","cooling":"gunawan_example2","lnp":"shin_case","moments":"qamar_moments","temperature_moments":"moment_crystallization","estimation":"parameter_estimation"}[args.case]
-            {"transport":transport,"cooling":cooling,"lnp":lnp,"moments":moments,"temperature_moments":temperature_moments,"estimation":estimation}[args.case](folder)
+        folder=args.data_dir or ASSETS/{"transport":"inguva_case2","cooling":"gunawan_example2","moments":"qamar_moments","temperature_moments":"moment_crystallization","estimation":"parameter_estimation"}[args.case]
+        {"transport":transport,"cooling":cooling,"moments":moments,"temperature_moments":temperature_moments,"estimation":estimation}[args.case](folder)

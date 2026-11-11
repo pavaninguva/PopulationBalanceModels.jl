@@ -1,5 +1,5 @@
 include("fixtures/example_modules.jl")
-@testset "Physical term declarations and integrated recipe source" begin
+@testset "Physical term declarations and integrated source balance" begin
     g=Grid1D(0.0:0.1:2.0)
     G=(x,p,t,ctx)->0.2
     J=(p,t,ctx)->1.0
@@ -13,20 +13,26 @@ include("fixtures/example_modules.jl")
     b=compile(PBMModel(GaussianNucleation(rate=J,center=0.4,width=0.01)),g)
     rhs!(da,N,a,(;),0.0);rhs!(db,N,b,(;),0.0)
     @test da==db
-    # Physical critical size lies inside a bin but far from its pivot in units
+    # Source centre lies inside a bin but far from its pivot in units
     # of sigma. Midpoint sampling underflows; bin integration must still create J.
     grid=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
+    p=(rate=3.,center=2.1e-9,width=1e-13,rho=1000.)
+    rate=(p,t,ctx)->p.rate
     for normalization in (:total_rate,:density_amplitude)
-        prob=CEJ2025LNP.build(;grid,initial_lipid=12.0,FRR=3.0,tau=0.0,
-            temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->1.0,
-            equilibrium_ratio=(L,w,T)->1.0,attachment_without_peg=(L,M,w,T)->1.0,
-            molecular_volume=5e-28,particle_density=1000.0,nucleation_width=1e-13,
-            nucleation_normalization=normalization,tspan=(0.0,0.001),kg=0.0,kPEG=0.0)
+        gaussian=GaussianNucleation(rate;center=p.center,width=p.width)
+        physical=GaussianNucleation(rate;center=p.center,width=p.width,truncation=:physical)
+        source=normalization===:total_rate ? gaussian : IntegratedNucleation(rate,
+            (lo,hi,p,t,ctx)->sqrt(2π)*p.width*physical.fraction(lo,hi,p,t,ctx);
+            normalization=:density_amplitude)
+        op=compile(PBMModel(nucleation=source),grid)
+        exchange=ConservativeExchange(:particles,:solute,(L,p,t,ctx)->p.rho*π/6*L^3;
+            mechanisms=(:nucleation,))
+        system=PBMSystem((particles=op,);exchanges=(exchange,),nonnegative_bulk=(:solute,))
+        prob=PBMProblem(system,(particles=zeros(length(grid)),),(0.,0.001);bulk0=(solute=1.,),p)
         du=similar(prob.u0);rhs!(du,prob.u0,prob.operator,prob.p,0.0)
-        rate=CEJ2025LNP.nucleation_rate(3.0,298.15,prob.p.gamma,prob.p.Vm,prob.p.An)
-        expected=normalization===:total_rate ? rate : rate*sqrt(2π)*prob.p.nucleation_width
-        @test sum(population(prob,du,:lnp))≈expected rtol=1e-12
-        @test bulk(prob,du,:lipid)+prob.p.rho*π/6*moment(grid,population(prob,du,:lnp),3)≈0 atol=1e-30
+        expected=normalization===:total_rate ? p.rate : p.rate*sqrt(2π)*p.width
+        @test sum(population(prob,du,:particles))≈expected rtol=1e-12
+        @test bulk(prob,du,:solute)+p.rho*π/6*moment(grid,population(prob,du,:particles),3)≈0 atol=1e-30
     end
 end
 
@@ -74,27 +80,6 @@ include("fixtures/constant_growth_gaussian.jl")
     sol=simulate(prob;method=ExactShift(),dt=0.1,saveat=[1.0])
     @test maximum(abs,last(sol.u).-InguvaBraatzCase1.reference(prob.operator.grid,1.0))<1e-14
     @test prob.operator.grid.x.edges[end]==2.0
-end
-
-_load_example(:ShinLNPReproduction, "shin_lnp_reproduction.jl")
-@testset "LNP observation export conventions" begin
-    grid=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
-    prob=CEJ2025LNP.build(;grid,initial_distribution=[1e10,2e10,0.0],
-        initial_lipid=1.0,FRR=3.0,tau=0.0,temperature=t->298.15,
-        viscosity=(w,T)->1e-3,solubility=(w,T)->1.0,
-        equilibrium_ratio=(L,w,T)->1.0,attachment_without_peg=(L,M,w,T)->1.0,
-        molecular_volume=5e-28,particle_density=1000.0,nucleation_width=1e-9,
-        nucleation_normalization=:total_rate,tspan=(0.0,0.001),kg=0.0,kPEG=0.0)
-    mktempdir() do output
-        @test_throws ArgumentError ShinLNPReproduction.run_case(prob;dt=0.001,
-            saveat=[0.001],provenance="",output)
-        sol=ShinLNPReproduction.run_case(prob;dt=0.001,saveat=[0.001],
-            provenance="Synthetic stationary distribution for export verification",output)
-        lines=readlines(joinpath(output,"psd.csv"))[2:end]
-        intensity=[parse(Float64,split(line,',')[4]) for line in lines]
-        @test sum(intensity.*grid.widths)≈1 rtol=1e-14
-        @test sol.u[end]≈prob.u0 rtol=1e-14
-    end
 end
 
 _load_example(:InguvaBraatzCase2, "inguva_braatz_case2.jl")
@@ -164,33 +149,6 @@ end
         @test_throws ArgumentError simulate(prob;method,dt=0.1,saveat=[0.0],maxsteps=0)
         @test_throws ArgumentError simulate(prob;method,dt=0.1,maxsteps=1.5)
         @test_throws ArgumentError simulate(prob;method,dt=0.1,saveat=[0.2,0.1])
-    end
-end
-
-@testset "Shin Figure 4: zero particle initialization and long output schedule" begin
-    grid=Grid1D([1e-9,3e-9,10e-9,30e-9];coordinate=:diameter)
-    material=(temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->1.0,
-        equilibrium_ratio=(L,w,T)->1.0,attachment_without_peg=(L,M,w,T)->1.0,
-        molecular_volume=5e-28,particle_density=1000.0,nucleation_width=1e-9,
-        nucleation_normalization=:total_rate,kg=0.0,kPEG=0.0)
-    prob=ShinLNPReproduction.figure4_problem(;grid,material...)
-    @test all(iszero,population(prob,prob.u0,:lnp))
-    @test bulk(prob,prob.u0,:lipid)==2.5
-    @test prob.tspan==(0.0,259200.0)
-    times=ShinLNPReproduction.figure4_saveat()
-    @test all(t->t in times,60 .*collect(ShinLNPReproduction.FIGURE4_MINUTES))
-    @test first(times)==0 && last(times)==prob.tspan[2] && all(diff(times).>0)
-    @test_throws ArgumentError ShinLNPReproduction.figure4_problem(;grid,material...,initial_distribution=ones(length(grid)))
-    # Test both exporter paths with zero kinetics over a short interval; these
-    # are synthetic interface checks, not a full-horizon paper calculation.
-    empty=remake(prob;tspan=(0.0,0.001),p=merge(prob.p,(An=0.0,)))
-    for solver in (nothing,(p,ts)->simulate(p;dt=0.001,saveat=ts))
-        mktempdir() do output
-            sol=ShinLNPReproduction.run_case(empty;dt=0.001,saveat=[0.0,0.001],solver,
-                provenance="Synthetic zero-kinetics exporter test",output)
-            @test all(iszero,population(empty,last(sol.u),:lnp))
-            @test occursin("intensity_peak_scaled",first(readlines(joinpath(output,"psd.csv"))))
-        end
     end
 end
 

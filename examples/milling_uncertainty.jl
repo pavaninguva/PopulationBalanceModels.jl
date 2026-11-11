@@ -8,6 +8,33 @@ include("support/milling_solver.jl")
 const ROOT = normpath(joinpath(@__DIR__,".."))
 const CONFIG = joinpath(@__DIR__,"data","milling_uncertainty","reconstruction.toml")
 const ASSETS = joinpath(ROOT,"docs","src","assets","milling_uncertainty")
+const SETTINGS = TOML.parsefile(CONFIG)
+
+"""Numerical contract shared by the literature comparison and every UQ solve.
+Initial inventory and speed history describe experiments, so are not part of it.
+"""
+function numerical_configuration(;bins=SETTINGS["bins"],
+        quadrature_order=SETTINGS["daughter_quadrature_order"],
+        reltol=SETTINGS["reltol"],abstol=SETTINGS["abstol"])
+    (;scheme="positive_fixed_pivot",coordinate="volume",grid="geometric",bins,
+        first_pivot_m3=SETTINGS["first_pivot_m3"],last_pivot_m3=SETTINGS["last_pivot_m3"],
+        feed="integrated_lognormal_bin_probabilities",daughter_quadrature_order=quadrature_order,
+        fines="analytic_sub_first_pivot_moments",median="linear_diameter_pivot_volume_CDF",
+        solver="CVODE_BDF",solver_coordinates="per_pivot_kg",nonnegative_constraints=true,
+        reltol,abstol_kg=abstol)
+end
+
+"""One forward builder for Barrasso startup and Bhonsale uncertainty propagation."""
+function forward_problem(theta=MillingModel.MEAN;bins=SETTINGS["bins"],
+        quadrature_order=SETTINGS["daughter_quadrature_order"],
+        last_pivot=SETTINGS["last_pivot_m3"],tf=200.,
+        initial_feed_duration=0.,rpm=nothing)
+    base=MillingModel.build(theta;bins,quadrature_order,tf,last_pivot)
+    first(base.p.pivots)≈SETTINGS["first_pivot_m3"] || error("inconsistent first milling pivot")
+    p=rpm===nothing ? base.p : merge(base.p,(change_time=Inf,speed_before=Float64(rpm)))
+    PBMProblem(base.operator.system,(mill=initial_feed_duration.*p.feed,),base.tspan;
+        bulk0=(discharged_mass=0.,fines_mass=0.),p)
+end
 
 # tutorial:start uq
 function output_times()
@@ -42,10 +69,11 @@ end
 """Build a data-free forward UQ problem. Rebuild daughter projections when sigma
 changes. All requested times share one segmented forward solve per realization.
 """
-function problem(;bins=100,times=output_times(),reltol=1e-9,abstol=1e-14,
-        quadrature_order=8,records=nothing,progress=0)
-    base=MillingModel.build(;bins,quadrature_order)
-    setup=(theta,base)->MillingModel.build(theta;bins,quadrature_order)
+function problem(;bins=SETTINGS["bins"],times=output_times(),reltol=SETTINGS["reltol"],
+        abstol=SETTINGS["abstol"],quadrature_order=SETTINGS["daughter_quadrature_order"],
+        records=nothing,progress=0)
+    base=forward_problem(;bins,quadrature_order)
+    setup=(theta,base)->forward_problem(theta;bins,quadrature_order)
     calls=Ref(0)
     solver=function(pb,ts)
         calls[]+=1
@@ -173,18 +201,20 @@ end
 
 function numerical_checks(folder;smoke=false)
     ts=[.01,5.,29.999,30.,30.001,31.,100.,200.]
-    configurations=[("base",100,1e-9,1e-14,8,1e-3),
-        ("time",100,1e-10,1e-15,8,1e-3),
-        ("quadrature",100,1e-9,1e-14,16,1e-3),
-        ("size200",200,1e-9,1e-14,8,1e-3)]
+    c=numerical_configuration();n=c.bins;rt=c.reltol;at=c.abstol_kg
+    order=c.daughter_quadrature_order;last=c.last_pivot_m3
+    configurations=[("base",n,rt,at,order,last),
+        ("time",n,rt/10,at/10,order,last),
+        ("quadrature",n,rt,at,2order,last),
+        ("size200",2n,rt,at,order,last)]
     if !smoke
-        push!(configurations,("size400",400,1e-9,1e-14,8,1e-3))
-        ratio=(1e-3/MillingModel.parameters().first_pivot)^(1/99)
-        push!(configurations,("domain",104,1e-9,1e-14,8,1e-3*ratio^4))
+        push!(configurations,("size400",4n,rt,at,order,last))
+        ratio=(last/c.first_pivot_m3)^(1/(n-1))
+        push!(configurations,("domain",n+4,rt,at,order,last*ratio^4))
     end
     rows=Tuple[];reference=nothing;refmedian=nothing
     for (name,bins,rt,at,order,last) in configurations
-        pb=MillingModel.build(;bins,last_pivot=last,quadrature_order=order)
+        pb=forward_problem(;bins,last_pivot=last,quadrature_order=order)
         started=time_ns();sol=MillingSolver.solve(pb,ts;reltol=rt,abstol=at)
         elapsed=(time_ns()-started)/1e9
         medians=[only(observe(MillingModel.median_observable(),sol;index=i)) for i in eachindex(ts)]
@@ -224,6 +254,7 @@ function run(;full=false,force=false,output=nothing)
         error("existing milling outputs have different/incomplete provenance; use --force explicitly to replace this case's results")
     end
     write_json(joinpath(folder,"settings.json"),(;configuration_key=identity.key,settings,
+        numerics=numerical_configuration(),
         source_hashes=identity.hashes,git_revision=strip(read(`git -C $ROOT rev-parse HEAD`,String)),
         initial_population=:empty,initial_outlet_median=:undefined,
         output_start_s=first(output_times()),solver_unknowns=:per_pivot_kg,
@@ -232,7 +263,7 @@ function run(;full=false,force=false,output=nothing)
     flush(stdout)
     # Warmup is separate and uses the actual residual, boundary, observation,
     # regression and surrogate types. Every warmup solve is counted separately.
-    pb=MillingModel.build();warm_started=time_ns()
+    pb=forward_problem();warm_started=time_ns()
     MillingSolver.solve(pb,[.01,30.,31.,200.])
     box=hcat(fill(-2.,4),fill(2.,4))
     warmuq=problem()
@@ -253,7 +284,8 @@ function run(;full=false,force=false,output=nothing)
     ts=uq.times
     write_csv(joinpath(folder,"times.csv"),["time_s"],((t,) for t in ts))
     write_csv(joinpath(folder,"grid.csv"),["edge_index","volume_m3"],enumerate(pb.p.edges))
-    tick=time_ns();nominal=MillingSolver.solve(pb,ts);nominal_seconds=(time_ns()-tick)/1e9
+    tick=time_ns();nominal=MillingSolver.solve(pb,ts;reltol=settings["reltol"],abstol=settings["abstol"])
+    nominal_seconds=(time_ns()-tick)/1e9
     write_csv(joinpath(folder,"nominal.csv"),["time_s","d50_um","mill_mass_kg","discharged_mass_kg","fines_mass_kg","material_error_kg"],
         ((t,only(observe(MillingModel.median_observable(),nominal;index=i)),
           pb.p.rho*pb.p.number_scale*dot(pb.p.pivots,population(pb,u,:mill)),bulk(pb,u,:discharged_mass),
@@ -327,6 +359,7 @@ function run(;full=false,force=false,output=nothing)
     files=Dict(name=>bytes2hex(sha256(read(joinpath(folder,name)))) for name in readdir(folder) if name!="provenance.json")
     status=read(`git -C $ROOT status --porcelain`,String)
     write_json(receipt,(configuration_key=identity.key,complete=true,mode=settings["mode"],settings,
+        numerics=numerical_configuration(),
         source_hashes=identity.hashes,git_revision=strip(read(`git -C $ROOT rev-parse HEAD`,String)),dirty=!isempty(status),
         working_tree=status,julia=string(VERSION),packages,cpu=Sys.CPU_NAME,cpu_model=Sys.cpu_info()[1].model,
         julia_threads=Threads.nthreads(),blas_threads=BLAS.get_num_threads(),warmup_seconds,warmup_full_solves=56,nominal_seconds,

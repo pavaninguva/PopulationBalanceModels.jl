@@ -92,10 +92,14 @@ def check(folder, *, smoke=False, retained=False):
 
 
 def check_forward(*, retained=False):
-    """The Barrasso comparison is independent of the retained Bhonsale ensemble."""
+    """Check the Barrasso experiment and its shared numerical contract with UQ."""
     folder = ROOT / "docs/src/assets/milling_uncertainty/forward"
     m = json.loads((folder / "provenance.json").read_text())
     assert m["complete"] and m["mode"] == "forward_comparison"
+    uq = json.loads((folder.parent / "data/provenance.json").read_text())
+    assert m["numerics"] == uq["numerics"], "Forward/UQ numerical configuration differs"
+    for name, digest in uq["source_hashes"].items():
+        assert m["source_hashes"].get(name) == digest, f"Different shared numerical source: {name}"
     for name, digest in m["numerical_files"].items():
         assert hashlib.sha256((folder / name).read_bytes()).hexdigest() == digest, name
     if not retained:
@@ -125,8 +129,8 @@ def check_forward(*, retained=False):
         np.testing.assert_array_equal(group["reference"], source["value"])
         trajectory = trajectories[(trajectories["bins"] == row["bins"]) &
                                    (trajectories["rpm"] == row["rpm"])]
-        column = "holdup_g" if row["quantity"] == "holdup_g" else (
-            "pivot_CDF_d50_um" if row["statistic"] == "pivot_CDF" else "finite_bin_d50_um")
+        assert row["statistic"] in ("inventory", "pivot_CDF")
+        column = "holdup_g" if row["quantity"] == "holdup_g" else "pivot_CDF_d50_um"
         indices = np.searchsorted(trajectory["time_s"], group["time_s"])
         np.testing.assert_array_equal(trajectory["time_s"][indices], group["time_s"])
         np.testing.assert_array_equal(trajectory[column][indices], group["prediction"])

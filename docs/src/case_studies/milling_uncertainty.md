@@ -88,16 +88,21 @@ This algebraic discharge law is not a first-order `Death` hazard. The shared
 | First representative volume | 6.54×10⁻¹⁷ m³ |
 
 The large printed feed median corresponds to about 4.5 cm diameter; it is
-retained rather than changed to improve agreement. The discrete feed
-normalization and startup assumptions differ between the two calculations:
+retained rather than changed to improve agreement. The deterministic comparison
+and every MC/PCE realization call the **same forward builder**. Their common
+baseline uses 100 geometric volume pivots from ``6.54\times10^{-17}`` to
+``10^{-3}`` m³, exact lognormal feed-bin probabilities normalized over that
+domain, positive fixed-pivot daughter hats with eight-point Gauss–Legendre
+quadrature, analytic sub-grid fines, and linear diameter interpolation of the
+cumulative pivot-volume outlet CDF. Grid and solver settings come from one
+[configuration](../assets/source/examples/data/milling_uncertainty/reconstruction.toml).
+Only the physical experiments differ:
 
-| Setting | Barrasso Figure 7 comparison | Retained Bhonsale UQ reconstruction |
+| Setting | Barrasso Figure 7 comparison | Bhonsale UQ reconstruction |
 |:--|:--|:--|
 | Speed | separate constant 3350 and 4923 RPM runs | 4923 RPM, then 1500 RPM at 30 s |
 | Initial mill | one second of feed: 7.4 g; shape assumed | empty |
-| Representative volumes | published ``v_i=v_1i^6``, 100 pivots | 100 geometric pivots, ``v_1`` to 10⁻³ m³ |
-| Feed deposition | normalized point weights from Barrasso Eqs. (3)–(4) | exact lognormal bin probabilities, normalized over the domain |
-| Outlet median | compare pivot and finite-bin CDF reconstructions | linear diameter interpolation of the pivot-volume CDF |
+| Duration | 180 s | 200 s |
 
 Both use integrated counts divided by ``10^{12}`` as the numerical population
 state. This scaling changes neither the inventory basis nor the material check:
@@ -130,12 +135,15 @@ N = population(problem, solution.u[end], :mill)
 d50 = MillingForward.MM.outlet_median(problem.p, N, times[end])
 ```
 
-Positive linear volume hats deposit daughter particles. For the same continuous
-birth density and parent-pivot evaluation, these follow algebraically from
-Barrasso's adjacent-volume allocation in Eqs. (14)–(17). That observation does
-not identify every detail of the original gPROMS cell-average implementation.
-Auxiliary bin edges are chosen to give the published arithmetic pivot centres.
-Refinements to 200, 400 and 800 pivots retain the endpoint volumes.
+Positive linear volume hats deposit daughter particles in both experiments.
+For the same continuous birth density and parent-pivot evaluation, these follow
+algebraically from Barrasso's adjacent-volume allocation in Eqs. (14)–(17).
+The comparison deliberately uses the common geometric grid and integrated feed,
+rather than a separate implementation of Barrasso's published ``v_i=v_1i^6``
+grid and point-normalized feed. It checks the numerical forward model used for
+UQ against Figure 7; it does not identify every detail of the original gPROMS
+cell-average implementation. Refinements to 200, 400 and 800 geometric pivots
+retain both endpoint volumes and the same observation rule.
 
 ![Forward-model comparison with Barrasso Figure 7](../assets/milling_uncertainty/milling_barrasso_figure7.png)
 
@@ -146,13 +154,10 @@ PDF coordinates are retained in the
 [reference readings](../assets/source/examples/data/milling_uncertainty/barrasso_figure7.csv).
 RMS differences use the 22 noninitial points for each speed and quantity.
 
-The two 100-pivot diameter curves use the **same population trajectory**.
-One interpolates its cumulative volume weights between pivot diameters; the
-other integrates a piecewise-constant number density within each auxiliary
-volume bin. The latter's volume CDF is quadratic in volume, not linear. The
-800-pivot curve changes both resolution and, relative to the dashed curve,
-the observation reconstruction. Neither change alters the kinetic parameters.
-Hold-up does not depend on the median reconstruction.
+The solid curves use the **same 100-pivot numerical configuration as UQ**.
+Dotted and dashed curves refine to 400 and 800 pivots. They change only spatial
+resolution; feed deposition, daughter preparation, median reconstruction,
+kinetic parameters and BDF tolerances follow the same rules throughout.
 
 ```@eval
 using Markdown, PopulationBalanceModels
@@ -160,17 +165,19 @@ Markdown.parse(read(joinpath(pkgdir(PopulationBalanceModels), "docs", "src", "as
     "milling_uncertainty", "forward", "comparison.md"), String))
 ```
 
-Hold-up is close, but startup diameter differences remain as large as about
-47 and 41 µm for the 800-pivot finite-bin observation. Refinement does not
-uniformly improve agreement with the published curve. At the last graph times,
-about 179 s, its medians are 215 and 210 µm, compared with source values 219 and
-216 µm. A close late value is not a reproduction of the whole trajectory.
+Hold-up is close, but the outlet-diameter trajectory is not recovered. Maximum
+diameter differences at the source times are **83.48/75.04 µm** for the shared
+100-pivot baseline at 3350/4923 RPM, and **58.86/51.69 µm** after refinement to
+800 pivots. At the last graph times, about 179 s, the refined medians are
+214.52/209.24 µm, versus source readings 219.31/216.49 µm. The generated table
+reports RMS differences for both grids. Spatial refinement improves those RMS
+differences but does not recover the published trajectory.
 
-Tenfold tighter BDF tolerances change the 100-pivot median by less than
-``5\times10^{-6}`` µm. A separately assembled affine matrix exponential, using
+Tenfold tighter BDF tolerances change the baseline median by less than
+``3.6\times10^{-6}`` µm. A separately assembled affine matrix exponential, using
 analytical truncated-lognormal daughter integrals, agrees within
-``4\times10^{-6}`` µm at the checked times. All saved populations are nonnegative;
-maximum material defects are below ``5\times10^{-11}`` kg across the refinements.
+``2.8\times10^{-6}`` µm. All saved populations are nonnegative; maximum material
+defects are below ``4.4\times10^{-11}`` kg across the refinements.
 These checks support the numerical solution of the **declared reconstruction**.
 They do not establish equivalence to the authors' parent reconstruction,
 initial distribution, median calculation or full-precision fitted parameters.
@@ -180,8 +187,8 @@ this evidence, nor does it establish that the source numerics are incorrect.
 ## Then: propagate uncertain inputs
 
 Bhonsale studies the response to a speed reduction at 30 s. Each realization
-now starts empty and uses the separate geometric-grid configuration tabulated
-above. The quantity of interest remains the **instantaneous outlet
+starts empty and uses the same numerical configuration as the deterministic
+comparison. The quantity of interest remains the **instantaneous outlet
 volume-weighted diameter median**, not a median of accumulated discharged
 material. At exactly 30 s the outlet uses the new speed; the inventory is
 continuous. Two integrations meet there so no solver stage mixes the rates.
@@ -304,14 +311,14 @@ numerical-check BDF trajectories and a matrix-exponential check.
 Bhonsale reports a 31-second MC mean **208.366 µm** and SD **41.7409 µm**.
 The difference from this reconstruction remains substantial. PCE-design and
 band ambiguities cannot explain an MC-mean discrepancy. The earlier forward
-check identifies important grid, initialization and median conventions, but
-does not resolve that gap or validate the retained UQ configuration against
-Barrasso. No parameter or seed was selected to improve agreement.
+check now exercises the same discretized model used by UQ, but its partial
+agreement does not resolve the literature gap or establish full validation of
+that model. No parameter or seed was selected to improve agreement.
 
 ## Numerical checks and limitations
 
 The [forward checks](../assets/milling_uncertainty/forward/checks.json) separate
-time integration and daughter quadrature from mesh/observation effects.
+time integration and daughter quadrature from spatial-resolution effects.
 Their [configuration and source record](../assets/source/examples/data/milling_uncertainty/barrasso_figure7.toml)
 retains the graph-extraction method and reconstruction assumptions.
 
@@ -345,7 +352,7 @@ BDF/export environment:
 
 ```sh
 julia --project=examples/environments/milling -e 'using Pkg; Pkg.develop(path=pwd()); Pkg.instantiate()'
-# First, the separate deterministic comparison and its figure:
+# First, the deterministic experiment using the common numerical model:
 julia --project=examples/environments/milling examples/verification/milling_forward.jl
 python test/milling_results.py --forward
 python docs/benchmarks/plot_milling_uncertainty.py --forward --usetex
@@ -361,8 +368,9 @@ The full UQ command generates or reuses the matching 12,000-run dataset. Smoke
 outputs stay in `.cache/`. Both plot commands only read checked exports; they
 never run Julia. Final figures use real LaTeX and 300-dpi PNG plus PDF/SVG;
 see the [plotting setup](../assets/source/plotting/README.txt).
-Original producer manifests and numerical UQ outputs are preserved separately
-from the forward comparison. No local source PDF is needed for replotting.
+Both numerical datasets have their own production receipts, with matching
+numerical configurations and shared-source hashes. Paper staging rejects a
+mismatch between them. No local source PDF is needed for replotting.
 
 Download the [forward comparison](../assets/source/examples/verification/milling_forward.jl),
 [UQ driver](../assets/source/examples/milling_uncertainty.jl),

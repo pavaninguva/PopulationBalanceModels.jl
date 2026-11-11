@@ -40,7 +40,7 @@ end
         end
         # Actually include downloaded files outside the checkout, including
         # data, companion includes and the separate accounting/propagation stage.
-        for name in (:continuous_precipitation,:protein_crystallization,:estimating_growth,:nanoparticles)
+        for name in (:continuous_precipitation,:protein_crystallization,:estimating_growth)
             scope=load_tutorial(name;path=joinpath(target,"$name.jl"))
             # Julia 1.13 versions global bindings as well as methods. This
             # closure predates the module just included above.
@@ -107,22 +107,6 @@ const TUTORIAL_REFERENCES=Dict{Symbol,Any}()
     ref=InguvaBraatzCase2.problem(50;initial=s.initial)
     same_initial_rates(pb,ref)
 
-    _load_example(:ShinLNPReproduction,"shin_lnp_reproduction.jl")
-    s=TUTORIALS[:nanoparticles];pb=s.problem;m=ShinLNPReproduction.CEJ2025LNP
-    # Capture numerical inputs/functions, not entire test Modules in closures.
-    attachment=let dlvo=m.dlvo_attachment,permittivity=s.permittivity
-        (L,M,w,T)->dlvo(L/2,M/2;temperature=T,ionic_strength=100w,relative_permittivity=permittivity)
-    end
-    temperature=let T=s.T;t->T;end
-    viscosity=let mu=s.mu;(w,T)->mu;end
-    equilibrium=let kelvin=m.kelvin_ratio;(L,w,T)->kelvin(L,T,.010,5e-28);end
-    ref=ShinLNPReproduction.figure4_problem(;grid=s.grid,FRR=3.,temperature,
-        viscosity,solubility=s.solubility,equilibrium_ratio=equilibrium,
-        attachment_without_peg=attachment,molecular_volume=5e-28,particle_density=1000.,
-        nucleation_width=1e-9,nucleation_normalization=:total_rate,overflow=:discard,
-        track_consumption=true,scheme=Upwind(),tspan=(0.,1e-5))
-    same_initial_rates(pb,ref)
-    TUTORIAL_REFERENCES[:nanoparticles]=ref
 end
 
 if Base.find_package("Optim")!==nothing

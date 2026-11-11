@@ -109,8 +109,10 @@ Constant-speed cone-mill startup compared with Barrasso et al. (2013),
 DOI 10.1007/s12247-013-9155-0, Figure 7.
 (i) Instantaneous volume-weighted outlet diameter median; (ii) mill hold-up.
 Solid curves use one conservative fixed-pivot breakage/classification scheme
-and the checked CVODE-BDF solver at 3350 and 4923 RPM. There are 100 power-grid
-volume pivots; the initial material is one second of feed (7.4 g), a declared
+and the checked CVODE-BDF solver at 3350 and 4923 RPM. There are 100 geometric
+volume pivots from $6.54\times10^{-17}$ to $10^{-3}\,\mathrm{m^3}$, with integrated
+lognormal feed and eight-point daughter quadrature; these are the same numerical
+settings used for UQ. The initial material is one second of feed (7.4 g), a declared
 reconstruction assumption. The outlet median uses linear diameter interpolation
 of the cumulative pivot-volume weights, the same convention used by the UQ
 example. Open symbols, labelled ``Reference data'', are the unchanged published
@@ -118,9 +120,9 @@ simulation markers extracted from the original vector figure, not experimental
 measurements. No kinetic parameters were fitted. The two speeds use the same
 scheme; no additional mesh or observation-reconstruction curves are displayed.
 This remains a partial reproduction: hold-up is close, while the diameter
-trajectory differs. The UQ calculation below uses the same fixed-pivot/BDF
-scheme with its separately declared geometric grid, feed deposition, empty
-initial mill and speed change.}
+trajectory differs. The UQ calculation below calls the same numerical forward
+builder, including grid, feed deposition, daughter preparation, fines and outlet
+observation. Its initial mill is empty and its speed changes at 30 s.}
 
 \newcommand{\MillingUQCaption}{%
 Forward uncertainty in the instantaneous volume-weighted outlet median of the
@@ -134,6 +136,8 @@ confidence intervals on a mean or simultaneous trajectory coverage. PCE
 percentiles use 50,000 seeded surrogate evaluations under the full Gaussian
 law; bounded training designs do not truncate that law. All panels use the same
 axes and retained numerical summaries as the documentation case study.
+The numerical configuration matches the preceding deterministic comparison,
+including integrated feed, eight-point daughter quadrature and analytic fines.
 The mill starts empty on 100 geometric volume pivots from
 $6.54\times10^{-17}$ to $10^{-3}\,\mathrm{m^3}$; the first displayed time is
 0.001 s because the empty-start outlet median is undefined at zero.
@@ -142,5 +146,5 @@ The conservative model uses relative tolerance $10^{-9}$ and absolute tolerance
 $10^{-14}$ on per-pivot/discharged material in kg. The Bhonsale et al. (2018)
 DOI 10.3390/pr6120255 design/band ambiguities and declared initialization,
 domain and observation choices prevent a claim of exact published-curve
-reproduction. Original ensembles, producer records and timings are reused;
-this redraw performs no new MC or timing measurements.}
+reproduction. Both experiments were recalculated with the shared numerical
+builder; figures read their checked production exports.}

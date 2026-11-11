@@ -94,7 +94,6 @@ makedocs(;
             "Continuous tubular precipitation" => "case_studies/continuous_precipitation.md",
             "Isothermal protein crystallization" => "case_studies/protein_crystallization.md",
             "Stem-cell self-renewal and differentiation" => "case_studies/stem_cells.md",
-            "Lipid nanoparticle formation" => "case_studies/nanoparticles.md",
             "Growth in two particle dimensions" => "case_studies/transport.md",
             "Estimating size-dependent growth" => "case_studies/estimating_growth.md",
             "Uncertainty in continuous milling" => "case_studies/milling_uncertainty.md",

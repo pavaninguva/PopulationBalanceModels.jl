@@ -1,4 +1,4 @@
-# Figure selection only. Physical/UQ settings remain in the shared examples.
+# Figure selection only. Both producers must use the shared numerical baseline.
 forward_source = "docs/src/assets/milling_uncertainty/forward"
 uq_source = "docs/src/assets/milling_uncertainty/data"
 reference_source = "examples/data/milling_uncertainty/barrasso_figure7.csv"

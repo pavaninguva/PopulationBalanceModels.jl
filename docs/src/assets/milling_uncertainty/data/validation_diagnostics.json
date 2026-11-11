@@ -16,10 +16,3084 @@
     "design": null,
     "solves": 512,
     "requested": 512,
-    "setup_seconds": 0.2301591059999999,
-    "solve_seconds": 9.89848705,
-    "observation_seconds": 0.2783290319999997,
-    "total_seconds": 10.417104619,
+    "integration_work": [
+        {
+            "accepted_steps": 595,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 729,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 728,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 642,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 631,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 709,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 605,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 666,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 698,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 471,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 734,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 828,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 655,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 574,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 626,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 777,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 738,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 689,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 670,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 649,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 474,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 728,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 898,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 671,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 658,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 723,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 771,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 766,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 779,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 809,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 651,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 777,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 736,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 675,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 785,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 574,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 614,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 586,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 601,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 823,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 636,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 735,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 761,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 768,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 657,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 654,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 760,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 656,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 738,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 612,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 688,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 627,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 726,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 690,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 667,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 721,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 670,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 696,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 806,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 665,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 653,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 638,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 763,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 649,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 716,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 524,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 696,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 689,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 784,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 684,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 661,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 656,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 610,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 672,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 670,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 767,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 654,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 541,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 672,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 700,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 745,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 646,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 667,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 676,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 646,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 755,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 743,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 664,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 614,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 773,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 633,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 776,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 753,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 601,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 747,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 817,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 652,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 604,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 593,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 682,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 582,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 528,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 728,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 630,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 551,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 590,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 771,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 637,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 747,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 655,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 686,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 657,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 693,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 769,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 704,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 594,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 602,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 725,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 676,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 580,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 710,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 683,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 633,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 726,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 844,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 650,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 748,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 726,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 509,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 614,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 720,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 629,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 694,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 558,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 816,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 598,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 760,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 680,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 709,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 589,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 660,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 567,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 604,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 808,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 636,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 701,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 664,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 610,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 655,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 576,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 586,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 675,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 739,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 765,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 786,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 783,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 708,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 613,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 695,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 611,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 648,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 773,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 597,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 515,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 686,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 576,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 476,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 716,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 590,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 786,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 749,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 717,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 543,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 723,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 773,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 732,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 705,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 733,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 658,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 607,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 689,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 673,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 759,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 712,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 694,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 651,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 558,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 635,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 589,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 644,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 727,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 663,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 680,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 740,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 615,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 680,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 620,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 880,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 681,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 777,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 566,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 734,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 741,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 759,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 610,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 673,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 711,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 833,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 539,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 623,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 554,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 557,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 673,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 685,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 630,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 687,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 693,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 690,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 799,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 656,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 677,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 605,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 728,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 767,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 562,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 764,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 676,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 774,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 690,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 664,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 591,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 621,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 794,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 764,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 584,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 666,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 660,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 642,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 730,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 734,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 588,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 603,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 743,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 751,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 906,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 706,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 613,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 709,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 670,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 631,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 732,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 703,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 645,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 732,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 713,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 689,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 611,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 628,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 719,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 763,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 740,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 637,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 795,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 702,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 621,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 688,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 678,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 669,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 596,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 618,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 551,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 657,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 723,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 649,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 648,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 757,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 701,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 653,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 701,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 533,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 817,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 660,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 879,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 793,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 659,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 589,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 608,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 697,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 620,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 671,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 699,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 736,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 657,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 534,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 632,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 796,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 642,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 701,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 743,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 544,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 666,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 617,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 702,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 668,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 686,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 675,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 531,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 617,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 785,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 572,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 728,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 792,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 736,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 692,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 677,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 537,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 717,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 624,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 504,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 742,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 610,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 578,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 743,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 753,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 671,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 712,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 617,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 681,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 607,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 621,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 594,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 522,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 580,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 698,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 723,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 581,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 631,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 602,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 721,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 605,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 736,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 634,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 666,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 673,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 770,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 675,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 522,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 636,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 636,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 520,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 463,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 612,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 784,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 694,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 574,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 687,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 675,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 690,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 730,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 687,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 713,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 601,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 757,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 708,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 638,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 623,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 738,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 682,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 529,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 630,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 633,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 717,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 729,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 684,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 739,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 686,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 623,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 661,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 717,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 701,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 648,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 666,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 684,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 548,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 689,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 637,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 814,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 788,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 752,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 709,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 656,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 830,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 666,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 611,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 797,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 736,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 745,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 703,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 597,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 639,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 757,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 540,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 695,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 713,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 708,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 582,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 727,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 602,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 817,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 781,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 709,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 741,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 681,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 542,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 691,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 600,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 758,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 702,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 547,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 667,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 740,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 780,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 627,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 616,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 510,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 615,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 606,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 745,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 733,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 670,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 568,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 694,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 688,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 586,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 553,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 600,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 646,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 650,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 698,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 732,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 733,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 716,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 700,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 647,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 633,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 752,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 586,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 638,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 630,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 835,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 659,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 581,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 795,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 731,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 548,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 658,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 694,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 838,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 686,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 613,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 672,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 684,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 686,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 705,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 702,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 692,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 718,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 656,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 672,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 798,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 748,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 613,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 831,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 785,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 650,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 639,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 714,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 604,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 787,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 699,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 645,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 573,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 697,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 750,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 694,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 662,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 792,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 686,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 764,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 718,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 643,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 570,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 693,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 750,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 512,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 598,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 574,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 893,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 620,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 761,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 638,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 611,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 584,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 702,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 677,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 696,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 569,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 690,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 687,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 799,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 699,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 687,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        }
+    ],
+    "setup_seconds": 0.16919916500000032,
+    "solve_seconds": 7.2003931759999995,
+    "observation_seconds": 0.21454704300000002,
+    "total_seconds": 7.592295592,
     "successful": 512,
     "failed": 0,
     "failures": [

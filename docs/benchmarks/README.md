@@ -27,9 +27,10 @@ interval definitions and numerical/validation checks.
 Figure 7. Its graph readings and extraction record are under
 `examples/data/milling_uncertainty/barrasso_figure7.*`; its newly calculated
 trajectories, errors and producer record are under the assets' `forward/`
-directory. This is a partial reproduction, not a validated replacement for the
-retained geometric-grid, empty-start UQ ensemble. Plotting it neither solves nor
-changes either numerical dataset.
+directory. It uses the same geometric grid, integrated feed, daughter quadrature,
+fines, outlet-median rule and BDF tolerances as UQ. Initial inventory and speed
+history distinguish the experiments. The comparison remains a partial
+reproduction. Plotting it neither solves nor changes either numerical dataset.
 
 ## Existing figure workflows
 
@@ -87,9 +88,7 @@ python test/docs_links.py docs/build
 ```
 
 Optional fitting/sampling/stiff-solver integrations need the working environment
-specified on the corresponding case page. The LNP reconstruction takes an
-explicit input file; use the [nanoparticle page](../src/case_studies/nanoparticles.md)
-for its driver, unresolved closures and retained long-time limitations.
+specified on the corresponding case page.
 
 The cooling calculation uses a declared nonnegative initial distribution and a
 refined numerical reference, not a repaired version of the printed polynomial.
@@ -161,7 +160,7 @@ The supplement's literal coefficient transcription remains separate from its
 independently corrected interpretation. Moving the files does not strengthen
 any order, stability, positivity or paper-reproduction claim.
 
-`diagnostics/` retains earlier cooling/LNP evidence used by historical plotters.
+`diagnostics/` retains earlier numerical evidence for historical inspection.
 Unused constant-growth tensor exports from `diagnostics/inguva_case1/`, the
 superseded uniform-size precipitation PNG/SVG figures, and dated development
 audit tables were moved to the external recovery archive; see the

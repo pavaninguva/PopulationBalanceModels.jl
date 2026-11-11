@@ -31,6 +31,11 @@ docs/src/assets/source/
 !/docs/src/assets/constant_growth/performance.*
 !/docs/src/assets/constant_growth/observed_orders.*
 !/docs/src/assets/constant_growth/timings.*
+# Current milling production uses one numerical model for comparison and UQ.
+# Bundle its new outputs; the historical download snapshot must not replace them.
+!/docs/src/assets/milling_uncertainty/**/*.csv
+!/docs/src/assets/milling_uncertainty/**/*.gz
+!/docs/src/assets/milling_uncertainty/*.png
 /docs/benchmarks/diagnostics/**/*.csv
 /docs/benchmarks/diagnostics/**/*.png
 /docs/benchmarks/diagnostics/**/*.pdf
@@ -40,6 +45,7 @@ docs/src/assets/source/
 /paper/*/data/**/*.png
 /paper/*/data/**/*.pdf
 /paper/*/data/**/*.svg
+!/paper/milling/data/*.csv
 /paper/*/figures/*.pdf
 /paper/*/figures/*.svg
 /test/fixtures/archives/legacy_docs_assets.zip

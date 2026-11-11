@@ -14,28 +14,45 @@
         "uq_source": "docs/src/assets/milling_uncertainty/data"
     },
     "files": {
-        "forward_producer.json": "dc1998bd9f6df1cdebc23e77eed8476fe05e8e71a12262de74e6e83d4707c9f8",
+        "forward_producer.json": "d078bfa8afead70528a607c004a55521df9e9e8b399a7341c837274b71b5b421",
         "reference.csv": "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb",
-        "uq_producer.json": "6c6f96c43c1fdc7f7e7e20690954bcf4ea3308ba9f1ece5aa773f852cf9bd1ad",
+        "uq_producer.json": "5c7aee0ffdb2319c9e5c8236aecfa28a91dd8bbd4eb14ced1e16a56c29fab946",
         "nominal.csv": "f39bca33cdb889257ecfcd52ff159c8a1079658e890d1ab131faac9ba8b590d8",
         "pce1_summary.csv": "1301b8d9cc560ed207e2de7717aea24e160422e39ceb638d5b3bb5c42938ad82",
-        "forward.csv": "555ed7ee350ba15a9dd7def07205b6af753f8f15225b3daff4534718a7df6f3c",
+        "forward.csv": "cb548eaea0e6374ae40cfdbc6d255f12dfb79dbca2bc148b2b9ab1ff08797814",
         "pce2_summary.csv": "903971c30f517b35af6e5935a22f8413c60a0912a006bbe11f83083198625b31",
         "mc_summary.csv": "ec88baddf03829d0f65e55477c115ca5034bd65d1847c7a8f8e3aa57db7cbeba"
     },
-    "source_digest": "11634f2fbb674128bf4ae76d00c0ed86fab370ad64ed77d295cbf295df23c513",
-    "workflow_digest": "4530732e68e650d447b7b689272e9f3e40ab21cfeeb9bd508a7296571c785b58",
-    "staging_revision": "a9edb6b69ddaa0210e9f8ea1f751650ffd5e749c",
-    "staging_working_tree": " M CHANGELOG.md\n M README.md\n M docs/src/api/uncertainty.md\n M docs/src/assets/architecture/section2_architecture_revised.png\n M docs/src/development.md\n M docs/src/uncertainty_quantification.md\n M examples/README.md\n M examples/milling_uncertainty.jl\n M paper/_support/figures.py\n M paper/architecture/README.md\n M paper/architecture/caption.tex\n M paper/architecture/generate_pbm_architecture.py\n M paper/figures/00_architecture/section2_architecture_revised.json\n M paper/figures/00_architecture/section2_architecture_revised.png\n M paper/growth/plot.py\n M paper/plotting_style.py\n M paper/precipitation/plot.py\n M src/PopulationBalanceModels.jl\n M src/uq/polynomial_chaos.jl\n M test/README.md\n M test/integration.jl\n M test/runtests.jl\n M test/stationary_integration.jl\n?? examples/pce_refinement.jl\n?? paper/milling/\n?? src/uq/bases.jl\n?? src/uq/refinement.jl\n?? test/fixtures/archives/paper_history/retired_moments_and_growth_figures_20261028.zip\n?? test/pce_construction.jl\n",
+    "source_digest": "9f05780e48452b64b334b187c7cf9a1514b1ccb618d97a10cafc2bfd2b49c746",
+    "workflow_digest": "2e0d01b6e9ad91961672e09004ecc7bc6a62ba2ff7f5af0fc18cecec6fdc7c28",
+    "staging_revision": "3917be30cd1d38d0fc6d7558a20319704ef4c368",
+    "staging_working_tree": " M .github/workflows/CI.yml\n M .github/workflows/plotting.yml\n M .gitignore\n M docs/benchmarks/README.md\n M docs/benchmarks/plot_milling_uncertainty.py\n M docs/src/assets/milling_uncertainty/README.txt\n M docs/src/assets/milling_uncertainty/data/accuracy.md\n M docs/src/assets/milling_uncertainty/data/mc_diagnostics.json\n M docs/src/assets/milling_uncertainty/data/pce1_diagnostics.json\n M docs/src/assets/milling_uncertainty/data/pce1_nine_diagnostics.json\n M docs/src/assets/milling_uncertainty/data/pce1_nine_training_diagnostics.json\n M docs/src/assets/milling_uncertainty/data/pce1_training_diagnostics.json\n M docs/src/assets/milling_uncertainty/data/pce2_diagnostics.json\n M docs/src/assets/milling_uncertainty/data/pce2_training_diagnostics.json\n M docs/src/assets/milling_uncertainty/data/provenance.json\n M docs/src/assets/milling_uncertainty/data/reconstruction.toml\n M docs/src/assets/milling_uncertainty/data/settings.json\n M docs/src/assets/milling_uncertainty/data/validation_diagnostics.json\n M docs/src/assets/milling_uncertainty/forward/checks.json\n M docs/src/assets/milling_uncertainty/forward/comparison.md\n M docs/src/assets/milling_uncertainty/forward/provenance.json\n M docs/src/case_studies/milling_uncertainty.md\n M examples/data/milling_uncertainty/barrasso_figure7.toml\n M examples/data/milling_uncertainty/reconstruction.toml\n M examples/milling_uncertainty.jl\n M examples/verification/milling_forward.jl\n M paper/README.md\n M paper/_support/figures.py\n M paper/captions.tex\n M paper/milling/config.toml\n M paper/milling/plot.py\n M paper/milling/run.jl\n M test/README.md\n M test/forward_execution_sensitivity.jl\n M test/milling_forward.jl\n M test/milling_results.py\n M test/paper_data.py\n M test/retained_data.py\n M tools/README.md\n M tools/retained_data.json\n?? docs/src/assets/milling_uncertainty/data/accuracy_31s.csv\n?? docs/src/assets/milling_uncertainty/data/costs.csv\n?? docs/src/assets/milling_uncertainty/data/grid.csv\n?? docs/src/assets/milling_uncertainty/data/matrix_exponential.csv\n?? docs/src/assets/milling_uncertainty/data/mc_convergence_31s.csv\n?? docs/src/assets/milling_uncertainty/data/mc_inputs.csv\n?? docs/src/assets/milling_uncertainty/data/mc_outputs.csv.gz\n?? docs/src/assets/milling_uncertainty/data/mc_summary.csv\n?? docs/src/assets/milling_uncertainty/data/nominal.csv\n?? docs/src/assets/milling_uncertainty/data/numerical_refinement.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_coefficients.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_common_inputs_error.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_nine_coefficients.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_nine_common_inputs_error.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_nine_summary.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_nine_surrogate_checks.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_nine_training_inputs.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_nine_training_outputs.csv.gz\n?? docs/src/assets/milling_uncertainty/data/pce1_nine_validation.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_summary.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_surrogate_checks.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_training_inputs.csv\n?? docs/src/assets/milling_uncertainty/data/pce1_training_outputs.csv.gz\n?? docs/src/assets/milling_uncertainty/data/pce1_validation.csv\n?? docs/src/assets/milling_uncertainty/data/pce2_coefficients.csv\n?? docs/src/assets/milling_uncertainty/data/pce2_common_inputs_error.csv\n?? docs/src/assets/milling_uncertainty/data/pce2_summary.csv\n?? docs/src/assets/milling_uncertainty/data/pce2_surrogate_checks.csv\n?? docs/src/assets/milling_uncertainty/data/pce2_training_inputs.csv\n?? docs/src/assets/milling_uncertainty/data/pce2_training_outputs.csv.gz\n?? docs/src/assets/milling_uncertainty/data/pce2_validation.csv\n?? docs/src/assets/milling_uncertainty/data/pce_propagation_inputs.csv.gz\n?? docs/src/assets/milling_uncertainty/data/published_comparison.csv\n?? docs/src/assets/milling_uncertainty/data/solve_checks.csv\n?? docs/src/assets/milling_uncertainty/data/times.csv\n?? docs/src/assets/milling_uncertainty/data/validation_inputs.csv\n?? docs/src/assets/milling_uncertainty/data/validation_outputs.csv.gz\n?? docs/src/assets/milling_uncertainty/forward/errors.csv\n?? docs/src/assets/milling_uncertainty/forward/reference_comparison.csv\n?? docs/src/assets/milling_uncertainty/forward/trajectories.csv\n?? paper/figures/00_graphical_abstract/\n?? paper/graphical_abstract/\n",
     "forward_source": "docs/src/assets/milling_uncertainty/forward",
     "uq_source": "docs/src/assets/milling_uncertainty/data",
     "forward_derivation": {
         "source_file": "trajectories.csv",
-        "source_sha256": "519b99db754de7d64fff170109f3adb561c28c1c15b15dbd12dba8b1f69a8d17",
+        "source_sha256": "c0a8d41bcf8dcca8b972afa18e52e81a63b73a7c97543f0bdd25c293d7edf7be",
         "filter_bins": 100,
         "statistic": "pivot_CDF_d50_um",
         "transformation": "Row selection only; stored ordinates unchanged"
     },
     "reference_sha256": "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb",
-    "producer_note": "Original producers are preserved byte-for-byte. Staging/redrawing does not assert current-source numerical equivalence."
+    "numerics": {
+        "scheme": "positive_fixed_pivot",
+        "coordinate": "volume",
+        "grid": "geometric",
+        "bins": 100,
+        "first_pivot_m3": 6.54e-17,
+        "last_pivot_m3": 0.001,
+        "feed": "integrated_lognormal_bin_probabilities",
+        "daughter_quadrature_order": 8,
+        "fines": "analytic_sub_first_pivot_moments",
+        "median": "linear_diameter_pivot_volume_CDF",
+        "solver": "CVODE_BDF",
+        "solver_coordinates": "per_pivot_kg",
+        "nonnegative_constraints": true,
+        "reltol": 1.0e-9,
+        "abstol_kg": 1.0e-14
+    },
+    "producer_note": "The comparison and UQ have the same recorded numerical configuration and shared sources. Producers are preserved byte-for-byte; staging does not assert current-checkout equivalence."
 }

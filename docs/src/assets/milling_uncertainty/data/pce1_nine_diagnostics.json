@@ -1,13 +1,14 @@
 {
     "degree": 1,
+    "construction": "regression",
     "terms": 5,
     "rank": 5,
     "condition": 1.224744871391589,
     "new_full_solves": 9,
     "training_solves": 9,
     "validation_new_solves": 0,
-    "preparation_seconds": 0.000103715,
-    "regression_seconds": 3.327e-5,
+    "preparation_seconds": 9.7883e-5,
+    "regression_seconds": 2.7778e-5,
     "training_rmse": [
         4.553210466829751,
         4.578581199406528,
@@ -92,6 +93,64 @@
     ],
     "basis": "orthonormal_product",
     "normalization": "probability_measure",
+    "basis_families": [
+        "hermite",
+        "hermite",
+        "hermite",
+        "hermite"
+    ],
+    "basis_recurrences": [
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1
+            ],
+            "shift": 0,
+            "scale": 1
+        },
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1
+            ],
+            "shift": 0,
+            "scale": 1
+        },
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1
+            ],
+            "shift": 0,
+            "scale": 1
+        },
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1
+            ],
+            "shift": 0,
+            "scale": 1
+        }
+    ],
+    "quadrature_gram_error": null,
     "validation_status": "disjoint_inputs",
-    "coordinates": "standard_normal"
+    "coordinates": "standard_normal",
+    "accuracy_status": "failed"
 }

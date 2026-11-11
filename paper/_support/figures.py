@@ -213,6 +213,14 @@ def load_milling(input_path=None, *, check_checkout=False):
         raise ValueError("Incomplete forward producer")
     if not uq["complete"] or uq["mode"] != "production" or uq["settings"]["mc_samples"] != 12000:
         raise ValueError("Paper UQ requires the full 12,000-solve production ensemble")
+    numerics = uq.get("numerics")
+    if not numerics or forward.get("numerics") != numerics or info.get("numerics") != numerics:
+        raise ValueError("Forward comparison and UQ must have the same numerical configuration")
+    if info["configuration"]["forward_bins"] != numerics["bins"]:
+        raise ValueError("Paper forward grid must match the UQ baseline")
+    for name, digest_ in uq["source_hashes"].items():
+        if forward["source_hashes"].get(name) != digest_:
+            raise ValueError(f"Different shared numerical source: {name}")
     for name in ("nominal.csv","mc_summary.csv","pce1_summary.csv","pce2_summary.csv"):
         if sha(base/name) != uq["numerical_files"][name]:
             raise ValueError(f"UQ table differs from its numerical producer: {name}")

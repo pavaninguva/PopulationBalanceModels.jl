@@ -21,7 +21,7 @@ For a direct solution of time-independent balances, see
 continuous crystallizer and parameter continuation.
 
 The [case studies](case_studies/index.md) develop cooling crystallization,
-lipid nanoparticle formation, growth in two particle dimensions, and
+growth in two particle dimensions, and
 [stem-cell marker dynamics](case_studies/stem_cells.md). For fitting
 models to data, see [Parameter estimation](inference.md). Signatures and
 extension hooks are collected in the [API reference](api.md) and

@@ -17,7 +17,6 @@ jobs:
       JULIA_NUM_PRECOMPILE_TASKS: '1'
       JULIA_PKG_PRECOMPILE_AUTO: '0'
       OPENBLAS_NUM_THREADS: '1'
-      MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,6 +31,7 @@ jobs:
           import os, sys
           with open(os.environ["GITHUB_ENV"], "a") as stream:
               stream.write("JULIA_PYTHONCALL_EXE=" + sys.executable + "\n")
+              stream.write("MPLCONFIGDIR=" + os.path.join(os.environ["RUNNER_TEMP"], "matplotlib") + "\n")
       - name: Fetch retained plotting inputs (no numerical calculations)
         run: python tools/retained_data.py fetch --profile plotting-tests
       - uses: julia-actions/setup-julia@v2

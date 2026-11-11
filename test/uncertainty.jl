@@ -56,7 +56,7 @@ include("fixtures/example_modules.jl")
 end
 
 _load_example(:TemperatureProgrammedCrystallization, "temperature_programmed_crystallization.jl")
-@testset "Native crystallization moment recipe and DLVO material helpers" begin
+@testset "Native crystallization moment recipe" begin
     recipe=TemperatureProgrammedCrystallization
     p=recipe.parameters(density=1.293)
     T=t->303.15
@@ -75,20 +75,6 @@ _load_example(:TemperatureProgrammedCrystallization, "temperature_programmed_cry
     temperature=recipe.linear_temperature([0.,1.,3.],[50.,30.,20.])
     @test temperature(2.0)≈298.15
     @test_throws ArgumentError temperature(4.0)
-    @test CEJ2025LNP.debye_wavenumber(0.0,298.15,78.4)==0
-    @test inv(CEJ2025LNP.debye_wavenumber(1.0,298.15,78.4))*1e9≈9.612 rtol=1e-3
-    for gap in (1e-10,1e-8,1e-3)
-        u=CEJ2025LNP.vdw_energy(10e-9,20e-9,gap,1.7e-22)
-        @test u<0
-        @test u==CEJ2025LNP.vdw_energy(20e-9,10e-9,gap,1.7e-22)
-        reference=setprecision(256) do
-            a=BigFloat(10e-9);b=BigFloat(20e-9);h=BigFloat(gap)
-            z=4a*b/(h*(h+2(a+b)))
-            -BigFloat(1.7e-22)/6*(z/2+z/(2*(1+z))-log1p(z))
-        end
-        @test u≈Float64(reference) rtol=1e-12
-    end
-    @test_throws ArgumentError CEJ2025LNP.vdw_energy(10e-9,20e-9,0.0,1.7e-22)
 end
 
 @testset "Forward error must be small relative to measurement uncertainty" begin

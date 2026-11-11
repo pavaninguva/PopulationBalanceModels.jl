@@ -111,7 +111,7 @@ beta_interval(d,a,b)=a>=b ? 0. : a>.5 ? ccdf(d,a)-ccdf(d,b) : cdf(d,b)-cdf(d,a)
     @test sum(g.centers.*births)≈parent rtol=1e-12
 end
 
-@testset "Joint initialization, signed transport and checked LNP startup" begin
+@testset "Joint initialization and signed transport" begin
     s=TUTORIALS[:transport]
     g=Grid2D(range(0.,2.;length=13),range(0.,2.;length=13))
     boundary=SizeBC(OpenBoundary(),NoFlux())
@@ -128,15 +128,6 @@ end
     solution=latest(simulate,pb;method=SSPRK33(),dt,saveat=[0.,.02],check_nonnegative=false)
     @test diagnostics(solution).settings.check_nonnegative===false
     @test only(observe(MomentObservable((0,0)),solution))≈sum(pb.u0) atol=3e-14
-
-    s=TUTORIALS[:nanoparticles]
-    solution=latest(simulate,remake(s.problem;tspan=(0.,2e-8));method=SSPRK33(),dt=1e-8,saveat=[0.,1e-8,2e-8])
-    @test solution.steps==2 && all(isfinite,last(solution.u))
-    @test sum(population(solution.problem,last(solution.u),:lnp))>0
-    @test bulk(solution.problem,last(solution.u),:lipid)>0
-    reference=latest(simulate,remake(TUTORIAL_REFERENCES[:nanoparticles];tspan=(0.,2e-8));
-        method=SSPRK33(),dt=1e-8,saveat=solution.t)
-    @test last(solution.u)≈last(reference.u) rtol=5e-13 atol=1e-15
 end
 
 if Base.find_package("Optim")!==nothing

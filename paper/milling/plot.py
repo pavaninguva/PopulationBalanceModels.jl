@@ -27,10 +27,10 @@ def milling(input_path=None):
     if set(forward["bins"]) != {cfg["forward_bins"]}:
         raise ValueError("The forward figure must contain only the selected grid")
     info["display_conventions"] = dict(
-        forward="One conservative fixed-pivot/CVODE-BDF scheme; 100 power-grid pivots; two constant speeds",
+        forward="Same numerical model as UQ: 100 geometric volume pivots, integrated lognormal feed, 8-point daughter quadrature and CVODE BDF; two constant speeds",
         forward_median="Instantaneous outlet volume median; linear diameter interpolation of the pivot-volume CDF, as in the UQ example",
         reference="Barrasso (2013) Figure 7 simulation markers; original graph readings, not experimental data",
-        uq="Original 12,000-draw MC, 12-point PCE1 and 32-point PCE2 summaries; full Gaussian input law",
+        uq="12,000-draw MC, 12-point PCE1 and 32-point PCE2 summaries from the shared numerical model; full Gaussian input law",
         bands="Pointwise 2.5/97.5% output quantiles and approximate mean +/-1.96 output SD, not confidence intervals on the mean",
         timing="No new simulations or timings in this redraw; original numerical producers are retained")
 

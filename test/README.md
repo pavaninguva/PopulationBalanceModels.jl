@@ -38,7 +38,7 @@ residuals; it does not fit, sample, advance a case study or write results. In an
 environment with Optim and NonlinearSolve it also constructs the stationary
 estimation example. Long benchmark/reproduction commands are separate.
 
-`julia --project=docs test/case_study_scripts.jl` checks all ten authored
+`julia --project=docs test/case_study_scripts.jl` checks all nine authored
 walkthroughs, verbatim display/download copies, portable relative companions,
 physical inputs, initial integrals and representative rates against maintained
 examples. Protein additionally checks calibration/test exclusion, normalized
@@ -82,10 +82,22 @@ propagation. `protein_parallel.jl` checks joint reassessment and retained-output
 protection without running protein calibration or sampling. Minimum/current Julia jobs, normal compiled-module
 sensitivity checks, and selective JET analysis remain in CI.
 
+The minimum Julia 1.10.0 Linux job uses Ubuntu 24.04: its bundled libopenlibm
+requests an executable stack that newer glibc releases reject before tests
+start ([upstream issue](https://github.com/JuliaLang/julia/issues/57250)). The
+other Linux core jobs keep `ubuntu-latest`; all six core combinations remain.
+
 Sensitivity CI resolves and precompiles its dependencies in one process, then
 runs the tests in a fresh process with the same project. Its cache keeps package
 sources and artifacts, but excludes compiled images; normal Julia precompilation
-remains enabled. Each job prints Julia/dependency versions and retains its
+remains enabled. This job uses `--cpu-target=generic` for preparation and tests,
+and `JULIA_CPU_TARGET=generic` for package images. This avoids the observed
+Julia 1.13.3/LLVM 20 `VPScalarPHIRecipe` compilation crash on Ice Lake when
+differentiating parameter-dependent initialization. Optimization stays at its
+normal level; no tests, derivative paths or tolerances are disabled. The core
+and other extension jobs retain native compilation coverage. This is a CI
+compiler workaround, not a change to initialization or sensitivity algorithms.
+Each job prints Julia/dependency versions and retains its
 `Project.toml` and `Manifest.toml`, including on failure. This distinguishes
 environment/precompilation failures from failed sensitivity assertions.
 
@@ -93,8 +105,8 @@ To reproduce that separation from the repository root:
 
 ```sh
 PBM_SENSITIVITY_ENV=/tmp/pbm-sensitivity-env
-JULIA_NUM_PRECOMPILE_TASKS=1 julia --project="$PBM_SENSITIVITY_ENV" -e 'import Pkg; Pkg.develop(path=pwd()); Pkg.add(["Optim", "SciMLBase", "SciMLSensitivity", "ReverseDiff", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff"]); Pkg.status(;mode=Pkg.PKGMODE_MANIFEST); Pkg.precompile(;strict=true)'
-julia --project="$PBM_SENSITIVITY_ENV" test/sensitivity_integration.jl
+JULIA_CPU_TARGET=generic JULIA_NUM_PRECOMPILE_TASKS=1 julia --cpu-target=generic --project="$PBM_SENSITIVITY_ENV" -e 'import Pkg; Pkg.develop(path=pwd()); Pkg.add(["Optim", "SciMLBase", "SciMLSensitivity", "ReverseDiff", "OrdinaryDiffEqTsit5", "Distributions", "ForwardDiff"]); Pkg.status(;mode=Pkg.PKGMODE_MANIFEST); Pkg.precompile(;strict=true)'
+JULIA_CPU_TARGET=generic julia --cpu-target=generic --project="$PBM_SENSITIVITY_ENV" test/sensitivity_integration.jl
 ```
 
 Use selective imports in shared test processes. For example, importing all of

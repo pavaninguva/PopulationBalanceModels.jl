@@ -16,10 +16,66 @@
     "design": null,
     "solves": 9,
     "requested": 9,
-    "setup_seconds": 0.004362134,
-    "solve_seconds": 0.17332848699999998,
-    "observation_seconds": 0.0043668000000000005,
-    "total_seconds": 0.182263757,
+    "integration_work": [
+        {
+            "accepted_steps": 695,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 727,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 743,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 798,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 742,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 656,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 672,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 570,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 646,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        }
+    ],
+    "setup_seconds": 0.0021729979999999998,
+    "solve_seconds": 0.11358321500000002,
+    "observation_seconds": 0.002647446,
+    "total_seconds": 0.118569095,
     "successful": 9,
     "failed": 0,
     "failures": [

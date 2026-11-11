@@ -60,7 +60,7 @@ include("case_study_scripts.jl")
 
 @testset "Direct tutorial plotting recipes use prepared numerical objects" begin
     for name in (:constant_growth,:crystallization,:moment_crystallization,
-                 :continuous_precipitation,:stem_cells,:nanoparticles,:transport)
+                 :continuous_precipitation,:stem_cells,:transport)
         s=TUTORIALS[name]
         solution = if name===:constant_growth
             s.solution
@@ -69,8 +69,6 @@ include("case_study_scripts.jl")
         elseif name===:stem_cells
             latest(simulate,remake(s.problem;tspan=(0.,.05));method=SSPRK33(),dt=s.dt,
                 negative_tolerance=0.,saveat=[0.,.05])
-        elseif name===:nanoparticles
-            latest(simulate,remake(s.problem;tspan=(0.,1e-8));method=SSPRK33(),dt=1e-8,saveat=[0.,1e-8])
         elseif name===:transport
             latest(simulate,remake(s.problem;tspan=(0.,.02));method=SSPRK33(),dt=s.dt,
                 check_nonnegative=false,saveat=[0.,.02])
@@ -89,8 +87,6 @@ include("case_study_scripts.jl")
             [plot_field(solution;orientation=:internal_x,xlabel="First coordinate",ylabel="Second coordinate")]
         elseif name===:moment_crystallization
             [plot_observable(solution,MomentObservable(0);xlabel="Time (s)",ylabel="Total number")]
-        elseif name===:nanoparticles
-            [plot_observable(solution,BulkObservable(:lipid);xlabel="Time (s)",ylabel="Dissolved lipid")]
         elseif name===:crystallization
             [plot_distribution(solution;population=:crystals,xlabel="Length (micrometres)"),
              plot_observable(solution,BulkObservable(:c);ylabel="Solute mass / water mass")]

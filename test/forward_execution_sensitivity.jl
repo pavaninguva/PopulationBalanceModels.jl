@@ -14,6 +14,12 @@ import Distributions
         ex=InferenceExperiment(:decay,base,m;solver)
         problem=EstimationProblem(specs,(ex,))
         z=initial_coordinates(problem)
+        # Uniform number density gives N*[0.4,0.6]. In log coordinates its
+        # initial Jacobian has a zero k column and N*[0.4,0.6] in the N column;
+        # the second derivative of its total with respect to log(N) is N.
+        initial=q->vec(PopulationBalanceModels._experiment_problem(problem,q,ex).u0)
+        @test PopulationBalanceModels._differentiate_jacobian(initial,z)≈[0. .8;0. 1.2] atol=2e-15
+        @test ForwardDiff.hessian(q->sum(initial(q)),z)≈[0. 0.;0. 2.] atol=2e-15
         # The likelihood residual vanishes; the transformed lognormal priors
         # also have zero gradient at these z medians.
         counts=PopulationBalanceModels._InferenceCounts()

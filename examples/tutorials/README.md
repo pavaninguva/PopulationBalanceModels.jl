@@ -1,8 +1,9 @@
 # Case-study walkthroughs
 
-These authored files are the source of the manual's complete scripts and their
-downloads. `docs/case_study_scripts.jl` reads them verbatim; it does not assemble
-programs from benchmark modules. Run from a checkout with its environment active:
+These authored files supply the manual's complete scripts and downloads.
+`docs/case_study_scripts.jl` reads them verbatim; it does not assemble programs
+from benchmark modules. Run from a
+checkout with its environment active:
 
 ```sh
 julia --project=. examples/tutorials/constant_growth.jl
@@ -11,7 +12,6 @@ julia --project=. examples/tutorials/moment_crystallization.jl
 julia --project=. examples/tutorials/continuous_precipitation.jl
 julia --project=. examples/tutorials/stem_cells.jl
 julia --project=. examples/tutorials/transport.jl
-julia --project=. examples/tutorials/nanoparticles.jl
 julia --project=docs examples/tutorials/estimating_growth.jl
 julia --project=docs examples/tutorials/protein_crystallization.jl
 ```
@@ -56,7 +56,6 @@ population. Counts/cargo at differentiation exit are not another population.
 | Protein | `../support/protein_data.jl`: original CSV reading and fixed split; `../support/protein_execution.jl`: checked interval solver and prescribed calibration starts |
 | Stem cells | `stem_cell_accounting.jl`: optional complete diagnostic balances |
 | Growth estimation | `../support/affine_growth_reference.jl`: exact densities/bin integrals and seeded synthetic point data |
-| Nanoparticles | `../support/lnp_material.jl`, `lnp_attachment.jl`: material formulas and parameter-specific DLVO preparation; optional `lnp_stiff_execution.jl` for the existing specialized long-time path |
 | Milling | `../support/milling_model.jl`, `milling_solver.jl`: daughter projection, classifier, median and constrained/material-coordinate BDF; `milling_propagation.jl` for MC/PCE stages |
 
 When downloading individual files, preserve this layout (or use a checkout):

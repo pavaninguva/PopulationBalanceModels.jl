@@ -180,6 +180,8 @@ class RetainedData(unittest.TestCase):
             self.assertFalse(item['path'].startswith(('src/', 'ext/', 'python/', 'examples/')))
             self.assertNotEqual(Path(item['path']).suffix, '.jl')
             self.assertFalse(item['path'].startswith('paper/') and '/figures/' in item['path'])
+            self.assertFalse(item['path'].startswith(('docs/src/assets/milling_uncertainty/',
+                                                     'paper/milling/')))
             self.assertFalse(item['path'].startswith('docs/src/assets/constant_growth/') and
                              Path(item['path']).stem in ('solutions','performance','observed_orders','timings') and
                              Path(item['path']).suffix in ('.png','.pdf','.svg'))

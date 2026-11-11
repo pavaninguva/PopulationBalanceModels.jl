@@ -1,11 +1,11 @@
-"""Read authored walkthroughs; displayed code and downloads are identical."""
+"""Read authored tutorials; manual pages and downloads use the same source."""
 module CaseStudyScripts
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 const CASES = (:constant_growth, :crystallization, :moment_crystallization,
     :continuous_precipitation, :protein_crystallization, :stem_cells,
-    :nanoparticles, :transport, :estimating_growth, :milling_uncertainty)
+    :transport, :estimating_growth, :milling_uncertainty)
 function source_path(name::Symbol; root=ROOT)
-    name in CASES || throw(ArgumentError("Unknown case study: $name"))
+    name in CASES || throw(ArgumentError("Unknown tutorial: $name"))
     joinpath(root, "examples", "tutorials", "$name.jl")
 end
 script(name::Symbol; root=ROOT) = read(source_path(name; root), String)

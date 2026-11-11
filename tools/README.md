@@ -18,7 +18,7 @@ plotting tests. `all` fetches every payload. Use repeatable `--group` arguments
 for individual cases; `list` reports their sizes.
 
 The [inventory](retained_data.json) pins an immutable Git revision and records
-the byte count and SHA-256 of each of 646 payloads (242.5 MiB before compression).
+the byte count and SHA-256 of each of 585 payloads (226.3 MiB before compression).
 The revision identifies their **storage location**, not a new scientific producer.
 Original producer manifests, settings, project snapshots, source hashes and
 scientific qualifications remain unchanged in the repository and archived files.
@@ -42,7 +42,11 @@ existing plot-only and retained-data check commands work after preparation.
 The current paper PNGs and four current Gaussian manual figures stay with the
 source and are excluded from this download inventory, so a data fetch cannot
 overwrite them. The small Gaussian figure-selection tables are also bundled;
-they preserve the original numerical producer identities and timings.
+they preserve the original numerical producer identities and timings. The
+current milling numerical exports and manual PNGs are bundled as well: its
+deterministic comparison and UQ were recalculated with one numerical model.
+Their new production receipts replace the earlier separate configurations;
+the pinned historical snapshot cannot overwrite the new results.
 For a new numerical production run, use its documented fresh output directory
 and preserve its own provenance. A new snapshot needs a deliberately reviewed
 inventory; do not update historical producer hashes to fit current code.

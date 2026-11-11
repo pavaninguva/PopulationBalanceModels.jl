@@ -142,6 +142,8 @@ class MillingData(unittest.TestCase):
         import hashlib,json
         forward,uq = self.runs['forward'][1],self.runs['uq'][1]
         self.assertEqual(uq['settings']['mc_samples'],12000)
+        self.assertEqual(forward['numerics'],uq['numerics'])
+        self.assertEqual(self.info['numerics'],uq['numerics'])
         self.assertEqual(self.info['configuration']['forward_statistic'],'pivot_CDF_d50_um')
         data=plots.table(self.base/'forward.csv')
         self.assertEqual(set(data['bins']),{100})
@@ -190,6 +192,27 @@ class MillingData(unittest.TestCase):
             with open(target/'uq_producer.json','a') as stream: stream.write('\n')
             with self.assertRaisesRegex(ValueError,'Changed numerical data'):
                 plots.load_case(2,check_checkout=False,input_path=target)
+
+    def test_mismatched_numerics_or_shared_source_are_rejected(self):
+        import hashlib,json
+        for change in ('grid','quadrature','source'):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as tmp:
+                target=Path(tmp)/'data'
+                shutil.copytree(self.base,target)
+                path=target/'forward_producer.json'
+                producer=json.loads(path.read_text())
+                if change=='grid':
+                    producer['numerics']['grid']='power'
+                elif change=='quadrature':
+                    producer['numerics']['daughter_quadrature_order']=24
+                else:
+                    producer['source_hashes']['examples/support/milling_model.jl']='0'*64
+                path.write_text(json.dumps(producer))
+                index=json.loads((target/'index.json').read_text())
+                index['files']['forward_producer.json']=hashlib.sha256(path.read_bytes()).hexdigest()
+                (target/'index.json').write_text(json.dumps(index))
+                with self.assertRaisesRegex(ValueError,'numerical configuration|shared numerical source'):
+                    plots.load_case(2,check_checkout=False,input_path=target)
 
 class PrecipitationData(unittest.TestCase):
     def test_separate_refinement_coordinates_and_reference_controls(self):

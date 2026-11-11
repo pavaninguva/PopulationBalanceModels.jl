@@ -17,7 +17,7 @@ downloads.
 | Directory | Case | Saved results |
 |:--|:--|:--|
 | [growth/](growth/) | One translating Gaussian: growth and time schemes | Compact retained figure selection bundled with the source |
-| [milling/](milling/) | Cone-mill forward comparison and MC/PCE uncertainty | Retained production curves and original producers |
+| [milling/](milling/) | Cone-mill forward comparison and MC/PCE uncertainty | Bundled production curves from one numerical model |
 | [precipitation/](precipitation/) | Tubular precipitation | Logarithmic WENO5 / axial MUSCL refinement study |
 | [protein/](protein/) | Fixed-γ CNT, constant D0 and growth-dependent GRD | MAPs, MCMC draws and latent predictions available |
 
@@ -83,13 +83,18 @@ python test/paper_data.py --case 2 --retained
 The forward figure shows outlet d50 and hold-up for 3350/4923 RPM using one
 100-pivot fixed-pivot/CVODE-BDF calculation and the UQ example's pivot-CDF
 median convention. Reference points are published simulation readings, not
-experiments. Its power grid, initial feed inventory and point-normalized feed
-remain distinct from the geometric-grid, empty-start UQ calculation. The UQ
+experiments. Both calculations call one forward builder with 100 geometric volume
+pivots from 6.54×10⁻¹⁷ to 10⁻³ m³, integrated lognormal feed, eight-point daughter
+quadrature, analytic fines, the same outlet-median rule and checked CVODE BDF
+tolerances. The initial feed inventory and constant speeds describe the Barrasso
+experiment; the UQ experiment starts empty and changes speed at 30 s. The UQ
 figure reuses the manual's three-panel MC/PCE comparison, including the full
 12,000-draw MC ensemble. It does not rerun that ensemble or reinterpret the
-stored output bands. Compact curve tables and unchanged producer manifests
+stored output bands. Compact curve tables and their production receipts
 live in `milling/data/`; full samples, coefficients and verification exports
-remain in the original documented reproduction dataset.
+are bundled under `docs/src/assets/milling_uncertainty/data/`. Both datasets were
+recalculated with the shared builder. Staging checks their numerical settings
+and shared-source hashes before selecting curves.
 
 A deliberate recalculation reuses the shared example builders/drivers and
 requires a fresh directory:
@@ -99,7 +104,7 @@ julia --project=paper paper/milling/run.jl --full --output=/tmp/milling-paper
 python paper/milling/plot.py --input=/tmp/milling-paper
 ```
 
-This executes the original forward verification (including its supporting grid
+This executes the shared-model forward verification (including its supporting grid
 checks) and full MC/PCE study; it can be expensive. Only the selected 100-pivot
 forward curves and the three UQ summaries enter the two paper figures.
 Staging and plotting validate retained numerical hashes without asserting

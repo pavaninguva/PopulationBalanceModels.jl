@@ -38,6 +38,12 @@ function stage(forward, uq, output)
     cfg = TOML.parsefile(CONFIG)
     f, u = producer(forward,"forward_comparison"), producer(uq,"production")
     u.settings.mc_samples == 12000 || error("Paper UQ needs the completed 12,000-realization ensemble")
+    haskey(f,:numerics) && haskey(u,:numerics) && f.numerics == u.numerics ||
+        error("Forward comparison and UQ must have the same numerical configuration; regenerate both producers")
+    cfg["forward_bins"] == u.numerics.bins || error("Paper forward grid must match the UQ baseline")
+    for (name,digest) in pairs(u.source_hashes)
+        get(f.source_hashes,name,nothing) == digest || error("Different shared numerical source: $name")
+    end
     cfg["forward_bins"] in f.configuration.calculation.bins || error("Missing selected forward grid")
     reference = joinpath(ROOT,cfg["reference_source"])
     sha(reference) == f.configuration.reference_sha256 || error("Changed reference readings")
@@ -76,7 +82,8 @@ function stage(forward, uq, output)
             filter_bins=cfg["forward_bins"],statistic=cfg["forward_statistic"],
             transformation="Row selection only; stored ordinates unchanged"),
         reference_sha256=sha(reference),
-        producer_note="Original producers are preserved byte-for-byte. Staging/redrawing does not assert current-source numerical equivalence.")
+        numerics=u.numerics,
+        producer_note="The comparison and UQ have the same recorded numerical configuration and shared sources. Producers are preserved byte-for-byte; staging does not assert current-checkout equivalence.")
     open(io -> JSON3.pretty(io,record),index,"w")
     println("Staged production milling curves and original producer records: ",output)
     output

@@ -73,7 +73,6 @@ through `Birth` and `PBMSystem.bulk_rhs`. Neither `Dilution` nor its keyword
 label creates a feed or a solute equation. The hazard callback may depend on
 size, but homogeneous volume change and well-mixed withdrawal normally do not.
 
-The [LNP case](../case_studies/nanoparticles.md) combines prescribed solvent
-history with a volume-consistent particle/free-lipid balance. Death and dilution
-need not have the same bulk exchange policy. Their implementation hooks are in
-`src/numerics/sectional/local_sources.jl` and `term_dispatch.jl`.
+Death and dilution need not have the same bulk exchange policy. Their
+implementation hooks are in `src/numerics/sectional/local_sources.jl` and
+`term_dispatch.jl`.

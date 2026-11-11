@@ -1,7 +1,6 @@
 include("fixtures/example_modules.jl")
 using ForwardDiff, LinearAlgebra
 _load_example(:Gunawan2004Case2, "papers/gunawan2004_case2.jl")
-_load_example(:CEJ2025LNP, "papers/cej2025_lnp.jl")
 
 @testset "Paper model recipes" begin
     @test Gunawan2004Case2.temperature(0.0)==32.0
@@ -22,53 +21,6 @@ _load_example(:CEJ2025LNP, "papers/cej2025_lnp.jl")
     Gunawan2004Case2.moment_rhs!(dref,ref,problem.p,1.0)
     @test dref[5]+problem.p.rho*dref[4]≈0 atol=1e-20
     @test dref[1]>0
-    @test CEJ2025LNP.aqueous_fraction(0.0,3.0,0.01)==0.0
-    @test CEJ2025LNP.aqueous_fraction(1.0,3.0,0.001)≈0.75
-    @test CEJ2025LNP.aqueous_fraction(0.0,3.0,0.0)≈0.75
-    @test CEJ2025LNP.nucleation_rate(1.0,298.15,0.01,5e-28,2e22)==0
-    @test isinf(CEJ2025LNP.critical_length(1.0,298.15,0.01,5e-28))
-    @test CEJ2025LNP.brownian_kernel(10e-9,10e-9,298.15,1e-3)≈8*CEJ2025LNP.kB*298.15/(3e-3)
-    @test CEJ2025LNP.loglinear_mole_solubility(1e-8,1e-3,0.5)≈sqrt(1e-11)
-    g=Grid1D(exp.(range(log(1e-9),log(2e-6);length=41));coordinate=:diameter)
-    N=zeros(length(g));N[18]=1e14
-    cej=CEJ2025LNP.build(;grid=g,initial_distribution=N,initial_lipid=10.0,FRR=3.0,tau=0.01,
-        temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->10exp(-8w),
-        equilibrium_ratio=(L,w,T)->1.0,attachment_without_peg=(L,M,w,T)->1.0,
-        molecular_volume=5e-28,particle_density=1000.0,nucleation_width=1e-9,
-        nucleation_normalization=:total_rate,tspan=(0.0,0.02),kg=0.05)
-    derivative=similar(cej.u0);time=0.01
-    rhs!(derivative,cej.u0,cej.operator,cej.p,time)
-    fields=cej.operator.system.fields(cej.p,time)
-    total=bulk(cej,cej.u0,:lipid)+cej.p.rho*π/6*moment(g,population(cej,cej.u0,:lnp),3)
-    change=bulk(cej,derivative,:lipid)+cej.p.rho*π/6*moment(g,population(cej,derivative,:lnp),3)
-    @test change≈-fields.dilution*total rtol=1e-12
-    @test all(isfinite,derivative)
-    @test CEJ2025LNP.paper_intensity_mean(g,N)≈g.centers[18]
-end
-
-@testset "DLVO reconstruction and LNP mechanism accounting" begin
-    kw=(temperature=298.15,ionic_strength=75.,relative_permittivity=65.)
-    @test CEJ2025LNP.dlvo_attachment(25e-9,75e-9;kw...,potential=0.,hamaker=0.)≈1 atol=1e-14
-    a=CEJ2025LNP.dlvo_attachment(25e-9,75e-9;kw...,order=128)
-    b=CEJ2025LNP.dlvo_attachment(75e-9,25e-9;kw...,order=128)
-    refined=CEJ2025LNP.dlvo_attachment(25e-9,75e-9;kw...,order=256)
-    @test a≈b rtol=1e-13
-    @test a≈refined rtol=0.005
-    @test CEJ2025LNP.debye_wavenumber(100.,298.15,78.4)≈10CEJ2025LNP.debye_wavenumber(1.,298.15,78.4)
-    @test_throws ArgumentError CEJ2025LNP.dlvo_attachment(0.,1.;kw...)
-    g=Grid1D(exp.(range(log(1e-9),log(2e-6);length=21));coordinate=:diameter)
-    N=zeros(length(g));N[10]=1e15;N[end]=1e10
-    prob=CEJ2025LNP.build(;grid=g,initial_distribution=N,initial_lipid=10.,FRR=3.,tau=0.,
-        temperature=t->298.15,viscosity=(w,T)->1e-3,solubility=(w,T)->.01,
-        equilibrium_ratio=(L,w,T)->1.,attachment_without_peg=(L,M,w,T)->1.,
-        molecular_volume=5e-28,particle_density=1000.,nucleation_width=1e-9,
-        nucleation_normalization=:total_rate,tspan=(0.,.02),kg=.05,overflow=:discard,track_consumption=true)
-    d=similar(prob.u0);rhs!(d,prob.u0,prob.operator,prob.p,0.)
-    @test bulk(prob,d,:lipid)+bulk(prob,d,:nucleated_lipid)+bulk(prob,d,:grown_lipid)≈0 atol=1e-10
-    particle_mass_rate=prob.p.rho*π/6*moment(g,population(prob,d,:lnp),3)
-    @test particle_mass_rate+bulk(prob,d,:lipid)+bulk(prob,d,:escaped_lipid)≈0 atol=1e-10
-    @test bulk(prob,d,:escaped_lipid)>0
-    @test bulk(prob,d,:nucleated_lipid)>0
 end
 
 _load_example(:ContinuousPrecipitation, "continuous_precipitation.jl")

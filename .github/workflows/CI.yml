@@ -11,6 +11,15 @@ jobs:
       matrix:
         version: ['1.10.0', '1.10', '1']
         os: [ubuntu-latest, windows-latest]
+        # Julia 1.10.0's libopenlibm requests an executable stack, which the
+        # newer glibc on Ubuntu 26.04 rejects before tests can start.
+        # https://github.com/JuliaLang/julia/issues/57250
+        exclude:
+          - version: '1.10.0'
+            os: ubuntu-latest
+        include:
+          - version: '1.10.0'
+            os: ubuntu-24.04
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -92,6 +101,11 @@ jobs:
       JULIA_LOAD_PATH: '@:@stdlib'
       JULIA_PKG_PRECOMPILE_AUTO: '0'
       JULIA_NUM_PRECOMPILE_TASKS: '1'
+      # Julia 1.13 / LLVM 20 can crash in VPScalarPHIRecipe while compiling
+      # dual-valued initial-state Jacobians on Ice Lake. Use portable code
+      # generation, with normal optimization and every derivative assertion.
+      # Core and other extension jobs still exercise native compilation.
+      JULIA_CPU_TARGET: generic
       OPENBLAS_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
@@ -106,7 +120,7 @@ jobs:
       - name: Prepare sensitivity environment
         env:
           JULIA_PROJECT: ${{ runner.temp }}/pbm-sensitivities
-        shell: julia --startup-file=no --color=yes {0}
+        shell: julia --startup-file=no --cpu-target=generic --color=yes {0}
         run: |
           import Pkg
           using InteractiveUtils
@@ -121,7 +135,7 @@ jobs:
       - name: Continuous forward and adjoint inference tests
         env:
           JULIA_PROJECT: ${{ runner.temp }}/pbm-sensitivities
-        shell: julia --startup-file=no --color=yes {0}
+        shell: julia --startup-file=no --cpu-target=generic --color=yes {0}
         run: |
           using InteractiveUtils
           versioninfo()
