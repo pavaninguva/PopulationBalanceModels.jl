@@ -72,6 +72,11 @@ def plot_forward(*, usetex, preview=False):
     manifest = json.loads((folder / "provenance.json").read_text())
     if not manifest["complete"] or manifest["mode"] != "forward_comparison":
         raise ValueError("Expected completed Barrasso forward-comparison results")
+    uq = json.loads((ASSETS / "data/provenance.json").read_text())
+    if not uq.get("numerics") or manifest.get("numerics") != uq["numerics"]:
+        raise ValueError("Forward comparison and UQ must have the same numerical configuration")
+    if any(manifest["source_hashes"].get(name) != digest for name, digest in uq["source_hashes"].items()):
+        raise ValueError("Forward comparison and UQ have different shared numerical sources")
     for name, digest in manifest["numerical_files"].items():
         if hashlib.sha256((folder / name).read_bytes()).hexdigest() != digest:
             raise ValueError(f"Changed forward export: {name}")
@@ -83,9 +88,9 @@ def plot_forward(*, usetex, preview=False):
         fig, axes = plt.subplots(2, 2, figsize=(7, 4.7), sharex=True)
         fig.subplots_adjust(left=.10, right=.985, top=.95, bottom=.23,
                             hspace=.29, wspace=.26)
-        settings = [(100, "pivot_CDF_d50_um", "pivot_CDF", "--"),
-                    (100, "finite_bin_d50_um", "finite_bin_CDF", ":"),
-                    (800, "finite_bin_d50_um", "finite_bin_CDF", "-")]
+        settings = [(100, "pivot_CDF_d50_um", "pivot_CDF", "-"),
+                    (400, "pivot_CDF_d50_um", "pivot_CDF", ":"),
+                    (800, "pivot_CDF_d50_um", "pivot_CDF", "--")]
         speed_colors = {3350: "#24679a", 4923: "#26816b"}
         # genfromtxt's default dtype is numeric: use explicit string fields for the
         # source labels while retaining their original, unrounded coordinates.
@@ -99,13 +104,11 @@ def plot_forward(*, usetex, preview=False):
                            (points["quantity"] == "d50_um") & (points["statistic"] == statistic)]
                 axes[1, 0].plot(e["time_s"], e["signed_difference"], color=color,
                                 ls=linestyle, lw=.9)
-                # Both median observations use exactly the same inventory state.
-                if statistic == "pivot_CDF" or bins == 800:
-                    axes[0, 1].plot(d["time_s"], d["holdup_g"], color=color, ls=linestyle, lw=1.)
-                    e = points[(points["rpm"] == rpm) & (points["bins"] == bins) &
-                               (points["quantity"] == "holdup_g")]
-                    axes[1, 1].plot(e["time_s"], e["signed_difference"], color=color,
-                                    ls=linestyle, lw=.9)
+                axes[0, 1].plot(d["time_s"], d["holdup_g"], color=color, ls=linestyle, lw=1.)
+                e = points[(points["rpm"] == rpm) & (points["bins"] == bins) &
+                           (points["quantity"] == "holdup_g")]
+                axes[1, 1].plot(e["time_s"], e["signed_difference"], color=color,
+                                ls=linestyle, lw=.9)
             marker = "^" if rpm == 3350 else "s"
             for axis, quantity in zip(axes[0], ("d50_um", "holdup_g")):
                 r = reference[(reference["rpm"] == rpm) & (reference["quantity"] == quantity)]
@@ -127,9 +130,9 @@ def plot_forward(*, usetex, preview=False):
                    for rpm, c in speed_colors.items()]
         handles += [Line2D([], [], color=".2", ls="none", marker="s", mfc="white", ms=3.2,
                            label="Barrasso Figure 7"),
-                    Line2D([], [], color=".2", ls="--", label="100 pivots; pivot CDF"),
-                    Line2D([], [], color=".2", ls=":", label="100 pivots; finite-bin CDF"),
-                    Line2D([], [], color=".2", ls="-", label="800 pivots; finite-bin CDF")]
+                    Line2D([], [], color=".2", ls="-", label="100 geometric pivots (UQ grid)"),
+                    Line2D([], [], color=".2", ls=":", label="400 geometric pivots"),
+                    Line2D([], [], color=".2", ls="--", label="800 geometric pivots")]
         fig.legend(handles=handles, loc="lower center", ncol=3, fontsize=7.5,
                    bbox_to_anchor=(.52, .015), columnspacing=1.4, handlelength=2.4)
         export_figure(fig, output, "milling_barrasso_figure7")
@@ -138,15 +141,16 @@ def plot_forward(*, usetex, preview=False):
             "Figure 7. (a,b) Instantaneous volume-weighted outlet median and mill hold-up at "
             "3350/4923 RPM; symbols are published simulation markers extracted from the original "
             "vector PDF, not experimental data. (c,d) Signed package-minus-source differences at "
-            "the 22 noninitial source times. The 100-pivot power grid and printed point-normalized "
-            "feed are used without fitting kinetic parameters. An initial inventory of one second "
-            "of feed (7.4 g) is a declared reconstruction. Dashed/dotted diameter curves change only "
-            "the observation reconstruction; solid curves additionally refine to 800 pivots at "
-            "fixed endpoint volumes. Hold-up is independent of the median reconstruction. "
-            "All package curves use the shared conservative model and checked CVODE BDF adapter. "
+            "the 22 noninitial source times. The solid 100-pivot calculation uses exactly the UQ "
+            "numerics: geometric volume pivots from 6.54e-17 to 1e-3 m3, integrated lognormal feed, "
+            "8-point positive fixed-pivot daughter quadrature, analytic fines, the pivot-volume "
+            "CDF median and checked CVODE BDF with reltol=1e-9 and abstol=1e-14 kg. "
+            "An initial inventory of one second of feed (7.4 g) is a declared reconstruction. "
+            "Dotted/dashed curves refine to 400/800 pivots at fixed endpoint volumes, with the "
+            "same observation rule. No kinetic parameters are fitted. "
             "Hold-up is close, but diameter startup and some later values differ: this is a partial "
             "reproduction, not verified equivalence to the original gPROMS implementation. "
-            "This separate calculation does not replace the retained geometric-grid UQ ensemble."
+            "Initial inventory and speed history differ between the two experiments; the numerical model is shared."
         )
         (output / "forward_caption.txt").write_text(caption + "\n")
         (output / "forward_figure_provenance.json").write_text(json.dumps({
@@ -224,7 +228,9 @@ def main():
                 "The outlet statistic is an instantaneous volume-weighted diameter median. "
                 "Empty initial mill, geometric-volume grid (100 pivots, 6.54e-17 to 1e-3 m3), "
                 "positive fixed-pivot daughter projection, and segmented CVODE BDF with reltol=1e-9, "
-                "abstol=1e-14. Initial state, upper domain and median interpolation are declared "
+                "abstol=1e-14 kg. The grid, integrated feed, 8-point daughter quadrature, fines and "
+                "median convention are identical to the Barrasso forward comparison. "
+                "Initial state, upper domain and median interpolation are declared "
                 "reconstruction choices; original random designs and unique source band degrees "
                 "of freedom are unavailable. This is not an exact replication of the published curves."
             )

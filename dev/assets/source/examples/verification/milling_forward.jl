@@ -27,91 +27,14 @@ function reference_data()
     end for line in readlines(path)[2:end]]
 end
 
-"""Fixed-endpoint refinement of Eq. (13), retaining arithmetic pivot centres."""
-function power_grid(bins)
+function problem(; bins=MU.SETTINGS["bins"], rpm=3350., order=MU.SETTINGS["daughter_quadrature_order"])
     config = TOML.parsefile(CONFIG)["calculation"]
-    x = config["first_pivot_m3"] .* range(1., config["last_grid_index"]; length=bins).^config["grid_power"]
-    edges = zeros(bins + 1)
-    edges[1] = first(x) / 2
-    for i in eachindex(x)
-        edges[i+1] = 2x[i] - edges[i]
-    end
-    Grid1D(edges; coordinate=:volume)
-end
-
-"""Prepare positive daughter hats on the power grid, without geometric-offset reuse."""
-function daughters(grid, p; order=24)
-    x = grid.centers
-    rule = PopulationBalanceModels._gauss_legendre(GaussLegendre(order))
-    eta = zeros(length(x), length(x))
-    for j in eachindex(x), i in 1:j
-        if i > 1
-            eta[i,j] += MM.hat_integral(log(x[i-1]/x[j]), log(x[i]/x[j]),
-                p.sigma, p.daughter_ratio, true, rule)
-        end
-        if i < j
-            eta[i,j] += MM.hat_integral(log(x[i]/x[j]), log(x[i+1]/x[j]),
-                p.sigma, p.daughter_ratio, false, rule)
-        end
-    end
-    norm = MM.relative_moment(1, 1., p.sigma, p.daughter_ratio)
-    low0 = [MM.relative_moment(0, x[1]/y, p.sigma, p.daughter_ratio)/norm for y in x]
-    low1 = [y*MM.relative_moment(1, x[1]/y, p.sigma, p.daughter_ratio)/norm for y in x]
-    defect = maximum(abs.(vec(x' * eta) + low1 - x) ./ x)
-    defect < 2e-12 || throw(NumericalFailure("unresolved daughter volume; increase quadrature order ($defect)"))
-    MM.MillingDaughters(copy(x), eta, low0, low1, p.sigma), defect
-end
-
-function problem(; bins=100, rpm=3350., order=24)
-    config = TOML.parsefile(CONFIG)["calculation"]
-    base = MM.build(; tf=config["final_time_s"])
-    grid = power_grid(bins)
-    x = grid.centers
-    daughter, defect = daughters(grid, base.p; order)
-    p = base.p
-    fractions = exp.(-0.5 .* ((log.(x) .- log(p.feed_median)) ./ p.feed_log_sd).^2)
-    feed = (p.mass_feed / (p.rho*p.number_scale)) .* (fractions/sum(fractions)) ./ x
-    selection = p.alpha .* (x ./ p.xref).^p.gamma
-    Q = (daughter.eta - I) * Diagonal(selection)
-    p = merge(p, (; pivots=x, edges=grid.edges, feed, selection, Q,
-        low0=daughter.underflow_number .* selection,
-        low1=daughter.underflow_volume .* selection, change_time=Inf, speed_before=rpm))
-    p = merge(p, (; retained=MM.retention(grid, p)))
-    terms = base.operator.system.populations.mill.model.terms
-    model = PBMModel(feed=terms[1],
-        breakage=Breakage(terms[2].rate, daughter; overflow=:discard), classification=terms[3])
-    op = compile(model, grid; methods=TermMethods(by_term=(breakage=MM.MillingFixedPivot(),)))
-    system = PBMSystem((mill=op,); bulk_rhs=base.operator.system.bulk_rhs,
-        nonnegative_bulk=(:discharged_mass, :fines_mass))
-    initial = config["initial_feed_duration_s"] .* feed
-    pb = PBMProblem(system, (mill=initial,), base.tspan;
-        bulk0=(discharged_mass=0., fines_mass=0.), p)
+    pb = MU.forward_problem(;bins,quadrature_order=order,tf=config["final_time_s"],
+        initial_feed_duration=config["initial_feed_duration_s"],rpm)
+    x = pb.p.pivots
+    daughter = pb.operator.system.populations.mill.model.terms[2].daughters
+    defect = maximum(abs.(vec(x' * daughter.eta) + daughter.underflow_volume - x) ./ x)
     pb, defect
-end
-
-"""Integrate the material CDF exactly for constant number density in each volume bin.
-This is an observation reconstruction, not a change to daughter deposition.
-"""
-function finite_bin_median(p, N, t)
-    q = MM.outlet(p, N, t)
-    weights = p.pivots .* q.resolved
-    all(>=(0), weights) && q.underflow_volume >= 0 ||
-        throw(NumericalFailure("negative instantaneous outlet contribution"))
-    cumulative = q.underflow_volume
-    target = (sum(weights) + cumulative) / 2
-    target > 0 || throw(NumericalFailure("empty outlet has no median"))
-    # The existing exact fines observation handles a sub-grid median.
-    target < cumulative && return MM.outlet_median(p, N, t)
-    for i in eachindex(weights)
-        next = cumulative + weights[i]
-        if next >= target && weights[i] > 0
-            fraction = (target-cumulative)/weights[i]
-            v = sqrt(p.edges[i]^2 + fraction*(p.edges[i+1]^2-p.edges[i]^2))
-            return 1e6MM.diameter(v)
-        end
-        cumulative = next
-    end
-    throw(NumericalFailure("outlet median is outside the represented bins"))
 end
 
 """Independent truncated-lognormal interval moments, rather than hat quadrature."""
@@ -171,6 +94,7 @@ end
 function run(; output=OUTPUT)
     config = TOML.parsefile(CONFIG)
     settings = config["calculation"]
+    numerics = MU.numerical_configuration()
     reference = reference_data()
     times = sort!(unique(vcat(.001, collect(1.:settings["final_time_s"]),
         [r.time for r in reference if r.time > .01])))
@@ -189,10 +113,10 @@ function run(; output=OUTPUT)
     for bins in settings["bins"], rpm in settings["speeds_rpm"]
         println("Barrasso forward comparison: $bins pivots, $rpm RPM"); flush(stdout)
         started = time_ns()
-        pb, daughter_defect = problem(; bins, rpm, order=settings["quadrature_order"])
+        pb, daughter_defect = problem(; bins, rpm, order=numerics.daughter_quadrature_order)
         setup_seconds = (time_ns()-started)/1e9
         started = time_ns()
-        sol = MS.solve(pb, times; reltol=settings["reltol"], abstol=settings["abstol_kg"])
+        sol = MS.solve(pb, times; reltol=numerics.reltol, abstol=numerics.abstol_kg)
         solve_seconds = (time_ns()-started)/1e9
         p = pb.p
         m0 = p.rho*p.number_scale*dot(p.pivots, population(pb, pb.u0, :mill))
@@ -201,18 +125,17 @@ function run(; output=OUTPUT)
             for (i, (t, u)) in enumerate(zip(times, sol.u))]
         for (i, t) in enumerate(times)
             N = population(pb, sol.u[i], :mill)
-            push!(rows, (bins, rpm, t, MM.outlet_median(p, N, t), finite_bin_median(p, N, t),
+            push!(rows, (bins, rpm, t, MM.outlet_median(p, N, t),
                 1e3material[i], defects[i], minimum(N)))
         end
         for quantity in ("d50_um", "holdup_g"), statistic in
-            (quantity == "d50_um" ? ("pivot_CDF", "finite_bin_CDF") : ("inventory",))
+            (quantity == "d50_um" ? ("pivot_CDF",) : ("inventory",))
             observations = filter(r -> r.rpm == rpm && r.quantity == quantity && r.time > .01, reference)
             differences = Float64[]
             for r in observations
                 i = findfirst(==(r.time), times)
                 N = population(pb, sol.u[i], :mill)
-                predicted = quantity == "holdup_g" ? 1e3material[i] :
-                    statistic == "pivot_CDF" ? MM.outlet_median(p, N, r.time) : finite_bin_median(p, N, r.time)
+                predicted = quantity == "holdup_g" ? 1e3material[i] : MM.outlet_median(p, N, r.time)
                 push!(differences, predicted-r.value)
                 push!(points, (bins, rpm, quantity, statistic, r.time, r.value, predicted, predicted-r.value))
             end
@@ -223,7 +146,7 @@ function run(; output=OUTPUT)
         push!(checks, (; bins, rpm, setup_seconds, solve_seconds, steps=sol.steps,
             initial_mass_kg=m0, maximum_material_error_kg=maximum(abs, defects),
             minimum_inventory=minimum(minimum.(sol.u)), daughter_defect))
-        if bins == 100
+        if bins == numerics.bins
             tight = MS.solve(pb, times; reltol=settings["check_reltol"], abstol=settings["check_abstol_kg"])
             push!(time_checks, (; rpm, maximum_d50_change_um=maximum(abs(
                 MM.outlet_median(p, population(pb, sol.u[i], :mill), t)-
@@ -236,20 +159,19 @@ function run(; output=OUTPUT)
     maximum(c.maximum_d50_change_um for c in time_checks) < 1e-3 || error("unresolved forward time integration")
     maximum(c.maximum_d50_difference_um for c in exponential_checks) < 1e-3 || error("BDF/exponential check failed")
     MU.write_csv(joinpath(output, "trajectories.csv"),
-        ["bins", "rpm", "time_s", "pivot_CDF_d50_um", "finite_bin_d50_um", "holdup_g", "material_defect_kg", "minimum_inventory"], rows)
+        ["bins", "rpm", "time_s", "pivot_CDF_d50_um", "holdup_g", "material_defect_kg", "minimum_inventory"], rows)
     MU.write_csv(joinpath(output, "reference_comparison.csv"),
         ["bins", "rpm", "quantity", "statistic", "time_s", "reference", "prediction", "signed_difference"], points)
     MU.write_csv(joinpath(output, "errors.csv"),
         ["bins", "rpm", "quantity", "statistic", "points", "rmse", "maximum_absolute_difference", "mean_absolute_relative_percent"], metrics)
     MU.write_json(joinpath(output, "checks.json"), (; solves=checks, time_refinement=time_checks, matrix_exponential=exponential_checks))
     open(joinpath(output, "comparison.md"), "w") do io
-        println(io, "| Speed (RPM) | Pivots / outlet reconstruction | Diameter RMS difference (µm) | Hold-up RMS difference (g) |")
+        println(io, "| Speed (RPM) | Geometric pivots | Diameter RMS difference (µm) | Hold-up RMS difference (g) |")
         println(io, "|--:|:--|--:|--:|")
-        for rpm in settings["speeds_rpm"], (bins, statistic) in ((100, "pivot_CDF"), (100, "finite_bin_CDF"), (800, "finite_bin_CDF"))
-            d = only(filter(r -> r[1]==bins && r[2]==rpm && r[3]=="d50_um" && r[4]==statistic, metrics))
+        for rpm in settings["speeds_rpm"], bins in (numerics.bins, last(settings["bins"]))
+            d = only(filter(r -> r[1]==bins && r[2]==rpm && r[3]=="d50_um" && r[4]=="pivot_CDF", metrics))
             h = only(filter(r -> r[1]==bins && r[2]==rpm && r[3]=="holdup_g", metrics))
-            label = statistic == "pivot_CDF" ? "pivot CDF" : "finite-bin CDF"
-            @printf(io, "| %.0f | %d / %s | %.2f | %.3f |\n", rpm, bins, label, d[6], h[6])
+            @printf(io, "| %.0f | %d | %.2f | %.3f |\n", rpm, bins, d[6], h[6])
         end
     end
     numerical_files = Dict(name => bytes2hex(sha256(read(joinpath(output, name)))) for name in
@@ -257,13 +179,13 @@ function run(; output=OUTPUT)
     versions = Dict(info.name => string(info.version) for info in values(Pkg.dependencies()) if
         info.name in ("PopulationBalanceModels", "Distributions", "Sundials", "SciMLBase", "JSON3"))
     MU.write_json(joinpath(output, "provenance.json"), (; complete=true, mode="forward_comparison",
-        revision, working_tree=status, source_hashes, numerical_files, configuration=config,
+        revision, working_tree=status, source_hashes, numerical_files, configuration=config,numerics,
         julia=string(VERSION), julia_threads=Threads.nthreads(), blas_threads=BLAS.get_num_threads(),
         cpu=Sys.cpu_info()[1].model, package_versions=versions, warmup_solves=1,
         full_solves=length(checks)+length(time_checks), matrix_exponential_checks=length(exponential_checks),
         timing_scope="One measured checked BDF solve after a separate compilation warmup; export and plotting excluded",
         result="Partial reproduction: close hold-up; diameter trajectory differs. No parameter fitting."))
-    println("Wrote independent forward comparison to $output")
+    println("Wrote shared-model forward comparison to $output")
 end
 end # module
 

@@ -60,7 +60,6 @@ and downloads those exact files. Existing download addresses under
 | Tubular precipitation | [continuous_precipitation.jl](continuous_precipitation.jl) | [Continuous precipitation](../docs/src/case_studies/continuous_precipitation.md) |
 | Isothermal CNT versus CNT + GRD | [isothermal_protein_crystallization.jl](isothermal_protein_crystallization.jl) | [Protein crystallization](../docs/src/case_studies/protein_crystallization.md) |
 | Stem-cell marker dynamics | [stem_cell_population.jl](stem_cell_population.jl) | [Stem cells](../docs/src/case_studies/stem_cells.md) |
-| Lipid nanoparticles | [shin_lnp_reproduction.jl](shin_lnp_reproduction.jl), [shin_lnp_long_time.jl](shin_lnp_long_time.jl) | [Nanoparticles](../docs/src/case_studies/nanoparticles.md) |
 | Two-coordinate variable growth | [inguva_braatz_case2.jl](inguva_braatz_case2.jl) | [Two-dimensional growth](../docs/src/case_studies/transport.md) |
 | Synthetic Bayesian growth fit | [estimate_size_dependent_growth.jl](estimate_size_dependent_growth.jl) | [Growth estimation](../docs/src/case_studies/estimating_growth.md) |
 
@@ -68,7 +67,7 @@ and downloads those exact files. Existing download addresses under
 and plotter for each case. The independent [paper workflow](../paper/README.md)
 reuses these builders, with its own configurations, results and figures.
 `support/` contains reporting, sampling and benchmark helpers, not alternative
-physical solvers. `papers/` contains the shared cooling and nanoparticle recipes.
+physical solvers. `papers/` contains the shared cooling recipe.
 
 The active protein entry point is
 `paper/protein/run.jl`. Its retained CNT/GRD draws
@@ -99,7 +98,7 @@ resolve or remove any recorded failure.
 
 Smaller historical teaching calculations remain runnable: the original
 `estimate_kinetic_parameters.jl`, `kinetic_parameter_uncertainty.jl`,
-`temperature_programmed_crystallization.jl`, `cooling_crystallization_demo.jl`
-and `lipid_nanoparticle_demo.jl`. Tests still exercise their distinct contracts.
+`temperature_programmed_crystallization.jl` and `cooling_crystallization_demo.jl`.
+Tests still exercise their distinct contracts.
 `two_coordinate_transport.jl` and `periodic_weno_transport.jl` provide analytical
 transport checks. They are not additional active case-study pages.

@@ -88,10 +88,84 @@
     },
     "solves": 12,
     "requested": 12,
-    "setup_seconds": 0.0033649999999999995,
-    "solve_seconds": 0.23427548600000003,
-    "observation_seconds": 0.0052199939999999995,
-    "total_seconds": 0.243124594,
+    "integration_work": [
+        {
+            "accepted_steps": 629,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 694,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 805,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 783,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 742,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 560,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 663,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 777,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 537,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 568,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 717,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 709,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        }
+    ],
+    "setup_seconds": 0.014175741999999998,
+    "solve_seconds": 0.165508722,
+    "observation_seconds": 0.0037790040000000003,
+    "total_seconds": 0.183671333,
     "successful": 12,
     "failed": 0,
     "failures": [

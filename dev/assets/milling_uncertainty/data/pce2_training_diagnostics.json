@@ -168,10 +168,204 @@
     },
     "solves": 32,
     "requested": 32,
-    "setup_seconds": 0.008945893,
-    "solve_seconds": 0.6288713390000001,
-    "observation_seconds": 0.017124341,
-    "total_seconds": 0.655552345,
+    "integration_work": [
+        {
+            "accepted_steps": 695,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 727,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 743,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 798,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 742,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 656,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 672,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 570,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 646,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 533,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 599,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 696,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 533,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 671,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 709,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 760,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 683,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 801,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 748,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 559,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 553,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 787,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 792,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 772,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 522,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 598,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 672,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 782,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 676,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 681,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 636,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        },
+        {
+            "accepted_steps": 638,
+            "rejected_steps": null,
+            "segments": 1,
+            "policy": "CVODE_BDF"
+        }
+    ],
+    "setup_seconds": 0.007855299000000001,
+    "solve_seconds": 0.3909017750000001,
+    "observation_seconds": 0.012605076000000002,
+    "total_seconds": 0.412072801,
     "successful": 32,
     "failed": 0,
     "failures": [

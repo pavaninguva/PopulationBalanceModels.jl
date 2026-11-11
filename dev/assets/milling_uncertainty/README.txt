@@ -1,8 +1,11 @@
 Milling forward-UQ results (Bhonsale et al., 2018, DOI 10.3390/pr6120255).
 
-data/provenance.json is the original production receipt. It records settings,
-source/dependency versions and numerical-file hashes. Do not replace its hashes
-after editing code. settings.json also preserves the pre-run configuration.
+data/provenance.json and forward/provenance.json are separate production receipts
+from the shared numerical forward model. They record matching numerical
+configurations and shared-source hashes, plus each experiment's settings,
+dependency versions and numerical-file hashes. Do not replace hashes after
+editing code: recalculate into a fresh directory. settings.json also preserves
+the UQ pre-run configuration. Paper staging rejects differing numerics or sources.
 
 Each *_inputs.csv pairs sample_id with four standard-normal reference values z
 and their physical delta/alpha/gamma/sigma values. The reference law is the

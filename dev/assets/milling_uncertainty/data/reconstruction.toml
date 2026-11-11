@@ -5,6 +5,7 @@ targets = ["Figure 4", "Figure 7", "Figure 8"]
 mc_samples = 12000
 validation_samples = 512
 pce_quantile_samples = 50000
+# Common numerical baseline for the deterministic comparison and all UQ solves.
 bins = 100
 first_pivot_m3 = 6.54e-17
 last_pivot_m3 = 1e-3

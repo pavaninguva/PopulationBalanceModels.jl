@@ -18,22 +18,17 @@ resolution_meaning = "Illustrative graph-reading resolution, not a statistical u
 [calculation]
 speeds_rpm = [3350.0, 4923.0]
 bins = [100, 200, 400, 800]
-first_pivot_m3 = 6.54e-17
-last_grid_index = 100.0
-grid_power = 6
 initial_feed_duration_s = 1.0
 final_time_s = 180.0
-quadrature_order = 24
-reltol = 1e-9
-abstol_kg = 1e-14
+# Baseline grid, feed, quadrature and BDF tolerances come from reconstruction.toml.
 check_reltol = 1e-10
 check_abstol_kg = 1e-15
 
 [interpretation]
-equations = "Barrasso Eqs. (3)-(4): feed; Eq. (13): representative volumes; Eqs. (14)-(17): adjacent-volume birth allocation. Selection, daughter normalization and screen algebra are shared with the Bhonsale reconstruction."
-grid = "Published 100 representative volumes v_i=v_1*i^6; refinements keep both endpoint volumes fixed. Auxiliary edges give these arithmetic bin centres; they are not specified by the article."
-feed = "Point weights proportional to exp(-(log(v_i)-log(v_m))^2/(2*sigma_feed^2)), normalized by their discrete sum as printed; not bin-integrated lognormal probabilities on this grid."
+equations = "The same feed-breakage-screen residual, physical parameters and numerical builder as the Bhonsale UQ reconstruction. This compares that declared reconstruction with Barrasso Figure 7, rather than copying the original discretization."
+grid = "Shared geometric volume grid: 100 pivots, 6.54e-17 to 1e-3 m3. Refinements keep both endpoints fixed. Barrasso's published v_i=v_1*i^6 grid is not used as a separate numerical baseline."
+feed = "Exact lognormal bin probabilities, normalized over the common domain and converted to counts at each pivot, identically to UQ."
 initial_condition = "Figure 7 begins at approximately 7.4 g. One second of the stated feed gives that inventory; its shape is an explicit reconstruction because the complete initial distribution is unavailable. No kinetic parameter was fitted to Figure 7."
-deposition = "Positive linear hats for the same continuous daughter density and parent-pivot evaluation. The printed adjacent-pivot cell-average allocation reduces to these hats under that interpretation; this is not a verified copy of the original gPROMS implementation."
-median = "Two declared observations of each state: linear interpolation of the cumulative pivot-volume weights in diameter; or the exact volume-weighted CDF of piecewise-constant number density within the auxiliary volume bins. Both include unresolved fines."
-scope = "Separate constant-speed forward check. This does not replace or retrospectively validate the retained empty-mill, geometric-grid Bhonsale MC/PCE dataset."
+deposition = "The same positive fixed-pivot hats, 8-point Gauss-Legendre daughter quadrature and analytic fines as UQ; not a verified copy of the original gPROMS implementation."
+median = "Instantaneous volume-weighted outlet diameter median, with linear diameter interpolation of the cumulative pivot-volume weights and analytic sub-grid fines, identically to UQ."
+scope = "The deterministic check and MC/PCE use one numerical forward model. Only the experiment's initial inventory, speed history and duration differ. Partial agreement with Figure 7 does not establish full published-model reproduction."

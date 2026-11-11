@@ -1,13 +1,14 @@
 {
     "degree": 2,
+    "construction": "regression",
     "terms": 15,
     "rank": 15,
     "condition": 3.6935513227738466,
     "new_full_solves": 32,
     "training_solves": 32,
     "validation_new_solves": 0,
-    "preparation_seconds": 0.00014778,
-    "regression_seconds": 4.32e-5,
+    "preparation_seconds": 0.000139677,
+    "regression_seconds": 3.3902e-5,
     "training_rmse": [
         0.3828523284085514,
         0.3948820002677042,
@@ -92,6 +93,72 @@
     ],
     "basis": "orthonormal_product",
     "normalization": "probability_measure",
+    "basis_families": [
+        "hermite",
+        "hermite",
+        "hermite",
+        "hermite"
+    ],
+    "basis_recurrences": [
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1,
+                1.4142135623730951
+            ],
+            "shift": 0,
+            "scale": 1
+        },
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1,
+                1.4142135623730951
+            ],
+            "shift": 0,
+            "scale": 1
+        },
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1,
+                1.4142135623730951
+            ],
+            "shift": 0,
+            "scale": 1
+        },
+        {
+            "family": "hermite",
+            "diagonal": [
+                0,
+                0,
+                0
+            ],
+            "offdiagonal": [
+                1,
+                1.4142135623730951
+            ],
+            "shift": 0,
+            "scale": 1
+        }
+    ],
+    "quadrature_gram_error": null,
     "validation_status": "disjoint_inputs",
-    "coordinates": "standard_normal"
+    "coordinates": "standard_normal",
+    "accuracy_status": "failed"
 }
