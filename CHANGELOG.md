@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 
+## 0.1.0
 
 First public release, consolidating the internal development milestones.
 
@@ -105,6 +105,9 @@ First public release, consolidating the internal development milestones.
 
 ### Correctness and compatibility
 
+- Plotting CI uses portable CPU code generation and rebuilds compiled images to
+  avoid the Julia 1.13.4 / LLVM 20 crash while compiling Laplace/ForwardDiff checks.
+  Julia and dependency versions are printed to support reproduction.
 - Optional integration CI uses portable CPU code generation to avoid the
   Julia 1.13.3 / LLVM 20 vectorizer crash during mixed stationary/transient
   gradients. Normal optimization and all derivative assertions remain enabled.
