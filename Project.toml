@@ -1,7 +1,7 @@
 name = "PopulationBalanceModels"
 uuid = "d67dbf4a-e476-4a75-b295-11f266f08ec0"
 authors = ["PBM.jl contributors"]
-version = "0.4.0"
+version = "0.1.0"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"

@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.4.0 — unreleased
+## 0.1.0 — unreleased
+
+First public release, consolidating the internal development milestones.
 
 ### Interface changes and migration
 
@@ -103,6 +105,9 @@
 
 ### Correctness and compatibility
 
+- Optional integration CI uses portable CPU code generation to avoid the
+  Julia 1.13.3 / LLVM 20 vectorizer crash during mixed stationary/transient
+  gradients. Normal optimization and all derivative assertions remain enabled.
 - Fixed current-Julia tutorial checks to inspect freshly included bindings in
   their latest world. Optional CI now separates environment preparation from
   test execution and uses one Python interpreter for plotting setup and tests.

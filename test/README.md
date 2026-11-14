@@ -62,13 +62,14 @@ Use an isolated working environment containing this checkout and the dependencie
 listed in [CI](../.github/workflows/CI.yml). Then run the corresponding entry points:
 
 ```sh
-julia --project=/path/to/optional-env test/integration.jl
-julia --project=/path/to/optional-env test/bayesian_integration.jl
-julia --project=/path/to/optional-env test/protein_parallel.jl
-julia --project=/path/to/optional-env test/stationary_integration.jl
-julia --project=/path/to/optional-env test/stationary_inference.jl
-julia --project=/path/to/optional-env test/tensor_integration.jl
-julia --project=/path/to/sensitivity-env test/sensitivity_integration.jl
+export JULIA_CPU_TARGET=generic
+julia --cpu-target=generic --project=/path/to/optional-env test/integration.jl
+julia --cpu-target=generic --project=/path/to/optional-env test/bayesian_integration.jl
+julia --cpu-target=generic --project=/path/to/optional-env test/protein_parallel.jl
+julia --cpu-target=generic --project=/path/to/optional-env test/stationary_integration.jl
+julia --cpu-target=generic --project=/path/to/optional-env test/stationary_inference.jl
+julia --cpu-target=generic --project=/path/to/optional-env test/tensor_integration.jl
+julia --cpu-target=generic --project=/path/to/sensitivity-env test/sensitivity_integration.jl
 ```
 
 The inference tests use small analytical targets; they do not regenerate the
@@ -87,17 +88,18 @@ requests an executable stack that newer glibc releases reject before tests
 start ([upstream issue](https://github.com/JuliaLang/julia/issues/57250)). The
 other Linux core jobs keep `ubuntu-latest`; all six core combinations remain.
 
-Sensitivity CI resolves and precompiles its dependencies in one process, then
-runs the tests in a fresh process with the same project. Its cache keeps package
-sources and artifacts, but excludes compiled images; normal Julia precompilation
-remains enabled. This job uses `--cpu-target=generic` for preparation and tests,
-and `JULIA_CPU_TARGET=generic` for package images. This avoids the observed
-Julia 1.13.3/LLVM 20 `VPScalarPHIRecipe` compilation crash on Ice Lake when
-differentiating parameter-dependent initialization. Optimization stays at its
-normal level; no tests, derivative paths or tolerances are disabled. The core
-and other extension jobs retain native compilation coverage. This is a CI
-compiler workaround, not a change to initialization or sensitivity algorithms.
-Each job prints Julia/dependency versions and retains its
+Optional integration and sensitivity CI resolve and precompile their dependencies
+in one process, then run tests in a fresh process with the same project. Their
+caches keep package sources and artifacts, but exclude compiled images; normal
+Julia precompilation remains enabled. Both jobs use `--cpu-target=generic` for
+preparation and tests, and `JULIA_CPU_TARGET=generic` for package images. This
+avoids the observed Julia 1.13.3/LLVM 20 `VPScalarPHIRecipe` compilation crash on
+affected x86 CPUs when differentiating parameter-dependent initialization or
+mixed stationary/transient experiments. Optimization stays at its normal level;
+no tests, derivative paths or tolerances are disabled. Core and plotting jobs
+retain native compilation coverage. This is a CI compiler workaround, not a
+change to initialization or sensitivity algorithms. Each job prints
+Julia/dependency versions and retains its
 `Project.toml` and `Manifest.toml`, including on failure. This distinguishes
 environment/precompilation failures from failed sensitivity assertions.
 

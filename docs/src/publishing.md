@@ -60,7 +60,7 @@ credentials or local environment files.
 In repository Settings → Pages choose deployment from branch `gh-pages` at
 `/ (root)`. Main builds publish `/dev/`. After an ordinary `vX.Y.Z` release tag
 with a matching package version, Documenter supplies versioned pages and the
-`/stable/` alias. The prepared package version is `0.4.0`; registration,
+`/stable/` alias. The prepared first public release is `0.1.0`; registration,
 tagging and deployment are separate release actions. Historical producer
 manifests retain their original development-version metadata.
 

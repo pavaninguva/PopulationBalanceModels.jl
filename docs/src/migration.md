@@ -1,8 +1,9 @@
 # Migrating existing workflows
 
-The 0.4 development series changed parameter declarations, moment compilation
-and reusable forward execution. Existing numerical arrays, physical laws,
-direct-discretization method selection and custom `solver(problem,times)`
+The first public release, 0.1.0, consolidates internal development changes to
+parameter declarations, moment compilation and reusable forward execution.
+Existing numerical arrays, physical laws, direct-discretization method selection
+and custom `solver(problem,times)`
 callbacks remain supported. This page describes the final interfaces; individual
 guides give their scientific and numerical restrictions.
 

@@ -41,6 +41,10 @@ jobs:
       JULIA_LOAD_PATH: '@:@stdlib'
       JULIA_PKG_PRECOMPILE_AUTO: '0'
       JULIA_NUM_PRECOMPILE_TASKS: '1'
+      # Julia 1.13 / LLVM 20 can crash in VPScalarPHIRecipe while compiling
+      # dual-valued initial states for mixed stationary/transient inference.
+      # Keep normal optimization and every assertion with portable code generation.
+      JULIA_CPU_TARGET: generic
       OPENBLAS_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +59,7 @@ jobs:
       - name: Prepare optional integration environment
         env:
           JULIA_PROJECT: ${{ runner.temp }}/pbm-extensions
-        shell: julia --color=yes {0}
+        shell: julia --startup-file=no --cpu-target=generic --color=yes {0}
         run: |
           import Pkg
           using InteractiveUtils
@@ -71,7 +75,7 @@ jobs:
       - name: Optional integration tests
         env:
           JULIA_PROJECT: ${{ runner.temp }}/pbm-extensions
-        shell: julia --startup-file=no --color=yes {0}
+        shell: julia --startup-file=no --cpu-target=generic --color=yes {0}
         run: |
           using InteractiveUtils
           versioninfo()
@@ -104,7 +108,7 @@ jobs:
       # Julia 1.13 / LLVM 20 can crash in VPScalarPHIRecipe while compiling
       # dual-valued initial-state Jacobians on Ice Lake. Use portable code
       # generation, with normal optimization and every derivative assertion.
-      # Core and other extension jobs still exercise native compilation.
+      # Core and plotting jobs still exercise native compilation.
       JULIA_CPU_TARGET: generic
       OPENBLAS_NUM_THREADS: '1'
     steps:
