@@ -108,7 +108,7 @@ jobs:
       # Julia 1.13 / LLVM 20 can crash in VPScalarPHIRecipe while compiling
       # dual-valued initial-state Jacobians on Ice Lake. Use portable code
       # generation, with normal optimization and every derivative assertion.
-      # Core and plotting jobs still exercise native compilation.
+      # Core jobs still exercise native compilation.
       JULIA_CPU_TARGET: generic
       OPENBLAS_NUM_THREADS: '1'
     steps:

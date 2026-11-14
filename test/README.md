@@ -88,20 +88,21 @@ requests an executable stack that newer glibc releases reject before tests
 start ([upstream issue](https://github.com/JuliaLang/julia/issues/57250)). The
 other Linux core jobs keep `ubuntu-latest`; all six core combinations remain.
 
-Optional integration and sensitivity CI resolve and precompile their dependencies
-in one process, then run tests in a fresh process with the same project. Their
-caches keep package sources and artifacts, but exclude compiled images; normal
-Julia precompilation remains enabled. Both jobs use `--cpu-target=generic` for
-preparation and tests, and `JULIA_CPU_TARGET=generic` for package images. This
-avoids the observed Julia 1.13.3/LLVM 20 `VPScalarPHIRecipe` compilation crash on
-affected x86 CPUs when differentiating parameter-dependent initialization or
-mixed stationary/transient experiments. Optimization stays at its normal level;
-no tests, derivative paths or tolerances are disabled. Core and plotting jobs
-retain native compilation coverage. This is a CI compiler workaround, not a
-change to initialization or sensitivity algorithms. Each job prints
-Julia/dependency versions and retains its
-`Project.toml` and `Manifest.toml`, including on failure. This distinguishes
-environment/precompilation failures from failed sensitivity assertions.
+Optional integration, sensitivity and plotting CI resolve and precompile their
+dependencies in one process, then run tests in a fresh process with the same
+project. Their caches keep package sources and artifacts, but exclude compiled
+images; normal Julia precompilation remains enabled. These jobs use
+`--cpu-target=generic` for preparation and tests, and `JULIA_CPU_TARGET=generic`
+for package images. These settings avoid the observed `VPScalarPHIRecipe`
+compilation crash in Julia 1.13.3 and
+1.13.4 (LLVM 20) on affected x86 CPUs when differentiating parameter-dependent
+initialization or mixed stationary/transient experiments, including plotting's
+Laplace approximation checks. Optimization stays at its normal level; no tests,
+derivative paths or tolerances are disabled. Core jobs retain native compilation
+coverage. This is a CI compiler workaround, not a change to initialization or
+sensitivity algorithms. Each job prints Julia/dependency versions and retains
+its `Project.toml` and `Manifest.toml`, including on failure. This distinguishes
+environment/precompilation failures from failed test assertions.
 
 To reproduce that separation from the repository root:
 
@@ -127,7 +128,8 @@ set `JULIA_PYTHONCALL_EXE` to that environment's Python and
 plotters require Python 3.11 or newer.
 
 ```sh
-MPLBACKEND=Agg julia --project=/path/to/plotting-env test/plotting_integration.jl
+MPLBACKEND=Agg JULIA_CPU_TARGET=generic \
+  julia --cpu-target=generic --project=/path/to/plotting-env test/plotting_integration.jl
 MPLBACKEND=Agg python test/shared_plotting.py
 MPLBACKEND=Agg python test/render_plotting_fixtures.py --output /tmp/pbm-plot-checks
 ```

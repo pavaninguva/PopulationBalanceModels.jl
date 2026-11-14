@@ -16,6 +16,10 @@ jobs:
       JULIA_NUM_THREADS: '1'
       JULIA_NUM_PRECOMPILE_TASKS: '1'
       JULIA_PKG_PRECOMPILE_AUTO: '0'
+      # Julia 1.13 / LLVM 20 can crash in VPScalarPHIRecipe while compiling
+      # ForwardDiff initial states for the plotting Laplace checks.
+      # Keep normal optimization and every assertion with portable code generation.
+      JULIA_CPU_TARGET: generic
       OPENBLAS_NUM_THREADS: '1'
     steps:
       - uses: actions/checkout@v4
@@ -38,17 +42,24 @@ jobs:
         with:
           version: ${{ matrix.julia }}
       - uses: julia-actions/cache@v2
+        with:
+          # A new prefix avoids restoring native images from older plotting jobs.
+          cache-name: julia-plotting-source-v1
+          cache-compiled: 'false'
       - name: Prepare isolated optional environment
-        shell: julia --color=yes {0}
+        shell: julia --startup-file=no --cpu-target=generic --color=yes {0}
         run: |
           using Pkg
+          using InteractiveUtils
+          versioninfo()
           Pkg.activate(joinpath(ENV["RUNNER_TEMP"], "plotting"))
           Pkg.develop(path=pwd())
           Pkg.add(["PythonPlot", "Distributions", "ForwardDiff", "SpecialFunctions",
                    "Optim", "SciMLBase", "Sundials"])
+          Pkg.status(;mode=Pkg.PKGMODE_MANIFEST)
           Pkg.precompile(;strict=true)
       - name: Test Julia extension and small tutorial paths
-        run: julia --startup-file=no --project="${RUNNER_TEMP}/plotting" test/plotting_integration.jl
+        run: julia --startup-file=no --cpu-target=generic --project="${RUNNER_TEMP}/plotting" test/plotting_integration.jl
       - run: python test/shared_plotting.py
       - run: python test/protein_publication.py
       - run: python test/plotting_summaries.py
