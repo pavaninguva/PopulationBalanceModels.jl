@@ -1,0 +1,38 @@
+[
+  {
+    "original_filename": "tang_concentration_markers.csv",
+    "original_sha256": "22e6c4d788e6637a411d74af3b8b05dd50094f86c79ea0e37584f361018da3aa",
+    "selected_snapshot": "provenance/selected_concentration_source.csv",
+    "selected_experiment_id": "Tang_100mL_0Cmin",
+    "rows": 16,
+    "selection": "original_rows_preserved_with_same_columns_filtered_by_experiment_id",
+    "selected_snapshot_sha256": "25cfd3e78fe462a915a03308f086f5592c4fbc0dbec0c14e0be88a98b1bd0924"
+  },
+  {
+    "original_filename": "tang_number_psd_derived_grids.csv",
+    "original_sha256": "87ac2fc5ca90ede4f44a807dc8d6aa41dd56198f6e37e30a2685a381864f363d",
+    "selected_snapshot": "provenance/selected_psd_grids_source.csv",
+    "selected_experiment_id": "Tang_100mL_0Cmin",
+    "rows": 548,
+    "selection": "original_rows_preserved_with_same_columns_filtered_by_experiment_id",
+    "selected_snapshot_sha256": "0a62bb651a08302700dc88828eb8181ebeb0c758ae5961b23b27f35074683c29"
+  },
+  {
+    "original_filename": "tang_number_psd_summaries.csv",
+    "original_sha256": "86c389d1905e56f610bb8572813dc0dc2f2999a93865e9c0deae2471cf7e5f2b",
+    "selected_snapshot": "provenance/selected_psd_summaries_source.csv",
+    "selected_experiment_id": "Tang_100mL_0Cmin",
+    "rows": 8,
+    "selection": "original_rows_preserved_with_same_columns_filtered_by_experiment_id",
+    "selected_snapshot_sha256": "176fb8f6afacfceba3d46bf1513b76979326629ba787b0e5c65432aa924dc919"
+  },
+  {
+    "original_filename": "tang_number_psd_pixel_traces.csv",
+    "original_sha256": "0bbb10a82679ef2aab6b35213a4cd33cb933c8c4031cac427a69d02ad7a6d76c",
+    "selected_snapshot": "provenance/selected_psd_traces_source.csv",
+    "selected_experiment_id": "Tang_100mL_0Cmin",
+    "rows": 2319,
+    "selection": "original_rows_preserved_with_same_columns_filtered_by_experiment_id",
+    "selected_snapshot_sha256": "54bd43690369380fac2e56bc8093f5df6d52f97cb86fbef5a0a2dd79048b20b4"
+  }
+]

@@ -1,0 +1,7 @@
+configuration,error_type,reason
+unclassified_callback,ArgumentError,"ArgumentError: HOC term growth, direction 1 has an unclassified growth callback; use AffineGrowth, ExponentialGrowth, TimeScaledGrowth, or HOCGrowthLaw with an explicit positive smooth-law contract"
+nonuniform_mesh,ArgumentError,"ArgumentError: HOC requires uniform rectangular axes with at least six bins per axis; use WENO3/Upwind on nonuniform grids"
+closed_outflow,ArgumentError,"ArgumentError: positive-growth HOC physical boundaries require left OpenBoundary/NoFlux/InflowFlux and right OpenBoundary; absorption and closed outflow are unsupported"
+fourth_order_sources,ArgumentError,"ArgumentError: HOCFiniteVolume has verified time order 2; use HOCADI(time_order=4) only for homogeneous periodic constant 2D growth"
+boundary_front_nonnegativity,PopulationBalanceModels.NumericalFailure,"negative HOC bin population during time integration; resolve the smooth profile, reduce dt, or use a positivity-preserving method; check_nonnegative=false retains signed dispersive lobes for diagnostics"
+runtime_vanishing_growth,PopulationBalanceModels.NumericalFailure,"HOC time factor is not finite and strictly positive at t=0.1; signed/vanishing growth requires a different method"

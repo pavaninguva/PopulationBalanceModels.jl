@@ -1,0 +1,13 @@
+{
+  "starting_revision": "d4c839296571aa604cc55f5dd0526898a99ce649",
+  "starting_working_tree": " M CHANGELOG.md\n M docs/src/api.md\n M docs/src/audit.md\n M docs/src/axial_reactors.md\n M docs/src/methods/growth.md\n M docs/src/numerical_methods.md\n M src/PopulationBalanceModels.jl\n M src/compilation/axial_system.jl\n M src/coupling/accounting.jl\n M src/numerics/sectional/reconstructions.jl\n M src/numerics/sectional/term_dispatch.jl\n M src/numerics/tensor/term_dispatch.jl\n M src/numerics/tensor/transport_sources.jl\n M test/case_study_benchmarks.jl\n M test/integration.jl\n M test/runtests.jl\n?? examples/nonuniform_weno.jl\n?? paper/\n?? protein_crystallization_handover.zip\n?? src/numerics/sectional/nonuniform_weno.jl\n?? test/nonuniform_weno.jl\n",
+  "handover_sha256": "81f12a1df139d6989f4dfc15c520a6e84f98e4cc80c64dbf67d45750058ae702",
+  "active_sources": "Supplied original Tang 2018 Fig 11d and 12a; no new digitization",
+  "data_hashes": {
+    "concentration.csv": "80fd4d8c1a891a73f2d658b1f11cf29568ef8b01b9016abd193b029075e1a2f8",
+    "psd_cdf.csv": "dc7b2196eb560f4a8c1be82dcd4d740402da84e05764a03b4a144a2ddae0b832",
+    "psd_summary.csv": "2565d059d7fd3f7101222172a3cfbd1af07ccb04696da029856a6d309cdbf6aa"
+  },
+  "integration_working_tree": " M .gitignore\n M CHANGELOG.md\n M docs/src/api.md\n M docs/src/audit.md\n M docs/src/axial_reactors.md\n M docs/src/methods/growth.md\n M docs/src/numerical_methods.md\n M ext/PopulationBalanceModelsOptimExt.jl\n M src/PopulationBalanceModels.jl\n M src/compilation/axial_system.jl\n M src/coupling/accounting.jl\n M src/inference/calibration.jl\n M src/inference/observations.jl\n M src/inference/uncertainty.jl\n M src/numerics/sectional/reconstructions.jl\n M src/numerics/sectional/term_dispatch.jl\n M src/numerics/tensor/term_dispatch.jl\n M src/numerics/tensor/transport_sources.jl\n M test/case_study_benchmarks.jl\n M test/integration.jl\n M test/runtests.jl\n?? examples/data/protein_crystallization/tang2018_isothermal/\n?? examples/nonuniform_weno.jl\n?? paper/\n?? src/inference/distribution_discrepancies.jl\n?? src/numerics/sectional/nonuniform_weno.jl\n?? test/nonuniform_weno.jl\n",
+  "baseline_note": "Starting status recorded before protein edits; integration status recorded when active data were copied. Production runs record their own actual revision and dirty state."
+}

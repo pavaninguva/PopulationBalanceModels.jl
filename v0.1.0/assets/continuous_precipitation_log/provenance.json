@@ -1,0 +1,66 @@
+{
+  "source": "public CADET verification numerical output; not the Figure 9 WENO35 run",
+  "download": {
+    "repository": "cadet/CADET-Verification",
+    "revision": "090606762fc657510a9e31c547890bf9a17ffb59",
+    "files": [
+      {
+        "file": "reference.h5",
+        "url": "https://raw.githubusercontent.com/cadet/CADET-Verification/090606762fc657510a9e31c547890bf9a17ffb59/data/CADET-Core_reference/crystallization/ref_DPFR_PBM_primarySecondaryNucleationAndGrowth.h5",
+        "sha256": "33c438eb1301003b5b941e6d6c7d5ea63baa470ddbb23c86b6ff94777a8995f9",
+        "bytes": 377155
+      },
+      {
+        "file": "settings_crystallization.py",
+        "url": "https://raw.githubusercontent.com/cadet/CADET-Verification/090606762fc657510a9e31c547890bf9a17ffb59/src/benchmark_models/settings_crystallization.py",
+        "sha256": "c4c7cc5c13e5b7a7f4f4a07879084132e6934e0cc9c3219dbd2e3a9c50f5989e",
+        "bytes": 56108
+      },
+      {
+        "file": "LICENSE",
+        "url": "https://raw.githubusercontent.com/cadet/CADET-Verification/090606762fc657510a9e31c547890bf9a17ffb59/LICENSE",
+        "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+        "bytes": 35149
+      }
+    ]
+  },
+  "time_s": 200.0,
+  "nx": 200,
+  "nz": 200,
+  "cadet_version": "5.0.4",
+  "cadet_commit": "GITDIR-NOTFOUND",
+  "size_scheme": "Upwind; CRY_GROWTH_SCHEME_ORDER=1",
+  "axial_scheme": "WENO23; WENO_ORDER=2",
+  "relative_tolerance": 1e-06,
+  "absolute_tolerance": 1e-06,
+  "flow_m3_s": 1.6666666666666665e-07,
+  "number_per_m3": 56715187846.352776,
+  "solute_kg_m3": 0.39999996855451886,
+  "reference_csv_sha256": "00d3110974538318bf76079eaa46fb1f1f7dd80b4567c6e1804e35e03af32d68",
+  "digitization": {
+    "doi": "10.1016/j.compchemeng.2024.108612",
+    "figure": "9(c)",
+    "page": 14,
+    "pdf_sha256": "e7b6c6e6e4bf23c6b24766a5da8adb9779af9ab0fc408a106086e1a7a290408c",
+    "image_size": [
+      1801,
+      1197
+    ],
+    "nx": 200,
+    "nz": 200,
+    "size_scheme": "WENO35",
+    "axial_scheme": "WENO35",
+    "time_s": 200,
+    "calibration": "log10(x_um)=(column-130)/226; n=(1098-row)*1.2e15/496",
+    "extraction": "blue number-density curve; 1.5--40 um only; uppermost blue trace before the number/volume-curve intersection",
+    "uncertainty": "conservative +/-2 pixels for calibration, antialiasing and line thickness; not experimental noise",
+    "excluded": "ambiguous intersections and small-density tails; no full-domain digitization error is claimed"
+  },
+  "physical_parameter_source": {
+    "section": "6.7.1, Case 7A",
+    "tables": "Supporting Information S8 and S10",
+    "supplementary_pdf_sha256": "7f4766725b516bf0779b39d58a8fab8417d976bb617d805ee2a32b6672970728",
+    "package_flow_m3_s": 1.67e-07,
+    "convention": "Interstitial axial velocity Q/(cross-sectional area times porosity)"
+  }
+}

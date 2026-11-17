@@ -1,0 +1,17 @@
+observation_id,experiment_id,split,source_graph_time_min,model_time_min,concentration_g_L,paper,figure,pdf_page,printed_page,pixel_x,pixel_y,graph_reading_dx_px,graph_reading_dy_px,shared_or_occluded_marker,source_status
+c00,Tang_100mL_0Cmin,initial_condition,0.4281345565749235,0.0,19.965841161400512,Tang2018,12a,9,194,154,74,2,2,True,manual_figure_marker_reading_not_raw_record
+c01,Tang_100mL_0Cmin,calibration,31.253822629969417,31.253822629969417,19.692570452604613,Tang2018,12a,9,194,190,82,2,2,True,manual_figure_marker_reading_not_raw_record
+c02,Tang_100mL_0Cmin,calibration,46.666666666666664,46.666666666666664,19.350982066609735,Tang2018,12a,9,194,208,92,2,2,True,manual_figure_marker_reading_not_raw_record
+c03,Tang_100mL_0Cmin,calibration,61.223241590214066,61.223241590214066,19.043552519214344,Tang2018,12a,9,194,225,101,2,2,False,manual_figure_marker_reading_not_raw_record
+c04,Tang_100mL_0Cmin,calibration,75.77981651376147,75.77981651376147,18.736122971818958,Tang2018,12a,9,194,242,110,2,2,False,manual_figure_marker_reading_not_raw_record
+c05,Tang_100mL_0Cmin,calibration,90.33639143730886,90.33639143730886,14.773697694278393,Tang2018,12a,9,194,259,226,2,2,False,manual_figure_marker_reading_not_raw_record
+c06,Tang_100mL_0Cmin,calibration,120.30581039755351,120.30581039755351,13.031596925704525,Tang2018,12a,9,194,294,277,2,2,False,manual_figure_marker_reading_not_raw_record
+c07,Tang_100mL_0Cmin,calibration,180.2446483180428,180.2446483180428,10.025619128949616,Tang2018,12a,9,194,364,365,2,2,False,manual_figure_marker_reading_not_raw_record
+c08,Tang_100mL_0Cmin,calibration,240.1834862385321,240.1834862385321,9.2399658411614,Tang2018,12a,9,194,434,388,2,2,False,manual_figure_marker_reading_not_raw_record
+c09,Tang_100mL_0Cmin,calibration,300.1223241590214,300.1223241590214,7.4978650725875315,Tang2018,12a,9,194,504,439,2,2,False,manual_figure_marker_reading_not_raw_record
+c10,Tang_100mL_0Cmin,calibration,360.0611620795107,360.0611620795107,6.575576430401366,Tang2018,12a,9,194,574,466,2,2,False,manual_figure_marker_reading_not_raw_record
+c11,Tang_100mL_0Cmin,calibration,419.14373088685016,419.14373088685016,5.448334756618275,Tang2018,12a,9,194,643,499,2,2,False,manual_figure_marker_reading_not_raw_record
+c12,Tang_100mL_0Cmin,validation,479.08256880733944,479.08256880733944,5.448334756618275,Tang2018,12a,9,194,713,499,2,2,False,manual_figure_marker_reading_not_raw_record
+c13,Tang_100mL_0Cmin,validation,539.0214067278287,539.0214067278287,5.243381725021349,Tang2018,12a,9,194,783,505,2,2,False,manual_figure_marker_reading_not_raw_record
+c14,Tang_100mL_0Cmin,validation,598.960244648318,598.960244648318,5.004269854824937,Tang2018,12a,9,194,853,512,2,2,False,manual_figure_marker_reading_not_raw_record
+c15,Tang_100mL_0Cmin,validation,658.8990825688073,658.8990825688073,4.9359521776259605,Tang2018,12a,9,194,923,514,2,2,False,manual_figure_marker_reading_not_raw_record

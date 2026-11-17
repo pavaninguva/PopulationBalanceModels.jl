@@ -1,0 +1,20 @@
+{
+  "latex": true,
+  "dpi": 300,
+  "preview": false,
+  "numerical_producer": "3917be30cd1d38d0fc6d7558a20319704ef4c368",
+  "numerical_files": {
+    "trajectories.csv": "c0a8d41bcf8dcca8b972afa18e52e81a63b73a7c97543f0bdd25c293d7edf7be",
+    "reference_comparison.csv": "c5b9194bd340a29b453a1ce8616d5a31dbe7fe7145102f84be6a3b977f76b75d",
+    "errors.csv": "271e3bd0ed926f14ff79d757936fd21c51673710426f1f0229ef645095359dd7",
+    "checks.json": "dbbf907c218bb8288e4931173b01410f87ab19351c6c291ec7869eb89a526a17",
+    "comparison.md": "16da4ec98f41ef427ffff85f4024092aa761503548d12d2d0f2d87fe43d31507"
+  },
+  "source_reference_sha256": "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb",
+  "plotter_sha256": "ee20ce25d2936e025234c557049add88481fffa555f20e83099c98ea57410409",
+  "style_sha256": "531f2b8af26fe3cc8e04a1459a2a015e1991714be24fafcc4a8ad821a245fe67",
+  "python": "3.12.3 | packaged by conda-forge | (main, Apr 15 2024, 18:38:13) [GCC 12.3.0]",
+  "numpy": "1.26.4",
+  "matplotlib": "3.8.4",
+  "presentation": "Lines connect stored predictions; source points and signed errors are unadjusted"
+}

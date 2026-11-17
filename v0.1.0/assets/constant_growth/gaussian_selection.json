@@ -1,0 +1,595 @@
+{
+  "schema": 1,
+  "benchmark": {
+    "profile": "gaussian",
+    "height": 100.0,
+    "center": 0.2,
+    "standard_deviation": 0.03,
+    "growth": 0.1,
+    "final_time": 4.0,
+    "domain": [
+      0.0,
+      1.0
+    ],
+    "boundary": "zero inflow / open outflow"
+  },
+  "configuration": {
+    "bins": [
+      40,
+      80,
+      160,
+      320,
+      640
+    ],
+    "courant": 0.5,
+    "final_time": 4.0,
+    "profile_bins": 200,
+    "profile_courants": [
+      0.5,
+      1.0
+    ],
+    "profile_family": "gaussian",
+    "roundoff_factor": 1000.0
+  },
+  "provenance": {
+    "kind": "retained Gaussian selection; no new numerical solves",
+    "producer_revisions": [
+      "7df87d4bc00a62b3220426ebe5bfa23bb05326ee"
+    ],
+    "index_sha256": "8bc02db14d97306e3374ef7a94b3b7972d11d3594683a7adafe13e10838c1c0e",
+    "source_digest": "04779370bb9406b4f7f04096b0a243cc82810730b96d4106a59cd6111d343981",
+    "workflow_digest": "fc3aca0079b27d8f0f6ccdce443db4aa4915aaf03713e0c21f6fe9e81b156367",
+    "environment": {
+      "blas_threads": 1,
+      "cpu": "13th Gen Intel(R) Core(TM) i9-13900H",
+      "cpu_target": "goldmont",
+      "julia": "1.10.12",
+      "julia_threads": 1,
+      "packages": {
+        "ADTypes": "1.24.0",
+        "AMD": "0.5.4",
+        "AbstractFFTs": "1.5.0",
+        "AbstractMCMC": "5.17.0",
+        "AbstractTrees": "0.4.5",
+        "Accessors": "0.1.45",
+        "Adapt": "4.7.4",
+        "AdvancedHMC": "0.8.8",
+        "AliasTables": "1.1.3",
+        "ArgCheck": "2.5.0",
+        "ArgTools": "1.1.1",
+        "ArrayInterface": "7.30.2",
+        "BangBang": "0.4.9",
+        "BracketingNonlinearSolve": "1.12.8",
+        "CEnum": "0.5.0",
+        "CommonSolve": "0.2.14",
+        "CommonSubexpressions": "0.3.1",
+        "Compat": "4.18.1",
+        "CompilerSupportLibraries_jll": "1.1.1+0",
+        "CompositionsBase": "0.1.2",
+        "ConcreteStructs": "0.2.8",
+        "ConsoleProgressMonitor": "0.1.2",
+        "ConstructionBase": "1.6.0",
+        "Crayons": "4.2.0",
+        "DataAPI": "1.16.0",
+        "DataStructures": "0.19.6",
+        "DataValueInterfaces": "1.0.0",
+        "DiffEqBase": "7.21.4",
+        "DiffResults": "1.1.0",
+        "DiffRules": "1.16.0",
+        "DifferentiationInterface": "0.7.21",
+        "Distributions": "0.25.132",
+        "DocStringExtensions": "0.9.5",
+        "Downloads": "1.6.0",
+        "EnumX": "1.0.7",
+        "EnzymeCore": "0.8.25",
+        "ExprTools": "0.1.11",
+        "FastBroadcast": "1.5.0",
+        "FastClosures": "0.3.2",
+        "FastPower": "1.5.1",
+        "FillArrays": "1.18.1",
+        "FindFirstFunctions": "3.4.1",
+        "FiniteDiff": "2.33.0",
+        "ForwardDiff": "1.4.6",
+        "FunctionWrappers": "1.1.3",
+        "FunctionWrappersWrappers": "1.13.0",
+        "GPUArraysCore": "0.2.1",
+        "Gamma": "1.2.0",
+        "HypergeometricFunctions": "0.3.30",
+        "InitialValues": "0.3.1",
+        "IntelOpenMP_jll": "2025.2.0+0",
+        "InverseFunctions": "0.1.18",
+        "IrrationalConstants": "0.2.6",
+        "IteratorInterfaceExtensions": "1.0.0",
+        "JLLWrappers": "1.8.0",
+        "JSON3": "1.14.3",
+        "Krylov": "0.10.11",
+        "LHLFactorization": "2.2.2",
+        "LaTeXStrings": "1.4.1",
+        "LeftChildRightSiblingTrees": "0.3.0",
+        "LibCURL": "0.6.4",
+        "LibCURL_jll": "8.4.0+0",
+        "LibGit2_jll": "1.6.4+0",
+        "LibSSH2_jll": "1.11.0+1",
+        "LineSearches": "7.8.2",
+        "LinearSolve": "5.18.2",
+        "LogDensityProblems": "2.2.1",
+        "LogDensityProblemsAD": "1.13.1",
+        "LogExpFunctions": "1.0.3",
+        "LoggingExtras": "1.2.0",
+        "MCMCDiagnosticTools": "0.3.19",
+        "MKL_jll": "2025.2.0+0",
+        "MLJModelInterface": "1.12.1",
+        "MacroTools": "0.5.16",
+        "MaybeInplace": "0.1.8",
+        "MbedTLS_jll": "2.28.2+1",
+        "Missings": "1.2.0",
+        "MozillaCACerts_jll": "2023.1.10",
+        "MuladdMacro": "0.2.7",
+        "NLSolversBase": "8.0.1",
+        "NaNMath": "1.1.5",
+        "NetworkOptions": "1.2.0",
+        "NonlinearSolveBase": "2.55.0",
+        "OpenBLAS32_jll": "0.3.24+0",
+        "OpenBLAS_jll": "0.3.23+4",
+        "OpenLibm_jll": "0.8.1+2",
+        "OpenSpecFun_jll": "0.5.6+0",
+        "Optim": "2.3.2",
+        "OrderedCollections": "2.0.3",
+        "PDMats": "0.11.41",
+        "Parsers": "2.8.7",
+        "Pkg": "1.10.0",
+        "PopulationBalanceModels": "0.4.0-DEV",
+        "PositiveFactorizations": "0.2.4",
+        "PreallocationTools": "1.7.1",
+        "PrecompileTools": "1.2.1",
+        "Preferences": "1.6.1",
+        "PrettyTables": "3.5.0",
+        "ProgressLogging": "0.1.6",
+        "ProgressMeter": "1.13.0",
+        "PtrArrays": "1.4.0",
+        "PureKLU": "1.6.0",
+        "QuadGK": "2.11.3",
+        "RecipesBase": "1.3.4",
+        "RecursiveArrayTools": "4.5.5",
+        "Reexport": "1.2.2",
+        "RespecializeParams": "1.3.0",
+        "Rmath": "0.9.0",
+        "Rmath_jll": "0.5.2+0",
+        "Roots": "3.0.11",
+        "RuntimeGeneratedFunctions": "0.5.27",
+        "SHA": "0.7.0",
+        "SciMLBase": "3.58.0",
+        "SciMLJacobianOperators": "0.1.20",
+        "SciMLLogging": "2.1.0",
+        "SciMLOperators": "1.30.3",
+        "SciMLPublic": "1.3.0",
+        "SciMLStructures": "1.10.6",
+        "ScientificTypesBase": "3.1.0",
+        "Setfield": "1.1.2",
+        "SortingAlgorithms": "1.2.3",
+        "SparseArrays": "1.10.0",
+        "SparseColumnPivotedQR": "2.1.8",
+        "SpecialFunctions": "2.9.0",
+        "StaticArraysCore": "1.4.4",
+        "StatisticalTraits": "3.6.0",
+        "Statistics": "1.10.0",
+        "StatsAPI": "1.8.0",
+        "StatsBase": "0.34.13",
+        "StatsFuns": "2.2.1",
+        "StringManipulation": "0.6.1",
+        "StructTypes": "1.11.0",
+        "StyledStrings": "1.0.3",
+        "SuiteSparse32_jll": "5.10.1+0",
+        "SuiteSparse_jll": "7.2.1+1",
+        "Sundials": "6.7.2",
+        "Sundials_jll": "7.5.0+0",
+        "SymbolicIndexingInterface": "0.3.55",
+        "TOML": "1.0.3",
+        "TableTraits": "1.0.1",
+        "Tables": "1.14.0",
+        "Tar": "1.10.0",
+        "TerminalLoggers": "0.1.8",
+        "TimerOutputs": "1.2.2",
+        "TruncatedStacktraces": "1.4.0",
+        "Zlib_jll": "1.2.13+1",
+        "libblastrampoline_jll": "5.8.0+1",
+        "nghttp2_jll": "1.52.0+1",
+        "oneTBB_jll": "2023.1.0+0",
+        "p7zip_jll": "17.4.0+2"
+      }
+    },
+    "environment_digest": "b5598370a1bb1e6b33d80b5f460cfc1d756dd85a31db2be0e80823cf7d8b3d39",
+    "timing_protocol": "one measured solve after separate compilation warmup; setup, explicit GC, export and plotting excluded",
+    "original_runs": [
+      {
+        "run": "gaussian_hoc_C0p5_N160",
+        "directory": "gaussian_hoc_C0p5_N160_4a4a237720df",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "983f430640f3213d364a382afc14be1a3d10bafff271493cf2967ac93faf49bc",
+        "metrics_sha256": "b835b0d56ac7c55f30921a46b031338dd0186e651aa04ccc5a4a074616d8123a",
+        "profile_sha256": "bbc7fae4f19ee0be33be7b081bfb45489350881531d71c3af4d9b92c9cf5c97c"
+      },
+      {
+        "run": "gaussian_hoc_C0p5_N200",
+        "directory": "gaussian_hoc_C0p5_N200_bc4280ca4fe2",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "e6f16956f3872ff898ed2debcd91ab11f1ed652a328a4a9b474e10448b49af7e",
+        "metrics_sha256": "223d40ee638789389dc5ef83e058eac46d4830851ad3d407302c8dc0cc92cf6b",
+        "profile_sha256": "e28ba18985fbbb5fd9981dd08c3a70ff40a70d04299b7733312c13fe018acb25"
+      },
+      {
+        "run": "gaussian_hoc_C0p5_N320",
+        "directory": "gaussian_hoc_C0p5_N320_59aab2b1b03c",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "6ac6978643fb856f1f88559d858a3bdb3da419f01795ee2e3dd7ea08d6b8bdf5",
+        "metrics_sha256": "a0bc3bdfdeff2c90ab1aaf5b9beabbde550871ac0cdc6e80805c4332936bd8ec",
+        "profile_sha256": "16f1b832e130d9ae74276f9d304d1f4fa55c6ed3583f10dd2f909cdfaeca6594"
+      },
+      {
+        "run": "gaussian_hoc_C0p5_N40",
+        "directory": "gaussian_hoc_C0p5_N40_31c0a2f07b6c",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "20c58b5593e7d3a339618fbea57548db3889adff1ebb7d00694571cffc2fa31a",
+        "metrics_sha256": "c8f450cef8b5ad79bd4b12e01684ea309a1920903d406ccc13eeada3d0afd838",
+        "profile_sha256": "b9af5160d11b431297ae97f5c9426e74510946b9ea3201bafa4e2cf52e0fd030"
+      },
+      {
+        "run": "gaussian_hoc_C0p5_N640",
+        "directory": "gaussian_hoc_C0p5_N640_3cdc5c348781",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "94fcb4c259ee0cbe1bdccce5f08258c1b563edcf93e7102ffe2a07f8fcca8c46",
+        "metrics_sha256": "62814b8e86396337edd4238eff90ce86e5d63492bcd6dff8e57efc8bb4ee6935",
+        "profile_sha256": "e7ff424c50920ddcc273c9fe09765aa507cad90e237044c6b94d894a0ff914c5"
+      },
+      {
+        "run": "gaussian_hoc_C0p5_N80",
+        "directory": "gaussian_hoc_C0p5_N80_4518c5621cf0",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "317085dce13e8b57a585fc9d024ca8db8290d9743b681964fe0ddc38682b823a",
+        "metrics_sha256": "28b7031d690edb73afc7db78b11e5b8812c819ebab2bdb7c205c50b81a46aac8",
+        "profile_sha256": "70ddbafade77abf45f77c623a612d3334846f5883227ea8ad56d1bfa18c58370"
+      },
+      {
+        "run": "gaussian_hoc_C1p0_N200",
+        "directory": "gaussian_hoc_C1p0_N200_19ead52eabb6",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "1620524de1c7c830a7db998d61113476c4201fc8caed50ae0a020c0a66b7eb46",
+        "metrics_sha256": "a9625761e87f20b9460f200e97caae4c00c6351390ec7981ea9757b2a2823ff6",
+        "profile_sha256": "8fb0bfec038bd60c45399e3f61596b9c3d89427f807ca2a9562abceb30eb6ae8"
+      },
+      {
+        "run": "gaussian_inguva2022_C1p0_N160",
+        "directory": "gaussian_inguva2022_C1p0_N160_884341341cd8",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "028db8b9417cf2d3c08ed59c1d1ab741591350ecce9dc3af9d209f7cb760bfaa",
+        "metrics_sha256": "d0a8f4733faaded32c28cfa2fca2ff8479549ab22c4712aa516088b17afac80d",
+        "profile_sha256": "7c0d537ee06f0a6bb4b6bec5acf7fe8b6cee7cf06019fbc2d512d67607b0ae50"
+      },
+      {
+        "run": "gaussian_inguva2022_C1p0_N200",
+        "directory": "gaussian_inguva2022_C1p0_N200_9e6f8aad9cc6",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "50650180da9186f4fc1f5d649de6ac7b6608c0cc23bf430ffca85c74ffff9883",
+        "metrics_sha256": "e2016b8ef00042143c1dd42e9924a60aed9da58c9e68fd18d65a0ca3bef8e55a",
+        "profile_sha256": "71bb50b0395e7dc5eb35fa715825bcbc83932f126378c58b5e3e9b7a6935fa7e"
+      },
+      {
+        "run": "gaussian_inguva2022_C1p0_N320",
+        "directory": "gaussian_inguva2022_C1p0_N320_ef4a1dafcf98",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "3a9f14799d42624d035a12fd8da970ccdfc8987b557c94f307b1e13cd285abd4",
+        "metrics_sha256": "a376ef9010ba2723fc0caf197df452d782000d477f196172b59507e0fd4db5a1",
+        "profile_sha256": "5324a66b9f71019aebc9d215acf50fc0d01f2c89fd3d2d1ee34ef859b8f83ba7"
+      },
+      {
+        "run": "gaussian_inguva2022_C1p0_N40",
+        "directory": "gaussian_inguva2022_C1p0_N40_e47d2586af33",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "74ce23657c501140bacaf93a370e2f826c51d482fc68e0af8e6d0246a56c6bcc",
+        "metrics_sha256": "97467ba6afb6f5423eebd0dda59b019e0d038dc04ae9bb69c2afaeb09465e1e4",
+        "profile_sha256": "0e11d35ad60c05d616ea841007d7b62d7faa1b2edc42bedfde09890aa05424cf"
+      },
+      {
+        "run": "gaussian_inguva2022_C1p0_N640",
+        "directory": "gaussian_inguva2022_C1p0_N640_715fd835309d",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "694dd13bcf7c117147cab211dae7cdac6208b929992063347e6d93be9c061752",
+        "metrics_sha256": "2f7ec41b132f1e8184235da0e6d8aa8501f3e8518d8ac7241067479c059d5cbd",
+        "profile_sha256": "3edacdeda41103a6f40411354abf8577791b64d0d637739e371364303bcea1f6"
+      },
+      {
+        "run": "gaussian_inguva2022_C1p0_N80",
+        "directory": "gaussian_inguva2022_C1p0_N80_591baf495acb",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "0e800395d40f1e13c8f269291d7f041358451effc12c64e0e717579003eba30f",
+        "metrics_sha256": "1bc7def233fc1d3436fb76b067ca56357f376159e200d62967c2475042b5b586",
+        "profile_sha256": "b7b8575e704ac7036becb6a5f9c602586261691e68a7c20abbc2c1d36f6ba066"
+      },
+      {
+        "run": "gaussian_muscl_C0p5_N160",
+        "directory": "gaussian_muscl_C0p5_N160_74ddc36b483c",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "0796bf5670d60109cc2ccb75c41e38ff7b4d4222c607077c9d8723bcab6ae45c",
+        "metrics_sha256": "e36c4c716048118b61f8e95178768dfacd27d61d2cd1c0ba010fd92a15237068",
+        "profile_sha256": "5838fbd012b9aa4b8952f1ae74524256edceb87d58f0cca024363d003777f693"
+      },
+      {
+        "run": "gaussian_muscl_C0p5_N200",
+        "directory": "gaussian_muscl_C0p5_N200_d49e63728e7f",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "7be49b3a602cf294188500f76bcce130e8e0bb821fedda5e15818df43a2ba669",
+        "metrics_sha256": "1309db18320f1fecbe3b86cee707351f7cd22edfb665e2aff798655d38a8f4ce",
+        "profile_sha256": "7fff876c1aafeb8ef839daa4dec1aa50e55a1e2e97c3961e3f58a3a1ce1906c7"
+      },
+      {
+        "run": "gaussian_muscl_C0p5_N320",
+        "directory": "gaussian_muscl_C0p5_N320_111c6e49605e",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "392f95988affcf8bc3cd7b17102f23c4ddf0e5865b3bb75852db67993ea2ab5a",
+        "metrics_sha256": "09c1a29e1bbbdd87355d1ad042c892fed9dd9d17df49867d359ac4d097068f9a",
+        "profile_sha256": "193d18dca3cb355c488884a052790e29a32413920f4f5addaec6d88aedf9fcbd"
+      },
+      {
+        "run": "gaussian_muscl_C0p5_N40",
+        "directory": "gaussian_muscl_C0p5_N40_a1de074cd6b7",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "49d45e3c982017ef60f90a117a7f53195f5b17e3ea69dbd509a64a20df5d047f",
+        "metrics_sha256": "c61c2bb84abc524d9b8e174fdf07e869434e4bf4314135270deebc848a11bbbb",
+        "profile_sha256": "17ddb59715965a02595420126b4dc8cfd8ca19c3b402b053682adaf39beaebc1"
+      },
+      {
+        "run": "gaussian_muscl_C0p5_N640",
+        "directory": "gaussian_muscl_C0p5_N640_09555550155a",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "6e5bc75349aaaa907b60f63495e6a694e8bc14dac8beafdad2369b4c05a6d33a",
+        "metrics_sha256": "292449adab99f3a76ffefaa64a44d454e388bd3721dd2a787fb20bd3f79dd09a",
+        "profile_sha256": "1d4c93196e6b25e65321505c7e95aaa22939ab8c6488bb77c4d8a2b5d4bc3e1d"
+      },
+      {
+        "run": "gaussian_muscl_C0p5_N80",
+        "directory": "gaussian_muscl_C0p5_N80_9de5185da691",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "f500f1a6c538927d381eb69c70718f402b6f6c334bd6a1859ed9fdedb1e093a8",
+        "metrics_sha256": "65d955ab511a1c3bd01496c8c972f07a92d568c004b8cd0d95ca819cbfbfe769",
+        "profile_sha256": "97e58486bd095df36db2f806de7185f47f27bd52ea3a7da468370418c7cb0717"
+      },
+      {
+        "run": "gaussian_muscl_C1p0_N200",
+        "directory": "gaussian_muscl_C1p0_N200_c4c4af0750fb",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "bd31ab65c3fe3fbf99291a403088192f5f9097f6077d0b7fda533178d490c0ba",
+        "metrics_sha256": "73b83992123a052d0394feec38b24d507ab07a5d66b8184b71c1f58e4f0e5ac8",
+        "profile_sha256": "41fd9d1e2fc6e11db3d44846a0ba2257470d4334ce4b3a66c49a826ab20bf0ab"
+      },
+      {
+        "run": "gaussian_upwind_C0p5_N160",
+        "directory": "gaussian_upwind_C0p5_N160_24cd0095250c",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "2856ded5f6b871a81ab038675c7e84763ff68fadb23d9a70d5014e970921a08e",
+        "metrics_sha256": "3d94cc0380a97441b514f47951983807bfd4fa1853384bb0a46d46e87f864772",
+        "profile_sha256": "f59f10cd53285d6fc3dd9adfbf11f628a64544c5703c3156ce61707bd081a0e4"
+      },
+      {
+        "run": "gaussian_upwind_C0p5_N200",
+        "directory": "gaussian_upwind_C0p5_N200_e179187b8223",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "972738bdf4e019617e35d3c5752b26d1aec06e1b0a81c69bc5130569eb10312f",
+        "metrics_sha256": "c4bae065952a940789f64752fb9e4893857e2f1b4744672c13218818f78c4f3d",
+        "profile_sha256": "ab5cf1e77169e0a6c6bf7d4ab85ed70d853522c2251abe253fed7e4538fb7401"
+      },
+      {
+        "run": "gaussian_upwind_C0p5_N320",
+        "directory": "gaussian_upwind_C0p5_N320_825b85854c7e",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "0971072828212d663a16c27a9df3473cec4e0b1499c86c9d2c70baad808b5c96",
+        "metrics_sha256": "58add8a9fd78e1350516b04de2a3bbe1e8a8837ae34a72ec513289c2ae1ca390",
+        "profile_sha256": "aa28e59e0f7924808a8b5c8c6cdd9f8372a718e08deced9eeb22a807fe111691"
+      },
+      {
+        "run": "gaussian_upwind_C0p5_N40",
+        "directory": "gaussian_upwind_C0p5_N40_4352820395ec",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "4752de37d84406ecf525192bcd0b843af04e75531e4c5ce08df1c4aa85c3215c",
+        "metrics_sha256": "dcbe6d3e9906efb827a2ed1fd8b8e864548cbb3f2179efb18318f447b667661f",
+        "profile_sha256": "b23eff3467101ba5520069f885c96ce4090c955915e419dc06b999336d263b10"
+      },
+      {
+        "run": "gaussian_upwind_C0p5_N640",
+        "directory": "gaussian_upwind_C0p5_N640_ec852067cc64",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "a47cd4841207e25bc0540d47420861094eaed0fe5ab0ce7a57dd1da6b9318092",
+        "metrics_sha256": "168a85e207c4aad94d110dd0e4a5aa5c683b7a041a43ea4296517db3a417aebb",
+        "profile_sha256": "0259c987a1a02fb4fcc55fba8950b5df7d66640a2e83d345b76e4a966f697f1d"
+      },
+      {
+        "run": "gaussian_upwind_C0p5_N80",
+        "directory": "gaussian_upwind_C0p5_N80_36edd85a6de3",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "911c3c119b93235e8dcfab11a853621872c9e277de8382efb3b6f0738689348a",
+        "metrics_sha256": "4c690dc6384fd27393af4f7cc8dfe328c5f8ad2f4738ce08e9e944893df10a6e",
+        "profile_sha256": "2c21fc1266733b89870de3a99a6e1b6f35b0716188889f1d6fc5a5fbe45e3ba6"
+      },
+      {
+        "run": "gaussian_upwind_C1p0_N200",
+        "directory": "gaussian_upwind_C1p0_N200_706d012acede",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "43fdc06eac2ff2accb9daccc9a33f32cef675010f471b17f77e876cf512498d0",
+        "metrics_sha256": "313612a318d822cde6a3e98bdd5d4025fe30490b09d6c6a5df56e790e7d12c82",
+        "profile_sha256": "71a400ba899fbbc3a7f8fe243068b0cd57f443585c7c01fdab485739eb04d4e8"
+      },
+      {
+        "run": "gaussian_weno3_C0p5_N160",
+        "directory": "gaussian_weno3_C0p5_N160_2646b5fbae7c",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "4a3c69bd509df2ff7b219d738c8013d9460bdab14e03852c82e7e8186681650a",
+        "metrics_sha256": "5869e58478ebe5a4a8030adc04bb1155213eb096918bdea00496ea02ad626b1e",
+        "profile_sha256": "640d2a809c0b16057031748eae6f3ddd2fe28a9ffd6365ad9ca5dfadd6225f3b"
+      },
+      {
+        "run": "gaussian_weno3_C0p5_N200",
+        "directory": "gaussian_weno3_C0p5_N200_59745e286fd6",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "f17ab56c88baebda93b3da7018ef96afa3a222a6905d650b0bfdc54519d6a1ca",
+        "metrics_sha256": "03fff0226ddbf22ad1e3462b124f908bb08995112e2cc1ec2d90e324b48d71be",
+        "profile_sha256": "9a3bb0c3e4766b74a8bb599b9466e3f31f591397912f4a3f1228e318bbb62d64"
+      },
+      {
+        "run": "gaussian_weno3_C0p5_N320",
+        "directory": "gaussian_weno3_C0p5_N320_2d3e76c5d8cb",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "c0d8832773302aa49524004b15a9550d278cbe5d2f4bdc76ecb3f277fc7c6f79",
+        "metrics_sha256": "e59732f88149f967dee0190ebb67c148a33a7603e8af207ffd3b0264f8f61de5",
+        "profile_sha256": "d9c29f77e0e63877df2dea2dc3812235e572b999c3bad1047dbf20259dc765f7"
+      },
+      {
+        "run": "gaussian_weno3_C0p5_N40",
+        "directory": "gaussian_weno3_C0p5_N40_b9b30b312f90",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "eed0b5f87034c4f6b400a3c49fbd691f876c88f41335a3c37bae842f8eeacbe2",
+        "metrics_sha256": "86441e83e98f3a9fbff398cfbb413bc88699eea8c7d15e10afee9a550c0e8fe2",
+        "profile_sha256": "6cbbf49877d804b76563e9964c5d59e4b74585b97f54afb643144cea31576e80"
+      },
+      {
+        "run": "gaussian_weno3_C0p5_N640",
+        "directory": "gaussian_weno3_C0p5_N640_5b238d4f91fd",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "4b798ca9588538e929a6d9a12c7adb5092e24fd340d350fdbd8e907fd68aac91",
+        "metrics_sha256": "1fa87a450a248dd114edce2548d2da234db0e2d4966f519003b616538f5b5e8f",
+        "profile_sha256": "28cda2e2600d200f613c2837daf69ed36ce5b9ac4825a2bab493ff3b4af8c7bf"
+      },
+      {
+        "run": "gaussian_weno3_C0p5_N80",
+        "directory": "gaussian_weno3_C0p5_N80_3170b1daec32",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "cb2508b0902a761254a8fb0132865ed2cb1e5e870c4f98330984c2d79fb38f8c",
+        "metrics_sha256": "6e2a87e518577dcc9fa58798fd1c172838f3bb79d0572e7c789b50fbb82d69f0",
+        "profile_sha256": "542d8652c945747b707e202fcc1cb2522bfd02f721faf58a1267e2f310e92b82"
+      },
+      {
+        "run": "gaussian_weno3_C1p0_N200",
+        "directory": "gaussian_weno3_C1p0_N200_f5dc849b279d",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "6b4b019450f306eda20bfa8e362a199e322d823b4c361ba16e169dc380942339",
+        "metrics_sha256": "72a7dbe8f94cb41e4a7bfb9223881b57fbf240f2dd8af11f979a7ff0478639ce",
+        "profile_sha256": "13229e22a1feedf0894c2c36c59cb38b7e0010af3e17274d920673b2b059564f"
+      },
+      {
+        "run": "gaussian_weno5_C0p5_N160",
+        "directory": "gaussian_weno5_C0p5_N160_968bd05307e4",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "67ed08c33c00edd904ced9f27b20535a7a933af85510cb1a582edd451d1ee30b",
+        "metrics_sha256": "76eff348621b7f787b268b85f9efc616cedc5f0bd885e0da58e9655c2c5bf7df",
+        "profile_sha256": "c9aee543581d3d8a0ca2e43686716c0d3189c9d33a7f419f6e3fbc5da553274e"
+      },
+      {
+        "run": "gaussian_weno5_C0p5_N200",
+        "directory": "gaussian_weno5_C0p5_N200_3d27d2a6f4dc",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "435c7db86416420951d5d74962dc66e576a448411698ded45a159de1638de906",
+        "metrics_sha256": "4d4aae407e2110964785a7e98d9d58c10ac9953c86e5a8b541099bae57683d35",
+        "profile_sha256": "9ff3b9af0cdec0006e6c676619ab3c5be533be31abd59109e161e9461aa41da9"
+      },
+      {
+        "run": "gaussian_weno5_C0p5_N320",
+        "directory": "gaussian_weno5_C0p5_N320_0563ac1ce7b0",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "be0792163ccb8d75c530c1d6937601f03820abf557a55bc6824d244745f7102a",
+        "metrics_sha256": "cfcbb5c26ad1b990dbb65383cf05a4880220f6f770a0ae5919644f1d7b382689",
+        "profile_sha256": "e0790c58e895f6bd8eabc29ed0b92d2b0f4097bca156f7ac13031839cccb9c50"
+      },
+      {
+        "run": "gaussian_weno5_C0p5_N40",
+        "directory": "gaussian_weno5_C0p5_N40_a93d29686f5e",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "5ffda7b62c372adc07e8af85d28c72a0fff647c8b58544687787a5dd84ee719b",
+        "metrics_sha256": "ece74f2151bed76d8e601ac5458108d1c74386de5c6dd7d9fd619c35c0eee69f",
+        "profile_sha256": "221672099745b660a1a81df4b6e3da7b073d8540ca152d9e06661633f9c92d7c"
+      },
+      {
+        "run": "gaussian_weno5_C0p5_N640",
+        "directory": "gaussian_weno5_C0p5_N640_91fa2c9d612f",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "ed71a7437616a7b91bd1ba316733a2e9353a70b7e9db351cf890a70b4469cd24",
+        "metrics_sha256": "2dc3e4523d06feb1df24dc1a02d13e3538de445edc7a6e84acd70b50b63dbaf0",
+        "profile_sha256": "8c827afa493e1599b713c0f7b13ff06e32f3b0910c2045cf4cc7c5c36605d5a2"
+      },
+      {
+        "run": "gaussian_weno5_C0p5_N80",
+        "directory": "gaussian_weno5_C0p5_N80_6eca1b250085",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "55dac59c14db7bfa5798e30e9534639a9cb24e661b01bdbd08b1e860d06e005e",
+        "metrics_sha256": "42fef9ed1b6e07b2e1474fd35e1c800a6bea09fe53ccf0da71a76be450c6a1e0",
+        "profile_sha256": "6d24fd820ede8c4b8cca6a81c767a8b29ee5c600865649eafdffda563e47f6e6"
+      },
+      {
+        "run": "gaussian_weno5_C1p0_N200",
+        "directory": "gaussian_weno5_C1p0_N200_c85d07b05d16",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "a898752017c06b8a2d3be74279e630a7e95fdf192f101768208f5a450ea2edef",
+        "metrics_sha256": "a533b85aa2e790ca73acdaf4164f762e41aa1b6b6ec8bd00228661eccab77b88",
+        "profile_sha256": "9a7106ad6c2cb9fa800e5a0d33c3bc0cc61f28ba6f57d2f92f284000fd294708"
+      },
+      {
+        "run": "gaussian_weno5_ssprk33_C0p5_N160",
+        "directory": "gaussian_weno5_ssprk33_C0p5_N160_643f965122c8",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "09a6692f7070afa03adc358bde6c64d1640188a5369f9dd7ae6f785d0d7f6fbc",
+        "metrics_sha256": "79b351058b3f8213c9fdb07eaa9c9ac0967f183b9799c2e62061d1daf72d1577",
+        "profile_sha256": "27fb9e3dd4c841f8616bba53baa9b662675ed2adcefcbc4d4d025be625e67e11"
+      },
+      {
+        "run": "gaussian_weno5_ssprk33_C0p5_N200",
+        "directory": "gaussian_weno5_ssprk33_C0p5_N200_12f302ad44dc",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "e9b7ea376eb88615e1d1b0933a111f9faf2146d9e89d6bad50c3e53e50f86b91",
+        "metrics_sha256": "d722bcfad971e04dbfc11f70e00185a9bd633d843da00d7b139dd164edaeced3",
+        "profile_sha256": "cbe28d41f15db35cf4ab0221e0e45cabdd5dfa61d57e00d6a836b81ae85053ee"
+      },
+      {
+        "run": "gaussian_weno5_ssprk33_C0p5_N320",
+        "directory": "gaussian_weno5_ssprk33_C0p5_N320_9235980b0375",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "728002f310f725b5058c7938056cd683426268981052725980db8778a93ec6c5",
+        "metrics_sha256": "d71ac3c156932cb3104c7b09715cbcee2d886c92fd76b4f5e01d4b969fc21472",
+        "profile_sha256": "61647ca9dacad057dee764dd93a362e25725895a8ce9138fb56b7f53b928491c"
+      },
+      {
+        "run": "gaussian_weno5_ssprk33_C0p5_N40",
+        "directory": "gaussian_weno5_ssprk33_C0p5_N40_a649497562e0",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "38adf1e17f9b0dbdf18a8b7c92bf8e7c6bfb261a4606145a8ebb8116914e3733",
+        "metrics_sha256": "1dba68d8b816af344c24dc572d748748e41e4a2a29465cd3d1640c85947f4812",
+        "profile_sha256": "44fec8df7fbb50fc1cab3712ee278bf43d0f17c90e8ca513985420f4d2a5bce8"
+      },
+      {
+        "run": "gaussian_weno5_ssprk33_C0p5_N640",
+        "directory": "gaussian_weno5_ssprk33_C0p5_N640_68c23aa596b0",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "d5a295b587c5d0569aefb4aeacb015d1646ce2e410a5267242b7ae1e4d17a2e1",
+        "metrics_sha256": "5f7c040f993e44e659fb70442f8400852f5b0a05c652da952bd0ea677489c212",
+        "profile_sha256": "c2899ce932e967df67f584a7721a6aaeb743b5adc16c184a5ea79bf431c64f99"
+      },
+      {
+        "run": "gaussian_weno5_ssprk33_C0p5_N80",
+        "directory": "gaussian_weno5_ssprk33_C0p5_N80_b6c05c7486d7",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "ad058f052af6305c04eaf5a99b1d5fc8623b90c388bbcae459bf42113197c121",
+        "metrics_sha256": "d635578ef50621b7baf647ee0a353f18d9779ab7ed23248edbcb0b2c77a2a940",
+        "profile_sha256": "4849af2c4ea54c37c51eca13053b0dc77d14899955f647e80422ee87d09cf008"
+      },
+      {
+        "run": "gaussian_weno5_ssprk33_C1p0_N200",
+        "directory": "gaussian_weno5_ssprk33_C1p0_N200_5ccab02907ff",
+        "revision": "7df87d4bc00a62b3220426ebe5bfa23bb05326ee",
+        "provenance_sha256": "d0fc6127899d5985ec4979ec85d19349c820056e9d3a83495633566f5152e4d1",
+        "metrics_sha256": "2a7e09d775ff3a4e24f93c908ce7ecb2a5aac65916de59f842b23a08471835e5",
+        "profile_sha256": "63fc7d86e63a6bfb5f0480f5ccdc39d41541447ad787742be02d2dcd41d76cbe"
+      }
+    ]
+  },
+  "files": {
+    "gaussian_metrics.csv": "8be756b20b4d7c2ff73184f6da09cab4fd1d0058ca88bd2182badc5af1464747",
+    "gaussian_profiles.csv": "506aacacd61e04c794889fc53f6ef5f7f8d1abc3ddd8c68875085afeed1a8421",
+    "gaussian_orders.csv": "c08d29f32f941963daf1ae59b739f3ecc5f148ba788a8d7d98fbd41b1800ff82"
+  }
+}

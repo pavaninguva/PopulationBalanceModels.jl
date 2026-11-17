@@ -1,0 +1,235 @@
+"""Render case studies and kinetic uncertainty from exported Julia CSV files.
+
+python docs/benchmarks/plot_case_studies.py CASE [--data-dir PATH] [--usetex]
+Requires NumPy and Matplotlib. No simulation is run by this script.
+"""
+from pathlib import Path
+import argparse
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from plot_style import configure, export_figure, panel_letters, relative_percent
+
+ASSETS=Path(__file__).resolve().parents[1]/"src"/"assets"
+
+def save_figure(fig,folder,name,vector=True):
+    export_figure(fig,folder,name,vector=vector)
+
+
+def load(path):
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing {path}. Fetch retained inputs with python tools/retained_data.py fetch --profile docs; no substitute data are plotted.")
+    return np.genfromtxt(path,delimiter=",",names=True)
+
+def field(path):
+    d=load(path);x=np.unique(d["a1"]);y=np.unique(d["a2"])
+    z=d["density"].reshape(len(y),len(x))
+    if "lower_a1" in d.dtype.names:
+        # Nonuniform physical cells must use their actual edges, rather than
+        # edges inferred from neighbouring centres on the transformed mesh.
+        x=np.unique(np.concatenate((d["lower_a1"],d["upper_a1"])))
+        y=np.unique(np.concatenate((d["lower_a2"],d["upper_a2"])))
+    return x,y,z
+
+def transport(folder):
+    names=(("reference","Analytical bin averages"),("upwind","Upwind + SSPRK3"),
+           ("weno5","WENO5 + SSPRK3"),("mapped_shift","Inguva and Braatz (2023)"))
+    fig,axes=plt.subplots(2,2,figsize=(10,8),layout="constrained")
+    for ax,(name,title) in zip(axes.flat,names):
+        x,y,z=field(folder/f"{name}_100.csv")
+        im=ax.pcolormesh(x,y,z,cmap="viridis",shading="auto",vmin=0,vmax=40,rasterized=True)
+        ax.set(xlabel="$a_1$",ylabel="$a_2$",title=title,aspect="equal",xlim=(0,2),ylim=(0,2))
+        fig.colorbar(im,ax=ax,label=r"$f(a_1,a_2,t)$")
+    fig.suptitle(r"Coordinate-dependent growth, $t=1$")
+    save_figure(fig,folder,"solutions")
+    fig,axes=plt.subplots(1,3,figsize=(12,3.8),layout="constrained")
+    for ax,(name,title) in zip(axes,(("upwind","Upwind"),("weno5","WENO5"),("mapped_shift","Inguva and Braatz (2023)"))):
+        x,y,z=field(folder/f"{name}_100.csv")
+        ref="mapped_reference" if name=="mapped_shift" else "reference"
+        _,_,truth=field(folder/f"{ref}_100.csv");error=z-truth;bound=max(np.max(abs(error)),1e-15)
+        im=ax.pcolormesh(x,y,error,cmap="RdBu_r",shading="auto",vmin=-bound,vmax=bound)
+        ax.set(xlabel="$a_1$",ylabel="$a_2$",title=title,aspect="equal")
+        fig.colorbar(im,ax=ax,label=r"$f_{\mathrm{num}}-f_{\mathrm{exact}}$")
+    save_figure(fig,folder,"errors",vector=False)
+    rows=np.genfromtxt(folder/"errors.csv",delimiter=",",names=True,dtype=None,encoding="utf-8")
+    fig,axes=plt.subplots(1,2,figsize=(9,3.6),layout="constrained")
+    for name,label in (("upwind","Upwind"),("weno5","WENO5"),("mapped_shift","Inguva and Braatz (2023)")):
+        data=rows[rows["method"]==name]; bins=data["nx"]*data["ny"]
+        axes[0].loglog(bins,data["RMS_area"],"o-",label=label)
+        axes[1].loglog(bins,np.maximum(data["negative_number"],1e-20),"o-",label=label)
+    axes[0].set(xlabel=r"$N_{\mathrm{bins}}$",ylabel=r"$\mathrm{RMS}_{A}(f_{\mathrm{num}}-f_{\mathrm{exact}})$")
+    axes[1].set(xlabel=r"$N_{\mathrm{bins}}$",ylabel=r"$-\int\min(f,0)\,\mathrm{d}a_1\,\mathrm{d}a_2$")
+    axes[0].legend(fontsize=8)
+    axes[1].text(.04,.08,r"Zero shown at $10^{-20}$",transform=axes[1].transAxes,fontsize=8)
+    save_figure(fig,folder,"convergence")
+
+def cooling(folder, output=None):
+    output = folder if output is None else output
+    data = np.genfromtxt(folder/"moments.csv", delimiter=",", names=True,
+                         dtype=None, encoding="utf-8")
+    ref = load(folder/"reference.csv")
+    methods = (("muscl", "MUSCL", "#0072B2", "-"),
+               ("upwind", "Upwind", "#D55E00", "--"),
+               ("reference", "MUSCL reference", "#222222", ":"))
+    fig, axes = plt.subplots(2, 2, figsize=(7, 5.2), layout="constrained")
+    panel_letters(axes)
+    for method, label, color, linestyle in methods:
+        subset = data[data["method"] == method]
+        bins = max(subset["bins"])
+        subset = subset[subset["bins"] == bins]
+        label = f"{label}, {bins} bins"
+        axes[0, 0].plot(subset["time"], subset["concentration"],
+                        color=color, ls=linestyle, label=label)
+        for k, opacity in ((0, 1), (3, .55)):
+            error = relative_percent(subset[f"mu{k}"], ref[f"mu{k}"], display_floor=True)/100
+            axes[0, 1].semilogy(subset["time"], error, color=color, ls=linestyle,
+                                alpha=opacity, label=rf"{label}, $k={k}$")
+        axes[1, 1].plot(subset["time"], subset["material_drift"],
+                        color=color, ls=linestyle, label=label)
+    axes[0, 0].plot(ref["time"], ref["concentration"], "k--", lw=.8,
+                    label="Independent moment ODE")
+    for method, label, color, linestyle in methods[:2]:
+        paths = sorted(folder.glob(f"{method}_*_psd.csv"))
+        largest = max(int(path.stem.split("_")[1]) for path in paths)
+        for path in paths:
+            d = load(path)
+            nominal_bins = int(path.stem.split("_")[1])
+            axes[1, 0].plot(d["length"], d["density"], color=color, ls=linestyle,
+                            lw=.8, alpha=.35+.65*nominal_bins/largest,
+                            label=f"{label}, {nominal_bins}")
+    # reference_12800_psd.csv is a duplicate export of this same reference.
+    d = load(folder/"reference_psd.csv")
+    reference_bins = max(data["bins"][data["method"] == "reference"])
+    axes[1, 0].plot(d["length"], d["density"], "k:", lw=1.1,
+                    label=f"MUSCL ref., {reference_bins}")
+    axes[0, 0].set(xlabel=r"$t\;[\mathrm{s}]$", ylabel=r"$c\;[\mathrm{g}/\mathrm{g\ water}]$")
+    axes[0, 1].set(xlabel=r"$t\;[\mathrm{s}]$",
+                    ylabel=r"$|\mu_k-\mu_{k,\mathrm{ref}}|/|\mu_{k,\mathrm{ref}}|$")
+    axes[1, 0].set(xlabel=r"$L\;[\mu\mathrm{m}]$",
+                    ylabel=r"$f(L,t_{\mathrm{f}})\;[(\mathrm{g}_{\mathrm{water}}\,\mu\mathrm{m})^{-1}]$")
+    axes[1, 1].set(xlabel=r"$t\;[\mathrm{s}]$",
+                    ylabel=r"$\Delta(c+\rho_c\mu_3)\;[\mathrm{g}/\mathrm{g\ water}]$")
+    for ax in axes.flat:
+        ax.legend(fontsize=6.5)
+    axes[1, 0].legend(fontsize=6.5, ncol=2, columnspacing=.6, handlelength=1.6)
+    save_figure(fig, output, "coupled_solution")
+
+def temperature_moments(folder):
+    data=np.genfromtxt(folder/"history.csv",delimiter=",",names=True,dtype=None,encoding="utf-8")
+    ref=data[data["method"]=="moments"]
+    fig,axes=plt.subplots(2,2,figsize=(10,7),layout="constrained")
+    axes[0,0].plot(ref["time"],ref["supersaturation"],label="Native moments")
+    temp=axes[0,0].twinx();temp.plot(ref["time"],ref["temperature_K"]-273.15,"--",color="0.5")
+    temp.set_ylabel(r"$T\;[{}^\circ\mathrm{C}]$")
+    axes[0,0].set(xlabel=r"$t\;[\mathrm{min}]$",ylabel=r"$S=c/c_s(T)$")
+    axes[0,1].plot(ref["time"],ref["L30"],label=r"$\overline{L}_{30}=(\mu_3/\mu_0)^{1/3}$")
+    axes[0,1].plot(ref["time"],ref["L43"],label=r"$\overline{L}_{43}=\mu_4/\mu_3$")
+    axes[0,1].set(xlabel=r"$t\;[\mathrm{min}]$",ylabel=r"$\overline{L}\;[\mu\mathrm{m}]$")
+    axes[1,0].plot(ref["time"],ref["mu0"],label="Native moments")
+    axes[1,0].set(xlabel=r"$t\;[\mathrm{min}]$",ylabel=r"$\mu_0\;[\mathrm{kg}_{\mathrm{solvent}}^{-1}]$")
+    for bins in sorted(set(data[data["method"]=="muscl"]["bins"])):
+        d=data[(data["method"]=="muscl")&(data["bins"]==bins)]
+        axes[0,0].plot(d["time"],d["supersaturation"],":",label=f"MUSCL, {bins} bins")
+        axes[1,0].plot(d["time"],d["mu0"],":",label=f"MUSCL, {bins} bins")
+        error=abs(d["mu3"]-ref["mu3"])/max(abs(ref["mu3"]))
+        axes[1,1].semilogy(d["time"],np.maximum(error,1e-16),label=f"{bins} bins")
+    axes[1,1].set(xlabel=r"$t\;[\mathrm{min}]$",ylabel=r"$|\mu_{3,\mathrm{FV}}-\mu_{3,\mathrm{MOM}}|/\max_t|\mu_{3,\mathrm{MOM}}|$")
+    for axis in axes.flat:axis.legend(fontsize=8)
+    fig.suptitle("Unseeded crystallization: reconstructed monotonic cooling input")
+    save_figure(fig,folder,"moment_comparison")
+
+
+def moments(folder):
+    data = load(folder/"aggregation_breakage.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(7, 3.05))
+    fig.subplots_adjust(left=.1, right=.985, bottom=.2, top=.92, wspace=.4)
+    panel_letters(axes)
+    for k in range(6):
+        q = data[(data["nodes"] == 3) & (data["order"] == k)]
+        axes[0].plot(q["time"], q["exact"]/q["exact"][0], color=f"C{k}", lw=1.1)
+        axes[0].plot(q["time"][::5], q["moment"][::5]/q["exact"][0], "o",
+                     color=f"C{k}", ms=3, mfc="none", label=rf"$\mu_{k}$")
+        if k != 3:
+            error = relative_percent(q["moment"], q["exact"], display_floor=True)
+            axes[1].semilogy(q["time"][1:], error[1:], color=f"C{k}", label=rf"$\mu_{k}$")
+    axes[0].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"$\mu_k(t)/\mu_k(0)$")
+    axes[1].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"Relative moment error $(\%)$")
+    for ax in axes:
+        ax.legend(fontsize=7.5, ncol=2)
+    save_figure(fig, folder, "aggregation_breakage")
+
+    data = np.genfromtxt(folder/"pulse.csv", delimiter=",", names=True, dtype=None, encoding="utf-8")
+    ref = load(folder/"sectional_reference.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(7, 3.05))
+    fig.subplots_adjust(left=.1, right=.985, bottom=.2, top=.92, wspace=.4)
+    panel_letters(axes)
+    for ax, process in zip(axes, ("growth_nucleation", "all")):
+        for k in range(5):
+            q = data[(data["processes"] == process) & (data["nodes"] == 3) & (data["order"] == k)]
+            initial = q["moment"][0]
+            if process == "growth_nucleation":
+                ax.semilogy(q["time"], q["reference"]/initial, color=f"C{k}", lw=1.1)
+            else:
+                r = ref[(ref["bins"] == max(ref["bins"])) & (ref["order"] == k)]
+                ax.semilogy(r["time"], r["moment"]/initial, color=f"C{k}", lw=1.1)
+            ax.semilogy(q["time"][::3], q["moment"][::3]/initial, "o", color=f"C{k}",
+                         ms=3, mfc="none", label=rf"$\mu_{k}$")
+        ax.set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"$\mu_k(t)/\mu_k(0)$")
+    axes[0].legend(fontsize=7.5, ncol=2)
+    save_figure(fig, folder, "nucleation_pulse")
+
+    fig, axes = plt.subplots(1, 2, figsize=(7, 3.5))
+    fig.subplots_adjust(left=.12, right=.985, bottom=.34, top=.93, wspace=.45)
+    panel_letters(axes)
+    for n in np.unique(ref["bins"]):
+        for k in (0, 3, 4):
+            q = data[(data["processes"] == "all") & (data["nodes"] == 3) & (data["order"] == k)]
+            r = ref[(ref["bins"] == n) & (ref["order"] == k)]
+            error = relative_percent(r["moment"], q["moment"], display_floor=True)
+            axes[0].semilogy(q["time"][1:], error[1:], color=f"C{k}",
+                              ls="-" if n == max(ref["bins"]) else "--",
+                              label=rf"$\mu_{k}$, {int(n)} bins")
+    for n in np.unique(data["nodes"]):
+        q = data[(data["processes"] == "growth_nucleation") & (data["nodes"] == n) & (data["order"] == 4)]
+        error = relative_percent(q["moment"], q["reference"], display_floor=True)
+        axes[1].semilogy(q["time"][1:], error[1:], label=f"{int(n)} nodes")
+    axes[0].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"Difference from QMOM $(\%)$")
+    axes[1].set(xlabel=r"$t\ (\mathrm{s})$", ylabel=r"Analytical $\mu_4$ error $(\%)$")
+    axes[0].legend(fontsize=7.5, ncol=2, loc="upper center", bbox_to_anchor=(.5, -.27))
+    axes[1].legend(fontsize=7.5)
+    save_figure(fig, folder, "pulse_verification")
+
+
+def estimation(folder):
+    data=load(folder/"observations.csv");curve=load(folder/"curve.csv")
+    region=load(folder/"region.csv");estimate=load(folder/"estimates.csv");profile=load(folder/"profile.csv")
+    fig,axes=plt.subplots(2,2,figsize=(9,7),layout="constrained")
+    axes[0,0].errorbar(data["time"],data["observed"],yerr=0.03,fmt="o",ms=3,label=r"Synthetic data $\pm\sigma$")
+    axes[0,0].plot(curve["time"],curve["fitted"],label="Fitted model")
+    axes[0,0].plot(curve["time"],curve["analytical_truth"],"--",color="0.4",label="Generating model")
+    axes[0,0].set(xlabel=r"$t$",ylabel=r"$M_0(t)$");axes[0,0].legend(fontsize=8)
+    axes[0,1].axhline(0,color="0.6",lw=.8)
+    axes[0,1].plot(data["time"],data["whitened_residual"],"o",ms=4)
+    axes[0,1].set(xlabel=r"$t$",ylabel=r"$r_j=(\widehat y_j-y_j)/\sigma_j$")
+    axes[1,0].plot(region["J"],region["k"],label=r"Mapped $95\%$ joint region")
+    axes[1,0].plot(estimate["J"],estimate["k"],"o",label="Estimate")
+    axes[1,0].plot(estimate["true_J"],estimate["true_k"],"x",ms=7,label="Generating parameters")
+    axes[1,0].set(xlabel=r"$J$",ylabel=r"$k$");axes[1,0].legend(fontsize=8)
+    valid=profile["converged"]==1
+    axes[1,1].plot(np.exp(profile["logJ"][valid]),profile["twice_delta_nll"][valid])
+    axes[1,1].axhline(3.841458820694124,color="0.4",ls="--",label=r"$\chi^2_{1,0.95}$")
+    axes[1,1].set(xlabel=r"$J$",ylabel=r"$2[\ell_{\mathrm{prof}}(J)-\ell(\widehat{\boldsymbol{z}})]$")
+    axes[1,1].legend(fontsize=8)
+    fig.suptitle("Kinetic estimation with known measurement errors")
+    save_figure(fig,folder,"fit_and_uncertainty")
+
+if __name__=="__main__":
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("case",choices=("transport","cooling","moments","temperature_moments","estimation"))
+    parser.add_argument("--usetex",action="store_true",help="Render with an installed LaTeX distribution instead of Matplotlib MathText.")
+    parser.add_argument("--data-dir",type=Path)
+    args=parser.parse_args()
+    with configure(usetex=args.usetex):
+        folder=args.data_dir or ASSETS/{"transport":"inguva_case2","cooling":"gunawan_example2","moments":"qamar_moments","temperature_moments":"moment_crystallization","estimation":"parameter_estimation"}[args.case]
+        {"transport":transport,"cooling":cooling,"moments":moments,"temperature_moments":temperature_moments,"estimation":estimation}[args.case](folder)

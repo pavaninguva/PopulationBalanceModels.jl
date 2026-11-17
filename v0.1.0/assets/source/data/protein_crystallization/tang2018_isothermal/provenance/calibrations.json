@@ -1,0 +1,92 @@
+{
+  "number_PSD_axes": {
+    "9": {
+      "a": [
+        118,
+        994,
+        659,
+        15
+      ],
+      "b": [
+        1175,
+        2051,
+        659,
+        15
+      ],
+      "c": [
+        118,
+        994,
+        1504,
+        860
+      ],
+      "d": [
+        1175,
+        2051,
+        1504,
+        860
+      ]
+    },
+    "11": {
+      "a": [
+        119,
+        1000,
+        663,
+        15
+      ],
+      "b": [
+        1170,
+        2051,
+        663,
+        15
+      ],
+      "c": [
+        119,
+        1000,
+        1518,
+        868
+      ],
+      "d": [
+        1170,
+        2051,
+        1514,
+        868
+      ]
+    }
+  },
+  "Tang12a": {
+    "time0_x": 153.5,
+    "time700_x": 971.0,
+    "concentration0_y": 658.5,
+    "concentration20_y": 73.0,
+    "units": "native_raster_pixels"
+  },
+  "Tang12b": {
+    "time0_x": 1213.5,
+    "time700_x": 2031.0,
+    "beta0_y": 578.0,
+    "pixels_per_beta": 160.9,
+    "units": "native_raster_pixels"
+  },
+  "Mitchell4": {
+    "time0_x": 111.5,
+    "time700_x": 1244.5,
+    "concentration20_y": 16.5,
+    "concentration4_y": 700.0,
+    "D50_14_y": 16.5,
+    "D50_0_y": 700.0
+  },
+  "Mitchell5": {
+    "time0_x": 93.0,
+    "time700_x": 951.0,
+    "concentration0_y": 540.0,
+    "concentration28_y": 13.0
+  },
+  "Tang13": {
+    "log10size1_x": 387.086,
+    "log10size2_x": 488.754,
+    "volume0_y": 654.804,
+    "volume14_y": 528.717,
+    "units": "PDF_points"
+  },
+  "raster_reading_uncertainty": "Nominal +/-2 pixels in each anchor coordinate, not laboratory error or statistical CI"
+}

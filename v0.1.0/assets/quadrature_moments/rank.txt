@@ -1,0 +1,1 @@
+Maximum nodes: 3; recovered active rank: 2; all-moment residual: 5.697183019859597e-16.

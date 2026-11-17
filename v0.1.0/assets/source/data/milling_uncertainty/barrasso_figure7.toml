@@ -1,0 +1,34 @@
+title = "Forward-model comparison with Barrasso et al. (2013), Figure 7"
+doi = "10.1007/s12247-013-9155-0"
+pdf_sha256 = "00cd51185dc82df2520b8e49c38ee96baaf286c422a9ed0f80527375bc819c3a"
+reference_file = "barrasso_figure7.csv"
+reference_sha256 = "fbae750657900004816eebb41ee8ae9c6503f154394a8e9b1656a75e1de06fcb"
+reference_page = "Printed page 157, PDF page 11; Figure 7(a,b) simulation markers, not experimental observations"
+extraction = "Original vector PDF: blue triangular marker centroids (3350 RPM), green square centres (4923 RPM). Legend boxes excluded geometrically. All 23 markers per speed and quantity retained without adjustment; original PDF coordinates are in the CSV."
+axis_time_s = [0.0, 180.0]
+axis_diameter_um = [0.0, 1000.0]
+axis_holdup_g = [0.0, 250.0]
+diameter_frame_pdf_pt = [258.5379943847656, 378.73797607421875, 64.77202606201172, 163.155029296875]
+holdup_frame_pdf_pt = [416.2560119628906, 542.467041015625, 64.77202606201172, 163.155029296875]
+graphical_resolution_pdf_pt = 0.25
+graphical_resolution_diameter_um = 2.5410893323025667
+graphical_resolution_holdup_g = 0.6352723330756417
+resolution_meaning = "Illustrative graph-reading resolution, not a statistical uncertainty estimate"
+
+[calculation]
+speeds_rpm = [3350.0, 4923.0]
+bins = [100, 200, 400, 800]
+initial_feed_duration_s = 1.0
+final_time_s = 180.0
+# Baseline grid, feed, quadrature and BDF tolerances come from reconstruction.toml.
+check_reltol = 1e-10
+check_abstol_kg = 1e-15
+
+[interpretation]
+equations = "The same feed-breakage-screen residual, physical parameters and numerical builder as the Bhonsale UQ reconstruction. This compares that declared reconstruction with Barrasso Figure 7, rather than copying the original discretization."
+grid = "Shared geometric volume grid: 100 pivots, 6.54e-17 to 1e-3 m3. Refinements keep both endpoints fixed. Barrasso's published v_i=v_1*i^6 grid is not used as a separate numerical baseline."
+feed = "Exact lognormal bin probabilities, normalized over the common domain and converted to counts at each pivot, identically to UQ."
+initial_condition = "Figure 7 begins at approximately 7.4 g. One second of the stated feed gives that inventory; its shape is an explicit reconstruction because the complete initial distribution is unavailable. No kinetic parameter was fitted to Figure 7."
+deposition = "The same positive fixed-pivot hats, 8-point Gauss-Legendre daughter quadrature and analytic fines as UQ; not a verified copy of the original gPROMS implementation."
+median = "Instantaneous volume-weighted outlet diameter median, with linear diameter interpolation of the cumulative pivot-volume weights and analytic sub-grid fines, identically to UQ."
+scope = "The deterministic check and MC/PCE use one numerical forward model. Only the experiment's initial inventory, speed history and duration differ. Partial agreement with Figure 7 does not establish full published-model reproduction."

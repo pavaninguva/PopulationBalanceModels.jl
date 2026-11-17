@@ -1,0 +1,6 @@
+Starting revision: 1e644a184f39c36ca81a9759d9b42a456e69e456; HOC working-tree implementation
+Julia 1.10.3; Linux x86_64
+CPU: 13th Gen Intel(R) Core(TM) i9-13900H; Julia threads: 1; BLAS threads: 1
+One measured solve after separate full warm-up; excludes compilation, model assembly, exports and plotting.
+Errors compare bin integrals, no clipping; RMSE is volume-weighted density RMSE.
+Temporal rows use independent fixed-grid matrix exponentials, except temporal_affine_inflow (an exact spatially constant continuum solution).

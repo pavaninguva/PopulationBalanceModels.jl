@@ -1,0 +1,17 @@
+{
+  "renderer": "LaTeX",
+  "python": "3.12.3",
+  "numpy": "1.26.4",
+  "matplotlib": "3.8.4",
+  "png_dpi": 300,
+  "plotter_sha256": "aac4f64043a01ac36ecbe3f491081d98bfbead62d894d1386bd7e3c9aad86092",
+  "input_manifest_sha256": "58a3cdd102d2a2547f0392ce912b037c22eb3dc2490a608eb2abf15318549ce1",
+  "files": {
+    "stem_cell_dynamics.png": "d2737c1cbe2218ef13ef6b3c8ecbaccf98b67e975fe19531ff2eb9330e3feed3",
+    "stem_cell_dynamics.svg": "1bd995cb0dd2aa1489f1b2c91dad967e0422d845d0cc79181183b0edd391bf75",
+    "stem_cell_dynamics.pdf": "d813351cd4240cba604da20af7b6a386c9cace26d6a30d52ca6b642c2976f433",
+    "stem_cell_physiology.png": "68c072b2306f8d6f53f7115f987f760fc171dde316abcb7c3601dc1795a53f2a",
+    "stem_cell_physiology.svg": "6f4954279d4087ede5ba8b17868f684371b8a59c84be2d8845ec7f150f7c6057",
+    "stem_cell_physiology.pdf": "da425d1847b1390e9d16eef85e707bf3d3a709af3180bcf77f0c96640eea0636"
+  }
+}

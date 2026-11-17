@@ -1,0 +1,9 @@
+Li2026 SI Eq S11 nodal audit; Julia 1.10.3.
+Domain [0,2] per axis; tf=1; Gaussian initial density exp(-((x-.6)/.08)^2),
+2D second factor exp(-((y-.7)/.1)^2). Laws .1, .1+.05x, .1exp(.2x).
+1D exact time-dependent Dirichlet boundaries; 2D zero Dirichlet faces with
+negligible exact density there. Gf (1D) or GxGyf (2D) is advanced.
+No clipping. Negative undershoots retained. Separate directional S11 updates;
+not a reproduction of the main paper multilevel ADI / physical boundary closure.
+consistent_variant.csv changes two coefficients by an independently derived
+modified-equation correction. It is not a literal paper transcription.
